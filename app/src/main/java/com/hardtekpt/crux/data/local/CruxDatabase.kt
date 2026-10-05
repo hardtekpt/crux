@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.data.local
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
@@ -12,8 +13,10 @@ import androidx.room.RoomDatabase
         TemplateBlockEntity::class,
         TemplateExerciseEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
+    // From here on schema changes migrate instead of wiping data.
+    autoMigrations = [AutoMigration(from = 4, to = 5)],
 )
 abstract class CruxDatabase : RoomDatabase() {
     abstract fun climbDao(): ClimbDao

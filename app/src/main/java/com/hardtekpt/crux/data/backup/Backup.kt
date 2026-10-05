@@ -73,6 +73,8 @@ data class PlanItemDto(
     val seconds: Int,
     val loadKg: Double,
     val restSeconds: Int,
+    /** Interval exercises: rest between repeats. Older backups omit it. */
+    val repRestSeconds: Int = 0,
 )
 
 @Serializable
@@ -144,6 +146,7 @@ class BackupRepository(
                                         seconds = it.item.seconds,
                                         loadKg = it.item.loadKg,
                                         restSeconds = it.item.restSeconds,
+                                        repRestSeconds = it.item.repRestSeconds,
                                     )
                                 },
                             )
@@ -235,6 +238,7 @@ class BackupRepository(
                                 seconds = item.seconds,
                                 loadKg = item.loadKg,
                                 restSeconds = item.restSeconds,
+                                repRestSeconds = item.repRestSeconds,
                             )
                         },
                     )

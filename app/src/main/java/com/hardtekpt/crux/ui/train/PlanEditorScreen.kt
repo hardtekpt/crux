@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseTarget
+import com.hardtekpt.crux.data.model.MetricType
 import com.hardtekpt.crux.data.model.formatKg
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
@@ -326,50 +327,10 @@ private fun TargetSheet(
                 style = CruxTheme.type.code,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TargetRow("Sets") {
-                CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "sets", testTagPrefix = "sets")
-            }
-            if (metric.usesReps) {
-                TargetRow("Reps") {
-                    CruxStepper(target.reps, { onChange(target.copy(reps = it)) }, 1..100, "reps", testTagPrefix = "reps")
-                }
-            }
-            if (metric.usesTime) {
-                TargetRow("Time per set") {
-                    CruxValueStepper(
-                        display = target.seconds.toString(),
-                        unit = "s",
-                        canDecrease = target.seconds > 1,
-                        canIncrease = target.seconds < 3600,
-                        onDecrease = { onChange(target.copy(seconds = stepSeconds(target.seconds, -1))) },
-                        onIncrease = { onChange(target.copy(seconds = stepSeconds(target.seconds, 1))) },
-                        testTagPrefix = "seconds",
-                    )
-                }
-            }
-            if (metric.usesLoad) {
-                TargetRow("Added load") {
-                    CruxValueStepper(
-                        display = (if (target.loadKg > 0) "+" else if (target.loadKg < 0) "−" else "") + formatKg(kotlin.math.abs(target.loadKg)),
-                        unit = "kg",
-                        canDecrease = target.loadKg > MIN_LOAD,
-                        canIncrease = target.loadKg < MAX_LOAD,
-                        onDecrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, -1))) },
-                        onIncrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, 1))) },
-                        testTagPrefix = "load",
-                    )
-                }
-            }
-            TargetRow("Rest between sets") {
-                CruxValueStepper(
-                    display = target.restSeconds.toString(),
-                    unit = "s",
-                    canDecrease = target.restSeconds > 0,
-                    canIncrease = target.restSeconds < 900,
-                    onDecrease = { onChange(target.copy(restSeconds = (target.restSeconds - 15).coerceAtLeast(0))) },
-                    onIncrease = { onChange(target.copy(restSeconds = (target.restSeconds + 15).coerceAtMost(900))) },
-                    testTagPrefix = "rest",
-                )
+            if (metric.usesIntervals) {
+                IntervalTargets(target, metric.usesLoad, onChange)
+            } else {
+                StandardTargets(target, metric, onChange)
             }
             CruxButton(
                 text = "Done",
@@ -381,6 +342,104 @@ private fun TargetSheet(
             )
         }
     }
+}
+
+/** Sets with reps or time per set, optional load, and rest between sets. */
+@Composable
+private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange: (ExerciseTarget) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
+        TargetRow("Sets") {
+            CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "sets", testTagPrefix = "sets")
+        }
+        if (metric.usesReps) {
+            TargetRow("Reps") {
+                CruxStepper(target.reps, { onChange(target.copy(reps = it)) }, 1..100, "reps", testTagPrefix = "reps")
+            }
+        }
+        if (metric.usesTime) {
+            TargetRow("Time per set") {
+                SecondsStepper(target.seconds, "seconds") { onChange(target.copy(seconds = it)) }
+            }
+        }
+        if (metric.usesLoad) {
+            TargetRow("Added load") { LoadStepper(target, onChange) }
+        }
+        TargetRow("Rest between sets") {
+            RestStepper(target.restSeconds, "rest") { onChange(target.copy(restSeconds = it)) }
+        }
+    }
+}
+
+/** Interval work: work and rest per repeat, repeats per cycle, cycles, rest between cycles. */
+@Composable
+private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange: (ExerciseTarget) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
+        TargetRow("Work") {
+            SecondsStepper(target.seconds, "work") { onChange(target.copy(seconds = it)) }
+        }
+        TargetRow("Rest") {
+            CruxValueStepper(
+                display = target.repRestSeconds.toString(),
+                unit = "s",
+                canDecrease = target.repRestSeconds > 0,
+                canIncrease = target.repRestSeconds < 600,
+                onDecrease = { onChange(target.copy(repRestSeconds = (target.repRestSeconds - 1).coerceAtLeast(0))) },
+                onIncrease = { onChange(target.copy(repRestSeconds = (target.repRestSeconds + 1).coerceAtMost(600))) },
+                testTagPrefix = "rep_rest",
+            )
+        }
+        TargetRow("Repeats") {
+            CruxStepper(target.reps, { onChange(target.copy(reps = it)) }, 1..50, "reps", testTagPrefix = "repeats")
+        }
+        TargetRow("Cycles") {
+            CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "cycles", testTagPrefix = "cycles")
+        }
+        if (usesLoad) {
+            TargetRow("Added load") { LoadStepper(target, onChange) }
+        }
+        TargetRow("Rest between cycles") {
+            RestStepper(target.restSeconds, "cycle_rest") { onChange(target.copy(restSeconds = it)) }
+        }
+    }
+}
+
+@Composable
+private fun SecondsStepper(seconds: Int, tag: String, onChange: (Int) -> Unit) {
+    CruxValueStepper(
+        display = seconds.toString(),
+        unit = "s",
+        canDecrease = seconds > 1,
+        canIncrease = seconds < 3600,
+        onDecrease = { onChange(stepSeconds(seconds, -1)) },
+        onIncrease = { onChange(stepSeconds(seconds, 1)) },
+        testTagPrefix = tag,
+    )
+}
+
+@Composable
+private fun RestStepper(seconds: Int, tag: String, onChange: (Int) -> Unit) {
+    CruxValueStepper(
+        display = seconds.toString(),
+        unit = "s",
+        canDecrease = seconds > 0,
+        canIncrease = seconds < 900,
+        onDecrease = { onChange((seconds - 15).coerceAtLeast(0)) },
+        onIncrease = { onChange((seconds + 15).coerceAtMost(900)) },
+        testTagPrefix = tag,
+    )
+}
+
+@Composable
+private fun LoadStepper(target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit) {
+    CruxValueStepper(
+        display = (if (target.loadKg > 0) "+" else if (target.loadKg < 0) "−" else "") + formatKg(kotlin.math.abs(target.loadKg)),
+        unit = "kg",
+        canDecrease = target.loadKg > MIN_LOAD,
+        canIncrease = target.loadKg < MAX_LOAD,
+        onDecrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, -1))) },
+        onIncrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, 1))) },
+        testTagPrefix = "load",
+    )
 }
 
 @Composable

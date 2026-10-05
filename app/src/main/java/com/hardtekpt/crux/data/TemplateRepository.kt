@@ -71,6 +71,7 @@ class OfflineTemplateRepository @Inject constructor(
                         seconds = item.target.seconds,
                         loadKg = item.target.loadKg,
                         restSeconds = item.target.restSeconds,
+                        repRestSeconds = item.target.repRestSeconds,
                     )
                 },
             )
@@ -97,6 +98,7 @@ private fun TemplateWithBlocks.toModel() = WorkoutTemplate(
                         seconds = it.item.seconds,
                         loadKg = it.item.loadKg,
                         restSeconds = it.item.restSeconds,
+                        repRestSeconds = it.item.repRestSeconds,
                     ),
                 )
             },

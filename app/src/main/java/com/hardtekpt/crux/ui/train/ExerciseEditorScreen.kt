@@ -196,12 +196,20 @@ fun ExerciseEditorScreen(
                 }
             }
             Eyebrow("Measured by", Modifier.padding(top = space.s3))
-            CruxSegmentedButtons(
-                options = MetricType.entries,
-                selected = draft.metric,
-                label = { it.shortLabel },
-                onSelect = viewModel::setMetric,
-            )
+            // More than four types, so chips rather than segmented buttons.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(space.s2),
+                verticalArrangement = Arrangement.spacedBy(space.s2),
+            ) {
+                MetricType.entries.forEach { metric ->
+                    CruxFilterChip(
+                        label = metric.label,
+                        selected = draft.metric == metric,
+                        onClick = { viewModel.setMetric(metric) },
+                        modifier = Modifier.testTag("metric_${metric.name}"),
+                    )
+                }
+            }
             Text(
                 metricHelp(draft.metric),
                 style = MaterialTheme.typography.bodySmall,
@@ -262,4 +270,6 @@ private fun metricHelp(metric: MetricType): String = when (metric) {
     MetricType.WEIGHTED_REPS -> "Plans set sets, reps and added load. Weighted pull-ups, dips."
     MetricType.TIME -> "Plans set sets and seconds. Lever holds, traversing, stretches."
     MetricType.WEIGHTED_TIME -> "Plans set sets, seconds and added load. Hangboard hangs."
+    MetricType.INTERVALS -> "Plans set work, rest, repeats, cycles and rest between cycles. Tabata, circuits."
+    MetricType.WEIGHTED_INTERVALS -> "Intervals with added load. Hangboard repeaters."
 }

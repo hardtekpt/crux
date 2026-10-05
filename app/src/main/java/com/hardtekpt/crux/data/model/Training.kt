@@ -25,11 +25,15 @@ enum class MetricType(
     val usesReps: Boolean,
     val usesTime: Boolean,
     val usesLoad: Boolean,
+    /** Interval work (Tabata, repeaters): work and rest per repeat, repeats per cycle, cycles. */
+    val usesIntervals: Boolean = false,
 ) {
     REPS("Reps", "Reps", usesReps = true, usesTime = false, usesLoad = false),
     WEIGHTED_REPS("Reps with load", "Reps+kg", usesReps = true, usesTime = false, usesLoad = true),
     TIME("Time", "Time", usesReps = false, usesTime = true, usesLoad = false),
     WEIGHTED_TIME("Time with load", "Time+kg", usesReps = false, usesTime = true, usesLoad = true),
+    INTERVALS("Intervals", "Intervals", usesReps = false, usesTime = false, usesLoad = false, usesIntervals = true),
+    WEIGHTED_INTERVALS("Intervals with load", "Intervals+kg", usesReps = false, usesTime = false, usesLoad = true, usesIntervals = true),
 }
 
 data class Exercise(
@@ -40,7 +44,13 @@ data class Exercise(
     val notes: String?,
 )
 
-/** What a plan asks for one exercise. Fields the metric does not use are ignored. */
+/**
+ * What a plan asks for one exercise. Fields the metric does not use are ignored.
+ *
+ * For interval metrics the same fields read as: [sets] = cycles, [reps] = repeats per cycle,
+ * [seconds] = work per repeat, [repRestSeconds] = rest between repeats, [restSeconds] = rest
+ * between cycles.
+ */
 data class ExerciseTarget(
     val sets: Int = 3,
     val reps: Int = 8,
@@ -48,11 +58,16 @@ data class ExerciseTarget(
     /** Added load in kg; negative means assisted. */
     val loadKg: Double = 0.0,
     val restSeconds: Int = 120,
+    val repRestSeconds: Int = 0,
 ) {
-    /** `5 × 5 · +10 kg`, `6 × 10 s · +5 kg`, `3 × 12`. */
+    /** `5 × 5 · +10 kg`, `6 × 10 s · +5 kg`, `3 × 12`, `3 × 6 × 7 s on / 3 s off · +5 kg`. */
     fun prescription(metric: MetricType): String = buildString {
         append("$sets × ")
-        append(if (metric.usesTime) formatDuration(seconds) else "$reps")
+        when {
+            metric.usesIntervals -> append("$reps × ${formatDuration(seconds)} on / ${formatDuration(repRestSeconds)} off")
+            metric.usesTime -> append(formatDuration(seconds))
+            else -> append("$reps")
+        }
         if (metric.usesLoad && loadKg != 0.0) {
             append(" · ")
             append(if (loadKg > 0) "+" else "−")
@@ -65,7 +80,11 @@ data class ExerciseTarget(
 
     /** Rough seconds this exercise takes: work plus rest between sets. */
     fun estimatedSeconds(metric: MetricType): Int {
-        val work = if (metric.usesTime) seconds else reps * SECONDS_PER_REP
+        val work = when {
+            metric.usesIntervals -> reps * seconds + (reps - 1).coerceAtLeast(0) * repRestSeconds
+            metric.usesTime -> seconds
+            else -> reps * SECONDS_PER_REP
+        }
         return sets * work + (sets - 1).coerceAtLeast(0) * restSeconds
     }
 
@@ -77,6 +96,11 @@ data class ExerciseTarget(
             MetricType.WEIGHTED_REPS -> ExerciseTarget(sets = 5, reps = 5, loadKg = 10.0, restSeconds = 180)
             MetricType.TIME -> ExerciseTarget(sets = 3, seconds = 30, restSeconds = 60)
             MetricType.WEIGHTED_TIME -> ExerciseTarget(sets = 6, seconds = 10, loadKg = 5.0, restSeconds = 180)
+            // Classic Tabata: 8 × 20 s on / 10 s off.
+            MetricType.INTERVALS -> ExerciseTarget(sets = 1, reps = 8, seconds = 20, repRestSeconds = 10, restSeconds = 120)
+            // Hangboard repeaters: 6 × 7 s on / 3 s off, three cycles.
+            MetricType.WEIGHTED_INTERVALS ->
+                ExerciseTarget(sets = 3, reps = 6, seconds = 7, repRestSeconds = 3, restSeconds = 180)
         }
     }
 }

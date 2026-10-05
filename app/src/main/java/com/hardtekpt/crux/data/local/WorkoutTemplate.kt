@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -84,6 +85,8 @@ data class TemplateExerciseEntity(
     val seconds: Int,
     val loadKg: Double,
     val restSeconds: Int,
+    /** Interval exercises only: rest between repeats. Added in schema 5. */
+    @ColumnInfo(defaultValue = "0") val repRestSeconds: Int = 0,
 )
 
 data class TemplateExerciseWithExercise(

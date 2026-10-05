@@ -20,6 +20,22 @@ class TrainingModelTest {
     }
 
     @Test
+    fun `interval prescriptions show work, rest, repeats and cycles`() {
+        val repeaters = ExerciseTarget.defaultFor(MetricType.WEIGHTED_INTERVALS).copy(loadKg = 5.0)
+        assertEquals("3 × 6 × 7 s on / 3 s off · +5 kg", repeaters.prescription(MetricType.WEIGHTED_INTERVALS))
+        assertEquals("3 min", repeaters.restLabel())
+        val tabata = ExerciseTarget.defaultFor(MetricType.INTERVALS)
+        assertEquals("1 × 8 × 20 s on / 10 s off", tabata.prescription(MetricType.INTERVALS))
+    }
+
+    @Test
+    fun `interval length counts every repeat, rest and cycle rest`() {
+        // 3 cycles × (6 × 7 s + 5 × 3 s) + 2 × 180 s = 3 × 57 + 360 = 531 s.
+        val repeaters = ExerciseTarget(sets = 3, reps = 6, seconds = 7, repRestSeconds = 3, restSeconds = 180)
+        assertEquals(531, repeaters.estimatedSeconds(MetricType.WEIGHTED_INTERVALS))
+    }
+
+    @Test
     fun `rest reads like a person would say it`() {
         assertEquals("3 min", ExerciseTarget(restSeconds = 180).restLabel())
         assertEquals("1 min 30 s", ExerciseTarget(restSeconds = 90).restLabel())

@@ -174,6 +174,8 @@ private data class StarterExercise(
 private val STARTER_EXERCISES = listOf(
     StarterExercise("Half-crimp hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, "20 mm edge"),
     StarterExercise("Open-hand hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, "20 mm edge"),
+    StarterExercise("Repeaters", ExerciseCategory.FINGERS, MetricType.WEIGHTED_INTERVALS, "20 mm edge, half crimp"),
+    StarterExercise("Tabata core", ExerciseCategory.CORE, MetricType.INTERVALS, "Hollow holds or mountain climbers"),
     StarterExercise("Scap pull-ups", ExerciseCategory.PULLING, MetricType.REPS),
     StarterExercise("Weighted pull-ups", ExerciseCategory.PULLING, MetricType.WEIGHTED_REPS),
     StarterExercise("Front lever tucks", ExerciseCategory.CORE, MetricType.TIME),
