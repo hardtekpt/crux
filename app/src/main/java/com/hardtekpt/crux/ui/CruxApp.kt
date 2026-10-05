@@ -23,6 +23,8 @@ import com.hardtekpt.crux.ui.navigation.cruxEnter
 import com.hardtekpt.crux.ui.navigation.cruxExit
 import com.hardtekpt.crux.ui.navigation.cruxPopEnter
 import com.hardtekpt.crux.ui.navigation.cruxPopExit
+import com.hardtekpt.crux.ui.navigation.cruxPredictivePopEnter
+import com.hardtekpt.crux.ui.navigation.cruxPredictivePopExit
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.navBarClearance
 import androidx.compose.foundation.layout.WindowInsets
@@ -125,6 +127,8 @@ fun CruxApp() {
             exitTransition = cruxExit,
             popEnterTransition = cruxPopEnter,
             popExitTransition = cruxPopExit,
+            predictivePopEnterTransition = cruxPredictivePopEnter,
+            predictivePopExitTransition = cruxPredictivePopExit,
         ) {
             navigation<HomeGraph>(startDestination = HomeRoute) {
                 page<HomeRoute> {

@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavBackStackEntry
@@ -22,11 +21,12 @@ import androidx.navigation.NavDestination.Companion.hierarchy
  * most a small nudge (about 16 dp) to say which way you went; nothing scales or swoops.
  *
  * - Tabs: a straight cross-fade.
- * - Drilling in: the new screen fades in nudged from the right; back reverses it.
+ * - Drilling in: the new screen fades in nudged from the right.
  * - Forms: fade in nudged up from below; closing drops them back down.
+ * - Back, by button or swipe: a plain fade. Nothing moves or shrinks.
  *
- * Arrivals take 180 ms with a decelerating curve, departures 120 ms. The predictive back
- * gesture scrubs the same small motion.
+ * Arrivals take 180 ms with a decelerating curve, departures 120 ms. The swipe-back gesture
+ * scrubs the same fade instead of the library's default shrink.
  */
 
 private val Decelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
@@ -85,8 +85,14 @@ val cruxPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterT
 }
 
 val cruxPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-    when (move()) {
-        Move.Push -> fadeOutOnly() + slideOutHorizontally(exitSpec<IntOffset>(), ::nudge)
-        else -> cruxExit()
-    }
+    fadeOutOnly()
+}
+
+/** Swipe-back: the same plain fades, so the closing page never scales toward the centre. */
+val cruxPredictivePopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition = {
+    fadeInOnly()
+}
+
+val cruxPredictivePopExit: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition = {
+    fadeOutOnly()
 }
