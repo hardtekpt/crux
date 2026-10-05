@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,9 +77,10 @@ fun CruxListRow(
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .background(if (selected) colors.surfaceContainerHigh else colors.surfaceContainer)
+            .border(CruxTheme.size.borderHairline, colors.outlineVariant, MaterialTheme.shapes.medium)
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .heightIn(min = CruxTheme.size.touchTarget)
-            .padding(horizontal = CruxTheme.space.s4, vertical = CruxTheme.space.s3),
+            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s2),
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
         verticalAlignment = Alignment.CenterVertically,
     ) {

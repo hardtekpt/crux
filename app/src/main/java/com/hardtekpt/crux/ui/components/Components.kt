@@ -2,6 +2,7 @@ package com.hardtekpt.crux.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,15 +101,12 @@ fun CruxCard(
             },
             contentColor = colors.onSurface,
         ),
-        border = if (fill == CruxCardFill.Outlined) {
-            BorderStroke(CruxTheme.size.borderHairline, colors.outlineVariant)
-        } else {
-            null
-        },
+        // Every card carries a hairline so it stands off the screen behind it.
+        border = BorderStroke(CruxTheme.size.borderHairline, colors.outlineVariant),
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(CruxTheme.space.s4),
+            modifier = Modifier.padding(CruxTheme.space.s3),
             verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
             content = content,
         )
@@ -140,7 +138,12 @@ fun StatTile(
     Column(
         modifier = modifier
             .background(container, MaterialTheme.shapes.large)
-            .padding(CruxTheme.space.s4),
+            .border(
+                CruxTheme.size.borderHairline,
+                if (isPersonalBest) colors.secondary.copy(alpha = 0.6f) else colors.outlineVariant,
+                MaterialTheme.shapes.large,
+            )
+            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s3),
         verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
     ) {
         Text(
