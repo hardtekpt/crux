@@ -1,6 +1,6 @@
 package com.hardtekpt.crux.data
 
-import com.hardtekpt.crux.data.local.ExerciseDao
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
@@ -29,17 +29,18 @@ interface ExerciseRepository {
 }
 
 class OfflineExerciseRepository @Inject constructor(
-    private val dao: ExerciseDao,
+    private val dbs: CruxDatabases,
     private val clock: Clock,
 ) : ExerciseRepository {
     override fun observeExercises(): Flow<List<Exercise>> =
-        dao.observeAll().map { rows -> rows.map(ExerciseEntity::toModel) }
+        dbs.observe { it.exerciseDao().observeAll() }.map { rows -> rows.map(ExerciseEntity::toModel) }
 
-    override suspend fun getExercise(id: Long): Exercise? = dao.get(id)?.toModel()
+    override suspend fun getExercise(id: Long): Exercise? = dbs.current().exerciseDao().get(id)?.toModel()
 
     override suspend fun saveExercise(input: ExerciseInput): Long {
         val name = input.name.trim()
         val notes = input.notes?.trim()?.takeIf { it.isNotEmpty() }
+        val dao = dbs.current().exerciseDao()
         val existing = if (input.id != 0L) dao.get(input.id) else null
         return if (existing != null) {
             dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes))
@@ -57,9 +58,9 @@ class OfflineExerciseRepository @Inject constructor(
         }
     }
 
-    override suspend fun planCount(id: Long): Int = dao.planCount(id)
+    override suspend fun planCount(id: Long): Int = dbs.current().exerciseDao().planCount(id)
 
-    override suspend fun deleteExercise(id: Long) = dao.delete(id)
+    override suspend fun deleteExercise(id: Long) = dbs.current().exerciseDao().delete(id)
 }
 
 internal fun ExerciseEntity.toModel() = Exercise(

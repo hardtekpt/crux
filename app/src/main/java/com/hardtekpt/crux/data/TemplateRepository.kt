@@ -1,9 +1,8 @@
 package com.hardtekpt.crux.data
 
 import androidx.room.withTransaction
-import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
-import com.hardtekpt.crux.data.local.TemplateDao
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
 import com.hardtekpt.crux.data.local.TemplateWithBlocks
 import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
@@ -25,18 +24,23 @@ interface TemplateRepository {
 }
 
 class OfflineTemplateRepository @Inject constructor(
-    private val db: CruxDatabase,
-    private val dao: TemplateDao,
+    private val dbs: CruxDatabases,
 ) : TemplateRepository {
     override fun observeTemplates(): Flow<List<WorkoutTemplate>> =
-        dao.observeAll().map { it.map(TemplateWithBlocks::toModel) }
+        dbs.observe { it.templateDao().observeAll() }.map { it.map(TemplateWithBlocks::toModel) }
 
     override fun observeTemplate(id: Long): Flow<WorkoutTemplate?> =
-        dao.observe(id).map { it?.toModel() }
+        dbs.observe { it.templateDao().observe(id) }.map { it?.toModel() }
 
-    override suspend fun getTemplate(id: Long): WorkoutTemplate? = dao.get(id)?.toModel()
+    override suspend fun getTemplate(id: Long): WorkoutTemplate? = dbs.current().templateDao().get(id)?.toModel()
 
-    override suspend fun saveTemplate(template: WorkoutTemplate): Long = db.withTransaction {
+    override suspend fun saveTemplate(template: WorkoutTemplate): Long {
+        val db = dbs.current()
+        val dao = db.templateDao()
+        return db.withTransaction { insertOrReplace(dao, template) }
+    }
+
+    private suspend fun insertOrReplace(dao: com.hardtekpt.crux.data.local.TemplateDao, template: WorkoutTemplate): Long {
         val id = if (template.id == 0L) {
             dao.insertTemplate(
                 WorkoutTemplateEntity(
@@ -71,10 +75,10 @@ class OfflineTemplateRepository @Inject constructor(
                 },
             )
         }
-        id
+        return id
     }
 
-    override suspend fun deleteTemplate(id: Long) = dao.deleteTemplate(id)
+    override suspend fun deleteTemplate(id: Long) = dbs.current().templateDao().deleteTemplate(id)
 }
 
 private fun TemplateWithBlocks.toModel() = WorkoutTemplate(

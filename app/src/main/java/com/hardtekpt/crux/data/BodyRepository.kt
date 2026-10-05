@@ -1,6 +1,6 @@
 package com.hardtekpt.crux.data
 
-import com.hardtekpt.crux.data.local.BodyMeasurementDao
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.MeasurementType
@@ -19,14 +19,14 @@ interface BodyRepository {
 }
 
 class OfflineBodyRepository @Inject constructor(
-    private val dao: BodyMeasurementDao,
+    private val dbs: CruxDatabases,
     private val clock: Clock,
 ) : BodyRepository {
     override fun observeWeights(): Flow<List<Measurement>> =
-        dao.observe(MeasurementType.WEIGHT).map { rows -> rows.map { it.toModel() } }
+        dbs.observe { it.bodyMeasurementDao().observe(MeasurementType.WEIGHT) }.map { rows -> rows.map { it.toModel() } }
 
     override fun observeHeight(): Flow<Measurement?> =
-        dao.observe(MeasurementType.HEIGHT).map { rows -> rows.firstOrNull()?.toModel() }
+        dbs.observe { it.bodyMeasurementDao().observe(MeasurementType.HEIGHT) }.map { rows -> rows.firstOrNull()?.toModel() }
 
     override suspend fun logWeight(kg: Double, date: LocalDate) {
         insert(MeasurementType.WEIGHT, kg, date)
@@ -37,7 +37,7 @@ class OfflineBodyRepository @Inject constructor(
     }
 
     private suspend fun insert(type: MeasurementType, value: Double, date: LocalDate) {
-        dao.insert(
+        dbs.current().bodyMeasurementDao().insert(
             BodyMeasurementEntity(
                 type = type,
                 value = value,

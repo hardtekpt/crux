@@ -34,7 +34,7 @@ class BackupRepositoryTest {
     @Test
     fun `export then import restores every section`() = runTest {
         val source = newDb()
-        StarterDataSeeder(source, FIXED_CLOCK).seed(includeSampleData = true)
+        StarterDataSeeder(FIXED_CLOCK).seed(source, includeSampleData = true)
         val text = BackupRepository(source, FIXED_CLOCK).export(BackupSection.entries.toSet())
 
         val target = newDb()
@@ -51,7 +51,7 @@ class BackupRepositoryTest {
     @Test
     fun `importing the same backup twice adds nothing the second time`() = runTest {
         val db = newDb()
-        StarterDataSeeder(db, FIXED_CLOCK).seed(includeSampleData = true)
+        StarterDataSeeder(FIXED_CLOCK).seed(db, includeSampleData = true)
         val repo = BackupRepository(db, FIXED_CLOCK)
         val file = repo.parse(repo.export(BackupSection.entries.toSet()))
 
@@ -64,7 +64,7 @@ class BackupRepositoryTest {
     @Test
     fun `sections switched off are left out of the file`() = runTest {
         val db = newDb()
-        StarterDataSeeder(db, FIXED_CLOCK).seed(includeSampleData = true)
+        StarterDataSeeder(FIXED_CLOCK).seed(db, includeSampleData = true)
         val repo = BackupRepository(db, FIXED_CLOCK)
 
         val file = repo.parse(repo.export(setOf(BackupSection.PLANS)))
@@ -77,7 +77,7 @@ class BackupRepositoryTest {
     @Test
     fun `plans bring their exercises even without the library`() = runTest {
         val source = newDb()
-        StarterDataSeeder(source, FIXED_CLOCK).seed(includeSampleData = false)
+        StarterDataSeeder(FIXED_CLOCK).seed(source, includeSampleData = false)
         val text = BackupRepository(source, FIXED_CLOCK).export(setOf(BackupSection.PLANS))
 
         val target = newDb()

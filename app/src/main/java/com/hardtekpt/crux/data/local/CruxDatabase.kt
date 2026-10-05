@@ -22,6 +22,9 @@ abstract class CruxDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
 
     companion object {
-        const val NAME = "crux.db"
+        /** The climber's own data. */
+        const val NAME = "crux-user.db"
+        /** Demo mode's data set. */
+        const val DEMO_NAME = "crux.db"
     }
 }

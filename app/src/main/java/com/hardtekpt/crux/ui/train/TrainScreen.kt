@@ -53,6 +53,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import com.hardtekpt.crux.data.seed.StarterData
 import javax.inject.Inject
 
 enum class TrainView(val label: String) { Plans("Plans"), Exercises("Exercises") }
@@ -71,7 +73,13 @@ data class TrainUiState(
 class TrainViewModel @Inject constructor(
     templates: TemplateRepository,
     exercises: ExerciseRepository,
+    private val starterData: StarterData,
 ) : ViewModel() {
+    /** Copies the starter exercises and plans into the active data set. */
+    fun addStarterLibrary() {
+        viewModelScope.launch { starterData.addStarterLibraryToCurrent() }
+    }
+
     val uiState: StateFlow<TrainUiState> = combine(
         templates.observeTemplates(),
         exercises.observeExercises(),
@@ -117,8 +125,8 @@ fun TrainScreen(
             modifier = Modifier.testTag("train_list"),
         ) {
             when (view) {
-                TrainView.Plans -> plans(uiState, onOpenPlan, onNewPlan)
-                TrainView.Exercises -> exercises(uiState, onOpenExercise, onNewExercise)
+                TrainView.Plans -> plans(uiState, onOpenPlan, onNewPlan, viewModel::addStarterLibrary)
+                TrainView.Exercises -> exercises(uiState, onOpenExercise, onNewExercise, viewModel::addStarterLibrary)
             }
         }
     }
@@ -128,6 +136,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.plans(
     uiState: TrainUiState,
     onOpenPlan: (Long) -> Unit,
     onNewPlan: () -> Unit,
+    onAddStarters: () -> Unit,
 ) {
     item {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -148,6 +157,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.plans(
                 text = "No plans yet. Tap New plan and build one from your exercises.",
             )
         }
+        item { StarterButton(onAddStarters) }
     }
     items(uiState.plans, key = { "plan_${it.id}" }) { plan ->
         CruxCard(
@@ -186,6 +196,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.exercises(
     uiState: TrainUiState,
     onOpenExercise: (Long) -> Unit,
     onNewExercise: () -> Unit,
+    onAddStarters: () -> Unit,
 ) {
     item {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -206,6 +217,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.exercises(
                 text = "No exercises yet. Tap New exercise to start your library.",
             )
         }
+        item { StarterButton(onAddStarters) }
     }
     uiState.exercisesByCategory.forEach { (category, exercises) ->
         item(key = "cat_${category.name}") {
@@ -227,4 +239,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.exercises(
             )
         }
     }
+}
+
+/** Offered on an empty library: 13 common exercises and 3 plans to start from. */
+@Composable
+private fun StarterButton(onClick: () -> Unit) {
+    CruxButton(
+        text = "Add starter exercises and plans",
+        onClick = onClick,
+        variant = CruxButtonVariant.Text,
+        modifier = Modifier.testTag("add_starters"),
+    )
 }

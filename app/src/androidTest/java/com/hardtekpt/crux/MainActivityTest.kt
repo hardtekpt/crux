@@ -2,6 +2,7 @@ package com.hardtekpt.crux
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
@@ -16,7 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
-import com.hardtekpt.crux.data.seed.StarterDataSeeder
+import com.hardtekpt.crux.data.seed.StarterData
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -33,12 +34,16 @@ class MainActivityTest {
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
     @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
 
-    @Inject lateinit var seeder: StarterDataSeeder
+    @Inject lateinit var starterData: StarterData
 
     @Before
     fun setUp() {
         hiltRule.inject()
-        runBlocking { seeder.seed(includeSampleData = false) }
+        runBlocking {
+            // The climber's own data set starts with the starter library; demo gets its full set.
+            starterData.addStarterLibraryToCurrent()
+            starterData.seedDemoIfEmpty()
+        }
     }
 
     @Test
@@ -172,6 +177,34 @@ class MainActivityTest {
         val trendTop = composeRule.onNodeWithTag("widget_WEIGHT_TREND").fetchSemanticsNode().boundsInRoot.top
         val recentTop = composeRule.onNodeWithTag("widget_RECENT_CLIMBS").fetchSemanticsNode().boundsInRoot.top
         assert(trendTop < recentTop) { "Weight trend should have moved above Recent climbs" }
+    }
+
+    @Test
+    fun demoModeShowsSampleDataAndLeavesRealDataAlone() {
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("screen_Journal")
+        assertEquals(0, composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().size)
+
+        openSettings()
+        composeRule.onNodeWithTag("demo_mode").performScrollTo().performClick()
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_climb")
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.onNodeWithTag("home_eyebrow").assertTextContains("DEMO DATA", substring = true)
+
+        openSettings()
+        composeRule.onNodeWithTag("demo_mode").performScrollTo().performClick()
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().isEmpty() }
+    }
+
+    private fun openSettings() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForIdle()
+        // The You tab keeps its own back stack, so Settings may still be open from last time.
+        if (composeRule.onAllNodesWithTag("screen_Settings").fetchSemanticsNodes().isNotEmpty()) return
+        composeRule.onNodeWithTag("open_settings").performClick()
+        composeRule.waitForTag("screen_Settings")
     }
 
     @Test

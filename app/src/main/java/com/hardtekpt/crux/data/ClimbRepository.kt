@@ -1,6 +1,6 @@
 package com.hardtekpt.crux.data
 
-import com.hardtekpt.crux.data.local.ClimbDao
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.PersonalBestRow
 import com.hardtekpt.crux.data.model.Climb
@@ -22,24 +22,24 @@ interface ClimbRepository {
 }
 
 class OfflineClimbRepository @Inject constructor(
-    private val climbDao: ClimbDao,
+    private val dbs: CruxDatabases,
     private val clock: Clock,
 ) : ClimbRepository {
     override fun observeClimbs(): Flow<List<Climb>> =
-        climbDao.observeAll().map { it.map(ClimbEntity::toModel) }
+        dbs.observe { it.climbDao().observeAll() }.map { it.map(ClimbEntity::toModel) }
 
     override fun observeRecentClimbs(limit: Int): Flow<List<Climb>> =
-        climbDao.observeRecent(limit).map { it.map(ClimbEntity::toModel) }
+        dbs.observe { it.climbDao().observeRecent(limit) }.map { it.map(ClimbEntity::toModel) }
 
     override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> =
-        climbDao.observeSince(from.toEpochDay()).map { it.map(ClimbEntity::toModel) }
+        dbs.observe { it.climbDao().observeSince(from.toEpochDay()) }.map { it.map(ClimbEntity::toModel) }
 
-    override fun observeClimbCount(): Flow<Int> = climbDao.observeCount()
+    override fun observeClimbCount(): Flow<Int> = dbs.observe { it.climbDao().observeCount() }
 
     override fun observePersonalBests(): Flow<List<PersonalBest>> =
-        climbDao.observePersonalBests().map { it.map(PersonalBestRow::toModel) }
+        dbs.observe { it.climbDao().observePersonalBests() }.map { it.map(PersonalBestRow::toModel) }
 
-    override suspend fun logClimb(climb: NewClimb): Long = climbDao.insert(
+    override suspend fun logClimb(climb: NewClimb): Long = dbs.current().climbDao().insert(
         ClimbEntity(
             discipline = climb.discipline,
             gradeScale = climb.gradeScale,

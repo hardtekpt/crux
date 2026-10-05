@@ -22,33 +22,66 @@ import com.hardtekpt.crux.data.model.Venue
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import com.hardtekpt.crux.data.local.CruxDatabases
 import javax.inject.Singleton
 
 /**
- * Fills a fresh install. A starter exercise library and session plans go into every build; a few weeks of
- * sample climbs and weigh-ins only go into debug builds so the dashboard looks alive.
+ * Demo mode's data set and the optional starter library. The demo database is filled with
+ * the starter library, plans and a few weeks of sample climbs; the climber's own database
+ * starts empty and only gets starter exercises when they ask for them.
  */
 @Singleton
-class StarterDataSeeder @Inject constructor(
-    private val db: CruxDatabase,
-    private val clock: Clock,
+class StarterData @Inject constructor(
+    private val dbs: CruxDatabases,
+    clock: Clock,
 ) {
+    private val seeder = StarterDataSeeder(clock)
+
+    suspend fun seedDemoIfEmpty() = seeder.seed(dbs.demo, includeSampleData = true)
+
+    /** Adds the starter exercises and plans to whichever data set is active. */
+    suspend fun addStarterLibraryToCurrent(): Int = seeder.addStarterLibrary(dbs.current())
+}
+
+class StarterDataSeeder(private val clock: Clock) {
     /**
-     * Checks the database rather than a flag, so the MVP's destructive schema changes
-     * repopulate an emptied database on the next launch.
+     * Fills an empty database: the starter library and plans, plus sample climbs and
+     * weigh-ins when [includeSampleData]. Checks contents rather than a flag.
      */
-    suspend fun seed(includeSampleData: Boolean) {
+    suspend fun seed(db: CruxDatabase, includeSampleData: Boolean) {
         db.withTransaction {
-            if (db.exerciseDao().count() == 0 && db.templateDao().count() == 0) insertLibraryAndPlans()
+            if (db.exerciseDao().count() == 0 && db.templateDao().count() == 0) insertLibraryAndPlans(db)
             if (includeSampleData && db.climbDao().count() == 0 && db.bodyMeasurementDao().count() == 0) {
-                insertSampleData()
+                insertSampleData(db)
             }
         }
     }
 
-    private suspend fun insertLibraryAndPlans() {
+    /** Adds the starter exercises and plans to a database that may already hold the climber's own. */
+    suspend fun addStarterLibrary(db: CruxDatabase): Int {
+        val existingPlans = db.templateDao().getAll().map { it.template.name.lowercase() }.toSet()
+        var added = 0
+        db.withTransaction {
+            insertLibraryAndPlans(
+                db,
+                skipPlans = existingPlans,
+                onAdded = { added++ },
+            )
+        }
+        return added
+    }
+
+    private suspend fun insertLibraryAndPlans(
+        db: CruxDatabase,
+        skipPlans: Set<String> = emptySet(),
+        onAdded: () -> Unit = {},
+    ) {
         val now = clock.millis()
+        val present = db.exerciseDao().getAll().associate { it.name.lowercase() to it.id }
         val exerciseIds = STARTER_EXERCISES.associate { exercise ->
+            // An exercise the climber already has (by name) is reused, not duplicated.
+            present[exercise.name.lowercase()]?.let { return@associate exercise.name to it }
+            onAdded()
             exercise.name to db.exerciseDao().insert(
                 ExerciseEntity(
                     name = exercise.name,
@@ -61,6 +94,8 @@ class StarterDataSeeder @Inject constructor(
         }
         val dao = db.templateDao()
         STARTER_TEMPLATES.forEachIndexed { templatePosition, template ->
+            if (template.name.lowercase() in skipPlans) return@forEachIndexed
+            onAdded()
             val templateId = dao.insertTemplate(
                 WorkoutTemplateEntity(
                     name = template.name,
@@ -90,7 +125,7 @@ class StarterDataSeeder @Inject constructor(
         }
     }
 
-    private suspend fun insertSampleData() {
+    private suspend fun insertSampleData(db: CruxDatabase) {
         val today = LocalDate.now(clock)
         val now = clock.millis()
         db.climbDao().insertAll(

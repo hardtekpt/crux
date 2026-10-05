@@ -83,9 +83,11 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
+    val demoMode by viewModel.demoMode.collectAsStateWithLifecycle()
     HomeContent(
         uiState = uiState,
         dashboard = dashboard,
+        demoMode = demoMode,
         actions = WidgetActions(onOpenTemplate, onOpenJournal, onOpenProgress, onOpenYou),
         editor = DashboardEditor(
             start = viewModel::startEditing,
@@ -128,6 +130,7 @@ data class DragCallbacks(
 fun HomeContent(
     uiState: HomeUiState,
     dashboard: DashboardState = DashboardState(widgets = defaultDashboard()),
+    demoMode: Boolean = false,
     actions: WidgetActions = WidgetActions(),
     editor: DashboardEditor = DashboardEditor(),
     modifier: Modifier = Modifier,
@@ -236,7 +239,14 @@ fun HomeContent(
                 .testTag("home_list"),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            Eyebrow(if (editing) "Drag to move · resize · remove" else uiState.today.dayLabel())
+            Eyebrow(
+                when {
+                    editing -> "Drag to move · resize · remove"
+                    demoMode -> "${uiState.today.dayLabel()} · Demo data"
+                    else -> uiState.today.dayLabel()
+                },
+                Modifier.testTag("home_eyebrow"),
+            )
             // One flat, keyed list laid out as a two-column flow: moving a widget only reorders
             // children, so the widget being dragged keeps its gesture while it changes rows.
             DashboardGrid(widgets = dashboard.widgets, spacing = space.s3) {

@@ -92,6 +92,9 @@ class HomeViewModel @Inject constructor(
         .map(::buildState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
+    val demoMode: StateFlow<Boolean> = preferences.demoMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     private val _dashboard = MutableStateFlow(DashboardState())
     val dashboard: StateFlow<DashboardState> = _dashboard.asStateFlow()
 

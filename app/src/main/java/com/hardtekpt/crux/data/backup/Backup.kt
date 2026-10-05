@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
@@ -104,10 +105,16 @@ data class ImportResult(val added: Map<BackupSection, Int>, val skipped: Map<Bac
 class BackupFormatException(message: String) : Exception(message)
 
 @Singleton
-class BackupRepository @Inject constructor(
-    private val db: CruxDatabase,
+class BackupRepository(
+    /** The data set to back up or restore into: whichever is active. */
+    private val database: suspend () -> CruxDatabase,
     private val clock: Clock,
 ) {
+    @Inject
+    constructor(dbs: CruxDatabases, clock: Clock) : this({ dbs.current() }, clock)
+
+    constructor(db: CruxDatabase, clock: Clock) : this({ db }, clock)
+
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
@@ -115,6 +122,7 @@ class BackupRepository @Inject constructor(
     }
 
     suspend fun export(sections: Set<BackupSection>): String {
+        val db = database()
         val exercises = db.exerciseDao().getAll()
         val byId = exercises.associateBy { it.id }
         val file = BackupFile(
@@ -166,7 +174,12 @@ class BackupRepository @Inject constructor(
      * Adds what the file holds for the chosen sections. Nothing is deleted: records that are
      * already here (same exercise or plan name, same climb, same weigh-in) are skipped.
      */
-    suspend fun import(file: BackupFile, sections: Set<BackupSection>): ImportResult = db.withTransaction {
+    suspend fun import(file: BackupFile, sections: Set<BackupSection>): ImportResult {
+        val db = database()
+        return db.withTransaction { importInto(db, file, sections) }
+    }
+
+    private suspend fun importInto(db: CruxDatabase, file: BackupFile, sections: Set<BackupSection>): ImportResult {
         val added = mutableMapOf<BackupSection, Int>()
         val skipped = mutableMapOf<BackupSection, Int>()
         val now = clock.millis()
@@ -281,7 +294,7 @@ class BackupRepository @Inject constructor(
                 added.merge(BackupSection.BODY, 1, Int::plus)
             }
         }
-        ImportResult(added, skipped)
+        return ImportResult(added, skipped)
     }
 }
 

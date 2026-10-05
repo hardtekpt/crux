@@ -6,11 +6,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
-import com.hardtekpt.crux.data.local.BodyMeasurementDao
-import com.hardtekpt.crux.data.local.ClimbDao
 import com.hardtekpt.crux.data.local.CruxDatabase
-import com.hardtekpt.crux.data.local.ExerciseDao
-import com.hardtekpt.crux.data.local.TemplateDao
+import com.hardtekpt.crux.data.local.DatabaseFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,26 +16,15 @@ import dagger.hilt.testing.TestInstallIn
 import java.util.UUID
 import javax.inject.Singleton
 
-/** Gives every instrumented test a fresh in-memory database and its own DataStore file. */
+/** Gives every instrumented test fresh in-memory databases and its own DataStore file. */
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [DatabaseModule::class])
 object TestDatabaseModule {
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): CruxDatabase =
+    fun provideDatabaseFactory(@ApplicationContext context: Context): DatabaseFactory = DatabaseFactory {
         Room.inMemoryDatabaseBuilder(context, CruxDatabase::class.java).build()
-
-    @Provides
-    fun provideClimbDao(db: CruxDatabase): ClimbDao = db.climbDao()
-
-    @Provides
-    fun provideBodyMeasurementDao(db: CruxDatabase): BodyMeasurementDao = db.bodyMeasurementDao()
-
-    @Provides
-    fun provideTemplateDao(db: CruxDatabase): TemplateDao = db.templateDao()
-
-    @Provides
-    fun provideExerciseDao(db: CruxDatabase): ExerciseDao = db.exerciseDao()
+    }
 
     @Provides
     @Singleton

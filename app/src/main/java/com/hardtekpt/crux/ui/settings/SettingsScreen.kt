@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -38,6 +42,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val scales: GradeScales = GradeScales(),
     val themeMode: ThemeMode = ThemeMode.DARK,
+    val demoMode: Boolean = false,
 )
 
 @HiltViewModel
@@ -47,11 +52,16 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = combine(
         preferences.gradeScales,
         preferences.themeMode,
-    ) { scales, theme -> SettingsUiState(scales, theme) }
+        preferences.demoMode,
+    ) { scales, theme, demo -> SettingsUiState(scales, theme, demo) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
         viewModelScope.launch { preferences.setGradeScale(scale) }
+    }
+
+    fun setDemoMode(enabled: Boolean) {
+        viewModelScope.launch { preferences.setDemoMode(enabled) }
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -72,6 +82,7 @@ fun SettingsScreen(
         onBack = onBack,
         onGradeScale = viewModel::setGradeScale,
         onThemeMode = viewModel::setThemeMode,
+        onDemoMode = viewModel::setDemoMode,
         backup = { BackupCard(backupState, backupViewModel) },
     )
 }
@@ -82,6 +93,7 @@ fun SettingsContent(
     onBack: () -> Unit,
     onGradeScale: (GradeScale) -> Unit,
     onThemeMode: (ThemeMode) -> Unit,
+    onDemoMode: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     backup: @Composable () -> Unit = {},
 ) {
@@ -137,6 +149,30 @@ fun SettingsContent(
             }
 
             Eyebrow("Your data", Modifier.padding(top = space.s4))
+            CruxCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Demo mode", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (uiState.demoMode) {
+                                "Showing sample climbs, plans and weigh-ins. Your own data is kept apart and comes back when you turn this off."
+                            } else {
+                                "Explore Crux with sample climbs, plans and weigh-ins. Your own data stays untouched."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = uiState.demoMode,
+                        onCheckedChange = onDemoMode,
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.secondary),
+                        modifier = Modifier
+                            .padding(start = space.s3)
+                            .testTag("demo_mode"),
+                    )
+                }
+            }
             backup()
         }
     }

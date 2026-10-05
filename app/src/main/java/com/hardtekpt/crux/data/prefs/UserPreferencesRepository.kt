@@ -2,6 +2,7 @@ package com.hardtekpt.crux.data.prefs
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hardtekpt.crux.data.model.Discipline
@@ -38,6 +39,13 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[THEME_MODE] = mode.name }
     }
 
+    /** Demo mode shows the separate demo data set; off means the climber's own data. */
+    val demoMode: Flow<Boolean> = dataStore.data.map { it[DEMO_MODE] ?: false }
+
+    suspend fun setDemoMode(enabled: Boolean) {
+        dataStore.edit { it[DEMO_MODE] = enabled }
+    }
+
     val gradeScales: Flow<GradeScales> = dataStore.data.map { prefs ->
         GradeScales(
             boulder = prefs[BOULDER_SCALE].toScale(Discipline.BOULDER),
@@ -53,6 +61,7 @@ class UserPreferencesRepository @Inject constructor(
 
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

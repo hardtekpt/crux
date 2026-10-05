@@ -15,11 +15,13 @@ import com.hardtekpt.crux.data.OfflineBodyRepository
 import com.hardtekpt.crux.data.OfflineClimbRepository
 import com.hardtekpt.crux.data.OfflineTemplateRepository
 import com.hardtekpt.crux.data.TemplateRepository
-import com.hardtekpt.crux.data.local.BodyMeasurementDao
-import com.hardtekpt.crux.data.local.ClimbDao
+import com.hardtekpt.crux.data.local.ApplicationScope
 import com.hardtekpt.crux.data.local.CruxDatabase
-import com.hardtekpt.crux.data.local.ExerciseDao
-import com.hardtekpt.crux.data.local.TemplateDao
+import com.hardtekpt.crux.data.local.DataMode
+import com.hardtekpt.crux.data.local.DatabaseFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -32,26 +34,19 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+    /**
+     * The climber's own data and the demo data are separate files. The demo set keeps the
+     * old `crux.db`, which already held the starter and sample data, so nothing is lost.
+     */
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): CruxDatabase =
-        Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.NAME)
-            // MVP only: schema changes wipe local data. Real migrations start in phase 2;
-            // exported schemas in app/schemas make that possible.
+    fun provideDatabaseFactory(@ApplicationContext context: Context): DatabaseFactory = DatabaseFactory { mode ->
+        val name = if (mode == DataMode.DEMO) CruxDatabase.DEMO_NAME else CruxDatabase.NAME
+        Room.databaseBuilder(context, CruxDatabase::class.java, name)
+            // Until real migrations land, schema changes wipe local data.
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
-
-    @Provides
-    fun provideClimbDao(db: CruxDatabase): ClimbDao = db.climbDao()
-
-    @Provides
-    fun provideBodyMeasurementDao(db: CruxDatabase): BodyMeasurementDao = db.bodyMeasurementDao()
-
-    @Provides
-    fun provideTemplateDao(db: CruxDatabase): TemplateDao = db.templateDao()
-
-    @Provides
-    fun provideExerciseDao(db: CruxDatabase): ExerciseDao = db.exerciseDao()
+    }
 
     @Provides
     @Singleton
@@ -62,6 +57,11 @@ object DatabaseModule {
 @Module
 @InstallIn(SingletonComponent::class)
 object AndroidModule {
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Provides
     fun provideContentResolver(@ApplicationContext context: Context): ContentResolver = context.contentResolver
 }
