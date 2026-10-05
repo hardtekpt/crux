@@ -11,7 +11,9 @@ import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.ui.progress.ProgressUiState
 import com.hardtekpt.crux.ui.progress.toDisciplineBests
-import com.hardtekpt.crux.ui.you.parseHeight
+import com.hardtekpt.crux.data.model.MeasurementType
+import com.hardtekpt.crux.ui.you.apeIndex
+import com.hardtekpt.crux.ui.you.parseMeasurement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -97,10 +99,22 @@ class DerivedDataTest {
     }
 
     @Test
-    fun `height must be between 100 and 250 cm`() {
-        assertEquals(178.5, parseHeight("178,5").getOrThrow(), 0.0)
-        assertTrue(parseHeight("90").isFailure)
-        assertTrue(parseHeight("tall").isFailure)
+    fun `body stats are checked against their range`() {
+        assertEquals(178.5, parseMeasurement(MeasurementType.HEIGHT, "178,5").getOrThrow(), 0.0)
+        assertTrue(parseMeasurement(MeasurementType.HEIGHT, "90").isFailure)
+        assertTrue(parseMeasurement(MeasurementType.WINGSPAN, "tall").isFailure)
+        assertEquals(
+            "Enter a body fat between 3 and 60%",
+            parseMeasurement(MeasurementType.BODY_FAT, "80").exceptionOrNull()?.message,
+        )
+    }
+
+    @Test
+    fun `ape index is wingspan minus height, with the ratio`() {
+        val ape = apeIndex(wingspanCm = 184.0, heightCm = 178.0)!!
+        assertEquals(6.0, ape.differenceCm, 1e-9)
+        assertEquals(1.034, ape.ratio, 1e-3)
+        assertNull(apeIndex(wingspanCm = 184.0, heightCm = null))
     }
 
     private fun climb(id: Long, date: LocalDate, place: String) = Climb(

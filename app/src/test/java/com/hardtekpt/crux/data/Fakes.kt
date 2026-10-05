@@ -3,6 +3,7 @@ package com.hardtekpt.crux.data
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.WorkoutTemplate
@@ -52,15 +53,15 @@ class FakeClimbRepository : ClimbRepository {
 
 class FakeBodyRepository : BodyRepository {
     val weights = MutableStateFlow<List<Measurement>>(emptyList())
-    val height = MutableStateFlow<Measurement?>(null)
 
     override fun observeWeights(): Flow<List<Measurement>> = weights.map { list -> list.sortedByDescending { it.date } }
-    override fun observeHeight(): Flow<Measurement?> = height
+    val latest = MutableStateFlow<Map<MeasurementType, Measurement>>(emptyMap())
+    override fun observeLatest(): Flow<Map<MeasurementType, Measurement>> = latest
     override suspend fun logWeight(kg: Double, date: LocalDate) {
         weights.value = weights.value + Measurement(weights.value.size + 1L, kg, date)
     }
-    override suspend fun setHeight(cm: Double) {
-        height.value = Measurement(1, cm, LocalDate.now(FIXED_CLOCK))
+    override suspend fun setMeasurement(type: MeasurementType, value: Double) {
+        latest.value = latest.value + (type to Measurement(1, value, LocalDate.now(FIXED_CLOCK)))
     }
 }
 

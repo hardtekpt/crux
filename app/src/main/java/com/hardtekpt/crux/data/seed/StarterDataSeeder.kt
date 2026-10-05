@@ -154,12 +154,19 @@ class StarterDataSeeder(private val clock: Clock) {
                     dateEpochDay = today.minusDays(daysAgo.toLong()).toEpochDay(),
                     createdAtMillis = now,
                 )
-            } + BodyMeasurementEntity(
-                type = MeasurementType.HEIGHT,
-                value = 178.0,
-                dateEpochDay = today.minusDays(40).toEpochDay(),
-                createdAtMillis = now,
-            ),
+            } + listOf(
+                MeasurementType.HEIGHT to 178.0,
+                MeasurementType.WINGSPAN to 184.0,
+                MeasurementType.STANDING_REACH to 231.0,
+                MeasurementType.BODY_FAT to 12.5,
+            ).map { (type, value) ->
+                BodyMeasurementEntity(
+                    type = type,
+                    value = value,
+                    dateEpochDay = today.minusDays(40).toEpochDay(),
+                    createdAtMillis = now,
+                )
+            },
         )
     }
 }

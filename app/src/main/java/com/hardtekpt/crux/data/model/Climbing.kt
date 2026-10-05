@@ -79,7 +79,25 @@ enum class AscentStyle(val label: String, val isSend: Boolean, val singleAttempt
     }
 }
 
-enum class MeasurementType(val unit: String) {
-    WEIGHT("kg"),
-    HEIGHT("cm"),
+/**
+ * Body stats a climber tracks. Stored by name, so adding a type needs no database change.
+ * [range] is what the entry form accepts.
+ */
+enum class MeasurementType(
+    val label: String,
+    val unit: String,
+    val range: ClosedFloatingPointRange<Double>,
+    val description: String,
+) {
+    WEIGHT("Weight", "kg", 20.0..300.0, "Bodyweight"),
+    HEIGHT("Height", "cm", 100.0..250.0, "Standing height, barefoot"),
+    WINGSPAN("Wingspan", "cm", 100.0..260.0, "Fingertip to fingertip, arms straight out"),
+    STANDING_REACH("Standing reach", "cm", 150.0..320.0, "Highest point you touch flat-footed, one arm up"),
+    BODY_FAT("Body fat", "%", 3.0..60.0, "From a scale or calipers"),
+    ;
+
+    companion object {
+        /** The climbing body stats on You, in display order. Weight has its own card. */
+        val bodyStats = listOf(HEIGHT, WINGSPAN, STANDING_REACH, BODY_FAT)
+    }
 }

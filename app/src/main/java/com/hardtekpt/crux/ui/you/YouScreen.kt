@@ -1,6 +1,13 @@
 package com.hardtekpt.crux.ui.you
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.WeightSummary
 import com.hardtekpt.crux.ui.charts.ChartCard
 import com.hardtekpt.crux.ui.charts.ChartRange
@@ -71,10 +79,17 @@ data class YouUiState(
     val isLoading: Boolean = true,
     val weights: List<Measurement> = emptyList(),
     val summary: WeightSummary? = null,
-    val height: Measurement? = null,
+    /** Newest value of each body stat. */
+    val latest: Map<MeasurementType, Measurement> = emptyMap(),
 ) {
-    val heightCm: Double? get() = height?.value
+    val apeIndex: ApeIndex? get() = apeIndex(latest[MeasurementType.WINGSPAN]?.value, latest[MeasurementType.HEIGHT]?.value)
 }
+
+/** Wingspan minus height, and their ratio; climbers quote both. */
+data class ApeIndex(val differenceCm: Double, val ratio: Double)
+
+fun apeIndex(wingspanCm: Double?, heightCm: Double?): ApeIndex? =
+    if (wingspanCm == null || heightCm == null || heightCm <= 0) null else ApeIndex(wingspanCm - heightCm, wingspanCm / heightCm)
 
 @HiltViewModel
 class YouViewModel @Inject constructor(
@@ -82,24 +97,24 @@ class YouViewModel @Inject constructor(
 ) : ViewModel() {
     val uiState: StateFlow<YouUiState> = combine(
         bodyRepository.observeWeights(),
-        bodyRepository.observeHeight(),
-    ) { weights, height ->
-        YouUiState(isLoading = false, weights = weights, summary = weights.weightSummary(), height = height)
+        bodyRepository.observeLatest(),
+    ) { weights, latest ->
+        YouUiState(isLoading = false, weights = weights, summary = weights.weightSummary(), latest = latest)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState())
 
-    fun setHeight(cm: Double) {
-        viewModelScope.launch { bodyRepository.setHeight(cm) }
+    fun setMeasurement(type: MeasurementType, value: Double) {
+        viewModelScope.launch { bodyRepository.setMeasurement(type, value) }
     }
 }
 
-/** Height entry: 100–250 cm, one decimal at most. Returns the value or an error message. */
-fun parseHeight(text: String): Result<Double> {
+/** Parses a body stat as typed (comma or point decimals) and checks it against the type's range. */
+fun parseMeasurement(type: MeasurementType, text: String): Result<Double> {
     val value = text.replace(',', '.').trim().toDoubleOrNull()
-    return if (value == null || value < 100 || value > 250) {
-        Result.failure(IllegalArgumentException("Enter a height between 100 and 250 cm"))
-    } else {
-        Result.success(value)
-    }
+    if (value != null && value in type.range) return Result.success(value)
+    val unit = if (type.unit == "%") "%" else " ${type.unit}"
+    val low = type.range.start.wholeOrOneDecimal()
+    val high = type.range.endInclusive.wholeOrOneDecimal()
+    return Result.failure(IllegalArgumentException("Enter a ${type.label.lowercase()} between $low and $high$unit"))
 }
 
 @Composable
@@ -112,7 +127,7 @@ fun YouScreen(
     YouContent(
         uiState = uiState,
         onLogWeight = onLogWeight,
-        onSetHeight = viewModel::setHeight,
+        onSetMeasurement = viewModel::setMeasurement,
         onOpenSettings = onOpenSettings,
     )
 }
@@ -122,13 +137,13 @@ fun YouScreen(
 fun YouContent(
     uiState: YouUiState,
     onLogWeight: () -> Unit,
-    onSetHeight: (Double) -> Unit,
+    onSetMeasurement: (MeasurementType, Double) -> Unit,
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
-    var editingHeight by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf<MeasurementType?>(null) }
 
     Column(
         modifier = modifier
@@ -146,12 +161,13 @@ fun YouContent(
             },
         )
         LazyColumn(
+            modifier = Modifier.testTag("you_list"),
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            item { Eyebrow("Body") }
+            item { Eyebrow("Weight") }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s3)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically) {
                     val summary = uiState.summary
                     StatTile(
                         label = "Weight",
@@ -165,18 +181,6 @@ fun YouContent(
                         modifier = Modifier.weight(1f),
                         valueModifier = Modifier.testTag("you_weight"),
                     )
-                    StatTile(
-                        label = "Height",
-                        value = uiState.heightCm?.wholeOrOneDecimal() ?: "–",
-                        unit = uiState.heightCm?.let { "cm" },
-                        delta = uiState.height?.let { "set ${it.date.shortLabel()}" } ?: "not set",
-                        modifier = Modifier.weight(1f),
-                        valueModifier = Modifier.testTag("you_height"),
-                    )
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
                     // Outlined on purpose: logging a measurement is not this screen's main job.
                     CruxButton(
                         text = "Log weight",
@@ -185,17 +189,13 @@ fun YouContent(
                         icon = Icons.Rounded.Add,
                         modifier = Modifier.testTag("log_weight"),
                     )
-                    CruxButton(
-                        text = "Set height",
-                        onClick = { editingHeight = true },
-                        variant = CruxButtonVariant.Text,
-                        modifier = Modifier.testTag("set_height"),
-                    )
                 }
             }
             if (uiState.weights.isNotEmpty()) {
-                item { WeightTrendCard(uiState.weights, Modifier.padding(top = space.s3)) }
+                item { WeightTrendCard(uiState.weights) }
             }
+            item { Eyebrow("Climbing body · tap to update", Modifier.padding(top = space.s3)) }
+            item { BodyStatGrid(uiState, onEdit = { editing = it }) }
             item { Eyebrow("Weight history", Modifier.padding(top = space.s3)) }
             if (!uiState.isLoading && uiState.weights.isEmpty()) {
                 item {
@@ -223,13 +223,14 @@ fun YouContent(
         }
     }
 
-    if (editingHeight) {
-        HeightDialog(
-            initial = uiState.heightCm,
-            onDismiss = { editingHeight = false },
+    editing?.let { type ->
+        MeasurementDialog(
+            type = type,
+            initial = uiState.latest[type]?.value,
+            onDismiss = { editing = null },
             onSave = {
-                onSetHeight(it)
-                editingHeight = false
+                onSetMeasurement(type, it)
+                editing = null
             },
         )
     }
@@ -276,36 +277,97 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
     }
 }
 
+/** Height, wingspan, ape index, reach and body fat as tiles, two per row. */
 @Composable
-private fun HeightDialog(initial: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
-    var text by rememberSaveable { mutableStateOf(initial?.wholeOrOneDecimal().orEmpty()) }
-    var error by rememberSaveable { mutableStateOf<String?>(null) }
+private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
+    val space = CruxTheme.space
+    val ape = uiState.apeIndex
+    Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
+            BodyStatTile(MeasurementType.HEIGHT, uiState, onEdit, Modifier.weight(1f))
+            BodyStatTile(MeasurementType.WINGSPAN, uiState, onEdit, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
+            StatTile(
+                label = "Ape index",
+                value = ape?.differenceCm?.let { signedWhole(it) } ?: "–",
+                unit = ape?.let { "cm" },
+                delta = ape?.let { "ratio ${String.format(java.util.Locale.UK, "%.2f", it.ratio)}" } ?: "add height and wingspan",
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                valueModifier = Modifier.testTag("you_ape_index"),
+            )
+            BodyStatTile(MeasurementType.STANDING_REACH, uiState, onEdit, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
+            BodyStatTile(MeasurementType.BODY_FAT, uiState, onEdit, Modifier.weight(1f))
+            Box(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun BodyStatTile(
+    type: MeasurementType,
+    uiState: YouUiState,
+    onEdit: (MeasurementType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val latest = uiState.latest[type]
+    StatTile(
+        label = type.label,
+        value = latest?.value?.wholeOrOneDecimal() ?: "–",
+        unit = latest?.let { type.unit },
+        delta = latest?.let { "set ${it.date.shortLabel()}" } ?: "tap to add",
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(MaterialTheme.shapes.large)
+            .clickable { onEdit(type) }
+            .testTag("stat_${type.name}"),
+        valueModifier = Modifier.testTag("you_${type.name.lowercase()}"),
+    )
+}
+
+/** `+6`, `−3`, `±0` for a difference in whole centimetres. */
+private fun signedWhole(value: Double): String {
+    val rounded = Math.round(value)
+    return when {
+        rounded > 0 -> "+$rounded"
+        rounded < 0 -> "−${-rounded}"
+        else -> "±0"
+    }
+}
+
+@Composable
+private fun MeasurementDialog(type: MeasurementType, initial: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
+    var text by rememberSaveable(type) { mutableStateOf(initial?.wholeOrOneDecimal().orEmpty()) }
+    var error by rememberSaveable(type) { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.extraLarge,
-        title = { Text("Set height", style = MaterialTheme.typography.headlineSmall) },
+        title = { Text(type.label, style = MaterialTheme.typography.headlineSmall) },
         text = {
             CruxTextField(
-                label = "Height",
+                label = type.description,
                 value = text,
                 onValueChange = {
                     text = it
                     error = null
                 },
-                placeholder = "178",
-                helper = "cm",
+                helper = type.unit,
                 error = error,
                 keyboardType = KeyboardType.Decimal,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("field_height"),
+                    .testTag("field_measurement"),
             )
         },
         confirmButton = {
             TextButton(
-                onClick = { parseHeight(text).onSuccess(onSave).onFailure { error = it.message } },
-                modifier = Modifier.testTag("save_height"),
+                onClick = { parseMeasurement(type, text).onSuccess(onSave).onFailure { error = it.message } },
+                modifier = Modifier.testTag("save_measurement"),
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

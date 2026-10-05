@@ -27,6 +27,9 @@ interface BodyMeasurementDao {
     )
     fun observe(type: MeasurementType): Flow<List<BodyMeasurementEntity>>
 
+    @Query("SELECT * FROM body_measurements ORDER BY dateEpochDay DESC, createdAtMillis DESC")
+    fun observeAll(): Flow<List<BodyMeasurementEntity>>
+
     @Query("SELECT COUNT(*) FROM body_measurements")
     suspend fun count(): Int
 

@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -24,8 +25,11 @@ import androidx.navigation.NavDestination.Companion.hierarchy
  * - Switching tabs is a fade-through: the old screen fades out fast, the new one fades in
  *   with a slight scale-up. Tabs are peers, so nothing slides.
  * - Drilling into a screen (a plan, a setting) is a shared-axis slide: the new screen comes
- *   in from the right a short way while the old one drifts left. Back reverses it, and the
- *   predictive back gesture scrubs the same motion.
+ *   in from the right a short way while the old one drifts left.
+ * - Going back follows Material's predictive back: the screen being left shrinks, rounds its
+ *   corners (see the page wrapper in CruxApp) and slides off toward the edge, while the one
+ *   underneath settles in from a slight parallax offset. The back gesture scrubs this motion
+ *   with the finger, so it reads as pulling the card away.
  * - Forms (log a climb, edit a plan) rise from below, like a sheet, and drop back down.
  */
 
@@ -37,6 +41,7 @@ private const val ENTER_MS = 250
 private const val EXIT_MS = 150
 private const val FADE_THROUGH_OUT_MS = 75
 private const val FADE_THROUGH_IN_MS = 175
+private const val BACK_MS = 300
 
 /** Shared-axis travel: a fraction of the width, so it reads as direction, not a full swipe. */
 private fun travel(fullWidth: Int) = (fullWidth * 0.08f).toInt()
@@ -86,16 +91,24 @@ val cruxExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransi
 
 val cruxPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
     when (move()) {
-        Move.Push -> slideInHorizontally(tween(ENTER_MS, easing = EmphasizedDecelerate)) { -travel(it) } +
-            fadeIn(tween(ENTER_MS, easing = EmphasizedDecelerate))
+        // The screen underneath was parked a quarter-width left; it settles back as the
+        // top card is pulled away, with a touch of scale so it feels like it rises.
+        Move.Push -> slideInHorizontally(tween(BACK_MS, easing = Emphasized)) { -(it * 0.25f).toInt() } +
+            scaleIn(tween(BACK_MS, easing = Emphasized), initialScale = 0.94f)
         else -> cruxEnter()
     }
 }
 
 val cruxPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
     when (move()) {
-        Move.Push -> slideOutHorizontally(tween(EXIT_MS, easing = EmphasizedAccelerate), ::travel) +
-            fadeOut(tween(EXIT_MS, easing = EmphasizedAccelerate))
+        // The card being left shrinks and slides off to the right; corners round in the
+        // page wrapper as it goes.
+        // No fade: an opaque card moving over the page underneath reads cleaner.
+        Move.Push -> scaleOut(tween(BACK_MS, easing = Emphasized), targetScale = 0.9f) +
+            slideOutHorizontally(tween(BACK_MS, easing = EmphasizedAccelerate)) { it }
+        Move.FormClose -> slideOutVertically(tween(BACK_MS, easing = EmphasizedAccelerate)) { it / 3 } +
+            scaleOut(tween(BACK_MS, easing = Emphasized), targetScale = 0.94f) +
+            fadeOut(tween(BACK_MS, easing = EmphasizedAccelerate))
         else -> cruxExit()
     }
 }

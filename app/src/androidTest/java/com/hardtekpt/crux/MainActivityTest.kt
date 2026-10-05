@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import com.hardtekpt.crux.data.seed.StarterData
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -81,9 +82,27 @@ class MainActivityTest {
         composeRule.textFieldIn("field_weight").performTextInput("72.5")
         composeRule.onNodeWithTag("save_weight").performClick()
 
-        composeRule.waitForTag("weight_row")
-        composeRule.onNodeWithTag("you_weight").assertTextEquals("72.5 kg")
+        composeRule.waitForTag("screen_You")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("you_weight").assertTextEquals("72.5 kg") }.isSuccess
+        }
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("weight_row"))
         assertEquals(1, composeRule.onAllNodesWithTag("weight_row").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun bodyStatsUpdateFromTheirTilesAndGiveTheApeIndex() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        listOf("HEIGHT" to "178", "WINGSPAN" to "184").forEach { (type, value) ->
+            composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("stat_$type"))
+            composeRule.onNodeWithTag("stat_$type").performClick()
+            composeRule.textFieldIn("field_measurement").performTextReplacement(value)
+            composeRule.onNodeWithTag("save_measurement").performClick()
+        }
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("you_ape_index"))
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("you_ape_index").assertTextEquals("+6 cm") }.isSuccess
+        }
     }
 
     @Test
