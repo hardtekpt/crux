@@ -40,7 +40,7 @@ fun GradeBadge(
     }
     Box(
         modifier = modifier
-            .defaultMinSize(minWidth = 44.dp, minHeight = if (small) 22.dp else 28.dp)
+            .defaultMinSize(minWidth = 46.dp, minHeight = if (small) 24.dp else 30.dp)
             .background(container, CruxTheme.shape.xl)
             .then(
                 if (state == GradeState.PersonalBest) {
@@ -91,7 +91,7 @@ fun CruxListRow(
             )
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .heightIn(min = CruxTheme.size.touchTarget)
-            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s2),
+            .padding(horizontal = CruxTheme.space.s4, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
         verticalAlignment = Alignment.CenterVertically,
     ) {

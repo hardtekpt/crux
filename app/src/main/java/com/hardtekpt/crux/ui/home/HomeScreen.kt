@@ -237,7 +237,7 @@ fun HomeContent(
                 .padding(horizontal = space.s4)
                 .padding(top = space.s1, bottom = space.s4 + LocalNavBarClearance.current)
                 .testTag("home_list"),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Eyebrow(
                 when {
@@ -249,7 +249,7 @@ fun HomeContent(
             )
             // One flat, keyed list laid out as a two-column flow: moving a widget only reorders
             // children, so the widget being dragged keeps its gesture while it changes rows.
-            DashboardGrid(widgets = dashboard.widgets, spacing = space.s2) {
+            DashboardGrid(widgets = dashboard.widgets, spacing = space.s3) {
                 dashboard.widgets.forEach { widget ->
                     key(widget.id) {
                         val dragging = widget.id == draggingId

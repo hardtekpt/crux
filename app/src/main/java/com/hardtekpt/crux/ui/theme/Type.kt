@@ -49,11 +49,11 @@ private fun style(
 
 // Slot mapping from the design system's compose-theme.md. M3 displayLarge is unused.
 val CruxTypography = Typography(
-    displayLarge = style(Archivo, 48, 52, 800, -0.02),
-    displayMedium = style(Archivo, 48, 52, 800, -0.02),
-    displaySmall = style(Archivo, 36, 40, 800, -0.02),
-    headlineLarge = style(Archivo, 28, 34, 800, -0.015),
-    headlineMedium = style(Archivo, 24, 30, 800, -0.01),
+    displayLarge = style(Archivo, 48, 52, 700, -0.02),
+    displayMedium = style(Archivo, 48, 52, 700, -0.02),
+    displaySmall = style(Archivo, 36, 40, 700, -0.02),
+    headlineLarge = style(Archivo, 28, 34, 700, -0.015),
+    headlineMedium = style(Archivo, 22, 28, 700, -0.01),
     headlineSmall = style(Archivo, 20, 26, 600, -0.01),
     titleLarge = style(Archivo, 20, 26, 600),
     titleMedium = style(Archivo, 16, 22, 600),
@@ -70,8 +70,8 @@ val CruxTypography = Typography(
 /** Crux text styles with no Material 3 slot. Read through `CruxTheme.type`. */
 @Immutable
 data class CruxType(
-    val metricLarge: TextStyle = style(Archivo, 36, 40, 800, -0.03, tabular = true),
-    val metricMedium: TextStyle = style(Archivo, 24, 28, 800, -0.02, tabular = true),
+    val metricLarge: TextStyle = style(Archivo, 38, 42, 700, -0.02, tabular = true),
+    val metricMedium: TextStyle = style(Archivo, 26, 30, 700, -0.015, tabular = true),
     val grade: TextStyle = style(JetBrainsMono, 15, 18, 600, 0.02, tabular = true),
     val gradeSmall: TextStyle = style(JetBrainsMono, 13, 16, 600, 0.02, tabular = true),
     val timer: TextStyle = style(JetBrainsMono, 32, 34, 500, 0.01, tabular = true),

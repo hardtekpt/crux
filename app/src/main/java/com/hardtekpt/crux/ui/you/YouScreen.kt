@@ -163,7 +163,7 @@ fun YouContent(
         LazyColumn(
             modifier = Modifier.testTag("you_list"),
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             item { Eyebrow("Weight") }
             item {
@@ -282,12 +282,12 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
 private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
     val space = CruxTheme.space
     val ape = uiState.apeIndex
-    Column(verticalArrangement = Arrangement.spacedBy(space.s2)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+    Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             BodyStatTile(MeasurementType.HEIGHT, uiState, onEdit, Modifier.weight(1f))
             BodyStatTile(MeasurementType.WINGSPAN, uiState, onEdit, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             StatTile(
                 label = "Ape index",
                 value = ape?.differenceCm?.let { signedWhole(it) } ?: "–",
@@ -300,7 +300,7 @@ private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit)
             )
             BodyStatTile(MeasurementType.STANDING_REACH, uiState, onEdit, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             BodyStatTile(MeasurementType.BODY_FAT, uiState, onEdit, Modifier.weight(1f))
             Box(Modifier.weight(1f))
         }

@@ -27,6 +27,7 @@ import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.navBarClearance
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -230,6 +231,9 @@ private inline fun <reified T : Any> NavGraphBuilder.page(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),
-        ) { content(entry) }
+        ) {
+            // Text without an explicit colour reads as ink on the page, not the platform default.
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) { content(entry) }
+        }
     }
 }

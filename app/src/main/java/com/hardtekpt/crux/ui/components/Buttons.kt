@@ -26,9 +26,9 @@ enum class CruxButtonVariant { Filled, Tonal, Outlined, Text, Destructive }
 
 /** Sizes are visual heights; every size keeps a 48dp hit area via minimumInteractiveComponentSize. */
 enum class CruxButtonSize(val height: Dp, val horizontalPadding: Dp) {
-    Small(28.dp, 12.dp),
-    Default(36.dp, 16.dp),
-    Large(44.dp, 20.dp),
+    Small(32.dp, 14.dp),
+    Default(40.dp, 20.dp),
+    Large(48.dp, 24.dp),
 }
 
 /** The single action set. One Filled button per screen. */

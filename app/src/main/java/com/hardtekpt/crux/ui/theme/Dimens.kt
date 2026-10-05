@@ -21,14 +21,14 @@ object CruxSpace {
 
 object CruxSize {
     val touchTarget = 48.dp
-    val controlHeight = 36.dp
-    val controlHeightLarge = 44.dp
-    val controlHeightSmall = 28.dp
+    val controlHeight = 40.dp
+    val controlHeightLarge = 48.dp
+    val controlHeightSmall = 32.dp
     val iconSm = 18.dp
-    val iconMd = 22.dp
+    val iconMd = 24.dp
     val iconLg = 32.dp
-    val navBarHeight = 56.dp
-    val appBarHeight = 48.dp
+    val navBarHeight = 60.dp
+    val appBarHeight = 56.dp
     val borderHairline = 1.dp
     val borderEmphasis = 2.dp
     val borderFocus = 3.dp
@@ -41,8 +41,8 @@ object CruxShape {
 
 val CruxShapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(10.dp),
-    large = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(14.dp),
     extraLarge = RoundedCornerShape(24.dp),
 )

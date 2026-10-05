@@ -105,7 +105,7 @@ fun SettingsContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = space.s4)
                 .padding(bottom = space.s4 + LocalNavBarClearance.current),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Eyebrow("Grades")
             Discipline.entries.forEach { discipline ->

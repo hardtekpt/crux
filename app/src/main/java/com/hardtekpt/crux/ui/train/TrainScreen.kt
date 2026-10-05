@@ -121,7 +121,7 @@ fun TrainScreen(
                 top = space.s2,
                 bottom = space.s4 + LocalNavBarClearance.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
             modifier = Modifier.testTag("train_list"),
         ) {
             when (view) {

@@ -107,7 +107,7 @@ fun CruxCard(
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(CruxTheme.space.s3),
+            modifier = Modifier.padding(CruxTheme.space.s4),
             verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
             content = content,
         )
@@ -118,7 +118,8 @@ enum class TrendDirection { Wanted, Neutral }
 
 /**
  * One figure, its label and its trend. The unit rides beside the figure in `muted`.
- * `isPersonalBest` switches to the `secondary-container` fill with a star; one per screen.
+ * `isPersonalBest` marks the tile with a gold edge and a gold "New best"; one per screen.
+ * The tile keeps its normal fill so a best reads as an accent, not a block of colour.
  */
 @Composable
 fun StatTile(
@@ -132,20 +133,20 @@ fun StatTile(
     valueModifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val container = if (isPersonalBest) colors.secondaryContainer else colors.surfaceContainerLow
-    val content = if (isPersonalBest) colors.onSecondaryContainer else colors.onSurface
-    val secondaryText = if (isPersonalBest) colors.onSecondaryContainer else colors.onSurfaceVariant
+    val container = colors.surfaceContainerLow
+    val content = colors.onSurface
+    val secondaryText = colors.onSurfaceVariant
 
     Column(
         modifier = modifier
             .background(container, MaterialTheme.shapes.large)
             // A personal best gets a 2dp gold border; everything else a hairline.
             .border(
-                if (isPersonalBest) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline,
+                if (isPersonalBest) 1.5.dp else CruxTheme.size.borderHairline,
                 if (isPersonalBest) colors.secondary else colors.outlineVariant,
                 MaterialTheme.shapes.large,
             )
-            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s3),
+            .padding(horizontal = CruxTheme.space.s4, vertical = CruxTheme.space.s4),
         verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
     ) {
         Text(
@@ -176,10 +177,10 @@ fun StatTile(
                 Icon(
                     Icons.Rounded.Star,
                     contentDescription = null,
-                    tint = content,
+                    tint = colors.secondary,
                     modifier = Modifier.size(CruxTheme.size.iconSm),
                 )
-                Text("New best", style = MaterialTheme.typography.labelMedium, color = content)
+                Text("New best", style = MaterialTheme.typography.labelMedium, color = colors.secondary)
             }
             delta != null -> Text(
                 text = delta,
