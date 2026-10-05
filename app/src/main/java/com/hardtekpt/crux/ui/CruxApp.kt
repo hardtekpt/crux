@@ -2,6 +2,7 @@ package com.hardtekpt.crux.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -18,6 +19,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.ui.navigation.FloatingNavBar
+import com.hardtekpt.crux.ui.navigation.cruxEnter
+import com.hardtekpt.crux.ui.navigation.cruxExit
+import com.hardtekpt.crux.ui.navigation.cruxPopEnter
+import com.hardtekpt.crux.ui.navigation.cruxPopExit
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.navBarClearance
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,6 +41,9 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavBackStackEntry
+import androidx.compose.animation.AnimatedContentScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
@@ -101,9 +109,13 @@ fun CruxApp() {
             navController = navController,
             startDestination = HomeGraph,
             modifier = Modifier.fillMaxSize(),
+            enterTransition = cruxEnter,
+            exitTransition = cruxExit,
+            popEnterTransition = cruxPopEnter,
+            popExitTransition = cruxPopExit,
         ) {
             navigation<HomeGraph>(startDestination = HomeRoute) {
-                composable<HomeRoute> {
+                page<HomeRoute> {
                     HomeScreen(
                         onOpenTemplate = { navController.navigate(TemplateDetailRoute(it)) },
                         onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
@@ -113,7 +125,7 @@ fun CruxApp() {
                 }
             }
             navigation<TrainGraph>(startDestination = TrainRoute) {
-                composable<TrainRoute> {
+                page<TrainRoute> {
                     TrainScreen(
                         onOpenPlan = { navController.navigate(TemplateDetailRoute(it)) },
                         onNewPlan = { navController.navigate(PlanEditorRoute()) },
@@ -121,32 +133,32 @@ fun CruxApp() {
                         onNewExercise = { navController.navigate(ExerciseEditorRoute()) },
                     )
                 }
-                composable<TemplateDetailRoute> {
+                page<TemplateDetailRoute> {
                     TemplateDetailScreen(
                         onBack = navController::popBackStack,
                         onEdit = { navController.navigate(PlanEditorRoute(it)) },
                     )
                 }
-                composable<PlanEditorRoute> { PlanEditorScreen(onDone = navController::popBackStack) }
-                composable<ExerciseEditorRoute> { ExerciseEditorScreen(onDone = navController::popBackStack) }
+                page<PlanEditorRoute> { PlanEditorScreen(onDone = navController::popBackStack) }
+                page<ExerciseEditorRoute> { ExerciseEditorScreen(onDone = navController::popBackStack) }
             }
             navigation<JournalGraph>(startDestination = JournalRoute) {
-                composable<JournalRoute> { JournalScreen() }
+                page<JournalRoute> { JournalScreen() }
             }
             navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                composable<ProgressRoute> { ProgressScreen() }
+                page<ProgressRoute> { ProgressScreen() }
             }
             navigation<YouGraph>(startDestination = YouRoute) {
-                composable<YouRoute> {
+                page<YouRoute> {
                     YouScreen(
                         onLogWeight = { navController.navigate(LogWeightRoute) },
                         onOpenSettings = { navController.navigate(SettingsRoute) },
                     )
                 }
-                composable<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
+                page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
             }
-            composable<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
-            composable<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
+            page<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
+            page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
         }
         }
 
@@ -164,8 +176,8 @@ fun CruxApp() {
 
         AnimatedVisibility(
             visible = !onForm,
-            enter = fadeIn() + slideInVertically { it },
-            exit = fadeOut() + slideOutVertically { it },
+            enter = fadeIn(tween(250, delayMillis = 100)) + slideInVertically(tween(250, delayMillis = 100)) { it / 2 },
+            exit = fadeOut(tween(120)) + slideOutVertically(tween(150)) { it / 2 },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -203,5 +215,21 @@ private fun NavHostController.navigateToTab(destination: TopLevelDestination) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+/**
+ * A destination on an opaque surface, so screens passing each other during a transition
+ * never show through one another.
+ */
+private inline fun <reified T : Any> NavGraphBuilder.page(
+    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
+) {
+    composable<T> { entry ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface),
+        ) { content(entry) }
     }
 }
