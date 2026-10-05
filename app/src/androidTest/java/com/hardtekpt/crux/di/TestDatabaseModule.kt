@@ -9,6 +9,7 @@ import androidx.room.Room
 import com.hardtekpt.crux.data.local.BodyMeasurementDao
 import com.hardtekpt.crux.data.local.ClimbDao
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.ExerciseDao
 import com.hardtekpt.crux.data.local.TemplateDao
 import dagger.Module
 import dagger.Provides
@@ -35,6 +36,9 @@ object TestDatabaseModule {
 
     @Provides
     fun provideTemplateDao(db: CruxDatabase): TemplateDao = db.templateDao()
+
+    @Provides
+    fun provideExerciseDao(db: CruxDatabase): ExerciseDao = db.exerciseDao()
 
     @Provides
     @Singleton

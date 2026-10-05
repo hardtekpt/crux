@@ -10,19 +10,32 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
+import androidx.room.Update
+import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.MetricType
 import kotlinx.coroutines.flow.Flow
 
+/** An exercise in the climber's library. Plans reference it; it is not copied into them. */
+@Entity(tableName = "exercises", indices = [Index("name")])
+data class ExerciseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val category: ExerciseCategory,
+    val metric: MetricType,
+    val notes: String? = null,
+    val createdAtMillis: Long,
+)
+
+/** A session plan. */
 @Entity(tableName = "workout_templates")
 data class WorkoutTemplateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val description: String,
-    /** Rough length, shown on the template card. */
-    val estimatedMinutes: Int,
     val position: Int,
 )
 
-/** A named section of a template: Warm-up, Max hangs, Limit bouldering. */
+/** A named section of a plan: Warm-up, Max hangs, Limit bouldering. */
 @Entity(
     tableName = "template_blocks",
     foreignKeys = [
@@ -42,7 +55,7 @@ data class TemplateBlockEntity(
     val name: String,
 )
 
-/** One exercise in a block with its target written as a prescription: `6 × 10 s · 20 mm · +5 kg`. */
+/** One library exercise placed in a block, with its targets. */
 @Entity(
     tableName = "template_exercises",
     foreignKeys = [
@@ -52,22 +65,37 @@ data class TemplateBlockEntity(
             childColumns = ["blockId"],
             onDelete = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index("blockId")],
+    indices = [Index("blockId"), Index("exerciseId")],
 )
 data class TemplateExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val blockId: Long,
+    val exerciseId: Long,
     val position: Int,
-    val name: String,
-    val target: String,
-    val rest: String? = null,
+    val sets: Int,
+    val reps: Int,
+    val seconds: Int,
+    val loadKg: Double,
+    val restSeconds: Int,
+)
+
+data class TemplateExerciseWithExercise(
+    @Embedded val item: TemplateExerciseEntity,
+    @Relation(parentColumn = "exerciseId", entityColumn = "id")
+    val exercise: ExerciseEntity,
 )
 
 data class BlockWithExercises(
     @Embedded val block: TemplateBlockEntity,
-    @Relation(parentColumn = "id", entityColumn = "blockId")
-    val exercises: List<TemplateExerciseEntity>,
+    @Relation(entity = TemplateExerciseEntity::class, parentColumn = "id", entityColumn = "blockId")
+    val exercises: List<TemplateExerciseWithExercise>,
 )
 
 data class TemplateWithBlocks(
@@ -77,20 +105,70 @@ data class TemplateWithBlocks(
 )
 
 @Dao
+interface ExerciseDao {
+    @Query("SELECT * FROM exercises ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<ExerciseEntity>>
+
+    @Query("SELECT * FROM exercises WHERE id = :id")
+    fun observe(id: Long): Flow<ExerciseEntity?>
+
+    @Query("SELECT * FROM exercises WHERE id = :id")
+    suspend fun get(id: Long): ExerciseEntity?
+
+    /** How many plans use an exercise; shown before deleting it. */
+    @Query(
+        """
+        SELECT COUNT(DISTINCT b.templateId) FROM template_exercises e
+        JOIN template_blocks b ON b.id = e.blockId
+        WHERE e.exerciseId = :id
+        """,
+    )
+    suspend fun planCount(id: Long): Int
+
+    @Query("SELECT COUNT(*) FROM exercises")
+    suspend fun count(): Int
+
+    @Insert
+    suspend fun insert(exercise: ExerciseEntity): Long
+
+    @Update
+    suspend fun update(exercise: ExerciseEntity)
+
+    @Query("DELETE FROM exercises WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
 interface TemplateDao {
     @Transaction
-    @Query("SELECT * FROM workout_templates ORDER BY position")
+    @Query("SELECT * FROM workout_templates ORDER BY position, id")
     fun observeAll(): Flow<List<TemplateWithBlocks>>
 
     @Transaction
     @Query("SELECT * FROM workout_templates WHERE id = :id")
     fun observe(id: Long): Flow<TemplateWithBlocks?>
 
+    @Transaction
+    @Query("SELECT * FROM workout_templates WHERE id = :id")
+    suspend fun get(id: Long): TemplateWithBlocks?
+
     @Query("SELECT COUNT(*) FROM workout_templates")
     suspend fun count(): Int
 
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM workout_templates")
+    suspend fun nextPosition(): Int
+
     @Insert
     suspend fun insertTemplate(template: WorkoutTemplateEntity): Long
+
+    @Update
+    suspend fun updateTemplate(template: WorkoutTemplateEntity)
+
+    @Query("DELETE FROM workout_templates WHERE id = :id")
+    suspend fun deleteTemplate(id: Long)
+
+    @Query("DELETE FROM template_blocks WHERE templateId = :templateId")
+    suspend fun deleteBlocks(templateId: Long)
 
     @Insert
     suspend fun insertBlock(block: TemplateBlockEntity): Long

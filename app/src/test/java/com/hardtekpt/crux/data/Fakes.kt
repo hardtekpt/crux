@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.data
 
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.PersonalBest
@@ -67,4 +68,29 @@ class FakeTemplateRepository : TemplateRepository {
     val templates = MutableStateFlow<List<WorkoutTemplate>>(emptyList())
     override fun observeTemplates(): Flow<List<WorkoutTemplate>> = templates
     override fun observeTemplate(id: Long): Flow<WorkoutTemplate?> = templates.map { list -> list.find { it.id == id } }
+    override suspend fun getTemplate(id: Long): WorkoutTemplate? = templates.value.find { it.id == id }
+    override suspend fun saveTemplate(template: WorkoutTemplate): Long {
+        val id = if (template.id == 0L) (templates.value.maxOfOrNull { it.id } ?: 0) + 1 else template.id
+        templates.value = templates.value.filterNot { it.id == id } + template.copy(id = id)
+        return id
+    }
+    override suspend fun deleteTemplate(id: Long) {
+        templates.value = templates.value.filterNot { it.id == id }
+    }
+}
+
+class FakeExerciseRepository : ExerciseRepository {
+    val exercises = MutableStateFlow<List<Exercise>>(emptyList())
+    override fun observeExercises(): Flow<List<Exercise>> = exercises
+    override suspend fun getExercise(id: Long): Exercise? = exercises.value.find { it.id == id }
+    override suspend fun saveExercise(input: ExerciseInput): Long {
+        val id = if (input.id == 0L) (exercises.value.maxOfOrNull { it.id } ?: 0) + 1 else input.id
+        exercises.value = exercises.value.filterNot { it.id == id } +
+            Exercise(id, input.name.trim(), input.category, input.metric, input.notes?.takeIf { it.isNotBlank() })
+        return id
+    }
+    override suspend fun planCount(id: Long): Int = 0
+    override suspend fun deleteExercise(id: Long) {
+        exercises.value = exercises.value.filterNot { it.id == id }
+    }
 }

@@ -50,6 +50,8 @@ import com.hardtekpt.crux.ui.navigation.LogClimbRoute
 import com.hardtekpt.crux.ui.navigation.LogWeightRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
+import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
+import com.hardtekpt.crux.ui.navigation.PlanEditorRoute
 import com.hardtekpt.crux.ui.navigation.SettingsRoute
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
@@ -62,6 +64,8 @@ import com.hardtekpt.crux.ui.quicklog.QuickLogAction
 import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
 import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.train.ExerciseEditorScreen
+import com.hardtekpt.crux.ui.train.PlanEditorScreen
 import com.hardtekpt.crux.ui.train.TemplateDetailScreen
 import com.hardtekpt.crux.ui.train.TrainScreen
 import com.hardtekpt.crux.ui.you.LogWeightScreen
@@ -74,7 +78,12 @@ fun CruxApp() {
     val currentDestination = backStackEntry?.destination
     var showQuickLog by rememberSaveable { mutableStateOf(false) }
 
-    val onForm = currentDestination.isAny(LogClimbRoute::class, LogWeightRoute::class)
+    val onForm = currentDestination.isAny(
+        LogClimbRoute::class,
+        LogWeightRoute::class,
+        PlanEditorRoute::class,
+        ExerciseEditorRoute::class,
+    )
     val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
     }
@@ -105,11 +114,21 @@ fun CruxApp() {
             }
             navigation<TrainGraph>(startDestination = TrainRoute) {
                 composable<TrainRoute> {
-                    TrainScreen(onOpenTemplate = { navController.navigate(TemplateDetailRoute(it)) })
+                    TrainScreen(
+                        onOpenPlan = { navController.navigate(TemplateDetailRoute(it)) },
+                        onNewPlan = { navController.navigate(PlanEditorRoute()) },
+                        onOpenExercise = { navController.navigate(ExerciseEditorRoute(it)) },
+                        onNewExercise = { navController.navigate(ExerciseEditorRoute()) },
+                    )
                 }
                 composable<TemplateDetailRoute> {
-                    TemplateDetailScreen(onBack = navController::popBackStack)
+                    TemplateDetailScreen(
+                        onBack = navController::popBackStack,
+                        onEdit = { navController.navigate(PlanEditorRoute(it)) },
+                    )
                 }
+                composable<PlanEditorRoute> { PlanEditorScreen(onDone = navController::popBackStack) }
+                composable<ExerciseEditorRoute> { ExerciseEditorScreen(onDone = navController::popBackStack) }
             }
             navigation<JournalGraph>(startDestination = JournalRoute) {
                 composable<JournalRoute> { JournalScreen() }

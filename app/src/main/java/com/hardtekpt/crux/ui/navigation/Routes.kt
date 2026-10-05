@@ -19,6 +19,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object HomeRoute
 @Serializable data object TrainRoute
 @Serializable data class TemplateDetailRoute(val templateId: Long)
+@Serializable data class PlanEditorRoute(val templateId: Long = 0)
+@Serializable data class ExerciseEditorRoute(val exerciseId: Long = 0)
 @Serializable data object JournalRoute
 @Serializable data object ProgressRoute
 @Serializable data object YouRoute

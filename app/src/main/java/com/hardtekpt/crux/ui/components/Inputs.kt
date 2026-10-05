@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -170,6 +171,33 @@ fun CruxStepper(
     modifier: Modifier = Modifier,
     step: Int = 1,
     enabled: Boolean = true,
+    testTagPrefix: String = "stepper",
+) {
+    CruxValueStepper(
+        display = value.toString(),
+        unit = unit,
+        canDecrease = enabled && value > range.first,
+        canIncrease = enabled && value < range.last,
+        onDecrease = { onValueChange((value - step).coerceAtLeast(range.first)) },
+        onIncrease = { onValueChange((value + step).coerceAtMost(range.last)) },
+        enabled = enabled,
+        modifier = modifier,
+        testTagPrefix = testTagPrefix,
+    )
+}
+
+/** Stepper with caller-defined steps, for values like load that step unevenly. */
+@Composable
+fun CruxValueStepper(
+    display: String,
+    unit: String,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    onDecrease: () -> Unit,
+    onIncrease: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    testTagPrefix: String = "stepper",
 ) {
     val colors = MaterialTheme.colorScheme
     val buttonColors = IconButtonDefaults.filledIconButtonColors(
@@ -181,32 +209,36 @@ fun CruxStepper(
             .background(colors.surfaceContainer, CircleShape)
             .padding(CruxTheme.space.s1),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
     ) {
         FilledIconButton(
-            onClick = { onValueChange((value - step).coerceAtLeast(range.first)) },
-            enabled = enabled && value > range.first,
+            onClick = onDecrease,
+            enabled = canDecrease,
             colors = buttonColors,
             modifier = Modifier
                 .size(CruxTheme.size.touchTarget)
-                .testTag("stepper_minus"),
+                .testTag("${testTagPrefix}_minus"),
         ) { Icon(Icons.Rounded.Remove, contentDescription = "Decrease $unit") }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = CruxTheme.space.s2)) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.widthIn(min = 44.dp),
+        ) {
             Text(
-                value.toString(),
+                display,
                 style = CruxTheme.type.metricMedium,
                 color = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
-                modifier = Modifier.testTag("stepper_value"),
+                maxLines = 1,
+                modifier = Modifier.testTag("${testTagPrefix}_value"),
             )
             Text(unit.uppercase(), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
         }
         FilledIconButton(
-            onClick = { onValueChange((value + step).coerceAtMost(range.last)) },
-            enabled = enabled && value < range.last,
+            onClick = onIncrease,
+            enabled = canIncrease,
             colors = buttonColors,
             modifier = Modifier
                 .size(CruxTheme.size.touchTarget)
-                .testTag("stepper_plus"),
+                .testTag("${testTagPrefix}_plus"),
         ) { Icon(Icons.Rounded.Add, contentDescription = "Increase $unit") }
     }
 }

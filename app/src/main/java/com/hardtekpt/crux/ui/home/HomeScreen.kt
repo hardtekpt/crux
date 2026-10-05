@@ -33,7 +33,7 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
-import com.hardtekpt.crux.data.model.TemplateBlock
+import com.hardtekpt.crux.data.model.PlanBlock
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.ui.components.CruxButton
@@ -264,7 +264,7 @@ private fun HomeContentPreview() {
             uiState = HomeUiState(
                 isLoading = false,
                 today = today,
-                todaysPlan = WorkoutTemplate(1, "Max hangs + limit bouldering", "", 75, listOf(TemplateBlock("Warm-up", emptyList()), TemplateBlock("Max hangs", emptyList()))),
+                todaysPlan = WorkoutTemplate(1, "Max hangs + limit bouldering", "", listOf(PlanBlock("Warm-up", emptyList()), PlanBlock("Max hangs", emptyList()))),
                 week = WeekSummary(climbs = 9, sends = 6, daysClimbed = 2),
                 latestBest = PersonalBest(Discipline.BOULDER, AscentStyle.FLASH, GradeScale.FONT, 9, "Blue crimps", "Block Lab", today),
                 weight = listOf(Measurement(1, 72.4, today), Measurement(2, 73.4, today.minusDays(35))).weightSummary(),

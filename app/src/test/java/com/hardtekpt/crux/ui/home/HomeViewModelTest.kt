@@ -57,7 +57,7 @@ class HomeViewModelTest {
 
     @Test
     fun `logging a climb or weight updates home without a restart`() = runTest {
-        templates.templates.value = listOf(WorkoutTemplate(1, "Strength day", "", 50, emptyList()))
+        templates.templates.value = listOf(WorkoutTemplate(1, "Strength day", "", emptyList()))
         viewModel().uiState.test {
             awaitLoaded()
             climbs.logClimb(newClimb(today, AscentStyle.FLASH, gradeIndex = 11))

@@ -8,6 +8,8 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
+import com.hardtekpt.crux.data.ExerciseRepository
+import com.hardtekpt.crux.data.OfflineExerciseRepository
 import com.hardtekpt.crux.data.OfflineBodyRepository
 import com.hardtekpt.crux.data.OfflineClimbRepository
 import com.hardtekpt.crux.data.OfflineTemplateRepository
@@ -15,6 +17,7 @@ import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.local.BodyMeasurementDao
 import com.hardtekpt.crux.data.local.ClimbDao
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.ExerciseDao
 import com.hardtekpt.crux.data.local.TemplateDao
 import dagger.Binds
 import dagger.Module
@@ -47,6 +50,9 @@ object DatabaseModule {
     fun provideTemplateDao(db: CruxDatabase): TemplateDao = db.templateDao()
 
     @Provides
+    fun provideExerciseDao(db: CruxDatabase): ExerciseDao = db.exerciseDao()
+
+    @Provides
     @Singleton
     fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("user_prefs") }
@@ -70,4 +76,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindTemplateRepository(impl: OfflineTemplateRepository): TemplateRepository
+
+    @Binds
+    abstract fun bindExerciseRepository(impl: OfflineExerciseRepository): ExerciseRepository
 }
