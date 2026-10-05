@@ -231,7 +231,6 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
                     supporting = listOfNotNull(climb.outcomeLine(), climb.place, climb.date.relativeLabel(state.today))
                         .joinToString(" · "),
                     leading = { GradeBadge(climb.grade, climb.gradeState) },
-                    selected = true,
                     modifier = Modifier.testTag("recent_climb"),
                 )
             }

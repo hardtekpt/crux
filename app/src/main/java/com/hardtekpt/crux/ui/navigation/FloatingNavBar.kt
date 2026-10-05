@@ -46,10 +46,10 @@ import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.ui.theme.CruxTheme
 
 /** Height of the floating bar itself, without its margin. */
-val FloatingNavBarHeight = 64.dp
-private val TabWidth = 56.dp
-private val IndicatorSize = 44.dp
-private val LogButtonSize = 64.dp
+val FloatingNavBarHeight = 56.dp
+private val TabWidth = 52.dp
+private val IndicatorSize = 40.dp
+private val LogButtonSize = 56.dp
 
 /**
  * How much bottom space a scrolling screen needs so its last row clears the floating bar.
@@ -100,7 +100,8 @@ fun FloatingNavBar(
                     Modifier
                         .offset(x = indicatorOffset)
                         .size(IndicatorSize)
-                        .background(colors.primaryContainer, CircleShape),
+                        .background(colors.primaryContainer, CircleShape)
+                        .border(CruxTheme.size.borderEmphasis, colors.primary, CircleShape),
                 )
             }
             Row {

@@ -9,28 +9,28 @@ import androidx.compose.ui.graphics.Color
 // each one fills is set in the schemes below (see the system's compose-theme.md).
 
 private object Light {
-    val surface = Color(0xFFF7F9F8)
-    val surfaceDim = Color(0xFFE6EBEA)
-    val surfaceContainerLow = Color(0xFFF2F5F4)
-    val surfaceContainer = Color(0xFFECF0EF)
-    val surfaceContainerHigh = Color(0xFFE5EAE9)
-    val surfaceContainerHighest = Color(0xFFDDE4E2)
+    val surface = Color(0xFFEAF0EF)
+    val surfaceDim = Color(0xFFDDE6E4)
+    val surfaceContainerLow = Color(0xFFFFFFFF)
+    val surfaceContainer = Color(0xFFF4F8F7)
+    val surfaceContainerHigh = Color(0xFFE0EBE9)
+    val surfaceContainerHighest = Color(0xFFD3E1DE)
     val ink = Color(0xFF121715)
     val muted = Color(0xFF434B49)
-    val outline = Color(0xFF6E7876)
-    val outlineVariant = Color(0xFFC6CECC)
+    val outline = Color(0xFF66716F)
+    val outlineVariant = Color(0xFFC1D0CC)
     val scrim = Color(0xA6121715)
-    val primary = Color(0xFF0B6B72)
+    val primary = Color(0xFF00747E)
     val onPrimary = Color(0xFFFFFFFF)
-    val primaryContainer = Color(0xFFB6ECEF)
-    val onPrimaryContainer = Color(0xFF00272A)
-    val secondary = Color(0xFF8A5A16)
+    val primaryContainer = Color(0xFF9FEDF1)
+    val onPrimaryContainer = Color(0xFF00262A)
+    val secondary = Color(0xFF8F5600)
     val onSecondary = Color(0xFFFFFFFF)
-    val secondaryContainer = Color(0xFFFFDFA8)
+    val secondaryContainer = Color(0xFFFFD27A)
     val onSecondaryContainer = Color(0xFF2E1C00)
     val success = Color(0xFF1F6B40)
     val onSuccess = Color(0xFFFFFFFF)
-    val successContainer = Color(0xFFB7F0CB)
+    val successContainer = Color(0xFF9FF2BF)
     val onSuccessContainer = Color(0xFF00210F)
     val danger = Color(0xFFB3261E)
     val onDanger = Color(0xFFFFFFFF)
@@ -43,29 +43,29 @@ private object Light {
 }
 
 private object Dark {
-    val surface = Color(0xFF0F1413)
-    val surfaceDim = Color(0xFF0A0E0D)
-    val surfaceContainerLow = Color(0xFF141A19)
-    val surfaceContainer = Color(0xFF18201E)
-    val surfaceContainerHigh = Color(0xFF222B29)
-    val surfaceContainerHighest = Color(0xFF2C3634)
+    val surface = Color(0xFF0B0F0E)
+    val surfaceDim = Color(0xFF070A09)
+    val surfaceContainerLow = Color(0xFF141C1B)
+    val surfaceContainer = Color(0xFF1A2422)
+    val surfaceContainerHigh = Color(0xFF243231)
+    val surfaceContainerHighest = Color(0xFF2F403E)
     val ink = Color(0xFFE4EAE8)
     val muted = Color(0xFFB6C0BD)
-    val outline = Color(0xFF818C89)
-    val outlineVariant = Color(0xFF3E4745)
+    val outline = Color(0xFF8A9693)
+    val outlineVariant = Color(0xFF3A4B48)
     val scrim = Color(0xB3000000)
-    val primary = Color(0xFF67D6DE)
+    val primary = Color(0xFF3FDDE8)
     val onPrimary = Color(0xFF00363A)
-    val primaryContainer = Color(0xFF0A5056)
-    val onPrimaryContainer = Color(0xFFB6ECEF)
-    val secondary = Color(0xFFF2C070)
+    val primaryContainer = Color(0xFF00565D)
+    val onPrimaryContainer = Color(0xFFA8F5F8)
+    val secondary = Color(0xFFFFBD45)
     val onSecondary = Color(0xFF452B00)
-    val secondaryContainer = Color(0xFF6A4408)
-    val onSecondaryContainer = Color(0xFFFFDFA8)
-    val success = Color(0xFF7CDBA0)
+    val secondaryContainer = Color(0xFF714600)
+    val onSecondaryContainer = Color(0xFFFFE0A8)
+    val success = Color(0xFF5EE391)
     val onSuccess = Color(0xFF00391C)
-    val successContainer = Color(0xFF0C5231)
-    val onSuccessContainer = Color(0xFFB7F0CB)
+    val successContainer = Color(0xFF0B5A33)
+    val onSuccessContainer = Color(0xFFB5F7CF)
     val danger = Color(0xFFFFB4AB)
     val onDanger = Color(0xFF690005)
     val dangerContainer = Color(0xFF93000A)
@@ -90,7 +90,7 @@ internal val CruxLightColorScheme = with(Light) {
         surface = surface, onSurface = ink,
         surfaceVariant = surfaceContainerHighest, onSurfaceVariant = muted,
         surfaceDim = surfaceDim, surfaceBright = surface,
-        surfaceContainerLowest = surface, surfaceContainerLow = surfaceContainerLow,
+        surfaceContainerLowest = surfaceContainerLow, surfaceContainerLow = surfaceContainerLow,
         surfaceContainer = surfaceContainer, surfaceContainerHigh = surfaceContainerHigh,
         surfaceContainerHighest = surfaceContainerHighest,
         outline = outline, outlineVariant = outlineVariant, scrim = scrim,
@@ -111,7 +111,7 @@ internal val CruxDarkColorScheme = with(Dark) {
         surface = surface, onSurface = ink,
         surfaceVariant = surfaceContainerHighest, onSurfaceVariant = muted,
         surfaceDim = surfaceDim, surfaceBright = surfaceContainerHighest,
-        surfaceContainerLowest = surfaceDim, surfaceContainerLow = surfaceContainerLow,
+        surfaceContainerLowest = surfaceContainerLow, surfaceContainerLow = surfaceContainerLow,
         surfaceContainer = surfaceContainer, surfaceContainerHigh = surfaceContainerHigh,
         surfaceContainerHighest = surfaceContainerHighest,
         outline = outline, outlineVariant = outlineVariant, scrim = scrim,

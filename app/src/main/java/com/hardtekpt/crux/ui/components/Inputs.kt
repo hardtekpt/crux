@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -69,9 +70,10 @@ fun CruxFilterChip(
             enabled = enabled,
             selected = selected,
             borderColor = colors.outline,
-            selectedBorderWidth = 0.dp,
+            selectedBorderColor = colors.primary,
+            selectedBorderWidth = CruxTheme.size.borderEmphasis,
         ),
-        modifier = modifier.height(32.dp),
+        modifier = modifier.height(CruxTheme.size.controlHeightSmall),
     )
 }
 
@@ -85,7 +87,7 @@ fun <T> CruxSegmentedButtons(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth().height(CruxTheme.size.controlHeight)) {
         options.forEachIndexed { index, option ->
             SegmentedButton(
                 selected = option == selected,
@@ -95,10 +97,16 @@ fun <T> CruxSegmentedButtons(
                     count = options.size,
                     baseShape = MaterialTheme.shapes.small,
                 ),
+                // The selected segment gets a 2dp primary border; the rest a hairline.
+                border = if (option == selected) {
+                    BorderStroke(CruxTheme.size.borderEmphasis, colors.primary)
+                } else {
+                    BorderStroke(CruxTheme.size.borderHairline, colors.outline)
+                },
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = colors.primaryContainer,
                     activeContentColor = colors.onPrimaryContainer,
-                    inactiveContainerColor = colors.surface,
+                    inactiveContainerColor = colors.surfaceContainerLow,
                     inactiveContentColor = colors.onSurface,
                     activeBorderColor = colors.outline,
                     inactiveBorderColor = colors.outline,
@@ -136,7 +144,7 @@ fun CruxTextField(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = CruxTheme.size.touchTarget),
+                .heightIn(min = CruxTheme.size.controlHeightLarge),
             placeholder = placeholder?.let { { Text(it, style = MaterialTheme.typography.bodyLarge) } },
             textStyle = MaterialTheme.typography.bodyLarge,
             isError = error != null,
@@ -145,8 +153,8 @@ fun CruxTextField(
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             shape = MaterialTheme.shapes.small,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = colors.surface,
-                unfocusedContainerColor = colors.surface,
+                focusedContainerColor = colors.surfaceContainerLow,
+                unfocusedContainerColor = colors.surfaceContainerLow,
                 unfocusedBorderColor = colors.outline,
                 focusedBorderColor = colors.primary,
                 errorBorderColor = colors.error,

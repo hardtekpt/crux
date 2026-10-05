@@ -26,9 +26,9 @@ enum class CruxButtonVariant { Filled, Tonal, Outlined, Text, Destructive }
 
 /** Sizes are visual heights; every size keeps a 48dp hit area via minimumInteractiveComponentSize. */
 enum class CruxButtonSize(val height: Dp, val horizontalPadding: Dp) {
-    Small(32.dp, 12.dp),
-    Default(40.dp, 20.dp),
-    Large(48.dp, 24.dp),
+    Small(28.dp, 12.dp),
+    Default(36.dp, 16.dp),
+    Large(44.dp, 20.dp),
 }
 
 /** The single action set. One Filled button per screen. */
@@ -66,10 +66,10 @@ fun CruxButton(
         enabled = enabled,
         shape = CircleShape,
         colors = buttonColors,
-        border = if (variant == CruxButtonVariant.Outlined) {
-            BorderStroke(CruxTheme.size.borderHairline, colors.outline)
-        } else {
-            null
+        border = when (variant) {
+            CruxButtonVariant.Outlined -> BorderStroke(CruxTheme.size.borderHairline, colors.outline)
+            CruxButtonVariant.Tonal -> BorderStroke(CruxTheme.size.borderHairline, colors.primary)
+            else -> null
         },
         contentPadding = PaddingValues(horizontal = size.horizontalPadding),
         modifier = modifier.defaultMinSize(minHeight = size.height),

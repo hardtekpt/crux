@@ -70,8 +70,8 @@ val CruxTypography = Typography(
 /** Crux text styles with no Material 3 slot. Read through `CruxTheme.type`. */
 @Immutable
 data class CruxType(
-    val metricLarge: TextStyle = style(Archivo, 44, 44, 800, -0.03, tabular = true),
-    val metricMedium: TextStyle = style(Archivo, 28, 32, 800, -0.02, tabular = true),
+    val metricLarge: TextStyle = style(Archivo, 36, 40, 800, -0.03, tabular = true),
+    val metricMedium: TextStyle = style(Archivo, 24, 28, 800, -0.02, tabular = true),
     val grade: TextStyle = style(JetBrainsMono, 15, 18, 600, 0.02, tabular = true),
     val gradeSmall: TextStyle = style(JetBrainsMono, 13, 16, 600, 0.02, tabular = true),
     val timer: TextStyle = style(JetBrainsMono, 32, 34, 500, 0.01, tabular = true),

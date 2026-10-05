@@ -40,8 +40,15 @@ fun GradeBadge(
     }
     Box(
         modifier = modifier
-            .defaultMinSize(minWidth = 46.dp, minHeight = if (small) 24.dp else 32.dp)
+            .defaultMinSize(minWidth = 44.dp, minHeight = if (small) 22.dp else 28.dp)
             .background(container, CruxTheme.shape.xl)
+            .then(
+                if (state == GradeState.PersonalBest) {
+                    Modifier.border(CruxTheme.size.borderEmphasis, colors.secondary, CruxTheme.shape.xl)
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = CruxTheme.space.s2),
         contentAlignment = Alignment.Center,
     ) {
@@ -76,8 +83,12 @@ fun CruxListRow(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .background(if (selected) colors.surfaceContainerHigh else colors.surfaceContainer)
-            .border(CruxTheme.size.borderHairline, colors.outlineVariant, MaterialTheme.shapes.medium)
+            .background(if (selected) colors.primaryContainer.copy(alpha = 0.35f) else colors.surfaceContainerLow)
+            .border(
+                if (selected) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline,
+                if (selected) colors.primary else colors.outlineVariant,
+                MaterialTheme.shapes.medium,
+            )
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .heightIn(min = CruxTheme.size.touchTarget)
             .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s2),

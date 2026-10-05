@@ -71,6 +71,7 @@ fun CruxTopAppBar(
         },
         actions = actions,
         modifier = modifier,
+        expandedHeight = CruxTheme.size.appBarHeight,
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -95,8 +96,8 @@ fun CruxCard(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = when (fill) {
-                CruxCardFill.Default -> colors.surfaceContainer
-                CruxCardFill.Low -> colors.surfaceContainerLow
+                CruxCardFill.Default -> colors.surfaceContainerLow
+                CruxCardFill.Low -> colors.surfaceContainer
                 CruxCardFill.Outlined -> colors.surface
             },
             contentColor = colors.onSurface,
@@ -131,16 +132,17 @@ fun StatTile(
     valueModifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val container = if (isPersonalBest) colors.secondaryContainer else colors.surfaceContainer
+    val container = if (isPersonalBest) colors.secondaryContainer else colors.surfaceContainerLow
     val content = if (isPersonalBest) colors.onSecondaryContainer else colors.onSurface
     val secondaryText = if (isPersonalBest) colors.onSecondaryContainer else colors.onSurfaceVariant
 
     Column(
         modifier = modifier
             .background(container, MaterialTheme.shapes.large)
+            // A personal best gets a 2dp gold border; everything else a hairline.
             .border(
-                CruxTheme.size.borderHairline,
-                if (isPersonalBest) colors.secondary.copy(alpha = 0.6f) else colors.outlineVariant,
+                if (isPersonalBest) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline,
+                if (isPersonalBest) colors.secondary else colors.outlineVariant,
                 MaterialTheme.shapes.large,
             )
             .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s3),
