@@ -138,9 +138,9 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.filterNot { it.placeId == id }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long {
         val id = areaId.takeIf { it != 0L } ?: nextId++
-        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null)
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath)
         return id
     }
 

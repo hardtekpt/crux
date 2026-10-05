@@ -17,6 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import com.hardtekpt.crux.ui.components.ImageViewer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -89,6 +95,7 @@ fun ProblemDetailScreen(
     val history by viewModel.history.collectAsStateWithLifecycle()
     val space = CruxTheme.space
     val problem = item?.problem
+    var viewingImage by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().testTag("screen_ProblemDetail")) {
         CruxTopAppBar(
@@ -104,7 +111,8 @@ fun ProblemDetailScreen(
         )
         val current = item ?: return@Column
         val stats = current.stats
-        val areaName = current.problem.areaId?.let { id -> place?.areas?.firstOrNull { it.id == id }?.name }
+        val area = current.problem.areaId?.let { id -> place?.areas?.firstOrNull { it.id == id } }
+        val areaName = area?.name
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
@@ -137,6 +145,19 @@ fun ProblemDetailScreen(
                         delta = if (stats?.sent == true) null else stats?.let { "last go ${it.lastGo.shortLabel()}" },
                         modifier = Modifier.weight(1f),
                     )
+                }
+            }
+            area?.imagePath?.let { image ->
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s3)) {
+                        ImageThumbnail(image, "${area.name} image", onClick = { viewingImage = true }, size = 64.dp)
+                        Text(
+                            "Where it is: ${area.name}. Tap to view.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (viewingImage) ImageViewer(image, area.name) { viewingImage = false }
                 }
             }
             current.problem.notes?.let { notes ->

@@ -1,5 +1,25 @@
 package com.hardtekpt.crux.ui.places
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import com.hardtekpt.crux.data.images.AreaImageStore
+import com.hardtekpt.crux.ui.components.CruxButtonSize
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import com.hardtekpt.crux.ui.components.ImageViewer
+import com.hardtekpt.crux.ui.components.areaImageFile
+import com.hardtekpt.crux.ui.components.rememberLocalImage
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -164,20 +184,42 @@ fun placeIcon(type: PlaceType) = when (type) {
 class PlaceDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: PlaceRepository,
+    private val images: AreaImageStore,
 ) : ViewModel() {
     val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
 
     val detail: StateFlow<PlaceDetail?> = repository.observePlaceDetail(placeId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun saveArea(areaId: Long, name: String, angle: Int?) {
+    /** Saves a wall; a replaced or removed image file is deleted. */
+    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?) {
         if (name.isBlank()) return
-        viewModelScope.launch { repository.saveArea(placeId, areaId, name, angle) }
+        viewModelScope.launch {
+            repository.saveArea(placeId, areaId, name, angle, image)
+            if (previousImage != image) images.delete(previousImage)
+        }
     }
 
-    fun deleteArea(id: Long) {
-        viewModelScope.launch { repository.deleteArea(id) }
+    fun deleteArea(area: Area) {
+        viewModelScope.launch {
+            repository.deleteArea(area.id)
+            images.delete(area.imagePath)
+        }
     }
+
+    /** Copies a picked or captured image into the app; [onReady] gets its file name. */
+    fun importImage(uri: Uri, onReady: (String) -> Unit, onFailed: () -> Unit) {
+        viewModelScope.launch {
+            runCatching { images.importFrom(uri) }.onSuccess(onReady).onFailure { onFailed() }
+        }
+    }
+
+    /** An image added in the dialog and then cancelled, or swapped for another. */
+    fun discardImage(name: String?) {
+        viewModelScope.launch { images.delete(name) }
+    }
+
+    fun captureUri(): Uri = images.newCaptureUri()
 
     fun resetArea(id: Long) {
         viewModelScope.launch { repository.resetArea(id) }
@@ -196,6 +238,7 @@ fun PlaceDetailScreen(
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
     var editingArea by remember { mutableStateOf<Area?>(null) }
+    var viewingArea by remember { mutableStateOf<Area?>(null) }
     var addingArea by rememberSaveable { mutableStateOf(false) }
     var showRetired by rememberSaveable { mutableStateOf(false) }
     val space = CruxTheme.space
@@ -247,13 +290,26 @@ fun PlaceDetailScreen(
             groups.forEach { (area, problems) ->
                 if (area == null && problems.isEmpty()) return@forEach
                 item(key = "area_${area?.id ?: "none"}") {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s3)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(space.s3),
+                        modifier = Modifier.padding(top = space.s3),
+                    ) {
+                        area?.imagePath?.let { image ->
+                            ImageThumbnail(
+                                name = image,
+                                description = "${area.name} image",
+                                onClick = { viewingArea = area },
+                                size = 44.dp,
+                                modifier = Modifier.testTag("area_image_${area.name}"),
+                            )
+                        }
                         Eyebrow(
                             area?.let { a -> listOfNotNull(a.name, a.angle?.let { "$it°" }, a.resetDate?.let { "reset ${it.shortLabel()}" }).joinToString(" · ") }
                                 ?: "No ${areaLabel.lowercase()}",
                             Modifier.weight(1f),
                         )
-                        if (area != null) AreaMenu(area, onEdit = { editingArea = area }, onReset = { viewModel.resetArea(area.id) }, onDelete = { viewModel.deleteArea(area.id) })
+                        if (area != null) AreaMenu(area, onEdit = { editingArea = area }, onReset = { viewModel.resetArea(area.id) }, onDelete = { viewModel.deleteArea(area) })
                     }
                 }
                 if (area != null && problems.isEmpty()) {
@@ -293,8 +349,9 @@ fun PlaceDetailScreen(
             area = editingArea,
             label = place?.type?.areaLabel ?: "Wall",
             isBoard = place?.type == PlaceType.BOARD,
-            onSave = { name, angle ->
-                viewModel.saveArea(editingArea?.id ?: 0, name, angle)
+            viewModel = viewModel,
+            onSave = { name, angle, image ->
+                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath)
                 addingArea = false
                 editingArea = null
             },
@@ -303,6 +360,9 @@ fun PlaceDetailScreen(
                 editingArea = null
             },
         )
+    }
+    viewingArea?.let { area ->
+        area.imagePath?.let { image -> ImageViewer(image, area.name) { viewingArea = null } }
     }
 }
 
@@ -339,24 +399,71 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${area.name} options") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text("Rename") }, onClick = { open = false; onEdit() })
+            DropdownMenuItem(text = { Text("Edit") }, onClick = { open = false; onEdit() })
             DropdownMenuItem(text = { Text("Reset (retire its problems)") }, onClick = { open = false; onReset() })
             DropdownMenuItem(text = { Text("Delete") }, onClick = { open = false; onDelete() })
         }
     }
 }
 
+/**
+ * Add or edit a wall: name, angle and an optional image, a photo of the wall or a map of the
+ * gym with it marked. Picked from the gallery or taken with the camera.
+ */
 @Composable
-private fun AreaDialog(area: Area?, label: String, isBoard: Boolean, onSave: (String, Int?) -> Unit, onDismiss: () -> Unit) {
+private fun AreaDialog(
+    area: Area?,
+    label: String,
+    isBoard: Boolean,
+    viewModel: PlaceDetailViewModel,
+    onSave: (String, Int?, String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
     var name by rememberSaveable { mutableStateOf(area?.name.orEmpty()) }
     var angle by rememberSaveable { mutableStateOf(area?.angle?.toString().orEmpty()) }
+    var image by rememberSaveable { mutableStateOf(area?.imagePath) }
+    var loading by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    var captureUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val noun = label.lowercase()
+
+    // A new image replaces one added earlier in this dialog; the wall's saved image is only
+    // dropped once the dialog is saved.
+    val accept = { uri: Uri ->
+        loading = true
+        failed = false
+        viewModel.importImage(
+            uri,
+            onReady = { file ->
+                if (image != area?.imagePath) viewModel.discardImage(image)
+                image = file
+                loading = false
+            },
+            onFailed = {
+                loading = false
+                failed = true
+            },
+        )
+    }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(accept) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        if (saved) captureUri?.let { accept(Uri.parse(it)) }
+    }
+    val cancel = {
+        if (image != area?.imagePath) viewModel.discardImage(image)
+        onDismiss()
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = cancel,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(if (area == null) "Add ${label.lowercase()}" else "Rename ${label.lowercase()}", style = MaterialTheme.typography.headlineSmall) },
+        title = { Text(if (area == null) "Add $noun" else "Edit $noun", style = MaterialTheme.typography.headlineSmall) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 CruxTextField(
                     label = "Name",
                     value = name,
@@ -371,14 +478,77 @@ private fun AreaDialog(area: Area?, label: String, isBoard: Boolean, onSave: (St
                     helper = "degrees, optional",
                     keyboardType = KeyboardType.Number,
                 )
+                Eyebrow("Image · optional", Modifier.padding(top = CruxTheme.space.s2))
+                Text(
+                    "A photo of the $noun, or a map of the place with it marked.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val current = image
+                when {
+                    loading -> Text("Adding image…", style = MaterialTheme.typography.bodyMedium)
+                    current != null -> {
+                        val preview = rememberLocalImage(areaImageFile(current), 800)
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                .testTag("area_image_preview"),
+                        ) {
+                            preview?.let {
+                                Image(it, contentDescription = "$label image", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                            CruxButton("Replace", { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                            CruxButton(
+                                "Remove",
+                                {
+                                    if (image != area?.imagePath) viewModel.discardImage(image)
+                                    image = null
+                                },
+                                variant = CruxButtonVariant.Text,
+                                size = CruxButtonSize.Small,
+                                modifier = Modifier.testTag("remove_area_image"),
+                            )
+                        }
+                    }
+                    else -> Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                        CruxButton(
+                            "Choose",
+                            { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            variant = CruxButtonVariant.Outlined,
+                            size = CruxButtonSize.Small,
+                            icon = Icons.Rounded.Image,
+                            modifier = Modifier.testTag("choose_area_image"),
+                        )
+                        CruxButton(
+                            "Take photo",
+                            {
+                                val uri = viewModel.captureUri()
+                                captureUri = uri.toString()
+                                camera.launch(uri)
+                            },
+                            variant = CruxButtonVariant.Outlined,
+                            size = CruxButtonSize.Small,
+                            icon = Icons.Rounded.PhotoCamera,
+                            modifier = Modifier.testTag("take_area_photo"),
+                        )
+                    }
+                }
+                if (failed) {
+                    Text("That image couldn't be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, angle.toIntOrNull()) }, enabled = name.isNotBlank(), modifier = Modifier.testTag("save_area")) {
+            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = cancel) { Text("Cancel") } },
     )
 }
 

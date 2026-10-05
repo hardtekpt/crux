@@ -47,6 +47,8 @@ data class AreaEntity(
     /** Gyms: the day the wall was last reset. */
     val resetEpochDay: Long? = null,
     val position: Int = 0,
+    /** File name of an attached photo or map in app storage (schema 8). */
+    val imagePath: String? = null,
 )
 
 /** A problem or route at a place, optionally on one of its areas. */

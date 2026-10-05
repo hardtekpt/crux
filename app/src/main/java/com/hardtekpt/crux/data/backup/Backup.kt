@@ -22,7 +22,9 @@ import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.Venue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.hardtekpt.crux.data.images.AreaImageStore
 import java.time.Clock
+import java.util.Base64
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +34,7 @@ enum class BackupSection(val label: String, val description: String, val availab
     EXERCISES("Exercise list", "Your exercise library"),
     PLANS("Plan list", "Session plans, with the exercises they use"),
     JOURNAL("Journal", "Every climb you logged"),
-    PLACES("Places", "Gyms, crags and boards, with their walls and problems"),
+    PLACES("Places", "Gyms, crags and boards, with their walls, wall images and problems"),
     BODY("Body stats", "Weigh-ins and height"),
     SESSIONS("Session history", "Arrives with the session logger", available = false),
 }
@@ -112,7 +114,13 @@ data class ClimbDto(
 )
 
 @Serializable
-data class AreaDto(val name: String, val angle: Int? = null, val resetDate: String? = null)
+data class AreaDto(
+    val name: String,
+    val angle: Int? = null,
+    val resetDate: String? = null,
+    /** The wall's photo or map as base64 JPEG. Older backups omit it. */
+    val image: String? = null,
+)
 
 @Serializable
 data class ProblemDto(
@@ -153,9 +161,11 @@ class BackupRepository(
     /** The data set to back up or restore into: whichever is active. */
     private val database: suspend () -> CruxDatabase,
     private val clock: Clock,
+    /** Wall images travel inside the file; without a store they are left out. */
+    private val images: AreaImageStore? = null,
 ) {
     @Inject
-    constructor(dbs: CruxDatabases, clock: Clock) : this({ dbs.current() }, clock)
+    constructor(dbs: CruxDatabases, clock: Clock, images: AreaImageStore) : this({ dbs.current() }, clock, images)
 
     constructor(db: CruxDatabase, clock: Clock) : this({ db }, clock)
 
@@ -223,7 +233,11 @@ class BackupRepository(
                     val placeAreas = areas[place.id].orEmpty().sortedBy { it.position }
                     val areaNames = placeAreas.associate { it.id to it.name }
                     place.toDto(
-                        areas = placeAreas.map { it.toDto() },
+                        areas = placeAreas.map { area ->
+                            area.toDto().copy(
+                                image = area.imagePath?.let { images?.readBytes(it) }?.let { Base64.getEncoder().encodeToString(it) },
+                            )
+                        },
                         problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
                     )
                 }
@@ -350,6 +364,9 @@ class BackupRepository(
                             angle = area.angle,
                             resetEpochDay = area.resetDate?.let { java.time.LocalDate.parse(it).toEpochDay() },
                             position = position,
+                            imagePath = area.image?.let { encoded ->
+                                runCatching { Base64.getDecoder().decode(encoded) }.getOrNull()?.let { images?.importBytes(it) }
+                            },
                         ),
                     )
                 }.toMap()

@@ -58,7 +58,7 @@ interface PlaceRepository {
     suspend fun getProblem(id: Long): Problem?
     suspend fun savePlace(input: PlaceInput): Long
     suspend fun deletePlace(id: Long)
-    suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?): Long
+    suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long
     suspend fun deleteArea(id: Long)
     /** Records a reset today and retires the problems that were on the wall. */
     suspend fun resetArea(id: Long)
@@ -159,14 +159,16 @@ class OfflinePlaceRepository @Inject constructor(
         }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long {
         val dao = dbs.current().placeDao()
         return if (areaId != 0L) {
             val existing = dao.getAllAreas().first { it.id == areaId }
-            dao.updateArea(existing.copy(name = name.trim(), angle = angle))
+            dao.updateArea(existing.copy(name = name.trim(), angle = angle, imagePath = imagePath))
             areaId
         } else {
-            dao.insertArea(AreaEntity(placeId = placeId, name = name.trim(), angle = angle, position = dao.nextAreaPosition(placeId)))
+            dao.insertArea(
+                AreaEntity(placeId = placeId, name = name.trim(), angle = angle, position = dao.nextAreaPosition(placeId), imagePath = imagePath),
+            )
         }
     }
 
@@ -229,7 +231,7 @@ class OfflinePlaceRepository @Inject constructor(
 
 internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes)
 
-internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay))
+internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath)
 
 internal fun ProblemEntity.toModel() = Problem(
     id = id,

@@ -25,6 +25,8 @@ data class Area(
     val name: String,
     val angle: Int?,
     val resetDate: LocalDate?,
+    /** A photo of the wall or a map with it marked; a file name in app storage. */
+    val imagePath: String? = null,
 )
 
 data class Problem(
