@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 
 /** Bests for one discipline in one scale. Grades in different scales are never compared. */
@@ -59,6 +61,7 @@ data class ProgressUiState(
     val scales: GradeScales = GradeScales(),
     /** Every discipline and scale the climber has sent in, disciplines in order. */
     val groups: List<DisciplineBests> = emptyList(),
+    val charts: ProgressCharts = ProgressCharts(),
 ) {
     val isEmpty: Boolean get() = groups.all { it.hardest == null }
 
@@ -87,11 +90,20 @@ fun List<PersonalBest>.toDisciplineBests(): List<DisciplineBests> =
 class ProgressViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     preferences: UserPreferencesRepository,
+    clock: Clock,
 ) : ViewModel() {
     val uiState: StateFlow<ProgressUiState> = combine(
         climbRepository.observePersonalBests(),
+        climbRepository.observeClimbs(),
         preferences.gradeScales,
-    ) { bests, scales -> ProgressUiState(isLoading = false, scales = scales, groups = bests.toDisciplineBests()) }
+    ) { bests, climbs, scales ->
+        ProgressUiState(
+            isLoading = false,
+            scales = scales,
+            groups = bests.toDisciplineBests(),
+            charts = progressCharts(climbs, scales, LocalDate.now(clock)),
+        )
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 }
 
@@ -143,6 +155,9 @@ fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier) {
                         )
                     }
                 }
+            }
+            item(key = "charts") {
+                ProgressChartCards(uiState.charts, Modifier.padding(top = space.s3))
             }
             uiState.groups.forEach { group ->
                 item(key = "header_${group.discipline}_${group.scale}") {

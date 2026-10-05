@@ -37,7 +37,12 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.ui.WeightSummary
+import com.hardtekpt.crux.ui.charts.ChartCard
+import com.hardtekpt.crux.ui.charts.ChartRange
+import com.hardtekpt.crux.ui.charts.SeriesPoint
+import com.hardtekpt.crux.ui.charts.TimeSeriesChart
 import com.hardtekpt.crux.ui.components.CruxButton
+import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTextField
@@ -59,6 +64,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class YouUiState(
@@ -187,6 +193,9 @@ fun YouContent(
                     )
                 }
             }
+            if (uiState.weights.isNotEmpty()) {
+                item { WeightTrendCard(uiState.weights, Modifier.padding(top = space.s3)) }
+            }
             item { Eyebrow("Weight history", Modifier.padding(top = space.s3)) }
             if (!uiState.isLoading && uiState.weights.isEmpty()) {
                 item {
@@ -223,6 +232,47 @@ fun YouContent(
                 editingHeight = false
             },
         )
+    }
+}
+
+/** Bodyweight over a chosen window, with the change across it in the header. */
+@Composable
+private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Modifier) {
+    var range by rememberSaveable { mutableStateOf(ChartRange.Quarter) }
+    val today = LocalDate.now()
+    val start = range.start(today)
+    val inRange = weights.filter { start == null || !it.date.isBefore(start) }.sortedBy { it.date }
+    val change = if (inRange.size > 1) inRange.last().value - inRange.first().value else null
+
+    ChartCard(
+        title = "Bodyweight",
+        trailing = change?.let { "${it.signedOneDecimal()} kg over ${range.label}" },
+        modifier = modifier.testTag("weight_chart_card"),
+    ) {
+        CruxSegmentedButtons(
+            options = ChartRange.entries,
+            selected = range,
+            label = { it.label },
+            onSelect = { range = it },
+            modifier = Modifier.padding(bottom = CruxTheme.space.s3),
+        )
+        if (inRange.size < 2) {
+            Text(
+                "Log another weigh-in in this window to see the trend.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = CruxTheme.space.s6),
+            )
+        } else {
+            TimeSeriesChart(
+                points = inRange.map { SeriesPoint(it.date.toEpochDay().toDouble(), it.value) },
+                formatX = { LocalDate.ofEpochDay(it.toLong()).shortLabel() },
+                formatY = { it.oneDecimal() },
+                unit = " kg",
+                description = "Bodyweight from ${inRange.first().value.oneDecimal()} to ${inRange.last().value.oneDecimal()} kg " +
+                    "between ${inRange.first().date.shortLabel()} and ${inRange.last().date.shortLabel()}",
+            )
+        }
     }
 }
 

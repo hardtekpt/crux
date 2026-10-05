@@ -80,6 +80,38 @@ class ComponentsTest {
     }
 
     @Test
+    fun chartsRenderWithTheirLabels() {
+        composeRule.setContent {
+            CruxTheme {
+                androidx.compose.foundation.layout.Column {
+                    com.hardtekpt.crux.ui.charts.TimeSeriesChart(
+                        points = listOf(
+                            com.hardtekpt.crux.ui.charts.SeriesPoint(1.0, 72.0),
+                            com.hardtekpt.crux.ui.charts.SeriesPoint(2.0, 72.5),
+                        ),
+                        formatX = { "Day ${it.toInt()}" },
+                        formatY = { it.toString() },
+                        description = "Bodyweight trend",
+                    )
+                    com.hardtekpt.crux.ui.charts.DonutChart(
+                        slices = listOf(
+                            com.hardtekpt.crux.ui.charts.SliceDatum("Flash", 3.0),
+                            com.hardtekpt.crux.ui.charts.SliceDatum("Redpoint", 1.0),
+                        ),
+                        centerValue = "4",
+                        centerLabel = "sends",
+                        formatValue = { it.toInt().toString() },
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithTag("time_series_chart").assertExists()
+        composeRule.onNodeWithText("Redpoint").performClick()
+        // Selecting a slice puts its value in the middle of the donut.
+        composeRule.onNodeWithText("REDPOINT").assertExists()
+    }
+
+    @Test
     fun emptyHomeNamesTheFirstAction() {
         composeRule.setContent { CruxTheme { HomeContent(HomeUiState(isLoading = false)) } }
         composeRule.onNodeWithTag("week_climbs").assertTextEquals("0")
