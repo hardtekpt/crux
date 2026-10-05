@@ -9,6 +9,7 @@ import com.hardtekpt.crux.data.local.ProblemStatsRow
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
@@ -33,6 +34,7 @@ data class PlaceInput(
     val routeScale: GradeScale?,
     val defaultAngle: Int?,
     val notes: String?,
+    val localScale: LocalScale? = null,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -46,6 +48,8 @@ data class ProblemInput(
     val gradeIndex: Int,
     val tape: Int?,
     val notes: String?,
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 )
 
 interface PlaceRepository {
@@ -142,6 +146,7 @@ class OfflinePlaceRepository @Inject constructor(
             defaultAngle = input.defaultAngle,
             notes = input.notes?.trim()?.takeIf { it.isNotEmpty() },
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
+            localScale = input.localScale?.encode(),
         )
         return if (existing != null) {
             dao.updatePlace(entity)
@@ -206,6 +211,8 @@ class OfflinePlaceRepository @Inject constructor(
             retired = existing?.retired ?: false,
             notes = input.notes?.trim()?.takeIf { it.isNotEmpty() },
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
+            gradeLabel = input.gradeLabel.takeIf { input.gradeScale.isLocal },
+            gradeColour = input.gradeColour.takeIf { input.gradeScale.isLocal },
         )
         return if (existing != null) {
             dao.updateProblem(entity)
@@ -229,7 +236,7 @@ class OfflinePlaceRepository @Inject constructor(
     }
 }
 
-internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes)
+internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale))
 
 internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath)
 
@@ -245,6 +252,8 @@ internal fun ProblemEntity.toModel() = Problem(
     setDate = setEpochDay?.let(LocalDate::ofEpochDay),
     retired = retired,
     notes = notes,
+    gradeLabel = gradeLabel,
+    gradeColour = gradeColour,
 )
 
 private fun ProblemStatsRow.toModel() = ProblemStats(

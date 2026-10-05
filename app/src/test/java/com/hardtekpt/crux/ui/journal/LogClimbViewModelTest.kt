@@ -7,6 +7,7 @@ import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.PlaceType
 import androidx.lifecycle.SavedStateHandle
 import com.hardtekpt.crux.data.model.AscentStyle
@@ -184,5 +185,29 @@ class LogClimbViewModelTest {
         again.confirmDelete()
         withTimeout(5_000) { again.draft.first { it.saved } }
         assertTrue(repository.climbs.value.isEmpty())
+    }
+
+    @Test
+    fun `a place with local colour grades logs the colour, not a converted grade`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Tape Gym", type = PlaceType.GYM, location = null,
+                boulderScale = GradeScale.LOCAL_BOULDER, routeScale = null, defaultAngle = null, notes = null,
+                localScale = LocalScale.DEFAULT_COLOURS,
+            ),
+        )
+        val vm = viewModel("placeId" to placeId)
+        val draft = withTimeout(5_000) { vm.draft.first { it.placeId == placeId && it.local != null } }
+        assertEquals(listOf("Yellow", "Green", "Blue", "Purple", "Red", "Black"), draft.system.labels)
+
+        vm.setGrade(2)
+        vm.save()
+        withTimeout(5_000) { vm.draft.first { it.saved } }
+
+        val logged = repository.logged.single()
+        assertEquals(GradeScale.LOCAL_BOULDER, logged.gradeScale)
+        assertEquals(2, logged.gradeIndex)
+        assertEquals("Blue", logged.gradeLabel)
+        assertEquals("Blue", repository.climbs.value.single().grade)
     }
 }

@@ -34,6 +34,9 @@ data class ClimbEntity(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10 (schema 7). Optional. */
     val effort: Int? = null,
+    /** For local grades: the label and tape colour as logged (schema 9). */
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */
@@ -45,4 +48,7 @@ data class PersonalBestRow(
     val name: String?,
     val place: String?,
     val dateEpochDay: Long,
+    val placeId: Long?,
+    val gradeLabel: String?,
+    val gradeColour: Long?,
 )

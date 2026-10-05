@@ -1,5 +1,23 @@
 package com.hardtekpt.crux.ui.places
 
+import com.hardtekpt.crux.data.model.GradeSystem
+import com.hardtekpt.crux.data.model.LocalGrade
+import com.hardtekpt.crux.data.model.LocalKind
+import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.input.TapeSwatch
+import com.hardtekpt.crux.ui.components.input.argb
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -88,12 +106,16 @@ data class PlaceDraft(
     val routeScale: GradeScale? = null,
     val defaultAngle: Int = 40,
     val notes: String = "",
+    /** The place's own grades; kept while editing even if no discipline uses them. */
+    val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
+    val localError: String? = null,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
     /** Set once saved or deleted: the id to open, or 0 after a delete. */
     val doneId: Long? = null,
 ) {
     val isNew: Boolean get() = id == 0L
+    val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
 }
 
 @HiltViewModel
@@ -114,6 +136,7 @@ class PlaceEditorViewModel @Inject constructor(
                             name = p.name, type = p.type, location = p.location.orEmpty(),
                             boulderScale = p.boulderScale, routeScale = p.routeScale,
                             defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
+                            localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
                         )
                     }
                 }
@@ -121,7 +144,7 @@ class PlaceEditorViewModel @Inject constructor(
         }
     }
 
-    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { change(it).copy(nameError = null) }
+    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { change(it).copy(nameError = null, localError = null) }
 
     fun save() {
         val d = _draft.value
@@ -130,8 +153,16 @@ class PlaceEditorViewModel @Inject constructor(
             d.name.trim().length > MAX_NAME -> "Keep the name under $MAX_NAME characters"
             else -> null
         }
-        if (error != null) {
-            _draft.update { it.copy(nameError = error) }
+        val local = d.localScale.copy(grades = d.localScale.grades.map { it.copy(name = it.name.trim()) })
+        val localError = when {
+            !d.usesLocal -> null
+            local.grades.size < 2 -> "A local scale needs at least two grades"
+            local.grades.any { it.name.isBlank() } -> "Name every grade"
+            local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
+            else -> null
+        }
+        if (error != null || localError != null) {
+            _draft.update { it.copy(nameError = error, localError = localError) }
             return
         }
         viewModelScope.launch {
@@ -145,6 +176,7 @@ class PlaceEditorViewModel @Inject constructor(
                     routeScale = d.routeScale,
                     defaultAngle = d.defaultAngle.takeIf { d.type == PlaceType.BOARD },
                     notes = d.notes,
+                    localScale = local.takeIf { d.usesLocal },
                 ),
             )
             _draft.update { it.copy(doneId = id) }
@@ -218,6 +250,13 @@ fun PlaceEditorScreen(
             if (draft.type != PlaceType.BOARD) {
                 ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
             }
+            if (draft.usesLocal) {
+                LocalScaleEditor(
+                    scale = draft.localScale,
+                    error = draft.localError,
+                    onChange = { scale -> viewModel.update { it.copy(localScale = scale) } },
+                )
+            }
             if (draft.type == PlaceType.BOARD) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text("Usual angle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -269,17 +308,157 @@ fun PlaceEditorScreen(
     }
 }
 
-/** "Use my settings" or one of the discipline's scales. */
+/** "Use my settings", one of the discipline's scales, or the place's own local grades. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, onSelect: (GradeScale?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
             CruxFilterChip("My settings", selected == null, { onSelect(null) })
             discipline.scales.forEach { scale ->
                 CruxFilterChip(scale.label, selected == scale, { onSelect(scale) })
             }
+            CruxFilterChip(
+                "Local",
+                selected == discipline.localScale,
+                { onSelect(discipline.localScale) },
+                modifier = Modifier.testTag("local_${discipline.name}"),
+            )
         }
+    }
+}
+
+/**
+ * The place's own grades, easiest first: a run of numbers with a range, or a list of named
+ * tape colours that can be recoloured, renamed, reordered, added and removed.
+ */
+@Composable
+private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (LocalScale) -> Unit) {
+    val space = CruxTheme.space
+    var pickingColourFor by remember { mutableStateOf<Int?>(null) }
+    CruxCard(modifier = Modifier.testTag("local_scale_editor")) {
+        Text("Local grades", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Easiest first. Climbs here keep these grades; they are never converted to Font or French.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = space.s2),
+        )
+        CruxSegmentedButtons(
+            options = LocalKind.entries,
+            selected = scale.kind,
+            label = { it.label },
+            onSelect = { kind ->
+                if (kind != scale.kind) onChange(if (kind == LocalKind.NUMBERS) LocalScale.DEFAULT_NUMBERS else LocalScale.DEFAULT_COLOURS)
+            },
+        )
+        when (scale.kind) {
+            LocalKind.NUMBERS -> {
+                val from = scale.grades.firstOrNull()?.name?.toIntOrNull() ?: 1
+                val to = scale.grades.lastOrNull()?.name?.toIntOrNull() ?: 10
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s3)) {
+                    Text("Easiest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    CruxStepper(from, { onChange(LocalScale.numbers(it, maxOf(to, it + 1))) }, 0..49, "from", testTagPrefix = "local_from")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s2)) {
+                    Text("Hardest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    CruxStepper(to, { onChange(LocalScale.numbers(from, it)) }, (from + 1)..50, "to", testTagPrefix = "local_to")
+                }
+                Text(
+                    scale.labels.joinToString("  "),
+                    style = CruxTheme.type.code,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = space.s2),
+                )
+            }
+            LocalKind.COLOURS -> {
+                Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
+                    scale.grades.forEachIndexed { index, grade ->
+                        val set = { next: LocalGrade -> onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = next })) }
+                        val move = { by: Int ->
+                            val list = scale.grades.toMutableList()
+                            list.add(index + by, list.removeAt(index))
+                            onChange(scale.copy(grades = list))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s1)) {
+                            Text("${index + 1}", style = CruxTheme.type.gradeSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(20.dp))
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .clickable(onClickLabel = "Change colour") { pickingColourFor = index }
+                                    .testTag("local_colour_$index"),
+                            ) { TapeSwatch(argb(grade.colour ?: 0xFF9E9E9EL), 28.dp) }
+                            OutlinedTextField(
+                                value = grade.name,
+                                onValueChange = { set(grade.copy(name = it.take(16))) },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("local_name_$index"),
+                            )
+                            IconButton(onClick = { move(-1) }, enabled = index > 0) {
+                                Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Easier")
+                            }
+                            IconButton(onClick = { move(1) }, enabled = index < scale.grades.lastIndex) {
+                                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "Harder")
+                            }
+                            IconButton(onClick = { onChange(scale.copy(grades = scale.grades.filterIndexed { i, _ -> i != index })) }, enabled = scale.grades.size > 2) {
+                                Icon(Icons.Rounded.Close, contentDescription = "Remove ${grade.name}")
+                            }
+                        }
+                    }
+                    CruxButton(
+                        text = "Add a colour",
+                        onClick = {
+                            val unused = LocalScale.PALETTE.firstOrNull { (_, c) -> scale.grades.none { it.colour == c } } ?: LocalScale.PALETTE.last()
+                            onChange(scale.copy(grades = scale.grades + LocalGrade(unused.first, unused.second)))
+                        },
+                        variant = CruxButtonVariant.Text,
+                        icon = Icons.Rounded.Add,
+                        enabled = scale.grades.size < 20,
+                        modifier = Modifier.testTag("local_add_colour"),
+                    )
+                }
+            }
+        }
+        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+    }
+
+    pickingColourFor?.let { index ->
+        AlertDialog(
+            onDismissRequest = { pickingColourFor = null },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text("Tape colour", style = MaterialTheme.typography.headlineSmall) },
+            text = {
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                    LocalScale.PALETTE.forEach { (name, colour) ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable {
+                                    val grade = scale.grades[index]
+                                    // A grade still named after its old colour takes the new name too.
+                                    val renamed = if (LocalScale.PALETTE.any { it.first == grade.name } || grade.name.isBlank()) name else grade.name
+                                    onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = LocalGrade(renamed, colour) }))
+                                    pickingColourFor = null
+                                }
+                                .padding(CruxTheme.space.s1),
+                        ) {
+                            TapeSwatch(argb(colour), 32.dp)
+                            Text(name, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { pickingColourFor = null }) { Text("Cancel") } },
+        )
     }
 }
 
@@ -293,6 +472,8 @@ data class ProblemDraft(
     val discipline: Discipline = Discipline.BOULDER,
     val gradeScale: GradeScale = GradeScale.FONT,
     val gradeIndex: Int = GradeScale.FONT.defaultIndex,
+    /** The place's local grades, when [gradeScale] is local. */
+    val local: LocalScale? = null,
     val tape: Int? = null,
     val notes: String = "",
     val retired: Boolean = false,
@@ -302,6 +483,7 @@ data class ProblemDraft(
     val deleted: Boolean = false,
 ) {
     val isNew: Boolean get() = id == 0L
+    val system: GradeSystem get() = GradeSystem(gradeScale, local.takeIf { gradeScale.isLocal })
 }
 
 @HiltViewModel
@@ -324,6 +506,8 @@ class ProblemEditorViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settings = preferences.gradeScales.first()
+            val local = repository.getPlace(placeId)?.localScale
+            _draft.update { it.copy(local = local) }
             val problem = problemId.takeIf { it != 0L }?.let { repository.getProblem(it) }
             if (problem != null) {
                 _draft.update {
@@ -335,7 +519,7 @@ class ProblemEditorViewModel @Inject constructor(
                 }
             } else {
                 val scale = scaleFor(Discipline.BOULDER)
-                _draft.update { it.copy(gradeScale = scale, gradeIndex = scale.defaultIndex) }
+                _draft.update { it.copy(gradeScale = scale).let { d -> d.copy(gradeIndex = d.system.defaultIndex) } }
             }
         }
     }
@@ -347,7 +531,7 @@ class ProblemEditorViewModel @Inject constructor(
     fun setDiscipline(discipline: Discipline) {
         viewModelScope.launch {
             val scale = scaleFor(discipline)
-            _draft.update { it.copy(discipline = discipline, gradeScale = scale, gradeIndex = scale.defaultIndex) }
+            _draft.update { it.copy(discipline = discipline, gradeScale = scale).let { d -> d.copy(gradeIndex = d.system.defaultIndex) } }
         }
     }
 
@@ -369,6 +553,7 @@ class ProblemEditorViewModel @Inject constructor(
                 ProblemInput(
                     id = d.id, placeId = d.placeId, areaId = d.areaId, name = d.name, discipline = d.discipline,
                     gradeScale = d.gradeScale, gradeIndex = d.gradeIndex, tape = d.tape, notes = d.notes,
+                    gradeLabel = d.system.label(d.gradeIndex), gradeColour = d.system.colour(d.gradeIndex),
                 ),
             )
             if (!d.isNew) repository.setRetired(id, d.retired)
@@ -429,9 +614,10 @@ fun ProblemEditorScreen(
                 error = draft.nameError,
                 modifier = Modifier.testTag("field_problem_name"),
             )
-            Eyebrow("Grade · ${draft.gradeScale.label}")
+            Eyebrow("Grade · ${draft.system.name}")
             GradeStrip(
-                grades = draft.gradeScale.grades,
+                grades = draft.system.labels,
+                colours = draft.system.local?.grades?.map { it.colour },
                 selectedIndex = draft.gradeIndex,
                 onSelect = { index -> viewModel.update { it.copy(gradeIndex = index) } },
                 tagPrefix = "problem_grade",

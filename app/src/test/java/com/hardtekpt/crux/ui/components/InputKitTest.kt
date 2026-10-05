@@ -1,5 +1,8 @@
 package com.hardtekpt.crux.ui.components
 
+import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.GradeSystem
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.formatKg
 import com.hardtekpt.crux.data.prefs.UnitSystem
@@ -87,5 +90,20 @@ class InputKitTest {
         assertEquals("Moderate", effortWord(6))
         assertEquals("Very hard", effortWord(9))
         assertEquals("Limit", effortWord(10))
+    }
+
+    @Test
+    fun `local scales round-trip and never pass for standard grades`() {
+        val numbers = LocalScale.numbers(1, 6)
+        assertEquals(listOf("1", "2", "3", "4", "5", "6"), numbers.labels)
+        assertEquals(numbers, LocalScale.decode(numbers.encode()))
+        assertNull(LocalScale.decode("not json"))
+
+        val system = GradeSystem(GradeScale.LOCAL_BOULDER, LocalScale.DEFAULT_COLOURS)
+        assertEquals("Local colours", system.name)
+        assertEquals("Green", system.label(1))
+        assertEquals(0xFF4CAF50L, system.colour(1))
+        assertEquals(false, com.hardtekpt.crux.data.model.Discipline.BOULDER.scales.any { it.isLocal })
+        assertEquals("#3", GradeScale.LOCAL_ROUTE.label(2))
     }
 }

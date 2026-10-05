@@ -29,6 +29,8 @@ data class PlaceEntity(
     val defaultAngle: Int? = null,
     val notes: String? = null,
     val createdAtMillis: Long,
+    /** The place's own grades as JSON ([com.hardtekpt.crux.data.model.LocalScale]); schema 9. */
+    val localScale: String? = null,
 )
 
 /** A wall or sector inside a place; for a board, a named angle or set. */
@@ -74,6 +76,9 @@ data class ProblemEntity(
     @ColumnInfo(defaultValue = "0") val retired: Boolean = false,
     val notes: String? = null,
     val createdAtMillis: Long,
+    /** For local grades: the label and tape colour when it was set (schema 9). */
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */

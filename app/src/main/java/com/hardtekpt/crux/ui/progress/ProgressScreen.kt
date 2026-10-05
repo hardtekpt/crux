@@ -49,10 +49,16 @@ import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** Bests for one discipline in one scale. Grades in different scales are never compared. */
+/**
+ * Bests for one discipline in one scale. Grades in different scales are never compared, and
+ * local grades are kept per place, in that place's own order.
+ */
 data class DisciplineBests(
     val discipline: Discipline,
     val scale: GradeScale,
+    /** Local grades only: the place whose scale these are. */
+    val placeId: Long? = null,
+    val placeName: String? = null,
     /** Hardest send of any style in this scale. */
     val hardest: PersonalBest?,
     /** Hardest send per style, in the order styles are listed for the discipline. */
@@ -74,18 +80,24 @@ data class ProgressUiState(
     fun headline(discipline: Discipline): PersonalBest? {
         val inDiscipline = groups.filter { it.discipline == discipline }
         return (inDiscipline.firstOrNull { it.scale == scales.forDiscipline(discipline) }?.hardest)
-            ?: inDiscipline.firstNotNullOfOrNull { it.hardest }
+            ?: inDiscipline.filter { !it.scale.isLocal }.firstNotNullOfOrNull { it.hardest }
     }
 }
 
 fun List<PersonalBest>.toDisciplineBests(): List<DisciplineBests> =
-    groupBy { it.discipline to it.gradeScale }
-        .toSortedMap(compareBy<Pair<Discipline, GradeScale>> { it.first.ordinal }.thenBy { it.second.ordinal })
+    groupBy { Triple(it.discipline, it.gradeScale, it.placeId.takeIf { _ -> it.gradeScale.isLocal }) }
+        .toSortedMap(
+            compareBy<Triple<Discipline, GradeScale, Long?>> { it.first.ordinal }
+                .thenBy { it.second.ordinal }
+                .thenBy { it.third ?: 0L },
+        )
         .map { (key, rows) ->
             val byStyle = rows.sortedBy { it.style.ordinal }
             DisciplineBests(
                 discipline = key.first,
                 scale = key.second,
+                placeId = key.third,
+                placeName = rows.firstOrNull()?.place.takeIf { key.second.isLocal },
                 hardest = byStyle.maxWithOrNull(compareBy<PersonalBest> { it.gradeIndex }.thenBy { -it.date.toEpochDay() }),
                 byStyle = byStyle,
             )
@@ -176,13 +188,17 @@ fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier, onO
                 ProgressChartCards(uiState.charts, Modifier.padding(top = space.s3))
             }
             uiState.groups.forEach { group ->
-                item(key = "header_${group.discipline}_${group.scale}") {
+                item(key = "header_${group.discipline}_${group.scale}_${group.placeId}") {
                     Eyebrow(
-                        "${group.discipline.label} · ${group.scale.label} · by style",
+                        if (group.scale.isLocal) {
+                            "${group.discipline.label} · ${group.placeName ?: "a place"} grades · by style"
+                        } else {
+                            "${group.discipline.label} · ${group.scale.label} · by style"
+                        },
                         Modifier.padding(top = space.s4, bottom = space.s1),
                     )
                 }
-                items(group.byStyle, key = { "${it.discipline}_${it.gradeScale}_${it.style}" }) { best ->
+                items(group.byStyle, key = { "${it.discipline}_${it.gradeScale}_${it.placeId}_${it.style}" }) { best ->
                     CruxListRow(
                         title = best.style.label,
                         supporting = listOfNotNull(best.name, best.place, best.date.shortLabel()).joinToString(" · "),

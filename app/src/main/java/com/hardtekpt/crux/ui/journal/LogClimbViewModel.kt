@@ -10,6 +10,8 @@ import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.GradeSystem
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
@@ -45,6 +47,8 @@ data class LogClimbDraft(
     val scales: GradeScales = GradeScales(),
     /** A scale set by the place or problem, which wins over Settings. */
     val scaleOverride: GradeScale? = null,
+    /** The picked place's own grades, used when its scale for this discipline is local. */
+    val local: LocalScale? = null,
     val gradeIndex: Int = scales.boulder.defaultIndex,
     val style: AscentStyle = AscentStyle.FLASH,
     val attempts: Int = 1,
@@ -70,6 +74,7 @@ data class LogClimbDraft(
 ) {
     val isEditing: Boolean get() = climbId != 0L
     val gradeScale: GradeScale get() = scaleOverride?.takeIf { it.discipline == discipline } ?: scales.forDiscipline(discipline)
+    val system: GradeSystem get() = GradeSystem(gradeScale, local.takeIf { gradeScale.isLocal })
     val styles: List<AscentStyle> get() = AscentStyle.forDiscipline(discipline)
     val attemptsLocked: Boolean get() = style.singleAttempt
 }
@@ -108,7 +113,7 @@ class LogClimbViewModel @Inject constructor(
                 _draft.update { draft ->
                     val before = draft.gradeScale
                     val next = draft.copy(scales = scales)
-                    if (next.gradeScale == before) next else next.copy(gradeIndex = next.gradeScale.defaultIndex)
+                    if (next.gradeScale == before) next else next.copy(gradeIndex = next.system.defaultIndex)
                 }
             }
         }
@@ -137,6 +142,8 @@ class LogClimbViewModel @Inject constructor(
                     effort = climb.effort,
                 )
             }
+            // Local grades need the place's list to show the strip.
+            climb.placeId?.let { placeRepository.getPlace(it) }?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
             return
         }
         val problem = routeProblemId.takeIf { it != 0L }?.let { placeRepository.getProblem(it) }
@@ -161,9 +168,10 @@ class LogClimbViewModel @Inject constructor(
                     venue = place?.type?.venue ?: draft.venue,
                     angle = if (place?.type == PlaceType.BOARD) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
+                    local = place?.localScale,
                     saveAsProblem = false,
                 )
-                if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.gradeScale.defaultIndex)
+                if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
             }
         }
     }
@@ -214,11 +222,11 @@ class LogClimbViewModel @Inject constructor(
         val style = draft.style.takeIf { it in AscentStyle.forDiscipline(discipline) } ?: AscentStyle.FLASH
         val override = placeDetail.value?.place?.scaleFor(discipline)
         val next = draft.copy(discipline = discipline, style = style, scaleOverride = override, problemId = null)
-        next.copy(gradeIndex = next.gradeScale.defaultIndex)
+        next.copy(gradeIndex = next.system.defaultIndex)
     }
 
     fun setGrade(index: Int) = _draft.update {
-        it.copy(gradeIndex = index.coerceIn(it.gradeScale.grades.indices))
+        it.copy(gradeIndex = index.coerceIn(0, (it.system.labels.size - 1).coerceAtLeast(0)))
     }
 
     fun setStyle(style: AscentStyle) = _draft.update {
@@ -281,6 +289,8 @@ class LogClimbViewModel @Inject constructor(
                         gradeIndex = draft.gradeIndex,
                         tape = null,
                         notes = null,
+                        gradeLabel = draft.system.label(draft.gradeIndex),
+                        gradeColour = draft.system.colour(draft.gradeIndex),
                     ),
                 )
             } else {
@@ -302,6 +312,8 @@ class LogClimbViewModel @Inject constructor(
                 problemId = problemId,
                 angle = draft.angle.takeIf { place?.type == PlaceType.BOARD },
                 effort = draft.effort,
+                gradeLabel = draft.system.label(draft.gradeIndex),
+                gradeColour = draft.system.colour(draft.gradeIndex),
             )
             if (draft.isEditing) climbRepository.updateClimb(draft.climbId, climb) else climbRepository.logClimb(climb)
             _draft.update { it.copy(isSaving = false, saved = true) }

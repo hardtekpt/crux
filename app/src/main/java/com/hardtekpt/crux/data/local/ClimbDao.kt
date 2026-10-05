@@ -27,14 +27,15 @@ interface ClimbDao {
 
     /**
      * Hardest send per discipline, scale and style. Grades in different scales are never
-     * compared, so each scale keeps its own bests. SQLite returns the other columns from the
+     * compared, so each scale keeps its own bests; local grades also per place. SQLite returns the other columns from the
      * row that holds the MAX; ties go to the earliest day it was sent.
      */
     @Query(
         """
-        SELECT discipline, style, gradeScale, MAX(gradeIndex) AS gradeIndex, name, place, dateEpochDay
+        SELECT discipline, style, gradeScale, MAX(gradeIndex) AS gradeIndex, name, place, dateEpochDay,
+            placeId, gradeLabel, gradeColour
         FROM (SELECT * FROM climbs WHERE style != 'ATTEMPT' ORDER BY dateEpochDay ASC, createdAtMillis ASC)
-        GROUP BY discipline, gradeScale, style
+        GROUP BY discipline, gradeScale, style, CASE WHEN gradeScale LIKE 'LOCAL%' THEN placeId ELSE 0 END
         """,
     )
     fun observePersonalBests(): Flow<List<PersonalBestRow>>

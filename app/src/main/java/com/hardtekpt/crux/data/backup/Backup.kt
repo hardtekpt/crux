@@ -18,7 +18,9 @@ import com.hardtekpt.crux.data.model.ExerciseCategory
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.MetricType
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.PlaceType
+import com.hardtekpt.crux.data.model.gradeLabel
 import com.hardtekpt.crux.data.model.Venue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -111,6 +113,9 @@ data class ClimbDto(
     val problem: String? = null,
     val angle: Int? = null,
     val effort: Int? = null,
+    /** Local grades: the position in the place's scale and its tape colour; [grade] holds the label. */
+    val gradeIndex: Int? = null,
+    val gradeColour: Long? = null,
 )
 
 @Serializable
@@ -133,6 +138,8 @@ data class ProblemDto(
     val setDate: String? = null,
     val retired: Boolean = false,
     val notes: String? = null,
+    val gradeIndex: Int? = null,
+    val gradeColour: Long? = null,
 )
 
 @Serializable
@@ -146,6 +153,7 @@ data class PlaceDto(
     val notes: String? = null,
     val areas: List<AreaDto> = emptyList(),
     val problems: List<ProblemDto> = emptyList(),
+    val localScale: LocalScale? = null,
 )
 
 @Serializable
@@ -354,6 +362,7 @@ class BackupRepository(
                         defaultAngle = dto.defaultAngle,
                         notes = dto.notes,
                         createdAtMillis = now,
+                        localScale = dto.localScale?.encode(),
                     ),
                 )
                 val areaIds = dto.areas.mapIndexed { position, area ->
@@ -371,7 +380,7 @@ class BackupRepository(
                     )
                 }.toMap()
                 dto.problems.forEach { problem ->
-                    val index = problem.gradeScale.grades.indexOf(problem.grade)
+                    val index = if (problem.gradeScale.isLocal) problem.gradeIndex ?: 0 else problem.gradeScale.grades.indexOf(problem.grade)
                     if (index < 0) return@forEach
                     placeDao.insertProblem(
                         ProblemEntity(
@@ -386,6 +395,8 @@ class BackupRepository(
                             retired = problem.retired,
                             notes = problem.notes,
                             createdAtMillis = now,
+                            gradeLabel = problem.grade.takeIf { problem.gradeScale.isLocal },
+                            gradeColour = problem.gradeColour,
                         ),
                     )
                 }
@@ -401,7 +412,7 @@ class BackupRepository(
             val climbDao = db.climbDao()
             val seen = climbDao.getAll().map { it.toDto().identity() }.toMutableSet()
             file.climbs?.forEach { dto ->
-                val index = dto.gradeScale.grades.indexOf(dto.grade)
+                val index = if (dto.gradeScale.isLocal) dto.gradeIndex ?: 0 else dto.gradeScale.grades.indexOf(dto.grade)
                 if (index < 0 || dto.identity() in seen) {
                     skipped.merge(BackupSection.JOURNAL, 1, Int::plus)
                     return@forEach
@@ -425,6 +436,8 @@ class BackupRepository(
                         problemId = dto.problem?.let { name -> problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
                         angle = dto.angle,
                         effort = dto.effort,
+                        gradeLabel = dto.grade.takeIf { dto.gradeScale.isLocal },
+                        gradeColour = dto.gradeColour,
                     ),
                 )
                 seen += dto.identity()
@@ -462,7 +475,7 @@ private fun ExerciseEntity.toDto() = ExerciseDto(name, category, metric, notes)
 private fun ClimbEntity.toDto() = ClimbDto(
     discipline = discipline,
     gradeScale = gradeScale,
-    grade = gradeScale.label(gradeIndex),
+    grade = gradeLabel(gradeScale, gradeIndex, gradeLabel),
     style = style,
     attempts = attempts,
     venue = venue,
@@ -471,6 +484,8 @@ private fun ClimbEntity.toDto() = ClimbDto(
     name = name,
     place = place,
     notes = notes,
+    gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
+    gradeColour = gradeColour,
 )
 
 /** Two climbs are the same entry when everything but notes and saved-place links matches. */
@@ -486,6 +501,7 @@ private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) 
     notes = notes,
     areas = areas,
     problems = problems,
+    localScale = LocalScale.decode(localScale),
 )
 
 private fun AreaEntity.toDto() = AreaDto(
@@ -498,12 +514,14 @@ private fun ProblemEntity.toDto(area: String?) = ProblemDto(
     name = name,
     discipline = discipline,
     gradeScale = gradeScale,
-    grade = gradeScale.label(gradeIndex),
+    grade = gradeLabel(gradeScale, gradeIndex, gradeLabel),
     area = area,
     tape = tape,
     setDate = setEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
     retired = retired,
     notes = notes,
+    gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
+    gradeColour = gradeColour,
 )
 
 private fun BodyMeasurementEntity.toDto() = MeasurementDto(

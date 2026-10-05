@@ -12,11 +12,17 @@ data class Place(
     val routeScale: GradeScale?,
     val defaultAngle: Int?,
     val notes: String?,
+    /** The place's own grades, used where a discipline's scale is local. */
+    val localScale: LocalScale? = null,
 ) {
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale
         Discipline.ROUTE -> routeScale
     }
+
+    /** The grades climbs here pick from, or null to use the climber's settings. */
+    fun systemFor(discipline: Discipline): GradeSystem? =
+        scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
 }
 
 data class Area(
@@ -41,8 +47,10 @@ data class Problem(
     val setDate: LocalDate?,
     val retired: Boolean,
     val notes: String?,
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 ) {
-    val grade: String get() = gradeScale.label(gradeIndex)
+    val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
 /** Every go the climber logged on one problem, summed. */

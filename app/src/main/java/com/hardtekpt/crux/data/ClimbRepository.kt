@@ -81,6 +81,8 @@ private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
     problemId = problemId,
     angle = angle,
     effort = effort,
+    gradeLabel = gradeLabel.takeIf { gradeScale.isLocal },
+    gradeColour = gradeColour.takeIf { gradeScale.isLocal },
 )
 
 internal fun ClimbEntity.toModel() = Climb(
@@ -100,6 +102,8 @@ internal fun ClimbEntity.toModel() = Climb(
     problemId = problemId,
     angle = angle,
     effort = effort,
+    gradeLabel = gradeLabel.takeIf { gradeScale.isLocal },
+    gradeColour = gradeColour.takeIf { gradeScale.isLocal },
 )
 
 internal fun PersonalBestRow.toModel() = PersonalBest(
@@ -110,4 +114,7 @@ internal fun PersonalBestRow.toModel() = PersonalBest(
     name = name,
     place = place,
     date = LocalDate.ofEpochDay(dateEpochDay),
+    placeId = placeId,
+    gradeLabel = gradeLabel,
+    gradeColour = gradeColour,
 )

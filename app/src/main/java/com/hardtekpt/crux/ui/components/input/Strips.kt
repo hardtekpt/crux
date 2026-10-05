@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +56,8 @@ fun GradeStrip(
     modifier: Modifier = Modifier,
     tagPrefix: String = "grade",
     description: String = "Grade",
+    /** Tape colours (ARGB) for colour grades, drawn as a dot by each name. */
+    colours: List<Long?>? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val picker = rememberPickerScroll(grades.size, selectedIndex, onSelect)
@@ -73,8 +76,9 @@ fun GradeStrip(
                 }
                 .testTag("${tagPrefix}_picker"),
         ) {
-            itemsIndexed(grades, key = { _, grade -> grade }) { index, grade ->
+            itemsIndexed(grades, key = { index, grade -> "$index$grade" }) { index, grade ->
                 val isSelected = index == selectedIndex
+                val colour = colours?.getOrNull(index)?.let(::argb)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -98,20 +102,36 @@ fun GradeStrip(
                                 .background(colors.primaryContainer, RoundedCornerShape(16.dp))
                                 .border(CruxTheme.size.borderEmphasis, colors.primary, RoundedCornerShape(16.dp)),
                         ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                colour?.let { TapeSwatch(it, 10.dp) }
+                                Text(
+                                    grade,
+                                    style = TextStyle(
+                                        fontFamily = JetBrainsMono,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = when {
+                                            grade.length > 5 -> 12.sp
+                                            grade.length > 4 -> 15.sp
+                                            colour != null -> 16.sp
+                                            else -> 22.sp
+                                        },
+                                        letterSpacing = (-0.4).sp,
+                                    ),
+                                    color = colors.onPrimaryContainer,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            colour?.let { TapeSwatch(it, 14.dp) }
                             Text(
                                 grade,
-                                style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold, fontSize = if (grade.length > 4) 17.sp else 22.sp, letterSpacing = (-0.4).sp),
-                                color = colors.onPrimaryContainer,
+                                style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = if (grade.length > 5) 11.sp else 15.sp),
+                                color = colors.onSurfaceVariant,
                                 maxLines = 1,
                             )
                         }
-                    } else {
-                        Text(
-                            grade,
-                            style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                        )
                     }
                 }
             }
@@ -198,3 +218,17 @@ private fun DayCell(day: LocalDate, isSelected: Boolean, today: LocalDate, onCli
         )
     }
 }
+
+/** A round swatch of a tape colour, with a hairline so dark and light tapes both show. */
+@Composable
+fun TapeSwatch(colour: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(size)
+            .background(colour, androidx.compose.foundation.shape.CircleShape)
+            .border(CruxTheme.size.borderHairline, MaterialTheme.colorScheme.outline, androidx.compose.foundation.shape.CircleShape),
+    )
+}
+
+/** An ARGB value stored as a Long, as a Compose colour. */
+fun argb(value: Long): Color = Color(value.toInt())

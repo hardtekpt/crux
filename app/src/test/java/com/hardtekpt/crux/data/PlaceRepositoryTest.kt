@@ -84,4 +84,21 @@ class PlaceRepositoryTest {
         assertTrue(db.climbDao().getAll().none { it.placeId == cave.placeId })
         assertNull(repo.getPlace(cave.placeId))
     }
+
+    @Test
+    fun `local bests stay apart per place and from standard scales`() = runTest {
+        val climbs = OfflineClimbRepository(databases(), FIXED_CLOCK)
+        val day = java.time.LocalDate.now(FIXED_CLOCK)
+        fun local(placeId: Long, index: Int, label: String) = com.hardtekpt.crux.data.model.NewClimb(
+            com.hardtekpt.crux.data.model.Discipline.BOULDER, com.hardtekpt.crux.data.model.GradeScale.LOCAL_BOULDER, index,
+            com.hardtekpt.crux.data.model.AscentStyle.FLASH, 1, com.hardtekpt.crux.data.model.Venue.GYM, day, null, "Gym $placeId", null,
+            placeId = placeId, gradeLabel = label,
+        )
+        climbs.logClimb(local(100, 4, "Red"))
+        climbs.logClimb(local(200, 2, "7"))
+
+        val localBests = climbs.observePersonalBests().first().filter { it.gradeScale.isLocal }
+        assertEquals(setOf("Red", "7"), localBests.map { it.grade }.toSet())
+        assertEquals(setOf(100L, 200L), localBests.map { it.placeId }.toSet())
+    }
 }

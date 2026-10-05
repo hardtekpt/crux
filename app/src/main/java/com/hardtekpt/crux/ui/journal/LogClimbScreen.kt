@@ -175,9 +175,10 @@ fun LogClimbContent(
                 onSelect = onDiscipline,
             )
 
-            Eyebrow("Grade · ${draft.gradeScale.label}", Modifier.padding(top = space.s3))
+            Eyebrow("Grade · ${draft.system.name}", Modifier.padding(top = space.s3))
             GradeStrip(
-                grades = draft.gradeScale.grades,
+                grades = draft.system.labels,
+                colours = draft.system.local?.grades?.map { it.colour },
                 selectedIndex = draft.gradeIndex,
                 onSelect = onGrade,
                 modifier = Modifier.bleed(space.s4),

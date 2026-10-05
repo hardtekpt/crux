@@ -6,7 +6,11 @@ enum class Discipline(val label: String) {
 
     /** The scales a climber can pick for this discipline in Settings; the first is the default. */
     val scales: List<GradeScale>
-        get() = GradeScale.entries.filter { it.discipline == this }
+        get() = GradeScale.entries.filter { it.discipline == this && !it.isLocal }
+
+    /** Marks a grade as one of a place's own; the place holds the actual list. */
+    val localScale: GradeScale
+        get() = if (this == BOULDER) GradeScale.LOCAL_BOULDER else GradeScale.LOCAL_ROUTE
 
     val defaultScale: GradeScale get() = scales.first()
 }
@@ -52,9 +56,16 @@ enum class GradeScale(
         grades = listOf("5.5", "5.6", "5.7", "5.8", "5.9") +
             (10..15).flatMap { n -> listOf("a", "b", "c", "d").map { "5.$n$it" } },
         defaultIndex = 5,
-    );
+    ),
 
-    fun label(index: Int): String = grades[index.coerceIn(grades.indices)]
+    /** A place's own grades (numbers or colour tapes); the list lives on the place. */
+    LOCAL_BOULDER(label = "Local", discipline = Discipline.BOULDER, grades = emptyList(), defaultIndex = 0),
+    LOCAL_ROUTE(label = "Local", discipline = Discipline.ROUTE, grades = emptyList(), defaultIndex = 0),
+    ;
+
+    val isLocal: Boolean get() = grades.isEmpty()
+
+    fun label(index: Int): String = if (isLocal) "#${index + 1}" else grades[index.coerceIn(grades.indices)]
 }
 
 /** Where the climb happened: indoors on plastic or outdoors on rock. */

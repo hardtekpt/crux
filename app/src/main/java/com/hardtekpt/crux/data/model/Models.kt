@@ -20,8 +20,11 @@ data class Climb(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
+    /** Local grades only: the label and tape colour as logged. */
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 ) {
-    val grade: String get() = gradeScale.label(gradeIndex)
+    val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
 /** What the climber fills in on the Log climb form. */
@@ -42,6 +45,8 @@ data class NewClimb(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 )
 
 data class PersonalBest(
@@ -52,8 +57,12 @@ data class PersonalBest(
     val name: String?,
     val place: String?,
     val date: LocalDate,
+    /** Local grades: the place they belong to, and the label as logged. */
+    val placeId: Long? = null,
+    val gradeLabel: String? = null,
+    val gradeColour: Long? = null,
 ) {
-    val grade: String get() = gradeScale.label(gradeIndex)
+    val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
 data class Measurement(
