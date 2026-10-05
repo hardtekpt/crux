@@ -44,11 +44,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavBackStackEntry
 import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.EnterExitState
-import androidx.compose.animation.core.animateDp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
@@ -181,8 +176,8 @@ fun CruxApp() {
 
         AnimatedVisibility(
             visible = !onForm,
-            enter = fadeIn(tween(250, delayMillis = 100)) + slideInVertically(tween(250, delayMillis = 100)) { it / 2 },
-            exit = fadeOut(tween(120)) + slideOutVertically(tween(150)) { it / 2 },
+            enter = fadeIn(tween(180, delayMillis = 60)) + slideInVertically(tween(180, delayMillis = 60)) { it / 4 },
+            exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it / 4 },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -231,16 +226,9 @@ private inline fun <reified T : Any> NavGraphBuilder.page(
     noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
 ) {
     composable<T> { entry ->
-        // Round the corners while the page is on its way out (back, predictive back), so the
-        // shrinking screen reads as a card being pulled away.
-        val corner by transition.animateDp(label = "pageCorner") { state ->
-            if (state == EnterExitState.PostExit) 28.dp else 0.dp
-        }
         Box(
             Modifier
                 .fillMaxSize()
-                .shadow(if (corner > 0.dp) 12.dp else 0.dp, RoundedCornerShape(corner))
-                .clip(RoundedCornerShape(corner))
                 .background(MaterialTheme.colorScheme.surface),
         ) { content(entry) }
     }

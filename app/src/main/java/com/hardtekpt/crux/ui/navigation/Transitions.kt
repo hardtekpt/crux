@@ -7,44 +7,39 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 
 /*
- * App-wide page motion, following the design system: short and physical, Material 3
- * emphasized easing, about 150 ms for leaving and 250 ms for arriving.
+ * App-wide page motion: fast, short and quiet. Every transition is a quick fade with at
+ * most a small nudge (about 16 dp) to say which way you went; nothing scales or swoops.
  *
- * - Switching tabs is a fade-through: the old screen fades out fast, the new one fades in
- *   with a slight scale-up. Tabs are peers, so nothing slides.
- * - Drilling into a screen (a plan, a setting) is a shared-axis slide: the new screen comes
- *   in from the right a short way while the old one drifts left.
- * - Going back follows Material's predictive back: the screen being left shrinks, rounds its
- *   corners (see the page wrapper in CruxApp) and slides off toward the edge, while the one
- *   underneath settles in from a slight parallax offset. The back gesture scrubs this motion
- *   with the finger, so it reads as pulling the card away.
- * - Forms (log a climb, edit a plan) rise from below, like a sheet, and drop back down.
+ * - Tabs: a straight cross-fade.
+ * - Drilling in: the new screen fades in nudged from the right; back reverses it.
+ * - Forms: fade in nudged up from below; closing drops them back down.
+ *
+ * Arrivals take 180 ms with a decelerating curve, departures 120 ms. The predictive back
+ * gesture scrubs the same small motion.
  */
 
-private val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
-private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
-private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+private val Decelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val Accelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
-private const val ENTER_MS = 250
-private const val EXIT_MS = 150
-private const val FADE_THROUGH_OUT_MS = 75
-private const val FADE_THROUGH_IN_MS = 175
-private const val BACK_MS = 300
+private const val IN_MS = 180
+private const val OUT_MS = 120
 
-/** Shared-axis travel: a fraction of the width, so it reads as direction, not a full swipe. */
-private fun travel(fullWidth: Int) = (fullWidth * 0.08f).toInt()
+/** The nudge: ~16 dp on a phone, as a share of the width so it scales with the screen. */
+private fun nudge(fullSize: Int) = (fullSize * 0.04f).toInt()
+
+private fun <T> enterSpec() = tween<T>(IN_MS, easing = Decelerate)
+private fun <T> exitSpec() = tween<T>(OUT_MS, easing = Accelerate)
 
 private fun NavDestination.tabIndex(): Int? =
     TopLevelDestination.entries.firstOrNull { tab -> hierarchy.any { it.hasRoute(tab.graph::class) } }?.ordinal
@@ -66,49 +61,31 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(): Move {
     }
 }
 
+private fun fadeInOnly(): EnterTransition = fadeIn(enterSpec())
+private fun fadeOutOnly(): ExitTransition = fadeOut(exitSpec())
+
 val cruxEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
     when (move()) {
-        Move.TabSwitch -> fadeIn(tween(FADE_THROUGH_IN_MS, delayMillis = FADE_THROUGH_OUT_MS, easing = EmphasizedDecelerate)) +
-            scaleIn(tween(FADE_THROUGH_IN_MS, delayMillis = FADE_THROUGH_OUT_MS, easing = EmphasizedDecelerate), initialScale = 0.96f)
-        Move.FormOpen -> slideInVertically(tween(ENTER_MS + 50, easing = EmphasizedDecelerate)) { it / 6 } +
-            fadeIn(tween(ENTER_MS, easing = EmphasizedDecelerate))
-        Move.FormClose -> fadeIn(tween(ENTER_MS, easing = Emphasized))
-        Move.Push -> slideInHorizontally(tween(ENTER_MS, easing = EmphasizedDecelerate), ::travel) +
-            fadeIn(tween(ENTER_MS, easing = EmphasizedDecelerate))
+        Move.TabSwitch, Move.FormClose -> fadeInOnly()
+        Move.FormOpen -> fadeInOnly() + slideInVertically(enterSpec<IntOffset>()) { nudge(it) * 2 }
+        Move.Push -> fadeInOnly() + slideInHorizontally(enterSpec<IntOffset>(), ::nudge)
     }
 }
 
 val cruxExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
     when (move()) {
-        Move.TabSwitch -> fadeOut(tween(FADE_THROUGH_OUT_MS, easing = EmphasizedAccelerate))
-        Move.FormOpen -> fadeOut(tween(EXIT_MS, easing = EmphasizedAccelerate))
-        Move.FormClose -> slideOutVertically(tween(EXIT_MS + 50, easing = EmphasizedAccelerate)) { it / 6 } +
-            fadeOut(tween(EXIT_MS, easing = EmphasizedAccelerate))
-        Move.Push -> slideOutHorizontally(tween(EXIT_MS, easing = EmphasizedAccelerate)) { -travel(it) } +
-            fadeOut(tween(EXIT_MS, easing = EmphasizedAccelerate))
+        Move.TabSwitch, Move.FormOpen, Move.Push -> fadeOutOnly()
+        Move.FormClose -> fadeOutOnly() + slideOutVertically(exitSpec<IntOffset>()) { nudge(it) * 2 }
     }
 }
 
 val cruxPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-    when (move()) {
-        // The screen underneath was parked a quarter-width left; it settles back as the
-        // top card is pulled away, with a touch of scale so it feels like it rises.
-        Move.Push -> slideInHorizontally(tween(BACK_MS, easing = Emphasized)) { -(it * 0.25f).toInt() } +
-            scaleIn(tween(BACK_MS, easing = Emphasized), initialScale = 0.94f)
-        else -> cruxEnter()
-    }
+    fadeInOnly()
 }
 
 val cruxPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
     when (move()) {
-        // The card being left shrinks and slides off to the right; corners round in the
-        // page wrapper as it goes.
-        // No fade: an opaque card moving over the page underneath reads cleaner.
-        Move.Push -> scaleOut(tween(BACK_MS, easing = Emphasized), targetScale = 0.9f) +
-            slideOutHorizontally(tween(BACK_MS, easing = EmphasizedAccelerate)) { it }
-        Move.FormClose -> slideOutVertically(tween(BACK_MS, easing = EmphasizedAccelerate)) { it / 3 } +
-            scaleOut(tween(BACK_MS, easing = Emphasized), targetScale = 0.94f) +
-            fadeOut(tween(BACK_MS, easing = EmphasizedAccelerate))
+        Move.Push -> fadeOutOnly() + slideOutHorizontally(exitSpec<IntOffset>(), ::nudge)
         else -> cruxExit()
     }
 }
