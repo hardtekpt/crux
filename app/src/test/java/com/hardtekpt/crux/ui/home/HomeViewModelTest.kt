@@ -17,6 +17,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+import java.io.File
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.hardtekpt.crux.data.dashboard.DashboardRepository
+import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import org.junit.Test
 import java.time.LocalDate
 
@@ -29,7 +34,12 @@ class HomeViewModelTest {
     private val templates = FakeTemplateRepository()
     private val today = LocalDate.now(FIXED_CLOCK)
 
-    private fun viewModel() = HomeViewModel(climbs, body, templates, FIXED_CLOCK)
+    @get:Rule val tmp = TemporaryFolder()
+
+    private val dataStore by lazy { PreferenceDataStoreFactory.create { File(tmp.root, "prefs.preferences_pb") } }
+    private val dashboard by lazy { DashboardRepository(dataStore) }
+
+    private fun viewModel() = HomeViewModel(climbs, body, templates, UserPreferencesRepository(dataStore), dashboard, FIXED_CLOCK)
 
     @Test
     fun `empty database gives empty widgets`() = runTest {
@@ -61,7 +71,7 @@ class HomeViewModelTest {
         viewModel().uiState.test {
             awaitLoaded()
             climbs.logClimb(newClimb(today, AscentStyle.FLASH, gradeIndex = 11))
-            val withClimb = awaitUntil { it.recentClimbs.size == 1 }
+            val withClimb = awaitUntil { it.recentClimbs.size == 1 && it.latestBest != null }
             assertEquals("7A", withClimb.latestBest?.grade)
             assertEquals("Strength day", withClimb.todaysPlan?.name)
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -140,6 +141,37 @@ class MainActivityTest {
         composeRule.onNode(hasText("Power day")).performClick()
         composeRule.waitForTag("template_exercise")
         composeRule.onNode(hasText("Campus ladders")).assertIsDisplayed()
+    }
+
+    @Test
+    fun dashboardWidgetsCanBeAddedRemovedResizedAndMoved() {
+        composeRule.onNodeWithTag("edit_dashboard").performClick()
+        composeRule.onNodeWithTag("remove_TODAYS_PLAN").performClick()
+        composeRule.onNodeWithTag("resize_WEEK_CLIMBS").performClick()
+        composeRule.onNodeWithTag("add_widget").performClick()
+        composeRule.onNodeWithTag("catalog_WEIGHT_TREND").performScrollTo().performClick()
+
+        // Drag the new widget (added last) above the one before it, by its handle.
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("drag_WEIGHT_TREND"))
+        // Move in steps and let layout settle between them, like a real finger.
+        val handle = composeRule.onNodeWithTag("drag_WEIGHT_TREND")
+        val from = composeRule.onNodeWithTag("widget_WEIGHT_TREND").fetchSemanticsNode().boundsInRoot
+        val to = composeRule.onNodeWithTag("widget_RECENT_CLIMBS").fetchSemanticsNode().boundsInRoot
+        // Bring the dragged widget's centre onto the widget above it.
+        val distance = to.center.y - from.center.y
+        val steps = 30
+        handle.performTouchInput { down(center) }
+        repeat(steps) {
+            handle.performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(0f, distance / steps)) }
+            composeRule.waitForIdle()
+        }
+        handle.performTouchInput { up() }
+        composeRule.onNodeWithTag("done_editing").performClick()
+
+        assertEquals(0, composeRule.onAllNodesWithTag("widget_TODAYS_PLAN").fetchSemanticsNodes().size)
+        val trendTop = composeRule.onNodeWithTag("widget_WEIGHT_TREND").fetchSemanticsNode().boundsInRoot.top
+        val recentTop = composeRule.onNodeWithTag("widget_RECENT_CLIMBS").fetchSemanticsNode().boundsInRoot.top
+        assert(trendTop < recentTop) { "Weight trend should have moved above Recent climbs" }
     }
 
     @Test
