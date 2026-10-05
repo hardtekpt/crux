@@ -3,42 +3,81 @@ package com.hardtekpt.crux.ui.home
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
 import com.hardtekpt.crux.MainDispatcherRule
-import com.hardtekpt.crux.data.ClimbRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.hardtekpt.crux.data.FIXED_CLOCK
+import com.hardtekpt.crux.data.FakeBodyRepository
+import com.hardtekpt.crux.data.FakeClimbRepository
+import com.hardtekpt.crux.data.FakeTemplateRepository
+import com.hardtekpt.crux.data.model.AscentStyle
+import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.WorkoutTemplate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDate
 
 class HomeViewModelTest {
 
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
-    private val repository = FakeClimbRepository()
+    private val climbs = FakeClimbRepository()
+    private val body = FakeBodyRepository()
+    private val templates = FakeTemplateRepository()
+    private val today = LocalDate.now(FIXED_CLOCK)
+
+    private fun viewModel() = HomeViewModel(climbs, body, templates, FIXED_CLOCK)
 
     @Test
-    fun `starts loading then shows climb count`() = runTest {
-        val viewModel = HomeViewModel(repository)
-
-        viewModel.uiState.test {
-            assertEquals(HomeUiState(isLoading = false, totalClimbs = 0), awaitLoaded())
+    fun `empty database gives empty widgets`() = runTest {
+        viewModel().uiState.test {
+            val state = awaitLoaded()
+            assertEquals(WeekSummary(), state.week)
+            assertNull(state.latestBest)
+            assertNull(state.weight)
+            assertNull(state.todaysPlan)
+            assertEquals(0, state.recentClimbs.size)
         }
     }
 
     @Test
-    fun `logging a climb updates the total`() = runTest {
-        val viewModel = HomeViewModel(repository)
+    fun `this week counts only climbs since Monday`() = runTest {
+        // FIXED_CLOCK is a Monday, so yesterday falls in the previous week.
+        climbs.logClimb(newClimb(today, AscentStyle.FLASH))
+        climbs.logClimb(newClimb(today, AscentStyle.ATTEMPT))
+        climbs.logClimb(newClimb(today.minusDays(1), AscentStyle.REDPOINT))
 
-        viewModel.uiState.test {
-            assertEquals(0, awaitLoaded().totalClimbs)
-            viewModel.logSampleClimb()
-            assertEquals(
-                HomeUiState(isLoading = false, totalClimbs = 1, climbsThisWeek = 1),
-                awaitUntil { it.totalClimbs == 1 && it.climbsThisWeek == 1 },
-            )
+        viewModel().uiState.test {
+            assertEquals(WeekSummary(climbs = 2, sends = 1, daysClimbed = 1), awaitLoaded().week)
         }
     }
+
+    @Test
+    fun `logging a climb or weight updates home without a restart`() = runTest {
+        templates.templates.value = listOf(WorkoutTemplate(1, "Strength day", "", 50, emptyList()))
+        viewModel().uiState.test {
+            awaitLoaded()
+            climbs.logClimb(newClimb(today, AscentStyle.FLASH, gradeIndex = 11))
+            val withClimb = awaitUntil { it.recentClimbs.size == 1 }
+            assertEquals("7A", withClimb.latestBest?.grade)
+            assertEquals("Strength day", withClimb.todaysPlan?.name)
+
+            body.logWeight(72.4, today)
+            assertEquals(72.4, awaitUntil { it.weight != null }.weight?.latest?.value)
+        }
+    }
+
+    private fun newClimb(date: LocalDate, style: AscentStyle, gradeIndex: Int = 5) = NewClimb(
+        discipline = Discipline.BOULDER,
+        gradeIndex = gradeIndex,
+        style = style,
+        attempts = 1,
+        date = date,
+        name = null,
+        place = null,
+        notes = null,
+    )
 }
 
 private suspend fun ReceiveTurbine<HomeUiState>.awaitUntil(predicate: (HomeUiState) -> Boolean): HomeUiState {
@@ -47,18 +86,5 @@ private suspend fun ReceiveTurbine<HomeUiState>.awaitUntil(predicate: (HomeUiSta
     return item
 }
 
-/** Skips the initial loading placeholder emitted before the repository answers. */
-private suspend fun ReceiveTurbine<HomeUiState>.awaitLoaded(): HomeUiState {
-    var item = awaitItem()
-    while (item.isLoading) item = awaitItem()
-    return item
-}
-
-private class FakeClimbRepository : ClimbRepository {
-    private val count = MutableStateFlow(0)
-    override fun observeClimbCount(): Flow<Int> = count
-    override fun observeClimbCountSince(sinceEpochMillis: Long): Flow<Int> = count
-    override suspend fun logClimb(name: String, grade: String, notes: String?) {
-        count.value += 1
-    }
-}
+/** Skips the initial loading placeholder emitted before the repositories answer. */
+private suspend fun ReceiveTurbine<HomeUiState>.awaitLoaded(): HomeUiState = awaitUntil { !it.isLoading }

@@ -9,21 +9,33 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.serialization.Serializable
 
+// One nested graph per tab so each keeps its own back stack.
+@Serializable data object HomeGraph
+@Serializable data object TrainGraph
+@Serializable data object JournalGraph
+@Serializable data object ProgressGraph
+@Serializable data object YouGraph
+
 @Serializable data object HomeRoute
 @Serializable data object TrainRoute
+@Serializable data class TemplateDetailRoute(val templateId: Long)
 @Serializable data object JournalRoute
 @Serializable data object ProgressRoute
 @Serializable data object YouRoute
 
+// Full-screen forms above the tabs; the nav bar hides while they are open.
+@Serializable data object LogClimbRoute
+@Serializable data object LogWeightRoute
+
 /** The five root destinations from the app blueprint. */
 enum class TopLevelDestination(
-    val route: Any,
+    val graph: Any,
     val label: String,
     val icon: ImageVector,
 ) {
-    Home(HomeRoute, "Home", Icons.Rounded.Home),
-    Train(TrainRoute, "Train", Icons.Rounded.FitnessCenter),
-    Journal(JournalRoute, "Journal", Icons.AutoMirrored.Rounded.MenuBook),
-    Progress(ProgressRoute, "Progress", Icons.Rounded.Insights),
-    You(YouRoute, "You", Icons.Rounded.Person),
+    Home(HomeGraph, "Home", Icons.Rounded.Home),
+    Train(TrainGraph, "Train", Icons.Rounded.FitnessCenter),
+    Journal(JournalGraph, "Journal", Icons.AutoMirrored.Rounded.MenuBook),
+    Progress(ProgressGraph, "Progress", Icons.Rounded.Insights),
+    You(YouGraph, "You", Icons.Rounded.Person),
 }

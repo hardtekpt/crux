@@ -12,6 +12,21 @@ Build: AGP 9.4, Gradle 9.7, Kotlin 2.4, compileSdk 37.2, minSdk 28. Opening the 
 Android Studio needs a version that supports AGP 9.4 (Help > Check for Updates); command-line
 builds work with the wrapper alone.
 
+## What's in the MVP
+
+All five tabs read and write the local Room database:
+
+- **Home**: today's plan, this week, latest best, bodyweight and recent climbs. The Log button opens
+  the quick log sheet.
+- **Train**: starter workout templates and a read-only detail of their blocks and targets.
+- **Journal**: climbs grouped by day and place, plus the Log climb form.
+- **Progress**: hardest send per discipline and per style, derived from the journal.
+- **You**: weight log with 30-day change, and height.
+
+Grades are stored as a scale plus an index (Font for boulders, French for routes). Starter templates
+are seeded on every install; debug builds also seed a few weeks of sample climbs and weigh-ins.
+Schema changes wipe local data until real migrations land in phase 2.
+
 ## Day-to-day commands
 
 From the repo root on Windows:

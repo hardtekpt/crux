@@ -44,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -111,4 +112,11 @@ dependencies {
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
+}
+
+kotlin {
+    compilerOptions {
+        // Material 3 still marks top app bar scrolling, sheets and date pickers experimental.
+        optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
+    }
 }

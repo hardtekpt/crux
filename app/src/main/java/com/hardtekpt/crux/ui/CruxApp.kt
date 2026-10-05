@@ -1,14 +1,14 @@
 package com.hardtekpt.crux.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -18,89 +18,146 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.hardtekpt.crux.ui.components.CruxFab
 import com.hardtekpt.crux.ui.home.HomeScreen
+import com.hardtekpt.crux.ui.journal.JournalScreen
+import com.hardtekpt.crux.ui.journal.LogClimbScreen
+import com.hardtekpt.crux.ui.navigation.HomeGraph
 import com.hardtekpt.crux.ui.navigation.HomeRoute
+import com.hardtekpt.crux.ui.navigation.JournalGraph
 import com.hardtekpt.crux.ui.navigation.JournalRoute
+import com.hardtekpt.crux.ui.navigation.LogClimbRoute
+import com.hardtekpt.crux.ui.navigation.LogWeightRoute
+import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
+import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
+import com.hardtekpt.crux.ui.navigation.TrainGraph
 import com.hardtekpt.crux.ui.navigation.TrainRoute
+import com.hardtekpt.crux.ui.navigation.YouGraph
 import com.hardtekpt.crux.ui.navigation.YouRoute
+import com.hardtekpt.crux.ui.progress.ProgressScreen
+import com.hardtekpt.crux.ui.quicklog.QuickLogAction
+import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.train.TemplateDetailScreen
+import com.hardtekpt.crux.ui.train.TrainScreen
+import com.hardtekpt.crux.ui.you.LogWeightScreen
+import com.hardtekpt.crux.ui.you.YouScreen
 
 @Composable
-fun CruxApp(home: @Composable () -> Unit = { HomeScreen() }) {
+fun CruxApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    var showQuickLog by rememberSaveable { mutableStateOf(false) }
+
+    val onForm = currentDestination.isAny(LogClimbRoute::class, LogWeightRoute::class)
+    val showFab = currentDestination.isAny(HomeRoute::class, JournalRoute::class)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            CruxNavBar(
-                isSelected = { destination ->
-                    currentDestination?.hierarchy?.any { it.hasRoute(destination.route::class) } == true
-                },
-                onNavigate = { destination ->
-                    navController.navigate(destination.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
+            AnimatedVisibility(visible = !onForm, enter = fadeIn(), exit = fadeOut()) {
+                CruxNavBar(
+                    isSelected = { destination ->
+                        currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
+                    },
+                    onNavigate = { destination -> navController.navigateToTab(destination) },
+                )
+            }
+        },
+        floatingActionButton = {
+            if (showFab) {
+                CruxFab(
+                    text = "Log",
+                    icon = Icons.Rounded.Add,
+                    onClick = { showQuickLog = true },
+                    modifier = Modifier.testTag("log_fab"),
+                )
+            }
         },
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = HomeRoute,
+            startDestination = HomeGraph,
             modifier = Modifier
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
         ) {
-            composable<HomeRoute> { home() }
-            composable<TrainRoute> {
-                PlaceholderScreen(
-                    title = "Train",
-                    icon = Icons.Rounded.FitnessCenter,
-                    headline = "No workouts yet",
-                    sentence = "Build a workout from your own exercises, then start a session from here.",
-                )
+            navigation<HomeGraph>(startDestination = HomeRoute) {
+                composable<HomeRoute> {
+                    HomeScreen(
+                        onOpenTemplate = { navController.navigate(TemplateDetailRoute(it)) },
+                        onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
+                        onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
+                        onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
+                    )
+                }
             }
-            composable<JournalRoute> {
-                PlaceholderScreen(
-                    title = "Journal",
-                    icon = Icons.AutoMirrored.Rounded.MenuBook,
-                    headline = "No climbs logged yet",
-                    sentence = "Every climb, session and note you log lands here, newest first.",
-                )
+            navigation<TrainGraph>(startDestination = TrainRoute) {
+                composable<TrainRoute> {
+                    TrainScreen(onOpenTemplate = { navController.navigate(TemplateDetailRoute(it)) })
+                }
+                composable<TemplateDetailRoute> {
+                    TemplateDetailScreen(onBack = navController::popBackStack)
+                }
             }
-            composable<ProgressRoute> {
-                PlaceholderScreen(
-                    title = "Progress",
-                    icon = Icons.Rounded.Insights,
-                    headline = "No progress to show yet",
-                    sentence = "Personal bests, volume and grade trends appear once you log a few sessions.",
-                )
+            navigation<JournalGraph>(startDestination = JournalRoute) {
+                composable<JournalRoute> { JournalScreen() }
             }
-            composable<YouRoute> {
-                PlaceholderScreen(
-                    title = "You",
-                    icon = Icons.Rounded.Person,
-                    headline = "No body stats yet",
-                    sentence = "Add your weight, height and ape index to track them over a season.",
-                )
+            navigation<ProgressGraph>(startDestination = ProgressRoute) {
+                composable<ProgressRoute> { ProgressScreen() }
             }
+            navigation<YouGraph>(startDestination = YouRoute) {
+                composable<YouRoute> {
+                    YouScreen(onLogWeight = { navController.navigate(LogWeightRoute) })
+                }
+            }
+            composable<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
+            composable<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
         }
+    }
+
+    if (showQuickLog) {
+        QuickLogSheet(
+            onDismiss = { showQuickLog = false },
+            onAction = { action ->
+                showQuickLog = false
+                when (action) {
+                    QuickLogAction.LogClimb -> navController.navigate(LogClimbRoute)
+                    QuickLogAction.LogWeight -> navController.navigate(LogWeightRoute)
+                    QuickLogAction.StartWorkout, QuickLogAction.AddNote -> Unit
+                }
+            },
+        )
+    }
+}
+
+private fun NavDestination?.isAny(vararg routes: kotlin.reflect.KClass<*>): Boolean =
+    this?.let { destination -> routes.any { destination.hasRoute(it) } } == true
+
+private fun NavHostController.navigateToTab(destination: TopLevelDestination) {
+    navigate(destination.graph) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
@@ -123,11 +180,11 @@ private fun CruxNavBar(
                 selected = isSelected(destination),
                 onClick = { onNavigate(destination) },
                 icon = { Icon(destination.icon, contentDescription = null) },
-                label = { Text(destination.label, style = MaterialTheme.typography.labelMedium) },
+                label = { Text(destination.label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
                 alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = colors.onPrimaryContainer,
-                    selectedTextColor = colors.onPrimaryContainer,
+                    selectedTextColor = colors.onSurface,
                     indicatorColor = colors.primaryContainer,
                     unselectedIconColor = colors.onSurfaceVariant,
                     unselectedTextColor = colors.onSurfaceVariant,
