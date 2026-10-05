@@ -6,6 +6,9 @@ import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
+import com.hardtekpt.crux.data.local.AreaEntity
+import com.hardtekpt.crux.data.local.PlaceEntity
+import com.hardtekpt.crux.data.local.ProblemEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
 import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
@@ -15,6 +18,7 @@ import com.hardtekpt.crux.data.model.ExerciseCategory
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.MetricType
+import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.Venue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -28,6 +32,7 @@ enum class BackupSection(val label: String, val description: String, val availab
     EXERCISES("Exercise list", "Your exercise library"),
     PLANS("Plan list", "Session plans, with the exercises they use"),
     JOURNAL("Journal", "Every climb you logged"),
+    PLACES("Places", "Gyms, crags and boards, with their walls and problems"),
     BODY("Body stats", "Weigh-ins and height"),
     SESSIONS("Session history", "Arrives with the session logger", available = false),
 }
@@ -43,6 +48,7 @@ data class BackupFile(
     val exercises: List<ExerciseDto>? = null,
     val plans: List<PlanDto>? = null,
     val climbs: List<ClimbDto>? = null,
+    val places: List<PlaceDto>? = null,
     val bodyMeasurements: List<MeasurementDto>? = null,
     /** Reserved for the session logger; always null for now. */
     val sessions: List<String>? = null,
@@ -52,6 +58,7 @@ data class BackupFile(
         BackupSection.EXERCISES -> exercises?.size
         BackupSection.PLANS -> plans?.size
         BackupSection.JOURNAL -> climbs?.size
+        BackupSection.PLACES -> places?.size
         BackupSection.BODY -> bodyMeasurements?.size
         BackupSection.SESSIONS -> sessions?.size
     }
@@ -96,6 +103,40 @@ data class ClimbDto(
     val name: String? = null,
     val place: String? = null,
     val notes: String? = null,
+    /** Set when the climb is linked to a saved place; with [place] it finds that place again. */
+    val placeType: PlaceType? = null,
+    val area: String? = null,
+    val problem: String? = null,
+    val angle: Int? = null,
+)
+
+@Serializable
+data class AreaDto(val name: String, val angle: Int? = null, val resetDate: String? = null)
+
+@Serializable
+data class ProblemDto(
+    val name: String,
+    val discipline: Discipline,
+    val gradeScale: GradeScale,
+    val grade: String,
+    val area: String? = null,
+    val tape: Int? = null,
+    val setDate: String? = null,
+    val retired: Boolean = false,
+    val notes: String? = null,
+)
+
+@Serializable
+data class PlaceDto(
+    val name: String,
+    val type: PlaceType,
+    val location: String? = null,
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    val defaultAngle: Int? = null,
+    val notes: String? = null,
+    val areas: List<AreaDto> = emptyList(),
+    val problems: List<ProblemDto> = emptyList(),
 )
 
 @Serializable
@@ -156,7 +197,37 @@ class BackupRepository(
             } else {
                 null
             },
-            climbs = if (BackupSection.JOURNAL in sections) db.climbDao().getAll().map { it.toDto() } else null,
+            climbs = if (BackupSection.JOURNAL in sections) {
+                val places = db.placeDao().getPlaces().associateBy { it.id }
+                val areas = db.placeDao().getAllAreas().associateBy { it.id }
+                val problems = db.placeDao().getAllProblems().associateBy { it.id }
+                db.climbDao().getAll().map { climb ->
+                    val place = climb.placeId?.let(places::get)
+                    climb.toDto().copy(
+                        place = place?.name ?: climb.place,
+                        placeType = place?.type,
+                        area = climb.areaId?.let(areas::get)?.name,
+                        problem = climb.problemId?.let(problems::get)?.name,
+                        angle = climb.angle,
+                    )
+                }
+            } else {
+                null
+            },
+            places = if (BackupSection.PLACES in sections) {
+                val areas = db.placeDao().getAllAreas().groupBy { it.placeId }
+                val problems = db.placeDao().getAllProblems().groupBy { it.placeId }
+                db.placeDao().getPlaces().map { place ->
+                    val placeAreas = areas[place.id].orEmpty().sortedBy { it.position }
+                    val areaNames = placeAreas.associate { it.id to it.name }
+                    place.toDto(
+                        areas = placeAreas.map { it.toDto() },
+                        problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
+                    )
+                }
+            } else {
+                null
+            },
             bodyMeasurements = if (BackupSection.BODY in sections) db.bodyMeasurementDao().getAll().map { it.toDto() } else null,
         )
         return json.encodeToString(file)
@@ -248,7 +319,66 @@ class BackupRepository(
             }
         }
 
+        // Places go in before the journal so imported climbs can link to them.
+        val placeDao = db.placeDao()
+        if (BackupSection.PLACES in sections) {
+            val known = placeDao.getPlaces().associateBy { it.type to it.name.lowercase() }
+            file.places?.forEach { dto ->
+                if ((dto.type to dto.name.lowercase()) in known) {
+                    skipped.merge(BackupSection.PLACES, 1, Int::plus)
+                    return@forEach
+                }
+                val placeId = placeDao.insertPlace(
+                    PlaceEntity(
+                        name = dto.name.trim(),
+                        type = dto.type,
+                        location = dto.location,
+                        boulderScale = dto.boulderScale,
+                        routeScale = dto.routeScale,
+                        defaultAngle = dto.defaultAngle,
+                        notes = dto.notes,
+                        createdAtMillis = now,
+                    ),
+                )
+                val areaIds = dto.areas.mapIndexed { position, area ->
+                    area.name.lowercase() to placeDao.insertArea(
+                        AreaEntity(
+                            placeId = placeId,
+                            name = area.name,
+                            angle = area.angle,
+                            resetEpochDay = area.resetDate?.let { java.time.LocalDate.parse(it).toEpochDay() },
+                            position = position,
+                        ),
+                    )
+                }.toMap()
+                dto.problems.forEach { problem ->
+                    val index = problem.gradeScale.grades.indexOf(problem.grade)
+                    if (index < 0) return@forEach
+                    placeDao.insertProblem(
+                        ProblemEntity(
+                            placeId = placeId,
+                            areaId = problem.area?.lowercase()?.let(areaIds::get),
+                            name = problem.name,
+                            discipline = problem.discipline,
+                            gradeScale = problem.gradeScale,
+                            gradeIndex = index,
+                            tape = problem.tape,
+                            setEpochDay = problem.setDate?.let { java.time.LocalDate.parse(it).toEpochDay() },
+                            retired = problem.retired,
+                            notes = problem.notes,
+                            createdAtMillis = now,
+                        ),
+                    )
+                }
+                added.merge(BackupSection.PLACES, 1, Int::plus)
+            }
+        }
+
         if (BackupSection.JOURNAL in sections) {
+            // Climbs relink by name to whichever saved places, walls and problems exist now.
+            val places = placeDao.getPlaces().associateBy { it.type to it.name.lowercase() }
+            val areas = placeDao.getAllAreas().groupBy { it.placeId }
+            val problems = placeDao.getAllProblems().groupBy { it.placeId }
             val climbDao = db.climbDao()
             val seen = climbDao.getAll().map { it.toDto().identity() }.toMutableSet()
             file.climbs?.forEach { dto ->
@@ -257,6 +387,7 @@ class BackupRepository(
                     skipped.merge(BackupSection.JOURNAL, 1, Int::plus)
                     return@forEach
                 }
+                val place = dto.placeType?.let { type -> dto.place?.let { places[type to it.lowercase()] } }
                 climbDao.insert(
                     ClimbEntity(
                         discipline = dto.discipline,
@@ -270,6 +401,10 @@ class BackupRepository(
                         name = dto.name,
                         place = dto.place,
                         notes = dto.notes,
+                        placeId = place?.id,
+                        areaId = dto.area?.let { name -> areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
+                        problemId = dto.problem?.let { name -> problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
+                        angle = dto.angle,
                     ),
                 )
                 seen += dto.identity()
@@ -318,8 +453,38 @@ private fun ClimbEntity.toDto() = ClimbDto(
     notes = notes,
 )
 
-/** Two climbs are the same entry when everything but notes matches. */
-private fun ClimbDto.identity() = copy(notes = null)
+/** Two climbs are the same entry when everything but notes and saved-place links matches. */
+private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null)
+
+private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) = PlaceDto(
+    name = name,
+    type = type,
+    location = location,
+    boulderScale = boulderScale,
+    routeScale = routeScale,
+    defaultAngle = defaultAngle,
+    notes = notes,
+    areas = areas,
+    problems = problems,
+)
+
+private fun AreaEntity.toDto() = AreaDto(
+    name = name,
+    angle = angle,
+    resetDate = resetEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
+)
+
+private fun ProblemEntity.toDto(area: String?) = ProblemDto(
+    name = name,
+    discipline = discipline,
+    gradeScale = gradeScale,
+    grade = gradeScale.label(gradeIndex),
+    area = area,
+    tape = tape,
+    setDate = setEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
+    retired = retired,
+    notes = notes,
+)
 
 private fun BodyMeasurementEntity.toDto() = MeasurementDto(
     type = type,

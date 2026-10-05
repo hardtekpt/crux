@@ -35,6 +35,7 @@ import com.hardtekpt.crux.ui.components.TrendDirection
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.oneDecimal
+import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
@@ -48,6 +49,7 @@ data class WidgetActions(
     val openJournal: () -> Unit = {},
     val openProgress: () -> Unit = {},
     val openYou: () -> Unit = {},
+    val openProblem: (Long) -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -131,6 +133,7 @@ fun DashboardWidgetContent(
             }
         }
         WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
+        WidgetType.PROJECTS -> ProjectsWidget(state, large, actions.openProblem, actions.openProgress, modifier)
     }
 }
 
@@ -234,6 +237,25 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
                     modifier = Modifier.testTag("recent_climb"),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, onOpenProgress: () -> Unit, modifier: Modifier) {
+    val projects = state.projects.take(if (large) 6 else 3)
+    CruxCard(modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Projects", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            if (state.projects.size > projects.size) {
+                CruxButton("All ${state.projects.size}", onOpenProgress, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+            }
+        }
+        if (!state.isLoading && projects.isEmpty()) {
+            EmptyWidgetText("No open projects. Log a go on a saved problem and it stays here until you send it.")
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s1)) {
+            projects.forEach { ProjectRow(it, onOpen) }
         }
     }
 }

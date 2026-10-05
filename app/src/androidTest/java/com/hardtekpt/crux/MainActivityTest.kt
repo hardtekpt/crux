@@ -172,6 +172,10 @@ class MainActivityTest {
         composeRule.onNodeWithTag("edit_dashboard").performClick()
         composeRule.onNodeWithTag("remove_TODAYS_PLAN").performClick()
         composeRule.onNodeWithTag("resize_WEEK_CLIMBS").performClick()
+        // Keep the list short enough that the drag below needs no auto-scroll.
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("remove_PROJECTS"))
+        composeRule.onNodeWithTag("remove_PROJECTS").performClick()
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_WEEK_CLIMBS"))
         composeRule.onNodeWithTag("add_widget").performClick()
         composeRule.onNodeWithTag("catalog_WEIGHT_TREND").performScrollTo().performClick()
 
@@ -195,7 +199,9 @@ class MainActivityTest {
         assertEquals(0, composeRule.onAllNodesWithTag("widget_TODAYS_PLAN").fetchSemanticsNodes().size)
         val trendTop = composeRule.onNodeWithTag("widget_WEIGHT_TREND").fetchSemanticsNode().boundsInRoot.top
         val recentTop = composeRule.onNodeWithTag("widget_RECENT_CLIMBS").fetchSemanticsNode().boundsInRoot.top
-        assert(trendTop < recentTop) { "Weight trend should have moved above Recent climbs" }
+        assert(trendTop < recentTop) {
+            "Weight trend should have moved above Recent climbs: from=$from to=$to trend=$trendTop recent=$recentTop"
+        }
     }
 
     @Test
@@ -214,6 +220,67 @@ class MainActivityTest {
         openSettings()
         composeRule.onNodeWithTag("demo_mode").performScrollTo().performClick()
         composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
+    fun placesHoldProblemsAndGoesOnThemBecomeProjects() {
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.onNode(hasText("Places") and hasAnyAncestor(hasTestTag("journal_view"))).performClick()
+        composeRule.waitForTag("new_place")
+        composeRule.onNodeWithTag("new_place").performClick()
+        composeRule.waitForTag("screen_PlaceEditor")
+        composeRule.textFieldIn("field_place_name").performTextInput("Test Gym")
+        composeRule.onNodeWithTag("save_place").performClick()
+
+        composeRule.waitForTag("screen_PlaceDetail")
+        composeRule.onNodeWithTag("add_problem").performClick()
+        composeRule.waitForTag("screen_ProblemEditor")
+        composeRule.textFieldIn("field_problem_name").performTextInput("Pink crimps")
+        composeRule.onNodeWithTag("save_problem").performClick()
+
+        composeRule.waitForTag("problem_row")
+        composeRule.onNodeWithTag("problem_row").performClick()
+        composeRule.waitForTag("screen_ProblemDetail")
+        composeRule.onNodeWithTag("log_go").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitForTag("picked_problem")
+        composeRule.onNodeWithTag("style_ATTEMPT").performScrollTo().performClick()
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        composeRule.waitForTag("screen_ProblemDetail")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("1") }.isSuccess
+        }
+
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitForTag("project_row")
+    }
+
+    @Test
+    fun aLoggedClimbCanBeEditedAndDeleted() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_LogClimb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Grey arete")
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        composeRule.waitForTag("screen_Home")
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_climb")
+        composeRule.onNodeWithTag("journal_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextReplacement("Grey arete sit")
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        composeRule.waitForTag("journal_climb")
+        composeRule.onNodeWithTag("journal_climb").assertTextContains("Grey arete sit", substring = true)
+        composeRule.onNodeWithTag("journal_climb").performClick()
+        composeRule.waitForTag("delete_climb")
+        composeRule.onNodeWithTag("delete_climb").performClick()
+        composeRule.onNodeWithTag("confirm_delete").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().isEmpty() }
     }
 

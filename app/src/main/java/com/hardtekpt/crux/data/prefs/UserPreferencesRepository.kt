@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
@@ -46,6 +47,13 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[DEMO_MODE] = enabled }
     }
 
+    /** The place last logged at, so the next log starts there. */
+    val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
+
+    suspend fun setLastPlaceId(id: Long?) {
+        dataStore.edit { if (id == null) it.remove(LAST_PLACE) else it[LAST_PLACE] = id }
+    }
+
     val gradeScales: Flow<GradeScales> = dataStore.data.map { prefs ->
         GradeScales(
             boulder = prefs[BOULDER_SCALE].toScale(Discipline.BOULDER),
@@ -62,6 +70,7 @@ class UserPreferencesRepository @Inject constructor(
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val LAST_PLACE = longPreferencesKey("last_place_id")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

@@ -57,6 +57,15 @@ import com.hardtekpt.crux.ui.navigation.JournalGraph
 import com.hardtekpt.crux.ui.navigation.JournalRoute
 import com.hardtekpt.crux.ui.navigation.LogClimbRoute
 import com.hardtekpt.crux.ui.navigation.LogWeightRoute
+import com.hardtekpt.crux.ui.navigation.PlaceDetailRoute
+import com.hardtekpt.crux.ui.navigation.PlaceEditorRoute
+import com.hardtekpt.crux.ui.navigation.ProblemDetailRoute
+import com.hardtekpt.crux.ui.navigation.ProblemEditorRoute
+import com.hardtekpt.crux.ui.places.PlaceDetailScreen
+import com.hardtekpt.crux.ui.places.PlaceEditorScreen
+import com.hardtekpt.crux.ui.places.ProblemDetailScreen
+import com.hardtekpt.crux.ui.places.ProblemEditorScreen
+import androidx.navigation.toRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
@@ -92,6 +101,8 @@ fun CruxApp() {
         LogWeightRoute::class,
         PlanEditorRoute::class,
         ExerciseEditorRoute::class,
+        PlaceEditorRoute::class,
+        ProblemEditorRoute::class,
     )
     val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
@@ -122,6 +133,7 @@ fun CruxApp() {
                         onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                         onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                         onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
+                        onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
                     )
                 }
             }
@@ -144,10 +156,64 @@ fun CruxApp() {
                 page<ExerciseEditorRoute> { ExerciseEditorScreen(onDone = navController::popBackStack) }
             }
             navigation<JournalGraph>(startDestination = JournalRoute) {
-                page<JournalRoute> { JournalScreen() }
+                page<JournalRoute> {
+                    JournalScreen(
+                        onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                        onOpenPlace = { navController.navigate(PlaceDetailRoute(it)) },
+                        onNewPlace = { navController.navigate(PlaceEditorRoute()) },
+                    )
+                }
+                page<PlaceDetailRoute> {
+                    PlaceDetailScreen(
+                        onBack = navController::popBackStack,
+                        onEdit = { navController.navigate(PlaceEditorRoute(it)) },
+                        onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
+                        onNewProblem = { navController.navigate(ProblemEditorRoute(placeId = it)) },
+                        onLogHere = { navController.navigate(LogClimbRoute(placeId = it)) },
+                    )
+                }
+                page<PlaceEditorRoute> { entry ->
+                    val editingId = entry.toRoute<PlaceEditorRoute>().placeId
+                    PlaceEditorScreen(
+                        onBack = navController::popBackStack,
+                        onSaved = { id ->
+                            when {
+                                // Deleted: leave the editor and the place it belonged to.
+                                id == 0L -> navController.popBackStack<JournalRoute>(inclusive = false)
+                                // Created: swap the editor for the new place.
+                                editingId == 0L -> navController.navigate(PlaceDetailRoute(id)) {
+                                    popUpTo<PlaceEditorRoute> { inclusive = true }
+                                }
+                                else -> navController.popBackStack()
+                            }
+                        },
+                    )
+                }
+                page<ProblemDetailRoute> {
+                    ProblemDetailScreen(
+                        onBack = navController::popBackStack,
+                        onEdit = { placeId, problemId -> navController.navigate(ProblemEditorRoute(placeId, problemId)) },
+                        onLogGo = { navController.navigate(LogClimbRoute(problemId = it)) },
+                        onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                    )
+                }
+                page<ProblemEditorRoute> {
+                    ProblemEditorScreen(
+                        onDone = { deleted ->
+                            // Deleting from the editor also leaves the problem's own page.
+                            val fromDetail = navController.previousBackStackEntry?.destination
+                                ?.hasRoute(ProblemDetailRoute::class) == true
+                            if (deleted && fromDetail) {
+                                navController.popBackStack<ProblemDetailRoute>(inclusive = true)
+                            } else {
+                                navController.popBackStack()
+                            }
+                        },
+                    )
+                }
             }
             navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                page<ProgressRoute> { ProgressScreen() }
+                page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) }) }
             }
             navigation<YouGraph>(startDestination = YouRoute) {
                 page<YouRoute> {
@@ -199,7 +265,7 @@ fun CruxApp() {
             onAction = { action ->
                 showQuickLog = false
                 when (action) {
-                    QuickLogAction.LogClimb -> navController.navigate(LogClimbRoute)
+                    QuickLogAction.LogClimb -> navController.navigate(LogClimbRoute())
                     QuickLogAction.LogWeight -> navController.navigate(LogWeightRoute)
                     QuickLogAction.StartWorkout, QuickLogAction.AddNote -> Unit
                 }

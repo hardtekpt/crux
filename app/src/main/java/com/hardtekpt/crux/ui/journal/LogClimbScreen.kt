@@ -17,6 +17,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,10 +65,25 @@ fun LogClimbScreen(
     viewModel: LogClimbViewModel = hiltViewModel(),
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val places by viewModel.places.collectAsStateWithLifecycle()
+    val detail by viewModel.placeDetail.collectAsStateWithLifecycle()
     LaunchedEffect(draft.saved) { if (draft.saved) onDone() }
+    val whereActions = WhereActions(
+        selectPlace = viewModel::selectPlace,
+        createPlace = viewModel::createPlace,
+        selectArea = viewModel::selectArea,
+        pickProblem = viewModel::pickProblem,
+        clearProblem = viewModel::clearProblem,
+        setSaveAsProblem = viewModel::setSaveAsProblem,
+        setAngle = viewModel::setAngle,
+        setVenue = viewModel::setVenue,
+        setPlaceText = viewModel::setPlace,
+    )
     LogClimbContent(
         draft = draft,
         onBack = onDone,
+        where = { WhereSection(draft, places, detail, whereActions) },
+        onDelete = viewModel::requestDelete,
         onDiscipline = viewModel::setDiscipline,
         onGrade = viewModel::setGrade,
         onStyle = viewModel::setStyle,
@@ -76,6 +95,21 @@ fun LogClimbScreen(
         onNotes = viewModel::setNotes,
         onSave = viewModel::save,
     )
+    if (draft.confirmDelete) {
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDelete,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text("Delete this climb?", style = MaterialTheme.typography.headlineSmall) },
+            text = { Text("It is removed from your journal, bests and charts.", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Keep") } },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,6 +128,8 @@ fun LogClimbContent(
     onNotes: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
+    where: @Composable () -> Unit = {},
+    onDelete: () -> Unit = {},
 ) {
     val space = CruxTheme.space
     var pickingDate by rememberSaveable { mutableStateOf(false) }
@@ -104,7 +140,17 @@ fun LogClimbContent(
             .imePadding()
             .testTag("screen_LogClimb"),
     ) {
-        CruxTopAppBar(title = "Log climb", onBack = onBack)
+        CruxTopAppBar(
+            title = if (draft.isEditing) "Edit climb" else "Log climb",
+            onBack = onBack,
+            actions = {
+                if (draft.isEditing) {
+                    IconButton(onClick = onDelete, modifier = Modifier.testTag("delete_climb")) {
+                        Icon(Icons.Rounded.Delete, contentDescription = "Delete climb")
+                    }
+                }
+            },
+        )
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -112,6 +158,8 @@ fun LogClimbContent(
                 .padding(horizontal = space.s4),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
+            where()
+            Eyebrow("Climb", Modifier.padding(top = space.s3))
             CruxSegmentedButtons(
                 options = Discipline.entries,
                 selected = draft.discipline,
@@ -180,21 +228,6 @@ fun LogClimbContent(
                     .padding(top = space.s3)
                     .testTag("field_name"),
             )
-            Eyebrow("Where", Modifier.padding(top = space.s1))
-            CruxSegmentedButtons(
-                options = Venue.entries,
-                selected = draft.venue,
-                label = { it.label },
-                onSelect = onVenue,
-            )
-            CruxTextField(
-                label = if (draft.venue == Venue.GYM) "Gym" else "Crag",
-                value = draft.place,
-                onValueChange = onPlace,
-                placeholder = if (draft.venue == Venue.GYM) "Block Lab" else "Arco",
-                helper = "Optional",
-                modifier = Modifier.testTag("field_place"),
-            )
             CruxTextField(
                 label = "Notes",
                 value = draft.notes,
@@ -206,7 +239,7 @@ fun LogClimbContent(
             )
         }
         CruxButton(
-            text = "Log climb",
+            text = if (draft.isEditing) "Save changes" else "Log climb",
             onClick = onSave,
             enabled = !draft.isSaving,
             icon = Icons.Rounded.Check,

@@ -19,6 +19,12 @@ interface ClimbRepository {
     fun observeClimbCount(): Flow<Int>
     fun observePersonalBests(): Flow<List<PersonalBest>>
     suspend fun logClimb(climb: NewClimb): Long
+    suspend fun getClimb(id: Long): Climb?
+    /** Replaces a logged climb's details, keeping when it was first logged. */
+    suspend fun updateClimb(id: Long, climb: NewClimb)
+    suspend fun deleteClimb(id: Long)
+    fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>>
+    fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>>
 }
 
 class OfflineClimbRepository @Inject constructor(
@@ -39,22 +45,42 @@ class OfflineClimbRepository @Inject constructor(
     override fun observePersonalBests(): Flow<List<PersonalBest>> =
         dbs.observe { it.climbDao().observePersonalBests() }.map { it.map(PersonalBestRow::toModel) }
 
-    override suspend fun logClimb(climb: NewClimb): Long = dbs.current().climbDao().insert(
-        ClimbEntity(
-            discipline = climb.discipline,
-            gradeScale = climb.gradeScale,
-            gradeIndex = climb.gradeIndex,
-            style = climb.style,
-            attempts = climb.attempts,
-            venue = climb.venue,
-            dateEpochDay = climb.date.toEpochDay(),
-            createdAtMillis = clock.millis(),
-            name = climb.name?.trim()?.takeIf { it.isNotEmpty() },
-            place = climb.place?.trim()?.takeIf { it.isNotEmpty() },
-            notes = climb.notes?.trim()?.takeIf { it.isNotEmpty() },
-        ),
-    )
+    override suspend fun logClimb(climb: NewClimb): Long = dbs.current().climbDao().insert(climb.toEntity(clock.millis()))
+
+    override suspend fun getClimb(id: Long): Climb? = dbs.current().climbDao().get(id)?.toModel()
+
+    override suspend fun updateClimb(id: Long, climb: NewClimb) {
+        val dao = dbs.current().climbDao()
+        val existing = dao.get(id) ?: return
+        dao.update(climb.toEntity(existing.createdAtMillis).copy(id = id))
+    }
+
+    override suspend fun deleteClimb(id: Long) = dbs.current().climbDao().delete(id)
+
+    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> =
+        dbs.observe { it.climbDao().observeForProblem(problemId) }.map { it.map(ClimbEntity::toModel) }
+
+    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> =
+        dbs.observe { it.climbDao().observeAtPlace(placeId) }.map { it.map(ClimbEntity::toModel) }
 }
+
+private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
+    discipline = discipline,
+    gradeScale = gradeScale,
+    gradeIndex = gradeIndex,
+    style = style,
+    attempts = attempts,
+    venue = venue,
+    dateEpochDay = date.toEpochDay(),
+    createdAtMillis = createdAtMillis,
+    name = name?.trim()?.takeIf { it.isNotEmpty() },
+    place = place?.trim()?.takeIf { it.isNotEmpty() },
+    notes = notes?.trim()?.takeIf { it.isNotEmpty() },
+    placeId = placeId,
+    areaId = areaId,
+    problemId = problemId,
+    angle = angle,
+)
 
 internal fun ClimbEntity.toModel() = Climb(
     id = id,
@@ -68,6 +94,10 @@ internal fun ClimbEntity.toModel() = Climb(
     name = name,
     place = place,
     notes = notes,
+    placeId = placeId,
+    areaId = areaId,
+    problemId = problemId,
+    angle = angle,
 )
 
 internal fun PersonalBestRow.toModel() = PersonalBest(

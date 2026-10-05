@@ -39,8 +39,23 @@ interface ClimbDao {
     )
     fun observePersonalBests(): Flow<List<PersonalBestRow>>
 
+    @Query("SELECT * FROM climbs WHERE id = :id")
+    suspend fun get(id: Long): ClimbEntity?
+
+    @Query("SELECT * FROM climbs WHERE problemId = :problemId ORDER BY dateEpochDay DESC, createdAtMillis DESC")
+    fun observeForProblem(problemId: Long): Flow<List<ClimbEntity>>
+
+    @Query("SELECT * FROM climbs WHERE placeId = :placeId ORDER BY dateEpochDay DESC, createdAtMillis DESC")
+    fun observeAtPlace(placeId: Long): Flow<List<ClimbEntity>>
+
     @Insert
     suspend fun insert(climb: ClimbEntity): Long
+
+    @androidx.room.Update
+    suspend fun update(climb: ClimbEntity)
+
+    @Query("DELETE FROM climbs WHERE id = :id")
+    suspend fun delete(id: Long)
 
     @Insert
     suspend fun insertAll(climbs: List<ClimbEntity>)

@@ -1,6 +1,14 @@
 package com.hardtekpt.crux.data
 
+import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Place
+import com.hardtekpt.crux.data.model.PlaceDetail
+import com.hardtekpt.crux.data.model.PlaceSummary
+import com.hardtekpt.crux.data.model.Problem
+import com.hardtekpt.crux.data.model.ProblemStats
+import com.hardtekpt.crux.data.model.ProblemWithStats
+import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.MeasurementType
@@ -9,6 +17,7 @@ import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.LocalDate
@@ -43,11 +52,125 @@ class FakeClimbRepository : ClimbRepository {
     override suspend fun logClimb(climb: NewClimb): Long {
         logged += climb
         val id = (climbs.value.maxOfOrNull { it.id } ?: 0) + 1
-        climbs.value = climbs.value + Climb(
-            id, climb.discipline, climb.gradeScale, climb.gradeIndex, climb.style,
-            climb.attempts, climb.venue, climb.date, climb.name, climb.place, climb.notes,
-        )
+        climbs.value = climbs.value + climb.toClimb(id)
         return id
+    }
+
+    override suspend fun getClimb(id: Long): Climb? = climbs.value.find { it.id == id }
+
+    override suspend fun updateClimb(id: Long, climb: NewClimb) {
+        climbs.value = climbs.value.map { if (it.id == id) climb.toClimb(id) else it }
+    }
+
+    override suspend fun deleteClimb(id: Long) {
+        climbs.value = climbs.value.filterNot { it.id == id }
+    }
+
+    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> =
+        observeClimbs().map { list -> list.filter { it.problemId == problemId } }
+
+    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> =
+        observeClimbs().map { list -> list.filter { it.placeId == placeId } }
+
+    private fun NewClimb.toClimb(id: Long) = Climb(
+        id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
+        placeId, areaId, problemId, angle,
+    )
+}
+
+/** Places, walls and problems held in memory; stats come from the fake climbs when given. */
+class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : PlaceRepository {
+    val places = MutableStateFlow<List<Place>>(emptyList())
+    val areas = MutableStateFlow<List<Area>>(emptyList())
+    val problems = MutableStateFlow<List<Problem>>(emptyList())
+    private var nextId = 1L
+
+    private fun stats(problemId: Long, all: List<Climb>): ProblemStats? {
+        val goes = all.filter { it.problemId == problemId }
+        if (goes.isEmpty()) return null
+        return ProblemStats(
+            sessions = goes.map { it.date }.distinct().size,
+            attempts = goes.sumOf { it.attempts },
+            firstSend = goes.filter { it.style.isSend }.minOfOrNull { it.date },
+            lastGo = goes.maxOf { it.date },
+        )
+    }
+
+    private val allClimbs: Flow<List<Climb>> = climbs?.climbs ?: MutableStateFlow(emptyList())
+
+    override fun observePlaces(): Flow<List<PlaceSummary>> = combine(places, allClimbs) { list, climbs ->
+        list.map { place ->
+            val here = climbs.filter { it.placeId == place.id }
+            PlaceSummary(place, here.size, here.maxOfOrNull { it.date })
+        }
+    }
+
+    override fun observePlaceDetail(id: Long): Flow<PlaceDetail?> = combine(places, areas, problems, allClimbs) { p, a, pr, c ->
+        p.find { it.id == id }?.let { place ->
+            PlaceDetail(place, a.filter { it.placeId == id }, pr.filter { it.placeId == id }.map { ProblemWithStats(it, stats(it.id, c)) })
+        }
+    }
+
+    override fun observeProblem(id: Long): Flow<ProblemWithStats?> = combine(problems, allClimbs) { pr, c ->
+        pr.find { it.id == id }?.let { ProblemWithStats(it, stats(it.id, c)) }
+    }
+
+    override fun observeProjects(): Flow<List<Project>> = combine(places, areas, problems, allClimbs) { p, a, pr, c ->
+        pr.filter { !it.retired }.mapNotNull { problem ->
+            val stats = stats(problem.id, c)?.takeIf { !it.sent } ?: return@mapNotNull null
+            Project(problem, p.find { it.id == problem.placeId }?.name.orEmpty(), a.find { it.id == problem.areaId }?.name, stats)
+        }.sortedByDescending { it.stats.lastGo }
+    }
+
+    override suspend fun getPlace(id: Long): Place? = places.value.find { it.id == id }
+    override suspend fun getProblem(id: Long): Problem? = problems.value.find { it.id == id }
+
+    override suspend fun savePlace(input: PlaceInput): Long {
+        val id = input.id.takeIf { it != 0L } ?: nextId++
+        val place = Place(id, input.name, input.type, input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes)
+        places.value = places.value.filterNot { it.id == id } + place
+        return id
+    }
+
+    override suspend fun deletePlace(id: Long) {
+        places.value = places.value.filterNot { it.id == id }
+        areas.value = areas.value.filterNot { it.placeId == id }
+        problems.value = problems.value.filterNot { it.placeId == id }
+    }
+
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?): Long {
+        val id = areaId.takeIf { it != 0L } ?: nextId++
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null)
+        return id
+    }
+
+    override suspend fun deleteArea(id: Long) {
+        areas.value = areas.value.filterNot { it.id == id }
+        problems.value = problems.value.map { if (it.areaId == id) it.copy(areaId = null) else it }
+    }
+
+    override suspend fun resetArea(id: Long) {
+        areas.value = areas.value.map { if (it.id == id) it.copy(resetDate = LocalDate.now(FIXED_CLOCK)) else it }
+        problems.value = problems.value.map { if (it.areaId == id) it.copy(retired = true) else it }
+    }
+
+    override suspend fun saveProblem(input: ProblemInput): Long {
+        val id = input.id.takeIf { it != 0L } ?: nextId++
+        val old = problems.value.find { it.id == id }
+        val problem = Problem(
+            id, input.placeId, input.areaId, input.name, input.discipline, input.gradeScale, input.gradeIndex,
+            input.tape, old?.setDate ?: LocalDate.now(FIXED_CLOCK), old?.retired ?: false, input.notes,
+        )
+        problems.value = problems.value.filterNot { it.id == id } + problem
+        return id
+    }
+
+    override suspend fun setRetired(problemId: Long, retired: Boolean) {
+        problems.value = problems.value.map { if (it.id == problemId) it.copy(retired = retired) else it }
+    }
+
+    override suspend fun deleteProblem(id: Long) {
+        problems.value = problems.value.filterNot { it.id == id }
     }
 }
 

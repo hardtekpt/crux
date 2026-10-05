@@ -46,6 +46,15 @@ class BackupRepositoryTest {
         assertEquals(source.climbDao().count(), target.climbDao().count())
         assertEquals(source.bodyMeasurementDao().count(), target.bodyMeasurementDao().count())
         assertEquals(source.climbDao().count(), result.added[BackupSection.JOURNAL])
+
+        // Places come back with their walls and problems, and climbs link to them again.
+        assertEquals(source.placeDao().getPlaces().size, target.placeDao().getPlaces().size)
+        assertEquals(source.placeDao().getAllAreas().size, target.placeDao().getAllAreas().size)
+        assertEquals(source.placeDao().getAllProblems().size, target.placeDao().getAllProblems().size)
+        val linkedSource = source.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }
+        val linkedTarget = target.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }
+        assertTrue(linkedSource > 0)
+        assertEquals(linkedSource, linkedTarget)
     }
 
     @Test

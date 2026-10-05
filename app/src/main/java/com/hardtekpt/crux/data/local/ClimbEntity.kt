@@ -9,7 +9,7 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Venue
 
 /** A single logged climb. The grade is its scale plus an index into that scale. */
-@Entity(tableName = "climbs", indices = [Index("dateEpochDay")])
+@Entity(tableName = "climbs", indices = [Index("dateEpochDay"), Index("placeId"), Index("problemId")])
 data class ClimbEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val discipline: Discipline,
@@ -23,8 +23,15 @@ data class ClimbEntity(
     /** When it was logged; orders climbs within a day. */
     val createdAtMillis: Long,
     val name: String? = null,
+    /** The place's name as logged; kept even if the place itself is deleted. */
     val place: String? = null,
     val notes: String? = null,
+    /** Links to the climber's places, walls and problems (schema 6). All optional. */
+    val placeId: Long? = null,
+    val areaId: Long? = null,
+    val problemId: Long? = null,
+    /** Board angle in degrees, when logged on a board. */
+    val angle: Int? = null,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */

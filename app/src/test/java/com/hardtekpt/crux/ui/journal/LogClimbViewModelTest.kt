@@ -3,6 +3,12 @@ package com.hardtekpt.crux.ui.journal
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
 import com.hardtekpt.crux.data.FakeClimbRepository
+import com.hardtekpt.crux.data.FakePlaceRepository
+import com.hardtekpt.crux.data.PlaceInput
+import com.hardtekpt.crux.data.ProblemInput
+import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.PlaceType
+import androidx.lifecycle.SavedStateHandle
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
@@ -28,10 +34,24 @@ class LogClimbViewModelTest {
     @get:Rule val tmp = TemporaryFolder()
 
     private val repository = FakeClimbRepository()
+    private val places = FakePlaceRepository(repository)
     private val preferences by lazy {
         UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") })
     }
-    private val viewModel by lazy { LogClimbViewModel(repository, FIXED_CLOCK, preferences) }
+    private val viewModel by lazy { viewModel() }
+
+    private fun viewModel(vararg args: Pair<String, Long>) =
+        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences)
+
+    private suspend fun boardWithProblem(): Pair<Long, Long> {
+        val placeId = places.savePlace(
+            PlaceInput(name = "Moon board", type = PlaceType.BOARD, location = null, boulderScale = GradeScale.V_SCALE, routeScale = null, defaultAngle = 40, notes = null),
+        )
+        val problemId = places.saveProblem(
+            ProblemInput(placeId = placeId, areaId = null, name = "Hard moves", discipline = Discipline.BOULDER, gradeScale = GradeScale.V_SCALE, gradeIndex = 6, tape = null, notes = null),
+        )
+        return placeId to problemId
+    }
 
     @Test
     fun `defaults to a boulder flash today`() {
@@ -99,5 +119,70 @@ class LogClimbViewModelTest {
         assertTrue(viewModel.draft.value.saved)
         assertEquals(1, repository.logged.size)
         assertEquals(11, repository.logged.single().gradeIndex)
+    }
+
+    @Test
+    fun `logging a problem copies its grade and links the place`() = runBlocking {
+        val (placeId, problemId) = boardWithProblem()
+        val vm = viewModel("problemId" to problemId)
+        val draft = withTimeout(5_000) { vm.draft.first { it.problemId == problemId } }
+
+        assertEquals(placeId, draft.placeId)
+        assertEquals(GradeScale.V_SCALE, draft.gradeScale)
+        assertEquals(6, draft.gradeIndex)
+        assertEquals("Hard moves", draft.name)
+        assertEquals(40, draft.angle)
+
+        vm.setStyle(AscentStyle.ATTEMPT)
+        vm.save()
+        withTimeout(5_000) { vm.draft.first { it.saved } }
+
+        val logged = repository.logged.single()
+        assertEquals(placeId, logged.placeId)
+        assertEquals(problemId, logged.problemId)
+        assertEquals(Venue.BOARD, logged.venue)
+        assertEquals("Moon board", logged.place)
+    }
+
+    @Test
+    fun `a new climb can be saved as a problem at the place`() = runBlocking {
+        val (placeId, _) = boardWithProblem()
+        val vm = viewModel("placeId" to placeId)
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
+        vm.setSaveAsProblem(true)
+        vm.save()
+        assertNotNull(vm.draft.value.nameError)
+
+        vm.setName(" Crimp ladder ")
+        vm.save()
+        withTimeout(5_000) { vm.draft.first { it.saved } }
+
+        val problem = places.problems.value.single { it.name == "Crimp ladder" }
+        assertEquals(problem.id, repository.logged.single().problemId)
+    }
+
+    @Test
+    fun `editing a climb keeps its id and delete removes it`() = runBlocking {
+        val id = repository.logClimb(
+            NewClimb(Discipline.ROUTE, GradeScale.FRENCH, 14, AscentStyle.REDPOINT, 3, Venue.CRAG, LocalDate.now(FIXED_CLOCK).minusDays(2), "Pilastro", "Arco", null),
+        )
+        val vm = viewModel("climbId" to id)
+        val draft = withTimeout(5_000) { vm.draft.first { it.name == "Pilastro" } }
+        assertTrue(draft.isEditing)
+        assertEquals(Discipline.ROUTE, draft.discipline)
+        assertEquals(14, draft.gradeIndex)
+
+        vm.setAttempts(5)
+        vm.save()
+        withTimeout(5_000) { vm.draft.first { it.saved } }
+        assertEquals(1, repository.climbs.value.size)
+        assertEquals(5, repository.climbs.value.single().attempts)
+
+        val again = viewModel("climbId" to id)
+        withTimeout(5_000) { again.draft.first { it.name == "Pilastro" } }
+        again.requestDelete()
+        again.confirmDelete()
+        withTimeout(5_000) { again.draft.first { it.saved } }
+        assertTrue(repository.climbs.value.isEmpty())
     }
 }

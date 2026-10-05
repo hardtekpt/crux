@@ -79,6 +79,7 @@ fun HomeScreen(
     onOpenJournal: () -> Unit,
     onOpenProgress: () -> Unit,
     onOpenYou: () -> Unit,
+    onOpenProblem: (Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,7 +89,7 @@ fun HomeScreen(
         uiState = uiState,
         dashboard = dashboard,
         demoMode = demoMode,
-        actions = WidgetActions(onOpenTemplate, onOpenJournal, onOpenProgress, onOpenYou),
+        actions = WidgetActions(onOpenTemplate, onOpenJournal, onOpenProgress, onOpenYou, onOpenProblem),
         editor = DashboardEditor(
             start = viewModel::startEditing,
             finish = viewModel::finishEditing,

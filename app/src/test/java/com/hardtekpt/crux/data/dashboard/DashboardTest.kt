@@ -5,6 +5,7 @@ import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
 import com.hardtekpt.crux.data.FakeBodyRepository
 import com.hardtekpt.crux.data.FakeClimbRepository
+import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.FakeTemplateRepository
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.home.HomeViewModel
@@ -31,6 +32,7 @@ class DashboardTest {
         FakeClimbRepository(),
         FakeBodyRepository(),
         FakeTemplateRepository(),
+        FakePlaceRepository(),
         UserPreferencesRepository(dataStore),
         repository,
         FIXED_CLOCK,

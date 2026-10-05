@@ -61,6 +61,17 @@ enum class GradeScale(
 enum class Venue(val label: String) {
     GYM("Gym"),
     CRAG("Crag"),
+    BOARD("Board"),
+}
+
+/** The kinds of place a climber logs at. Names match [Venue] so climbs map across. */
+enum class PlaceType(val label: String, val areaLabel: String) {
+    GYM("Gym", "Wall"),
+    CRAG("Crag", "Sector"),
+    BOARD("Board", "Set"),
+    ;
+
+    val venue: Venue get() = Venue.valueOf(name)
 }
 
 /** How the climb went. Everything but [ATTEMPT] is a send. */

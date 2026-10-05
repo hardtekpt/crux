@@ -14,6 +14,10 @@ data class Climb(
     val name: String?,
     val place: String?,
     val notes: String?,
+    val placeId: Long? = null,
+    val areaId: Long? = null,
+    val problemId: Long? = null,
+    val angle: Int? = null,
 ) {
     val grade: String get() = gradeScale.label(gradeIndex)
 }
@@ -30,6 +34,10 @@ data class NewClimb(
     val name: String?,
     val place: String?,
     val notes: String?,
+    val placeId: Long? = null,
+    val areaId: Long? = null,
+    val problemId: Long? = null,
+    val angle: Int? = null,
 )
 
 data class PersonalBest(

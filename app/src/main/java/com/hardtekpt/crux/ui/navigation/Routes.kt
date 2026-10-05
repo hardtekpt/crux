@@ -22,12 +22,17 @@ import kotlinx.serialization.Serializable
 @Serializable data class PlanEditorRoute(val templateId: Long = 0)
 @Serializable data class ExerciseEditorRoute(val exerciseId: Long = 0)
 @Serializable data object JournalRoute
+@Serializable data class PlaceDetailRoute(val placeId: Long)
+@Serializable data class PlaceEditorRoute(val placeId: Long = 0)
+@Serializable data class ProblemDetailRoute(val problemId: Long)
+@Serializable data class ProblemEditorRoute(val placeId: Long, val problemId: Long = 0)
 @Serializable data object ProgressRoute
 @Serializable data object YouRoute
 @Serializable data object SettingsRoute
 
 // Full-screen forms above the tabs; the nav bar hides while they are open.
-@Serializable data object LogClimbRoute
+/** Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where. */
+@Serializable data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0)
 @Serializable data object LogWeightRoute
 
 /** The five root destinations from the app blueprint. */

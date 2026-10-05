@@ -22,6 +22,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
+import com.hardtekpt.crux.data.PlaceRepository
+import com.hardtekpt.crux.data.model.Project
+import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.prefs.GradeScales
@@ -62,8 +65,10 @@ data class ProgressUiState(
     /** Every discipline and scale the climber has sent in, disciplines in order. */
     val groups: List<DisciplineBests> = emptyList(),
     val charts: ProgressCharts = ProgressCharts(),
+    /** Problems you've tried and not sent yet, most recently tried first. */
+    val projects: List<Project> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = groups.all { it.hardest == null }
+    val isEmpty: Boolean get() = groups.all { it.hardest == null } && projects.isEmpty()
 
     /** The headline best per discipline: the chosen scale if it has sends, else any scale that does. */
     fun headline(discipline: Discipline): PersonalBest? {
@@ -89,6 +94,7 @@ fun List<PersonalBest>.toDisciplineBests(): List<DisciplineBests> =
 @HiltViewModel
 class ProgressViewModel @Inject constructor(
     climbRepository: ClimbRepository,
+    placeRepository: PlaceRepository,
     preferences: UserPreferencesRepository,
     clock: Clock,
 ) : ViewModel() {
@@ -96,8 +102,10 @@ class ProgressViewModel @Inject constructor(
         climbRepository.observePersonalBests(),
         climbRepository.observeClimbs(),
         preferences.gradeScales,
-    ) { bests, climbs, scales ->
+        placeRepository.observeProjects(),
+    ) { bests, climbs, scales, projects ->
         ProgressUiState(
+            projects = projects,
             isLoading = false,
             scales = scales,
             groups = bests.toDisciplineBests(),
@@ -108,14 +116,14 @@ class ProgressViewModel @Inject constructor(
 }
 
 @Composable
-fun ProgressScreen(viewModel: ProgressViewModel = hiltViewModel()) {
+fun ProgressScreen(onOpenProblem: (Long) -> Unit = {}, viewModel: ProgressViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ProgressContent(uiState)
+    ProgressContent(uiState, onOpenProblem = onOpenProblem)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier) {
+fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier, onOpenProblem: (Long) -> Unit = {}) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     Column(
@@ -154,6 +162,14 @@ fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier) {
                             valueModifier = Modifier.testTag("hardest_${discipline.name}"),
                         )
                     }
+                }
+            }
+            if (uiState.projects.isNotEmpty()) {
+                item(key = "projects_header") {
+                    Eyebrow("Projects · ${uiState.projects.size} open", Modifier.padding(top = space.s4, bottom = space.s1))
+                }
+                items(uiState.projects, key = { "project_${it.problem.id}" }) { project ->
+                    ProjectRow(project, onOpenProblem)
                 }
             }
             item(key = "charts") {

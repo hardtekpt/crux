@@ -46,7 +46,8 @@ private fun NavDestination.tabIndex(): Int? =
 
 private fun NavDestination.isForm(): Boolean =
     hasRoute(LogClimbRoute::class) || hasRoute(LogWeightRoute::class) ||
-        hasRoute(PlanEditorRoute::class) || hasRoute(ExerciseEditorRoute::class)
+        hasRoute(PlanEditorRoute::class) || hasRoute(ExerciseEditorRoute::class) ||
+        hasRoute(PlaceEditorRoute::class) || hasRoute(ProblemEditorRoute::class)
 
 private enum class Move { TabSwitch, FormOpen, FormClose, Push }
 

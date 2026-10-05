@@ -5,6 +5,9 @@ import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.ExerciseEntity
+import com.hardtekpt.crux.data.local.AreaEntity
+import com.hardtekpt.crux.data.local.PlaceEntity
+import com.hardtekpt.crux.data.local.ProblemEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
 import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
@@ -18,6 +21,7 @@ import com.hardtekpt.crux.data.model.ExerciseCategory
 import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.MetricType
+import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.Venue
 import java.time.Clock
 import java.time.LocalDate
@@ -128,6 +132,34 @@ class StarterDataSeeder(private val clock: Clock) {
     private suspend fun insertSampleData(db: CruxDatabase) {
         val today = LocalDate.now(clock)
         val now = clock.millis()
+        // Saved places with their walls; every named sample climb is a problem on one of them.
+        val placeDao = db.placeDao()
+        val placeIds = SAMPLE_PLACES.associate { sample ->
+            sample.name to placeDao.insertPlace(PlaceEntity(name = sample.name, type = sample.type, location = sample.location, createdAtMillis = now))
+        }
+        val areaIds = SAMPLE_PLACES.flatMap { sample ->
+            sample.areas.mapIndexed { position, area ->
+                (sample.name to area) to placeDao.insertArea(AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = position))
+            }
+        }.toMap()
+        val problemIds = mutableMapOf<Pair<String, String>, Long>()
+        SAMPLE_CLIMBS.filter { it.name != null }.forEach { climb ->
+            val key = climb.place to climb.name!!
+            if (key in problemIds) return@forEach
+            problemIds[key] = placeDao.insertProblem(
+                ProblemEntity(
+                    placeId = placeIds.getValue(climb.place),
+                    areaId = climb.area?.let { areaIds[climb.place to it] },
+                    name = climb.name,
+                    discipline = climb.discipline,
+                    gradeScale = climb.discipline.defaultScale,
+                    gradeIndex = climb.discipline.defaultScale.grades.indexOf(climb.grade),
+                    tape = TAPES.indexOfFirst { climb.name.startsWith(it) }.takeIf { it >= 0 },
+                    setEpochDay = today.minusDays(30).toEpochDay(),
+                    createdAtMillis = now,
+                ),
+            )
+        }
         db.climbDao().insertAll(
             SAMPLE_CLIMBS.mapIndexed { index, climb ->
                 ClimbEntity(
@@ -143,6 +175,9 @@ class StarterDataSeeder(private val clock: Clock) {
                     name = climb.name,
                     place = climb.place,
                     notes = climb.notes,
+                    placeId = placeIds[climb.place],
+                    areaId = climb.area?.let { areaIds[climb.place to it] },
+                    problemId = climb.name?.let { problemIds[climb.place to it] },
                 )
             },
         )
@@ -263,22 +298,34 @@ private data class SampleClimb(
     val name: String?,
     val place: String,
     val notes: String? = null,
+    val area: String? = null,
 )
 
+private data class SamplePlace(val name: String, val type: PlaceType, val location: String, val areas: List<String>)
+
+private val SAMPLE_PLACES = listOf(
+    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall")),
+    SamplePlace("Arco", PlaceType.CRAG, "Trentino", listOf("Policromuro", "Massi di Prabi")),
+    SamplePlace("The Arch", PlaceType.GYM, "London", listOf("Overhang", "Lead wall")),
+)
+
+/** Matches the tape colours the problem editor offers, in order. */
+private val TAPES = listOf("Red", "Orange", "Yellow", "Green", "Blue", "Purple")
+
 private val SAMPLE_CLIMBS = listOf(
-    SampleClimb(26, Discipline.BOULDER, "6B", FLASH, 1, "Green slab", "Block Lab"),
-    SampleClimb(26, Discipline.BOULDER, "6C", REDPOINT, 4, "Pinch roof", "Block Lab"),
-    SampleClimb(26, Discipline.BOULDER, "7A", ATTEMPT, 6, "Yellow dyno", "Block Lab", "Missing the left foot."),
-    SampleClimb(19, Discipline.ROUTE, "6b+", ONSIGHT, 1, "Diedro", "Arco"),
-    SampleClimb(19, Discipline.ROUTE, "7a", REDPOINT, 3, "Pilastro", "Arco", "Clipped the chains on the third go."),
+    SampleClimb(26, Discipline.BOULDER, "6B", FLASH, 1, "Green slab", "Block Lab", area = "Slab"),
+    SampleClimb(26, Discipline.BOULDER, "6C", REDPOINT, 4, "Pinch roof", "Block Lab", area = "Cave"),
+    SampleClimb(26, Discipline.BOULDER, "7A", ATTEMPT, 6, "Yellow dyno", "Block Lab", "Missing the left foot.", area = "Comp wall"),
+    SampleClimb(19, Discipline.ROUTE, "6b+", ONSIGHT, 1, "Diedro", "Arco", area = "Policromuro"),
+    SampleClimb(19, Discipline.ROUTE, "7a", REDPOINT, 3, "Pilastro", "Arco", "Clipped the chains on the third go.", area = "Policromuro"),
     SampleClimb(19, Discipline.ROUTE, "6c", FLASH, 1, null, "Arco"),
-    SampleClimb(12, Discipline.BOULDER, "6C+", FLASH, 1, "Blue crimps", "Block Lab"),
-    SampleClimb(12, Discipline.BOULDER, "7A", REDPOINT, 5, "Yellow dyno", "Block Lab", "Left foot high, then commit."),
+    SampleClimb(12, Discipline.BOULDER, "6C+", FLASH, 1, "Blue crimps", "Block Lab", area = "Cave"),
+    SampleClimb(12, Discipline.BOULDER, "7A", REDPOINT, 5, "Yellow dyno", "Block Lab", "Left foot high, then commit.", area = "Comp wall"),
     SampleClimb(5, Discipline.BOULDER, "6B+", FLASH, 1, null, "The Arch"),
-    SampleClimb(5, Discipline.BOULDER, "7A+", ATTEMPT, 8, "Overhang project", "The Arch"),
-    SampleClimb(2, Discipline.ROUTE, "6c+", ONSIGHT, 1, "Red arete", "The Arch"),
-    SampleClimb(2, Discipline.ROUTE, "7a+", ATTEMPT, 2, "Black roof", "The Arch", "Pumped out at the third bolt."),
-    SampleClimb(0, Discipline.BOULDER, "6C", FLASH, 1, "Purple sloper", "Block Lab"),
+    SampleClimb(5, Discipline.BOULDER, "7A+", ATTEMPT, 8, "Overhang project", "The Arch", area = "Overhang"),
+    SampleClimb(2, Discipline.ROUTE, "6c+", ONSIGHT, 1, "Red arete", "The Arch", area = "Lead wall"),
+    SampleClimb(2, Discipline.ROUTE, "7a+", ATTEMPT, 2, "Black roof", "The Arch", "Pumped out at the third bolt.", area = "Lead wall"),
+    SampleClimb(0, Discipline.BOULDER, "6C", FLASH, 1, "Purple sloper", "Block Lab", area = "Slab"),
 )
 
 /** Days ago to kg. */

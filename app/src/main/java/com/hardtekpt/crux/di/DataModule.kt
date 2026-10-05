@@ -10,6 +10,8 @@ import androidx.room.Room
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.ExerciseRepository
+import com.hardtekpt.crux.data.OfflinePlaceRepository
+import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.OfflineExerciseRepository
 import com.hardtekpt.crux.data.OfflineBodyRepository
 import com.hardtekpt.crux.data.OfflineClimbRepository
@@ -87,4 +89,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindExerciseRepository(impl: OfflineExerciseRepository): ExerciseRepository
+
+    @Binds
+    abstract fun bindPlaceRepository(impl: OfflinePlaceRepository): PlaceRepository
 }

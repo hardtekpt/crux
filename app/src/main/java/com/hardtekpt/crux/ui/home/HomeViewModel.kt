@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
+import com.hardtekpt.crux.data.PlaceRepository
+import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
@@ -52,6 +54,7 @@ data class HomeUiState(
     val weights: List<Measurement> = emptyList(),
     val recentClimbs: List<Climb> = emptyList(),
     val charts: ProgressCharts = ProgressCharts(),
+    val projects: List<Project> = emptyList(),
 )
 
 /** The layout being shown, and while editing, the working copy. */
@@ -66,6 +69,7 @@ class HomeViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     bodyRepository: BodyRepository,
     templateRepository: TemplateRepository,
+    placeRepository: PlaceRepository,
     preferences: UserPreferencesRepository,
     private val dashboardRepository: DashboardRepository,
     clock: Clock,
@@ -80,6 +84,7 @@ class HomeViewModel @Inject constructor(
         val bests: List<PersonalBest>,
         val weights: List<Measurement>,
         val scales: GradeScales,
+        val projects: List<Project> = emptyList(),
     )
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -89,6 +94,7 @@ class HomeViewModel @Inject constructor(
         bodyRepository.observeWeights(),
         preferences.gradeScales,
     ) { templates, climbs, bests, weights, scales -> Inputs(templates, climbs, bests, weights, scales) }
+        .combine(placeRepository.observeProjects()) { inputs, projects -> inputs.copy(projects = projects) }
         .map(::buildState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
@@ -124,6 +130,7 @@ class HomeViewModel @Inject constructor(
             weights = inputs.weights,
             recentClimbs = inputs.climbs.take(RECENT_LIMIT),
             charts = progressCharts(inputs.climbs, inputs.scales, today),
+            projects = inputs.projects,
         )
     }
 

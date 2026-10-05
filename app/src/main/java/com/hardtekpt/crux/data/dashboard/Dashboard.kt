@@ -33,6 +33,7 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
     WEEKLY_SENDS("Sends per week", "Sends over the last weeks", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     SENDS_BY_STYLE("Sends by style", "Flash, onsight and redpoint split", listOf(WidgetSize.LARGE, WidgetSize.WIDE)),
     RECENT_CLIMBS("Recent climbs", "Your latest journal entries", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
+    PROJECTS("Projects", "Problems you're still working", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     ;
 
     val defaultSize: WidgetSize get() = sizes.first()
@@ -58,6 +59,7 @@ fun defaultDashboard(): List<DashboardWidget> = listOf(
     DashboardWidget(type = WidgetType.DAYS_ON_WALL),
     DashboardWidget(type = WidgetType.LATEST_BEST),
     DashboardWidget(type = WidgetType.BODYWEIGHT),
+    DashboardWidget(type = WidgetType.PROJECTS),
     DashboardWidget(type = WidgetType.RECENT_CLIMBS),
 )
 
