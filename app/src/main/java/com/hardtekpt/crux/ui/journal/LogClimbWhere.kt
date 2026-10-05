@@ -1,6 +1,20 @@
 package com.hardtekpt.crux.ui.journal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import com.hardtekpt.crux.ui.places.placeIcon
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,8 +83,9 @@ data class WhereActions(
 )
 
 /**
- * Place, wall and problem for the climb. With no saved place picked it falls back to the
- * old gym/crag switch and a typed place name.
+ * Place, wall and problem for the climb: three optional selectors, each narrowing the next.
+ * Picking a problem fills in the climb's name and grade. With no place picked, a small
+ * gym, crag or board switch says where it was.
  */
 @Composable
 fun WhereSection(
@@ -80,63 +95,66 @@ fun WhereSection(
     actions: WhereActions,
 ) {
     val space = CruxTheme.space
+    var sheet by rememberSaveable { mutableStateOf<WhereSheet?>(null) }
     var creatingPlace by rememberSaveable { mutableStateOf(false) }
-    var pickingProblem by rememberSaveable { mutableStateOf(false) }
+    val place = detail?.place?.takeIf { it.id == draft.placeId }
+    val area = place?.let { detail.areas.firstOrNull { it.id == draft.areaId } }
+    val problem = place?.let { detail.problems.firstOrNull { it.problem.id == draft.problemId } }
+    val problemNoun = if (place?.type == PlaceType.CRAG || draft.discipline == com.hardtekpt.crux.data.model.Discipline.ROUTE) "Route" else "Problem"
 
     Column(verticalArrangement = Arrangement.spacedBy(space.s2)) {
-        Eyebrow("Where")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("place_picker")) {
-            item {
-                CruxFilterChip(label = "No saved place", selected = draft.placeId == null, onClick = { actions.selectPlace(null) })
-            }
-            items(places, key = { it.place.id }) { summary ->
-                CruxFilterChip(
-                    label = summary.place.name,
-                    selected = draft.placeId == summary.place.id,
-                    onClick = { actions.selectPlace(summary.place.id) },
-                    modifier = Modifier.testTag("place_${summary.place.name}"),
-                )
-            }
-            item {
-                CruxFilterChip(label = "+ New place", selected = false, onClick = { creatingPlace = true }, modifier = Modifier.testTag("new_place_chip"))
-            }
-        }
+        Eyebrow("Where · optional")
+        SelectorField(
+            label = "Place",
+            value = when {
+                place != null -> place.name
+                draft.place.isNotBlank() -> "${draft.place} (not saved)"
+                else -> null
+            },
+            placeholder = "None",
+            leading = place?.let { { Icon(placeIcon(it.type), contentDescription = null) } },
+            onClick = { sheet = WhereSheet.PLACE },
+            onClear = if (place != null) ({ actions.selectPlace(null) }) else null,
+            modifier = Modifier.testTag("select_place"),
+        )
+        SelectorField(
+            label = place?.type?.areaLabel ?: "Area",
+            value = area?.name,
+            placeholder = if (place == null) "Pick a place first" else if (detail.areas.isEmpty()) "None set up" else "Any",
+            enabled = place != null && detail.areas.isNotEmpty(),
+            onClick = { sheet = WhereSheet.AREA },
+            onClear = if (area != null) ({ actions.selectArea(null) }) else null,
+            modifier = Modifier.testTag("select_area"),
+        )
+        SelectorField(
+            label = problemNoun,
+            value = when {
+                problem != null -> "${problem.problem.name} · ${problem.problem.grade}"
+                draft.saveAsProblem -> "New: saved from this climb"
+                else -> null
+            },
+            placeholder = if (place == null) "Pick a place first" else "None",
+            enabled = place != null,
+            leading = problem?.problem?.tape?.let { tape -> { TapeDot(tape) } },
+            onClick = { sheet = WhereSheet.PROBLEM },
+            onClear = when {
+                problem != null -> actions.clearProblem
+                draft.saveAsProblem -> ({ actions.setSaveAsProblem(false) })
+                else -> null
+            },
+            modifier = Modifier.testTag("select_problem"),
+        )
 
-        if (draft.placeId == null || detail == null) {
+        if (place == null) {
             CruxSegmentedButtons(
                 options = listOf(Venue.GYM, Venue.CRAG, Venue.BOARD),
                 selected = draft.venue,
                 label = { it.label },
                 onSelect = actions.setVenue,
+                modifier = Modifier.testTag("venue"),
             )
-            CruxTextField(
-                label = "Place",
-                value = draft.place,
-                onValueChange = actions.setPlaceText,
-                placeholder = "Block Lab",
-                helper = "Optional. Save places to pick walls and problems.",
-                modifier = Modifier.testTag("field_place"),
-            )
-            return@Column
         }
-
-        val place = detail.place
-        if (detail.areas.isNotEmpty()) {
-            Text(place.type.areaLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                item { CruxFilterChip(label = "Any", selected = draft.areaId == null, onClick = { actions.selectArea(null) }) }
-                items(detail.areas, key = { it.id }) { area ->
-                    CruxFilterChip(
-                        label = area.name,
-                        selected = draft.areaId == area.id,
-                        onClick = { actions.selectArea(area.id) },
-                        modifier = Modifier.testTag("area_${area.name}"),
-                    )
-                }
-            }
-        }
-
-        if (place.type == PlaceType.BOARD) {
+        if (place?.type == PlaceType.BOARD) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("Angle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 CruxStepper(
@@ -149,41 +167,80 @@ fun WhereSection(
                 )
             }
         }
-
-        val picked = detail.problems.firstOrNull { it.problem.id == draft.problemId }
-        if (picked != null) {
-            CruxListRow(
-                title = picked.problem.name,
-                supporting = problemLine(picked, detail),
-                leading = { GradeBadge(picked.problem.grade, GradeState.Attempted) },
-                trailing = {
-                    IconButton(onClick = actions.clearProblem) { Icon(Icons.Rounded.Close, contentDescription = "Clear problem") }
-                },
-                selected = true,
-                modifier = Modifier.testTag("picked_problem"),
-            )
-        } else {
-            CruxButton(
-                text = "Pick a ${if (place.type == PlaceType.CRAG) "route or problem" else "problem"}",
-                onClick = { pickingProblem = true },
-                variant = CruxButtonVariant.Outlined,
-                icon = Icons.Rounded.Search,
-                modifier = Modifier.testTag("pick_problem"),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = draft.saveAsProblem,
-                    onCheckedChange = actions.setSaveAsProblem,
-                    modifier = Modifier.testTag("save_as_problem"),
-                )
-                Text(
-                    "Save it as a problem at ${place.name}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
     }
 
+    when (sheet) {
+        WhereSheet.PLACE -> PickerSheet(title = "Place", onDismiss = { sheet = null }) {
+            item {
+                PickRow("None", selected = draft.placeId == null, tag = "place_none") {
+                    actions.selectPlace(null)
+                    sheet = null
+                }
+            }
+            items(places, key = { it.place.id }) { summary ->
+                PickRow(
+                    title = summary.place.name,
+                    supporting = listOfNotNull(summary.place.type.label, summary.place.location).joinToString(" · "),
+                    icon = placeIcon(summary.place.type),
+                    selected = draft.placeId == summary.place.id,
+                    tag = "place_${summary.place.name}",
+                ) {
+                    actions.selectPlace(summary.place.id)
+                    sheet = null
+                }
+            }
+            item {
+                PickRow("New place", icon = Icons.Rounded.Add, selected = false, tag = "new_place_chip") {
+                    sheet = null
+                    creatingPlace = true
+                }
+            }
+        }
+        WhereSheet.AREA -> if (detail != null) {
+            PickerSheet(title = detail.place.type.areaLabel, onDismiss = { sheet = null }) {
+                item {
+                    PickRow("Any", selected = draft.areaId == null, tag = "area_any") {
+                        actions.selectArea(null)
+                        sheet = null
+                    }
+                }
+                items(detail.areas, key = { it.id }) { item ->
+                    PickRow(
+                        title = item.name,
+                        supporting = item.angle?.let { "$it°" },
+                        selected = draft.areaId == item.id,
+                        tag = "area_${item.name}",
+                    ) {
+                        actions.selectArea(item.id)
+                        sheet = null
+                    }
+                }
+            }
+        }
+        WhereSheet.PROBLEM -> if (detail != null) {
+            ProblemPickerSheet(
+                detail = detail,
+                areaId = draft.areaId,
+                noun = problemNoun.lowercase(),
+                onPick = {
+                    actions.pickProblem(it)
+                    sheet = null
+                },
+                onNone = {
+                    actions.clearProblem()
+                    actions.setSaveAsProblem(false)
+                    sheet = null
+                },
+                onSaveNew = {
+                    actions.clearProblem()
+                    actions.setSaveAsProblem(true)
+                    sheet = null
+                },
+                onDismiss = { sheet = null },
+            )
+        }
+        null -> Unit
+    }
     if (creatingPlace) {
         NewPlaceDialog(
             onCreate = { name, type ->
@@ -193,17 +250,106 @@ fun WhereSection(
             onDismiss = { creatingPlace = false },
         )
     }
-    if (pickingProblem && detail != null) {
-        ProblemPickerSheet(
-            detail = detail,
-            areaId = draft.areaId,
-            onPick = {
-                actions.pickProblem(it)
-                pickingProblem = false
-            },
-            onDismiss = { pickingProblem = false },
-        )
+}
+
+private enum class WhereSheet { PLACE, AREA, PROBLEM }
+
+/** A field that opens a picker: label above, the pick (or a quiet placeholder), a chevron. */
+@Composable
+private fun SelectorField(
+    label: String,
+    value: String?,
+    placeholder: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leading: (@Composable () -> Unit)? = null,
+    onClear: (() -> Unit)? = null,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.small
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clip(shape)
+            .background(if (enabled) colors.surfaceContainerLow else Color.Transparent, shape)
+            .border(CruxTheme.size.borderHairline, if (enabled) colors.outline else colors.outlineVariant, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(start = CruxTheme.space.s3, end = CruxTheme.space.s1),
+    ) {
+        if (leading != null) {
+            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalContentColor provides colors.onSurfaceVariant) { leading() }
+            }
+        }
+        Column(Modifier.weight(1f).padding(vertical = CruxTheme.space.s2)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+            Text(
+                value ?: placeholder,
+                style = MaterialTheme.typography.bodyLarge,
+                color = when {
+                    !enabled -> colors.onSurfaceVariant.copy(alpha = 0.6f)
+                    value == null -> colors.onSurfaceVariant
+                    else -> colors.onSurface
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (onClear != null) {
+            IconButton(onClick = onClear) { Icon(Icons.Rounded.Close, contentDescription = "Clear $label") }
+        } else {
+            Icon(
+                Icons.Rounded.ExpandMore,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.4f),
+                modifier = Modifier.padding(end = CruxTheme.space.s2),
+            )
+        }
     }
+}
+
+@Composable
+private fun PickerSheet(title: String, onDismiss: () -> Unit, content: LazyListScope.() -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+    ) {
+        Column(Modifier.padding(horizontal = CruxTheme.space.s4)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = CruxTheme.space.s3))
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
+                modifier = Modifier.navigationBarsPadding(),
+                content = content,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickRow(
+    title: String,
+    selected: Boolean,
+    tag: String,
+    supporting: String? = null,
+    icon: ImageVector? = null,
+    onClick: () -> Unit,
+) {
+    CruxListRow(
+        title = title,
+        supporting = supporting?.takeIf { it.isNotBlank() },
+        leading = icon?.let { { Icon(it, contentDescription = null) } },
+        trailing = if (selected) ({ Icon(Icons.Rounded.Check, contentDescription = "Picked", tint = MaterialTheme.colorScheme.primary) }) else null,
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier.testTag(tag),
+    )
 }
 
 /** `Cave · 3 sessions · 12 goes · sent 3 Oct`, or `project · 8 goes`. */
@@ -252,7 +398,10 @@ private fun NewPlaceDialog(onCreate: (String, PlaceType) -> Unit, onDismiss: () 
 private fun ProblemPickerSheet(
     detail: PlaceDetail,
     areaId: Long?,
+    noun: String,
     onPick: (Problem) -> Unit,
+    onNone: () -> Unit,
+    onSaveNew: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -267,7 +416,7 @@ private fun ProblemPickerSheet(
         shape = MaterialTheme.shapes.extraLarge,
     ) {
         Column(Modifier.padding(horizontal = CruxTheme.space.s4)) {
-            Text("Problems at ${detail.place.name}", style = MaterialTheme.typography.headlineSmall)
+            Text("${noun.replaceFirstChar { it.uppercase() }}s at ${detail.place.name}", style = MaterialTheme.typography.headlineSmall)
             CruxTextField(
                 label = "Search by name or grade",
                 value = query,
@@ -281,14 +430,23 @@ private fun ProblemPickerSheet(
                 contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
                 modifier = Modifier.navigationBarsPadding(),
             ) {
+                if (query.isBlank()) {
+                    item { PickRow("None", selected = false, tag = "problem_none", onClick = onNone) }
+                    item {
+                        PickRow(
+                            title = "Save this climb as a new $noun",
+                            supporting = "Uses the name and grade you log",
+                            icon = Icons.Rounded.Add,
+                            selected = false,
+                            tag = "save_as_problem",
+                            onClick = onSaveNew,
+                        )
+                    }
+                }
                 if (matches.isEmpty()) {
                     item {
                         Text(
-                            if (detail.problems.isEmpty()) {
-                                "No problems saved here yet. Log this climb with a name and tick \"Save it as a problem\"."
-                            } else {
-                                "Nothing matches."
-                            },
+                            if (detail.problems.isEmpty()) "Nothing saved here yet." else "Nothing matches.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

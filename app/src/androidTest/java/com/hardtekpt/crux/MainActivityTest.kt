@@ -256,7 +256,9 @@ class MainActivityTest {
         composeRule.waitForTag("screen_ProblemDetail")
         composeRule.onNodeWithTag("log_go").performClick()
         composeRule.waitForTag("screen_LogClimb")
-        composeRule.waitForTag("picked_problem")
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("select_problem") and hasText("Pink crimps", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithTag("style_ATTEMPT").performScrollTo().performClick()
         composeRule.onNodeWithTag("effort_7").performScrollTo().performClick()
         composeRule.onNodeWithTag("effort_value").assertTextEquals("7")
