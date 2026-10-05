@@ -12,6 +12,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -95,10 +98,16 @@ fun parseHeight(text: String): Result<Double> {
 @Composable
 fun YouScreen(
     onLogWeight: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: YouViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    YouContent(uiState = uiState, onLogWeight = onLogWeight, onSetHeight = viewModel::setHeight)
+    YouContent(
+        uiState = uiState,
+        onLogWeight = onLogWeight,
+        onSetHeight = viewModel::setHeight,
+        onOpenSettings = onOpenSettings,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,6 +116,7 @@ fun YouContent(
     uiState: YouUiState,
     onLogWeight: () -> Unit,
     onSetHeight: (Double) -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -119,7 +129,15 @@ fun YouContent(
             .nestedScroll(scrollBehavior.nestedScrollConnection)
             .testTag("screen_You"),
     ) {
-        CruxTopAppBar(title = "You", scrollBehavior = scrollBehavior)
+        CruxTopAppBar(
+            title = "You",
+            scrollBehavior = scrollBehavior,
+            actions = {
+                IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("open_settings")) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Settings")
+                }
+            },
+        )
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s12),
             verticalArrangement = Arrangement.spacedBy(space.s3),

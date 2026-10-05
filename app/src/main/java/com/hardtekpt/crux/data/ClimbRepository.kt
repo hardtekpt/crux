@@ -42,10 +42,11 @@ class OfflineClimbRepository @Inject constructor(
     override suspend fun logClimb(climb: NewClimb): Long = climbDao.insert(
         ClimbEntity(
             discipline = climb.discipline,
-            gradeScale = climb.discipline.scale,
+            gradeScale = climb.gradeScale,
             gradeIndex = climb.gradeIndex,
             style = climb.style,
             attempts = climb.attempts,
+            venue = climb.venue,
             dateEpochDay = climb.date.toEpochDay(),
             createdAtMillis = clock.millis(),
             name = climb.name?.trim()?.takeIf { it.isNotEmpty() },
@@ -62,6 +63,7 @@ internal fun ClimbEntity.toModel() = Climb(
     gradeIndex = gradeIndex,
     style = style,
     attempts = attempts,
+    venue = venue,
     date = LocalDate.ofEpochDay(dateEpochDay),
     name = name,
     place = place,

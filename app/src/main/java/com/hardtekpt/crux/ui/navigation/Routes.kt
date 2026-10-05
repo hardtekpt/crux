@@ -22,6 +22,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object JournalRoute
 @Serializable data object ProgressRoute
 @Serializable data object YouRoute
+@Serializable data object SettingsRoute
 
 // Full-screen forms above the tabs; the nav bar hides while they are open.
 @Serializable data object LogClimbRoute

@@ -39,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
@@ -69,6 +70,7 @@ fun LogClimbScreen(
         onStyle = viewModel::setStyle,
         onAttempts = viewModel::setAttempts,
         onDate = viewModel::setDate,
+        onVenue = viewModel::setVenue,
         onName = viewModel::setName,
         onPlace = viewModel::setPlace,
         onNotes = viewModel::setNotes,
@@ -86,6 +88,7 @@ fun LogClimbContent(
     onStyle: (AscentStyle) -> Unit,
     onAttempts: (Int) -> Unit,
     onDate: (LocalDate) -> Unit,
+    onVenue: (Venue) -> Unit,
     onName: (String) -> Unit,
     onPlace: (String) -> Unit,
     onNotes: (String) -> Unit,
@@ -116,7 +119,7 @@ fun LogClimbContent(
                 onSelect = onDiscipline,
             )
 
-            Eyebrow("Grade · ${if (draft.discipline == Discipline.BOULDER) "Font" else "French"}", Modifier.padding(top = space.s3))
+            Eyebrow("Grade · ${draft.gradeScale.label}", Modifier.padding(top = space.s3))
             GradePicker(draft, onGrade)
 
             Eyebrow("Style", Modifier.padding(top = space.s3))
@@ -177,12 +180,19 @@ fun LogClimbContent(
                     .padding(top = space.s3)
                     .testTag("field_name"),
             )
+            Eyebrow("Where", Modifier.padding(top = space.s1))
+            CruxSegmentedButtons(
+                options = Venue.entries,
+                selected = draft.venue,
+                label = { it.label },
+                onSelect = onVenue,
+            )
             CruxTextField(
-                label = "Place",
+                label = if (draft.venue == Venue.GYM) "Gym" else "Crag",
                 value = draft.place,
                 onValueChange = onPlace,
-                placeholder = "Block Lab",
-                helper = "Gym or crag, optional",
+                placeholder = if (draft.venue == Venue.GYM) "Block Lab" else "Arco",
+                helper = "Optional",
                 modifier = Modifier.testTag("field_place"),
             )
             CruxTextField(
@@ -237,9 +247,9 @@ fun LogClimbContent(
 /** Grades scroll horizontally in scale order; the picked one stays in view. */
 @Composable
 private fun GradePicker(draft: LogClimbDraft, onGrade: (Int) -> Unit) {
-    val grades = draft.discipline.scale.grades
+    val grades = draft.gradeScale.grades
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (draft.gradeIndex - 2).coerceAtLeast(0))
-    LaunchedEffect(draft.discipline) {
+    LaunchedEffect(draft.gradeScale) {
         listState.scrollToItem((draft.gradeIndex - 2).coerceAtLeast(0))
     }
     LazyRow(
@@ -253,6 +263,7 @@ private fun GradePicker(draft: LogClimbDraft, onGrade: (Int) -> Unit) {
                 label = grade,
                 selected = index == draft.gradeIndex,
                 onClick = { onGrade(index) },
+                labelStyle = CruxTheme.type.gradeSmall,
                 modifier = Modifier.testTag("grade_$grade"),
             )
         }

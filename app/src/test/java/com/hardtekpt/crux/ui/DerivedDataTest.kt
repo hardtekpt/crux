@@ -7,6 +7,9 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
+import com.hardtekpt.crux.data.model.Venue
+import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.ui.progress.ProgressUiState
 import com.hardtekpt.crux.ui.progress.toDisciplineBests
 import com.hardtekpt.crux.ui.you.parseHeight
 import org.junit.Assert.assertEquals
@@ -58,7 +61,7 @@ class DerivedDataTest {
         ).groupByDayAndPlace()
 
         assertEquals(listOf(2, 1, 1), days.map { it.climbs.size })
-        assertEquals("Mon 5 Oct · Arco", days.first().title)
+        assertEquals("Mon 5 Oct · Arco · Gym", days.first().title)
     }
 
     @Test
@@ -68,8 +71,29 @@ class DerivedDataTest {
             best(Discipline.BOULDER, AscentStyle.REDPOINT, 12),
         ).toDisciplineBests()
 
-        assertEquals(12, bests.first { it.discipline == Discipline.BOULDER }.hardest?.gradeIndex)
-        assertNull(bests.first { it.discipline == Discipline.ROUTE }.hardest)
+        assertEquals(12, bests.single().hardest?.gradeIndex)
+        assertNull(ProgressUiState(groups = bests).headline(Discipline.ROUTE))
+    }
+
+    @Test
+    fun `bests in different scales are kept apart and the chosen scale leads`() {
+        val groups = listOf(
+            best(Discipline.BOULDER, AscentStyle.FLASH, 12, GradeScale.FONT),
+            best(Discipline.BOULDER, AscentStyle.FLASH, 3, GradeScale.V_SCALE),
+        ).toDisciplineBests()
+
+        assertEquals(listOf(GradeScale.FONT, GradeScale.V_SCALE), groups.map { it.scale })
+        val vFirst = ProgressUiState(scales = GradeScales(boulder = GradeScale.V_SCALE), groups = groups)
+        assertEquals("V2", vFirst.headline(Discipline.BOULDER)?.grade)
+        assertEquals("7A+", ProgressUiState(groups = groups).headline(Discipline.BOULDER)?.grade)
+    }
+
+    @Test
+    fun `each discipline offers its own scales`() {
+        assertEquals(listOf(GradeScale.FONT, GradeScale.V_SCALE), Discipline.BOULDER.scales)
+        assertEquals(listOf(GradeScale.FRENCH, GradeScale.YDS), Discipline.ROUTE.scales)
+        assertEquals("V3", GradeScale.V_SCALE.label(GradeScale.V_SCALE.defaultIndex))
+        assertEquals("5.10a", GradeScale.YDS.label(GradeScale.YDS.defaultIndex))
     }
 
     @Test
@@ -80,9 +104,13 @@ class DerivedDataTest {
     }
 
     private fun climb(id: Long, date: LocalDate, place: String) = Climb(
-        id, Discipline.BOULDER, GradeScale.FONT, 5, AscentStyle.FLASH, 1, date, null, place, null,
+        id, Discipline.BOULDER, GradeScale.FONT, 5, AscentStyle.FLASH, 1, Venue.GYM, date, null, place, null,
     )
 
-    private fun best(discipline: Discipline, style: AscentStyle, index: Int) =
-        PersonalBest(discipline, style, discipline.scale, index, null, null, today)
+    private fun best(
+        discipline: Discipline,
+        style: AscentStyle,
+        index: Int,
+        scale: GradeScale = discipline.defaultScale,
+    ) = PersonalBest(discipline, style, scale, index, null, null, today)
 }

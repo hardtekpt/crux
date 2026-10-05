@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         TemplateBlockEntity::class,
         TemplateExerciseEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class CruxDatabase : RoomDatabase() {

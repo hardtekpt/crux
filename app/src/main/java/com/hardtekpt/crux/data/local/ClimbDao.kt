@@ -19,15 +19,19 @@ interface ClimbDao {
     @Query("SELECT COUNT(*) FROM climbs")
     fun observeCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM climbs")
+    suspend fun count(): Int
+
     /**
-     * Hardest send per discipline and style. SQLite returns the other columns from the
+     * Hardest send per discipline, scale and style. Grades in different scales are never
+     * compared, so each scale keeps its own bests. SQLite returns the other columns from the
      * row that holds the MAX; ties go to the earliest day it was sent.
      */
     @Query(
         """
         SELECT discipline, style, gradeScale, MAX(gradeIndex) AS gradeIndex, name, place, dateEpochDay
         FROM (SELECT * FROM climbs WHERE style != 'ATTEMPT' ORDER BY dateEpochDay ASC, createdAtMillis ASC)
-        GROUP BY discipline, style
+        GROUP BY discipline, gradeScale, style
         """,
     )
     fun observePersonalBests(): Flow<List<PersonalBestRow>>

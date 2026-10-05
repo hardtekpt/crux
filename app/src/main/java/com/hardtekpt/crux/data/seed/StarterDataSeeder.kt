@@ -14,7 +14,7 @@ import com.hardtekpt.crux.data.model.AscentStyle.ONSIGHT
 import com.hardtekpt.crux.data.model.AscentStyle.REDPOINT
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.MeasurementType
-import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.data.model.Venue
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
@@ -27,16 +27,19 @@ import javax.inject.Singleton
 @Singleton
 class StarterDataSeeder @Inject constructor(
     private val db: CruxDatabase,
-    private val preferences: UserPreferencesRepository,
     private val clock: Clock,
 ) {
+    /**
+     * Checks the database rather than a flag, so the MVP's destructive schema changes
+     * repopulate an emptied database on the next launch.
+     */
     suspend fun seed(includeSampleData: Boolean) {
-        if (preferences.isStarterDataSeeded()) return
         db.withTransaction {
             if (db.templateDao().count() == 0) insertTemplates()
-            if (includeSampleData) insertSampleData()
+            if (includeSampleData && db.climbDao().count() == 0 && db.bodyMeasurementDao().count() == 0) {
+                insertSampleData()
+            }
         }
-        preferences.markStarterDataSeeded()
     }
 
     private suspend fun insertTemplates() {
@@ -76,10 +79,12 @@ class StarterDataSeeder @Inject constructor(
             SAMPLE_CLIMBS.mapIndexed { index, climb ->
                 ClimbEntity(
                     discipline = climb.discipline,
-                    gradeScale = climb.discipline.scale,
-                    gradeIndex = climb.discipline.scale.grades.indexOf(climb.grade),
+                    gradeScale = climb.discipline.defaultScale,
+                    gradeIndex = climb.discipline.defaultScale.grades.indexOf(climb.grade),
                     style = climb.style,
                     attempts = climb.attempts,
+                    // Arco is the outdoor crag in the sample; the rest are gyms.
+                    venue = if (climb.place == "Arco") Venue.CRAG else Venue.GYM,
                     dateEpochDay = today.minusDays(climb.daysAgo.toLong()).toEpochDay(),
                     createdAtMillis = now - (SAMPLE_CLIMBS.size - index) * 60_000L,
                     name = climb.name,

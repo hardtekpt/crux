@@ -30,7 +30,7 @@ class FakeClimbRepository : ClimbRepository {
 
     override fun observePersonalBests(): Flow<List<PersonalBest>> = climbs.map { list ->
         list.filter { it.style.isSend }
-            .groupBy { it.discipline to it.style }
+            .groupBy { Triple(it.discipline, it.gradeScale, it.style) }
             .values
             .map { group ->
                 val best = group.maxBy { it.gradeIndex }
@@ -42,8 +42,8 @@ class FakeClimbRepository : ClimbRepository {
         logged += climb
         val id = (climbs.value.maxOfOrNull { it.id } ?: 0) + 1
         climbs.value = climbs.value + Climb(
-            id, climb.discipline, climb.discipline.scale, climb.gradeIndex, climb.style,
-            climb.attempts, climb.date, climb.name, climb.place, climb.notes,
+            id, climb.discipline, climb.gradeScale, climb.gradeIndex, climb.style,
+            climb.attempts, climb.venue, climb.date, climb.name, climb.place, climb.notes,
         )
         return id
     }

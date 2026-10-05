@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
@@ -46,8 +47,9 @@ data class JournalDay(
     val place: String?,
     val climbs: List<Climb>,
 ) {
-    val key: String get() = "$date|${place.orEmpty()}"
-    val title: String get() = listOfNotNull(date.dayLabel(), place).joinToString(" · ")
+    val key: String get() = "$date|${place.orEmpty()}|$venue"
+    val venue: Venue get() = climbs.first().venue
+    val title: String get() = listOfNotNull(date.dayLabel(), place, venue.label).joinToString(" · ")
 }
 
 data class JournalUiState(
@@ -57,7 +59,7 @@ data class JournalUiState(
 
 /** Climbs arrive newest first; grouping keeps that order. */
 fun List<Climb>.groupByDayAndPlace(): List<JournalDay> =
-    groupBy { it.date to it.place }.map { (key, climbs) -> JournalDay(key.first, key.second, climbs) }
+    groupBy { Triple(it.date, it.place, it.venue) }.map { (key, climbs) -> JournalDay(key.first, key.second, climbs) }
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(

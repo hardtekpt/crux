@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.Venue
 
 /** A single logged climb. The grade is its scale plus an index into that scale. */
 @Entity(tableName = "climbs", indices = [Index("dateEpochDay")])
@@ -16,6 +17,7 @@ data class ClimbEntity(
     val gradeIndex: Int,
     val style: AscentStyle,
     val attempts: Int,
+    val venue: Venue,
     /** The day it was climbed, as LocalDate.toEpochDay(). */
     val dateEpochDay: Long,
     /** When it was logged; orders climbs within a day. */

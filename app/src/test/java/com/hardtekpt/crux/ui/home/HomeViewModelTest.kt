@@ -9,6 +9,8 @@ import com.hardtekpt.crux.data.FakeClimbRepository
 import com.hardtekpt.crux.data.FakeTemplateRepository
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import kotlinx.coroutines.test.runTest
@@ -70,9 +72,11 @@ class HomeViewModelTest {
 
     private fun newClimb(date: LocalDate, style: AscentStyle, gradeIndex: Int = 5) = NewClimb(
         discipline = Discipline.BOULDER,
+        gradeScale = GradeScale.FONT,
         gradeIndex = gradeIndex,
         style = style,
         attempts = 1,
+        venue = Venue.GYM,
         date = date,
         name = null,
         place = null,

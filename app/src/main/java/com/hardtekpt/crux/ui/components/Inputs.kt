@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -43,13 +44,14 @@ fun CruxFilterChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    labelStyle: TextStyle = MaterialTheme.typography.labelMedium,
 ) {
     val colors = MaterialTheme.colorScheme
     FilterChip(
         selected = selected,
         onClick = onClick,
         enabled = enabled,
-        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+        label = { Text(label, style = labelStyle) },
         leadingIcon = if (selected) {
             { Icon(Icons.Rounded.Check, null, Modifier.size(CruxTheme.size.iconSm)) }
         } else {

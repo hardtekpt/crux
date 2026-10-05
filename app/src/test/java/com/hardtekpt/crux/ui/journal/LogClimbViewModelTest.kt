@@ -6,11 +6,18 @@ import com.hardtekpt.crux.data.FakeClimbRepository
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.Venue
+import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import org.junit.Test
 import java.time.LocalDate
 
@@ -18,8 +25,13 @@ class LogClimbViewModelTest {
 
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
+    @get:Rule val tmp = TemporaryFolder()
+
     private val repository = FakeClimbRepository()
-    private val viewModel = LogClimbViewModel(repository, FIXED_CLOCK)
+    private val preferences by lazy {
+        UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") })
+    }
+    private val viewModel by lazy { LogClimbViewModel(repository, FIXED_CLOCK, preferences) }
 
     @Test
     fun `defaults to a boulder flash today`() {
@@ -52,6 +64,20 @@ class LogClimbViewModelTest {
         viewModel.setStyle(AscentStyle.REDPOINT)
         assertEquals(2, viewModel.draft.value.attempts)
         assertFalse(viewModel.draft.value.attemptsLocked)
+    }
+
+    @Test
+    fun `new climbs use the scale chosen in settings`() = runBlocking {
+        preferences.setGradeScale(GradeScale.V_SCALE)
+        val draft = withTimeout(5_000) { viewModel.draft.first { it.gradeScale == GradeScale.V_SCALE } }
+        assertEquals("V3", draft.gradeScale.label(draft.gradeIndex))
+
+        viewModel.setVenue(Venue.CRAG)
+        viewModel.save()
+
+        val logged = repository.logged.single()
+        assertEquals(GradeScale.V_SCALE, logged.gradeScale)
+        assertEquals(Venue.CRAG, logged.venue)
     }
 
     @Test

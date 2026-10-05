@@ -9,6 +9,7 @@ data class Climb(
     val gradeIndex: Int,
     val style: AscentStyle,
     val attempts: Int,
+    val venue: Venue,
     val date: LocalDate,
     val name: String?,
     val place: String?,
@@ -20,9 +21,11 @@ data class Climb(
 /** What the climber fills in on the Log climb form. */
 data class NewClimb(
     val discipline: Discipline,
+    val gradeScale: GradeScale,
     val gradeIndex: Int,
     val style: AscentStyle,
     val attempts: Int,
+    val venue: Venue,
     val date: LocalDate,
     val name: String?,
     val place: String?,

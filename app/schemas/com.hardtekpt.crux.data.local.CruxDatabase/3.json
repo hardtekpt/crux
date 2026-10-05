@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 2,
-    "identityHash": "5902e43d856bb201c61789f0655b6fd0",
+    "version": 3,
+    "identityHash": "edd23d0c3175ee0734abcf012a75a0c5",
     "entities": [
       {
         "tableName": "climbs",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `discipline` TEXT NOT NULL, `gradeScale` TEXT NOT NULL, `gradeIndex` INTEGER NOT NULL, `style` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `dateEpochDay` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, `name` TEXT, `place` TEXT, `notes` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `discipline` TEXT NOT NULL, `gradeScale` TEXT NOT NULL, `gradeIndex` INTEGER NOT NULL, `style` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `venue` TEXT NOT NULL, `dateEpochDay` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, `name` TEXT, `place` TEXT, `notes` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -42,6 +42,12 @@
             "fieldPath": "attempts",
             "columnName": "attempts",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "venue",
+            "columnName": "venue",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -320,7 +326,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5902e43d856bb201c61789f0655b6fd0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'edd23d0c3175ee0734abcf012a75a0c5')"
     ]
   }
 }

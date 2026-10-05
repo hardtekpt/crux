@@ -81,6 +81,28 @@ class MainActivityTest {
     }
 
     @Test
+    fun choosingVScaleInSettingsChangesTheClimbForm() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.onNodeWithTag("open_settings").performClick()
+        composeRule.waitForTag("screen_Settings")
+        composeRule.onNodeWithTag("segment_V scale").performClick()
+        composeRule.onNodeWithTag("back").performClick()
+
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_LogClimb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("grade_picker").performScrollToNode(hasTestTag("grade_V5"))
+        composeRule.onNodeWithTag("grade_V5").performClick()
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        composeRule.waitForTag("screen_Home")
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitForTag("hardest_BOULDER")
+        composeRule.onNodeWithTag("hardest_BOULDER").assertTextEquals("V5")
+    }
+
+    @Test
     fun trainShowsStarterTemplatesAndTheirDetail() {
         composeRule.onNodeWithTag("nav_Train").performClick()
         composeRule.waitForTag("template_card")

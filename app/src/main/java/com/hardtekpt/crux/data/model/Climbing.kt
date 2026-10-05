@@ -4,36 +4,63 @@ enum class Discipline(val label: String) {
     BOULDER("Boulder"),
     ROUTE("Route");
 
-    /** MVP: one fixed scale per discipline (Font for boulders, French for routes). */
-    val scale: GradeScale
-        get() = when (this) {
-            BOULDER -> GradeScale.FONT
-            ROUTE -> GradeScale.FRENCH
-        }
+    /** The scales a climber can pick for this discipline in Settings; the first is the default. */
+    val scales: List<GradeScale>
+        get() = GradeScale.entries.filter { it.discipline == this }
+
+    val defaultScale: GradeScale get() = scales.first()
 }
 
 /**
  * A grade scale is an ordered list, so a grade is stored as its scale plus an index:
  * it sorts and compares as a number and prints exactly as the climber picked it.
  */
-enum class GradeScale(val grades: List<String>, val defaultIndex: Int) {
+enum class GradeScale(
+    val label: String,
+    val discipline: Discipline,
+    val grades: List<String>,
+    val defaultIndex: Int,
+) {
     FONT(
+        label = "Font",
+        discipline = Discipline.BOULDER,
         grades = listOf(
             "3", "4", "4+", "5", "5+", "6A", "6A+", "6B", "6B+", "6C", "6C+",
             "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A", "8A+", "8B", "8B+", "8C", "8C+", "9A",
         ),
         defaultIndex = 5,
     ),
+    V_SCALE(
+        label = "V scale",
+        discipline = Discipline.BOULDER,
+        grades = listOf("VB") + (0..17).map { "V$it" },
+        defaultIndex = 4,
+    ),
     FRENCH(
+        label = "French",
+        discipline = Discipline.ROUTE,
         grades = listOf(
             "4a", "4b", "4c", "5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+",
             "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a", "8a+", "8b", "8b+", "8c", "8c+",
             "9a", "9a+", "9b", "9b+", "9c",
         ),
         defaultIndex = 6,
+    ),
+    YDS(
+        label = "YDS",
+        discipline = Discipline.ROUTE,
+        grades = listOf("5.5", "5.6", "5.7", "5.8", "5.9") +
+            (10..15).flatMap { n -> listOf("a", "b", "c", "d").map { "5.$n$it" } },
+        defaultIndex = 5,
     );
 
     fun label(index: Int): String = grades[index.coerceIn(grades.indices)]
+}
+
+/** Where the climb happened: indoors on plastic or outdoors on rock. */
+enum class Venue(val label: String) {
+    GYM("Gym"),
+    CRAG("Crag"),
 }
 
 /** How the climb went. Everything but [ATTEMPT] is a send. */

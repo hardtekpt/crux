@@ -45,6 +45,7 @@ import com.hardtekpt.crux.ui.navigation.LogClimbRoute
 import com.hardtekpt.crux.ui.navigation.LogWeightRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
+import com.hardtekpt.crux.ui.navigation.SettingsRoute
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
 import com.hardtekpt.crux.ui.navigation.TrainGraph
@@ -54,6 +55,7 @@ import com.hardtekpt.crux.ui.navigation.YouRoute
 import com.hardtekpt.crux.ui.progress.ProgressScreen
 import com.hardtekpt.crux.ui.quicklog.QuickLogAction
 import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
+import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.train.TemplateDetailScreen
 import com.hardtekpt.crux.ui.train.TrainScreen
@@ -127,8 +129,12 @@ fun CruxApp() {
             }
             navigation<YouGraph>(startDestination = YouRoute) {
                 composable<YouRoute> {
-                    YouScreen(onLogWeight = { navController.navigate(LogWeightRoute) })
+                    YouScreen(
+                        onLogWeight = { navController.navigate(LogWeightRoute) },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                    )
                 }
+                composable<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
             }
             composable<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
             composable<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }

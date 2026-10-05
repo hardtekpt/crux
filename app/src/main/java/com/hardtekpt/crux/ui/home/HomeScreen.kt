@@ -34,6 +34,7 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.TemplateBlock
+import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
@@ -267,7 +268,7 @@ private fun HomeContentPreview() {
                 latestBest = PersonalBest(Discipline.BOULDER, AscentStyle.FLASH, GradeScale.FONT, 9, "Blue crimps", "Block Lab", today),
                 weight = listOf(Measurement(1, 72.4, today), Measurement(2, 73.4, today.minusDays(35))).weightSummary(),
                 recentClimbs = listOf(
-                    Climb(1, Discipline.BOULDER, GradeScale.FONT, 9, AscentStyle.FLASH, 1, today, "Purple sloper", "Block Lab", null),
+                    Climb(1, Discipline.BOULDER, GradeScale.FONT, 9, AscentStyle.FLASH, 1, Venue.GYM, today, "Purple sloper", "Block Lab", null),
                 ),
             ),
         )

@@ -7,6 +7,7 @@ import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.MeasurementType
+import com.hardtekpt.crux.data.model.Venue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -59,6 +60,18 @@ class ClimbDaoTest {
     }
 
     @Test
+    fun personalBestsNeverCompareAcrossScales() = runTest {
+        val dao = db.climbDao()
+        dao.insert(climb("Font send", gradeIndex = 11, scale = GradeScale.FONT))
+        dao.insert(climb("V send", gradeIndex = 15, scale = GradeScale.V_SCALE))
+
+        val bests = dao.observePersonalBests().first().associateBy { it.gradeScale }
+
+        assertEquals("Font send", bests.getValue(GradeScale.FONT).name)
+        assertEquals("V send", bests.getValue(GradeScale.V_SCALE).name)
+    }
+
+    @Test
     fun measurementsAreFilteredByType() = runTest {
         val dao = db.bodyMeasurementDao()
         dao.insert(BodyMeasurementEntity(type = MeasurementType.WEIGHT, value = 72.4, dateEpochDay = 2, createdAtMillis = 0))
@@ -73,12 +86,14 @@ class ClimbDaoTest {
         style: AscentStyle = AscentStyle.FLASH,
         day: Long = 1,
         created: Long = 0,
+        scale: GradeScale = GradeScale.FONT,
     ) = ClimbEntity(
         discipline = Discipline.BOULDER,
-        gradeScale = GradeScale.FONT,
+        gradeScale = scale,
         gradeIndex = gradeIndex,
         style = style,
         attempts = 1,
+        venue = Venue.GYM,
         dateEpochDay = day,
         createdAtMillis = created,
         name = name,
