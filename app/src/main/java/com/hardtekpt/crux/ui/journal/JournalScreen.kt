@@ -27,6 +27,7 @@ import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.PlaceSummary
+import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.places.PlacesViewModel
@@ -91,6 +92,7 @@ fun JournalScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val places by placesViewModel.places.collectAsStateWithLifecycle()
     var view by rememberSaveable { mutableStateOf(JournalView.Climbs) }
+    var placeFilter by rememberSaveable { mutableStateOf<PlaceType?>(null) }
     JournalContent(
         uiState = uiState,
         view = view,
@@ -99,6 +101,8 @@ fun JournalScreen(
         onOpenClimb = onOpenClimb,
         onOpenPlace = onOpenPlace,
         onNewPlace = onNewPlace,
+        placeFilter = placeFilter,
+        onPlaceFilter = { placeFilter = it },
     )
 }
 
@@ -113,6 +117,8 @@ fun JournalContent(
     onOpenClimb: (Long) -> Unit = {},
     onOpenPlace: (Long) -> Unit = {},
     onNewPlace: () -> Unit = {},
+    placeFilter: PlaceType? = null,
+    onPlaceFilter: (PlaceType?) -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Column(
@@ -136,7 +142,7 @@ fun JournalContent(
                 verticalArrangement = Arrangement.spacedBy(space.s2),
                 modifier = Modifier.testTag("places_list"),
             ) {
-                placesList(places, onOpenPlace, onNewPlace)
+                placesList(places, onOpenPlace, onNewPlace, placeFilter, onPlaceFilter)
             }
             return
         }

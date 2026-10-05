@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -85,10 +86,29 @@ fun LazyListScope.placesList(
     places: List<PlaceSummary>?,
     onOpen: (Long) -> Unit,
     onNew: () -> Unit,
+    filter: PlaceType? = null,
+    onFilter: (PlaceType?) -> Unit = {},
 ) {
+    // No chip picked shows every place; tapping the picked chip again clears it.
+    item(key = "place_filters") {
+        Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.testTag("place_filters")) {
+            listOf(PlaceType.CRAG, PlaceType.GYM, PlaceType.BOARD).forEach { type ->
+                CruxFilterChip(
+                    label = type.label,
+                    selected = filter == type,
+                    onClick = { onFilter(if (filter == type) null else type) },
+                    modifier = Modifier.testTag("filter_${type.name}"),
+                )
+            }
+        }
+    }
+    val shown = places?.filter { filter == null || it.place.type == filter }
     item {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Eyebrow("Gyms, crags and boards · ${places?.size ?: 0}", Modifier.weight(1f))
+            Eyebrow(
+                (filter?.let { "${it.label}s" } ?: "Gyms, crags and boards") + " · ${shown?.size ?: 0}",
+                Modifier.weight(1f),
+            )
             CruxButton(
                 text = "New place",
                 onClick = onNew,
@@ -98,15 +118,19 @@ fun LazyListScope.placesList(
             )
         }
     }
-    if (places != null && places.isEmpty()) {
+    if (shown != null && shown.isEmpty()) {
         item {
             InlineEmptyState(
                 icon = Icons.Rounded.Place,
-                text = "No places yet. Add your gym, crag or board to log walls and problems there.",
+                text = if (places.isEmpty()) {
+                    "No places yet. Add your gym, crag or board to log walls and problems there."
+                } else {
+                    "No ${filter?.label?.lowercase()}s yet. Tap ${filter?.label} again to see every place."
+                },
             )
         }
     }
-    items(places.orEmpty(), key = { "place_${it.place.id}" }) { summary ->
+    items(shown.orEmpty(), key = { "place_${it.place.id}" }) { summary ->
         val today = LocalDate.now()
         CruxListRow(
             title = summary.place.name,
