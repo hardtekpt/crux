@@ -7,13 +7,17 @@
   .\crux test           # JVM unit tests + Robolectric Compose UI tests (no emulator)
   .\crux device-test    # instrumented Compose/Room tests on the emulator
   .\crux check          # test + device-test
+  .\crux run -Device 192.168.1.128:37223   # same, on a phone over wireless debugging
 #>
 param(
     [Parameter(Position = 0)]
     [ValidateSet('run', 'build', 'test', 'device-test', 'check', 'emulator', 'stop', 'avd', 'help')]
     [string]$Command = 'help',
     # Show the emulator window (default) or run it headless, e.g. for test-only runs.
-    [switch]$Headless
+    [switch]$Headless,
+    # Target a connected device instead of the emulator, e.g. a phone on wireless
+    # debugging: -Device 192.168.1.128:37223 (connects with adb first if needed).
+    [string]$Device
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,6 +73,10 @@ function New-CruxAvd {
 }
 
 function Start-CruxEmulator {
+    if ($Device) {
+        if ($Device -match ':') { & $Adb connect $Device | Out-Host }
+        return $Device
+    }
     $serial = Get-RunningEmulator
     if ($serial) { return $serial }
     New-CruxAvd

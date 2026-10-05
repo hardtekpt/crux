@@ -40,7 +40,8 @@ From the repo root on Windows:
 | `.\crux emulator` / `.\crux stop` | Boot or shut down the emulator |
 | `.\crux build` | Debug APK only |
 
-Add `-Headless` to boot the emulator without a window (handy for test-only runs). The script
+Add `-Device <ip:port>` to `run` or `device-test` to target a phone on wireless debugging instead
+(pair it once with `adb pair <ip:pairing-port> <code>`). Add `-Headless` to boot the emulator without a window (handy for test-only runs). The script
 finds Android Studio's bundled JDK and the SDK in `%LOCALAPPDATA%\Android\Sdk` automatically,
 and creates the emulator on first use.
 
