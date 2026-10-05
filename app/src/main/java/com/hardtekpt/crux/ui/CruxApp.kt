@@ -3,26 +3,32 @@ package com.hardtekpt.crux.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.navigation.FloatingNavBar
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.navigation.navBarClearance
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -33,7 +39,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import com.hardtekpt.crux.ui.components.CruxFab
 import com.hardtekpt.crux.ui.home.HomeScreen
 import com.hardtekpt.crux.ui.journal.JournalScreen
 import com.hardtekpt.crux.ui.journal.LogClimbScreen
@@ -70,38 +75,23 @@ fun CruxApp() {
     var showQuickLog by rememberSaveable { mutableStateOf(false) }
 
     val onForm = currentDestination.isAny(LogClimbRoute::class, LogWeightRoute::class)
-    val showFab = currentDestination.isAny(HomeRoute::class, JournalRoute::class)
+    val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
+        currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
+    }
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentWindowInsets = WindowInsets(0),
-        bottomBar = {
-            AnimatedVisibility(visible = !onForm, enter = fadeIn(), exit = fadeOut()) {
-                CruxNavBar(
-                    isSelected = { destination ->
-                        currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
-                    },
-                    onNavigate = { destination -> navController.navigateToTab(destination) },
-                )
-            }
-        },
-        floatingActionButton = {
-            if (showFab) {
-                CruxFab(
-                    text = "Log",
-                    icon = Icons.Rounded.Add,
-                    onClick = { showQuickLog = true },
-                    modifier = Modifier.testTag("log_fab"),
-                )
-            }
-        },
-    ) { innerPadding ->
+    // Content runs edge to edge and scrolls under the floating bar; screens pad their
+    // lists by LocalNavBarClearance so the last row can still scroll clear of it.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+    ) {
+        CompositionLocalProvider(LocalNavBarClearance provides if (onForm) 0.dp else navBarClearance(bottomInset)) {
         NavHost(
             navController = navController,
             startDestination = HomeGraph,
-            modifier = Modifier
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding),
+            modifier = Modifier.fillMaxSize(),
         ) {
             navigation<HomeGraph>(startDestination = HomeRoute) {
                 composable<HomeRoute> {
@@ -139,6 +129,36 @@ fun CruxApp() {
             composable<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
             composable<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
         }
+        }
+
+        // Content fades out under the floating bar instead of colliding with it.
+        if (!onForm) {
+            val surface = MaterialTheme.colorScheme.surface
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(navBarClearance(bottomInset))
+                    .background(Brush.verticalGradient(listOf(surface.copy(alpha = 0f), surface.copy(alpha = 0.92f), surface))),
+            )
+        }
+
+        AnimatedVisibility(
+            visible = !onForm,
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = CruxTheme.space.s4),
+        ) {
+            FloatingNavBar(
+                selected = selectedTab,
+                onNavigate = { navController.navigateToTab(it) },
+                logOpen = showQuickLog,
+                onLog = { showQuickLog = true },
+            )
+        }
     }
 
     if (showQuickLog) {
@@ -164,38 +184,5 @@ private fun NavHostController.navigateToTab(destination: TopLevelDestination) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
-    }
-}
-
-/** NavBar: `surface-container`, `primary-container` pill on the active item, labels always shown. */
-@Composable
-private fun CruxNavBar(
-    isSelected: (TopLevelDestination) -> Boolean,
-    onNavigate: (TopLevelDestination) -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    NavigationBar(
-        containerColor = colors.surfaceContainer,
-        tonalElevation = CruxTheme.space.s0,
-    ) {
-        TopLevelDestination.entries.forEach { destination ->
-            NavigationBarItem(
-                modifier = Modifier
-                    .height(CruxTheme.size.navBarHeight)
-                    .testTag("nav_${destination.name}"),
-                selected = isSelected(destination),
-                onClick = { onNavigate(destination) },
-                icon = { Icon(destination.icon, contentDescription = null) },
-                label = { Text(destination.label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
-                alwaysShowLabel = true,
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = colors.onPrimaryContainer,
-                    selectedTextColor = colors.onSurface,
-                    indicatorColor = colors.primaryContainer,
-                    unselectedIconColor = colors.onSurfaceVariant,
-                    unselectedTextColor = colors.onSurfaceVariant,
-                ),
-            )
-        }
     }
 }

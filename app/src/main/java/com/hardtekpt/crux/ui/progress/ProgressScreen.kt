@@ -35,6 +35,7 @@ import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.shortLabel
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -124,7 +125,7 @@ fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier) {
         val headlines = Discipline.entries.associateWith { uiState.headline(it) }
         val topBest = headlines.values.filterNotNull().maxByOrNull { it.date }
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s2),
         ) {
             item { Eyebrow("Hardest sends", Modifier.padding(bottom = space.s1)) }

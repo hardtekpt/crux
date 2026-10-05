@@ -32,6 +32,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.outcomeLine
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -97,7 +98,7 @@ fun JournalContent(uiState: JournalUiState, modifier: Modifier = Modifier) {
         }
         val space = CruxTheme.space
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s16 + space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s2),
         ) {
             uiState.days.forEachIndexed { index, day ->

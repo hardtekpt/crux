@@ -49,6 +49,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.weightSummary
 import com.hardtekpt.crux.ui.wholeOrOneDecimal
@@ -139,7 +140,7 @@ fun YouContent(
             },
         )
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             item { Eyebrow("Body") }

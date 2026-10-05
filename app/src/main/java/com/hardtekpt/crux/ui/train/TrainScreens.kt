@@ -41,6 +41,7 @@ import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -87,7 +88,7 @@ fun TrainScreen(
             return
         }
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             item { Eyebrow("Templates · ${uiState.templates.size}") }
@@ -156,7 +157,7 @@ fun TemplateDetailScreen(
         CruxTopAppBar(title = template?.name ?: "", onBack = onBack)
         if (template == null) return@Column
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s2),
         ) {
             item {

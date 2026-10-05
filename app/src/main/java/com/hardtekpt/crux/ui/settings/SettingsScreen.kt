@@ -25,6 +25,7 @@ import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -87,7 +88,7 @@ fun SettingsContent(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = space.s4)
-                .padding(bottom = space.s12),
+                .padding(bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Eyebrow("Grades")

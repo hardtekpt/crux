@@ -55,6 +55,7 @@ import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.weightSummary
 import java.time.LocalDate
@@ -100,7 +101,7 @@ fun HomeContent(
         CruxTopAppBar(title = "Crux", scrollBehavior = scrollBehavior)
         LazyColumn(
             modifier = Modifier.testTag("home_list"),
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s16 + space.s12),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             item { Eyebrow(uiState.today.dayLabel()) }
