@@ -4,7 +4,10 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -79,7 +82,9 @@ class MainActivityTest {
         composeRule.onNodeWithTag("nav_You").performClick()
         composeRule.onNodeWithTag("log_weight").performClick()
         composeRule.waitForTag("screen_LogWeight")
-        composeRule.textFieldIn("field_weight").performTextInput("72.5")
+        composeRule.onNodeWithTag("ruler_weight_value").performClick()
+        composeRule.textFieldIn("field_type_value").performTextReplacement("72.5")
+        composeRule.onNodeWithTag("confirm_type_value").performClick()
         composeRule.onNodeWithTag("save_weight").performClick()
 
         composeRule.waitForTag("screen_You")
@@ -96,7 +101,9 @@ class MainActivityTest {
         listOf("HEIGHT" to "178", "WINGSPAN" to "184").forEach { (type, value) ->
             composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("stat_$type"))
             composeRule.onNodeWithTag("stat_$type").performClick()
-            composeRule.textFieldIn("field_measurement").performTextReplacement(value)
+            composeRule.onNodeWithTag("ruler_measurement_value").performClick()
+            composeRule.textFieldIn("field_type_value").performTextReplacement(value)
+            composeRule.onNodeWithTag("confirm_type_value").performClick()
             composeRule.onNodeWithTag("save_measurement").performClick()
         }
         composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("you_ape_index"))
@@ -156,7 +163,12 @@ class MainActivityTest {
         composeRule.textFieldIn("exercise_search").performTextInput("Campus")
         composeRule.onNodeWithTag("pick_Campus ladders").performClick()
         composeRule.waitForTag("target_sheet")
-        composeRule.onNodeWithTag("sets_plus").performClick()
+        // Sets opens a wheel in place; set it the way TalkBack would.
+        composeRule.onNodeWithTag("row_sets").performClick()
+        composeRule.onNode(hasContentDescription("Sets")).performSemanticsAction(SemanticsActions.SetProgress) { it(4f) }
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("sets_value", useUnmergedTree = true).assertTextEquals("5") }.isSuccess
+        }
         composeRule.onNodeWithTag("target_done").performClick()
         composeRule.onNodeWithTag("save_plan").performClick()
 
@@ -246,6 +258,8 @@ class MainActivityTest {
         composeRule.waitForTag("screen_LogClimb")
         composeRule.waitForTag("picked_problem")
         composeRule.onNodeWithTag("style_ATTEMPT").performScrollTo().performClick()
+        composeRule.onNodeWithTag("effort_7").performScrollTo().performClick()
+        composeRule.onNodeWithTag("effort_value").assertTextEquals("7")
         composeRule.onNodeWithTag("save_climb").performClick()
 
         composeRule.waitForTag("screen_ProblemDetail")

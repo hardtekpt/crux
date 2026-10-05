@@ -24,6 +24,7 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.ThemeMode
+import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
@@ -43,6 +44,7 @@ data class SettingsUiState(
     val scales: GradeScales = GradeScales(),
     val themeMode: ThemeMode = ThemeMode.DARK,
     val demoMode: Boolean = false,
+    val units: UnitSystem = UnitSystem.METRIC,
 )
 
 @HiltViewModel
@@ -53,7 +55,8 @@ class SettingsViewModel @Inject constructor(
         preferences.gradeScales,
         preferences.themeMode,
         preferences.demoMode,
-    ) { scales, theme, demo -> SettingsUiState(scales, theme, demo) }
+        preferences.units,
+    ) { scales, theme, demo, units -> SettingsUiState(scales, theme, demo, units) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
@@ -66,6 +69,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { preferences.setThemeMode(mode) }
+    }
+
+    fun setUnits(units: UnitSystem) {
+        viewModelScope.launch { preferences.setUnits(units) }
     }
 }
 
@@ -83,6 +90,7 @@ fun SettingsScreen(
         onGradeScale = viewModel::setGradeScale,
         onThemeMode = viewModel::setThemeMode,
         onDemoMode = viewModel::setDemoMode,
+        onUnits = viewModel::setUnits,
         backup = { BackupCard(backupState, backupViewModel) },
     )
 }
@@ -95,6 +103,7 @@ fun SettingsContent(
     onThemeMode: (ThemeMode) -> Unit,
     onDemoMode: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
+    onUnits: (UnitSystem) -> Unit = {},
     backup: @Composable () -> Unit = {},
 ) {
     val space = CruxTheme.space
@@ -147,6 +156,28 @@ fun SettingsContent(
                     onSelect = onThemeMode,
                 )
             }
+
+            Eyebrow("Units", Modifier.padding(top = space.s4))
+            CruxCard {
+                Text("Weight and length", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (uiState.units == UnitSystem.IMPERIAL) "Pounds, and feet and inches" else "Kilograms and centimetres",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = space.s2),
+                )
+                CruxSegmentedButtons(
+                    options = UnitSystem.entries,
+                    selected = uiState.units,
+                    label = { it.label },
+                    onSelect = onUnits,
+                )
+            }
+            Text(
+                "Only what you see changes. Everything is stored in kilograms and centimetres, so switching back and forth loses nothing. Added load on exercises stays in kilograms.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Eyebrow("Your data", Modifier.padding(top = space.s4))
             CruxCard {

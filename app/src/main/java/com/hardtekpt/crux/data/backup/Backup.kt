@@ -108,6 +108,7 @@ data class ClimbDto(
     val area: String? = null,
     val problem: String? = null,
     val angle: Int? = null,
+    val effort: Int? = null,
 )
 
 @Serializable
@@ -209,6 +210,7 @@ class BackupRepository(
                         area = climb.areaId?.let(areas::get)?.name,
                         problem = climb.problemId?.let(problems::get)?.name,
                         angle = climb.angle,
+                        effort = climb.effort,
                     )
                 }
             } else {
@@ -405,6 +407,7 @@ class BackupRepository(
                         areaId = dto.area?.let { name -> areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
                         problemId = dto.problem?.let { name -> problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
                         angle = dto.angle,
+                        effort = dto.effort,
                     ),
                 )
                 seen += dto.identity()
@@ -454,7 +457,7 @@ private fun ClimbEntity.toDto() = ClimbDto(
 )
 
 /** Two climbs are the same entry when everything but notes and saved-place links matches. */
-private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null)
+private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null)
 
 private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) = PlaceDto(
     name = name,

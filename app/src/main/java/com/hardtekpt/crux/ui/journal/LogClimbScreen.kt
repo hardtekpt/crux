@@ -50,6 +50,11 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
+import com.hardtekpt.crux.ui.components.input.DayStrip
+import com.hardtekpt.crux.ui.components.input.EffortScale
+import com.hardtekpt.crux.ui.components.input.GradeStrip
+import com.hardtekpt.crux.ui.components.input.PastDayDialog
+import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -89,6 +94,7 @@ fun LogClimbScreen(
         onStyle = viewModel::setStyle,
         onAttempts = viewModel::setAttempts,
         onDate = viewModel::setDate,
+        onEffort = viewModel::setEffort,
         onVenue = viewModel::setVenue,
         onName = viewModel::setName,
         onPlace = viewModel::setPlace,
@@ -130,6 +136,8 @@ fun LogClimbContent(
     modifier: Modifier = Modifier,
     where: @Composable () -> Unit = {},
     onDelete: () -> Unit = {},
+    onEffort: (Int?) -> Unit = {},
+    today: LocalDate = remember { LocalDate.now() },
 ) {
     val space = CruxTheme.space
     var pickingDate by rememberSaveable { mutableStateOf(false) }
@@ -168,7 +176,12 @@ fun LogClimbContent(
             )
 
             Eyebrow("Grade · ${draft.gradeScale.label}", Modifier.padding(top = space.s3))
-            GradePicker(draft, onGrade)
+            GradeStrip(
+                grades = draft.gradeScale.grades,
+                selectedIndex = draft.gradeIndex,
+                onSelect = onGrade,
+                modifier = Modifier.bleed(space.s4),
+            )
 
             Eyebrow("Style", Modifier.padding(top = space.s3))
             Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
@@ -205,13 +218,15 @@ fun LogClimbContent(
                 )
             }
 
-            Eyebrow("Day", Modifier.padding(top = space.s3))
-            CruxButton(
-                text = draft.date.dayLabel(),
-                onClick = { pickingDate = true },
-                variant = CruxButtonVariant.Outlined,
-                icon = Icons.Rounded.CalendarMonth,
-                modifier = Modifier.testTag("pick_date"),
+            EffortScale(draft.effort, onEffort, Modifier.padding(top = space.s3))
+
+            Eyebrow("Day · ${draft.date.dayLabel()}", Modifier.padding(top = space.s3))
+            DayStrip(
+                selected = draft.date,
+                today = today,
+                onSelect = onDate,
+                onOpenCalendar = { pickingDate = true },
+                modifier = Modifier.bleed(space.s4),
             )
             draft.dateError?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -253,52 +268,6 @@ fun LogClimbContent(
     }
 
     if (pickingDate) {
-        val state = rememberDatePickerState(
-            initialSelectedDateMillis = draft.date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
-            selectableDates = remember {
-                object : SelectableDates {
-                    override fun isSelectableDate(utcTimeMillis: Long) =
-                        utcTimeMillis <= LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-                }
-            },
-        )
-        DatePickerDialog(
-            onDismissRequest = { pickingDate = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    state.selectedDateMillis?.let {
-                        onDate(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())
-                    }
-                    pickingDate = false
-                }) { Text("Set day") }
-            },
-            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Cancel") } },
-        ) { DatePicker(state = state) }
-    }
-}
-
-/** Grades scroll horizontally in scale order; the picked one stays in view. */
-@Composable
-private fun GradePicker(draft: LogClimbDraft, onGrade: (Int) -> Unit) {
-    val grades = draft.gradeScale.grades
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (draft.gradeIndex - 2).coerceAtLeast(0))
-    LaunchedEffect(draft.gradeScale) {
-        listState.scrollToItem((draft.gradeIndex - 2).coerceAtLeast(0))
-    }
-    LazyRow(
-        state = listState,
-        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        contentPadding = PaddingValues(end = CruxTheme.space.s4),
-        modifier = Modifier.testTag("grade_picker"),
-    ) {
-        itemsIndexed(grades) { index, grade ->
-            CruxFilterChip(
-                label = grade,
-                selected = index == draft.gradeIndex,
-                onClick = { onGrade(index) },
-                labelStyle = CruxTheme.type.gradeSmall,
-                modifier = Modifier.testTag("grade_$grade"),
-            )
-        }
+        PastDayDialog(draft.date, today, onDate) { pickingDate = false }
     }
 }

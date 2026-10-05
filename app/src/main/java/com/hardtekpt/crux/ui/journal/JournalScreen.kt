@@ -162,7 +162,7 @@ fun JournalContent(
                 items(day.climbs, key = { it.id }) { climb ->
                     CruxListRow(
                         title = climb.displayName(),
-                        supporting = listOfNotNull(climb.outcomeLine(), climb.notes).joinToString(" · "),
+                        supporting = listOfNotNull(climb.outcomeLine(), climb.effort?.let { "felt $it/10" }, climb.notes).joinToString(" · "),
                         leading = { GradeBadge(climb.grade, climb.gradeState) },
                         onClick = { onOpenClimb(climb.id) },
                         modifier = Modifier.testTag("journal_climb"),

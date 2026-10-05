@@ -32,6 +32,8 @@ data class ClimbEntity(
     val problemId: Long? = null,
     /** Board angle in degrees, when logged on a board. */
     val angle: Int? = null,
+    /** How hard it felt, 1 to 10 (schema 7). Optional. */
+    val effort: Int? = null,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */

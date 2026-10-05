@@ -1,5 +1,7 @@
 package com.hardtekpt.crux.ui.train
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +56,11 @@ import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.CruxValueStepper
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.input.DurationWheel
+import com.hardtekpt.crux.ui.components.input.InputRow
+import com.hardtekpt.crux.ui.components.input.LoadWheel
+import com.hardtekpt.crux.ui.components.input.NumberWheel
+import com.hardtekpt.crux.ui.components.input.formatDuration
 import com.hardtekpt.crux.ui.theme.CruxTheme
 
 @Composable
@@ -316,6 +323,7 @@ private fun TargetSheet(
     ) {
         Column(
             modifier = Modifier
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = CruxTheme.space.s4)
                 .padding(bottom = CruxTheme.space.s6)
                 .navigationBarsPadding(),
@@ -344,28 +352,39 @@ private fun TargetSheet(
     }
 }
 
-/** Sets with reps or time per set, optional load, and rest between sets. */
+/**
+ * Sets with reps or time per set, optional load, and rest between sets. Each value is a row
+ * that opens its wheel in place; one row is open at a time.
+ */
 @Composable
 private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange: (ExerciseTarget) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
-        TargetRow("Sets") {
-            CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "sets", testTagPrefix = "sets")
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    val toggle = { key: String -> open = if (open == key) null else key }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        InputRow("Sets", target.sets.toString(), open == "sets", { toggle("sets") }, unit = "sets", testTag = "sets") {
+            NumberWheel(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "sets", "Sets")
         }
         if (metric.usesReps) {
-            TargetRow("Reps") {
-                CruxStepper(target.reps, { onChange(target.copy(reps = it)) }, 1..100, "reps", testTagPrefix = "reps")
+            InputRow("Reps", target.reps.toString(), open == "reps", { toggle("reps") }, unit = "reps", testTag = "reps") {
+                NumberWheel(target.reps, { onChange(target.copy(reps = it)) }, 1..100, "reps", "Reps")
             }
         }
         if (metric.usesTime) {
-            TargetRow("Time per set") {
-                SecondsStepper(target.seconds, "seconds") { onChange(target.copy(seconds = it)) }
+            InputRow("Time per set", formatDuration(target.seconds), open == "seconds", { toggle("seconds") }, mono = true, testTag = "seconds") {
+                DurationWheel(
+                    target.seconds, { onChange(target.copy(seconds = it)) }, "Time per set",
+                    maxMinutes = 10, minSeconds = 1, presets = listOf(5, 7, 10, 20, 30, 60),
+                )
             }
         }
         if (metric.usesLoad) {
-            TargetRow("Added load") { LoadStepper(target, onChange) }
+            LoadRow(target, open == "load", { toggle("load") }, onChange)
         }
-        TargetRow("Rest between sets") {
-            RestStepper(target.restSeconds, "rest") { onChange(target.copy(restSeconds = it)) }
+        InputRow("Rest between sets", formatDuration(target.restSeconds), open == "rest", { toggle("rest") }, mono = true, testTag = "rest") {
+            DurationWheel(
+                target.restSeconds, { onChange(target.copy(restSeconds = it)) }, "Rest between sets",
+                maxMinutes = 15, secondStep = 5, presets = listOf(60, 90, 120, 180, 240, 300),
+            )
         }
     }
 }
@@ -373,100 +392,53 @@ private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange
 /** Interval work: work and rest per repeat, repeats per cycle, cycles, rest between cycles. */
 @Composable
 private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange: (ExerciseTarget) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
-        TargetRow("Work") {
-            SecondsStepper(target.seconds, "work") { onChange(target.copy(seconds = it)) }
-        }
-        TargetRow("Rest") {
-            CruxValueStepper(
-                display = target.repRestSeconds.toString(),
-                unit = "s",
-                canDecrease = target.repRestSeconds > 0,
-                canIncrease = target.repRestSeconds < 600,
-                onDecrease = { onChange(target.copy(repRestSeconds = (target.repRestSeconds - 1).coerceAtLeast(0))) },
-                onIncrease = { onChange(target.copy(repRestSeconds = (target.repRestSeconds + 1).coerceAtMost(600))) },
-                testTagPrefix = "rep_rest",
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    val toggle = { key: String -> open = if (open == key) null else key }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        InputRow("Work", formatDuration(target.seconds), open == "work", { toggle("work") }, mono = true, testTag = "work") {
+            DurationWheel(
+                target.seconds, { onChange(target.copy(seconds = it)) }, "Work",
+                maxMinutes = 10, minSeconds = 1, presets = listOf(5, 7, 10, 15, 20, 30),
             )
         }
-        TargetRow("Repeats") {
-            CruxStepper(target.reps, { onChange(target.copy(reps = it)) }, 1..50, "reps", testTagPrefix = "repeats")
+        InputRow("Rest", formatDuration(target.repRestSeconds), open == "rep_rest", { toggle("rep_rest") }, mono = true, testTag = "rep_rest") {
+            DurationWheel(
+                target.repRestSeconds, { onChange(target.copy(repRestSeconds = it)) }, "Rest",
+                maxMinutes = 10, presets = listOf(3, 5, 10, 30, 60, 90),
+            )
         }
-        TargetRow("Cycles") {
-            CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "cycles", testTagPrefix = "cycles")
+        InputRow("Repeats", target.reps.toString(), open == "repeats", { toggle("repeats") }, unit = "reps", testTag = "repeats") {
+            NumberWheel(target.reps, { onChange(target.copy(reps = it)) }, 1..50, "reps", "Repeats")
+        }
+        InputRow("Cycles", target.sets.toString(), open == "cycles", { toggle("cycles") }, unit = "cycles", testTag = "cycles") {
+            NumberWheel(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "cycles", "Cycles")
         }
         if (usesLoad) {
-            TargetRow("Added load") { LoadStepper(target, onChange) }
+            LoadRow(target, open == "load", { toggle("load") }, onChange)
         }
-        TargetRow("Rest between cycles") {
-            RestStepper(target.restSeconds, "cycle_rest") { onChange(target.copy(restSeconds = it)) }
+        InputRow("Rest between cycles", formatDuration(target.restSeconds), open == "cycle_rest", { toggle("cycle_rest") }, mono = true, testTag = "cycle_rest") {
+            DurationWheel(
+                target.restSeconds, { onChange(target.copy(restSeconds = it)) }, "Rest between cycles",
+                maxMinutes = 15, secondStep = 5, presets = listOf(60, 90, 120, 180, 240, 300),
+            )
         }
     }
 }
 
 @Composable
-private fun SecondsStepper(seconds: Int, tag: String, onChange: (Int) -> Unit) {
-    CruxValueStepper(
-        display = seconds.toString(),
-        unit = "s",
-        canDecrease = seconds > 1,
-        canIncrease = seconds < 3600,
-        onDecrease = { onChange(stepSeconds(seconds, -1)) },
-        onIncrease = { onChange(stepSeconds(seconds, 1)) },
-        testTagPrefix = tag,
-    )
-}
-
-@Composable
-private fun RestStepper(seconds: Int, tag: String, onChange: (Int) -> Unit) {
-    CruxValueStepper(
-        display = seconds.toString(),
-        unit = "s",
-        canDecrease = seconds > 0,
-        canIncrease = seconds < 900,
-        onDecrease = { onChange((seconds - 15).coerceAtLeast(0)) },
-        onIncrease = { onChange((seconds + 15).coerceAtMost(900)) },
-        testTagPrefix = tag,
-    )
-}
-
-@Composable
-private fun LoadStepper(target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit) {
-    CruxValueStepper(
-        display = (if (target.loadKg > 0) "+" else if (target.loadKg < 0) "−" else "") + formatKg(kotlin.math.abs(target.loadKg)),
+private fun LoadRow(target: ExerciseTarget, open: Boolean, onToggle: () -> Unit, onChange: (ExerciseTarget) -> Unit) {
+    val load = target.loadKg
+    InputRow(
+        "Added load",
+        (if (load > 0) "+" else if (load < 0) "−" else "") + formatKg(kotlin.math.abs(load)),
+        open,
+        onToggle,
         unit = "kg",
-        canDecrease = target.loadKg > MIN_LOAD,
-        canIncrease = target.loadKg < MAX_LOAD,
-        onDecrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, -1))) },
-        onIncrease = { onChange(target.copy(loadKg = stepLoad(target.loadKg, 1))) },
-        testTagPrefix = "load",
-    )
-}
-
-@Composable
-private fun TargetRow(label: String, stepper: @Composable () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        stepper()
+        testTag = "load",
+    ) {
+        LoadWheel(load, { onChange(target.copy(loadKg = it)) }, minKg = MIN_LOAD, maxKg = MAX_LOAD)
     }
 }
 
 private const val MIN_LOAD = -50.0
 private const val MAX_LOAD = 150.0
-
-/** Load steps the way the sport does: 0.5 kg up to 5 kg either side of zero, 2.5 kg beyond. */
-internal fun stepLoad(current: Double, direction: Int): Double {
-    val magnitude = kotlin.math.abs(current)
-    val goingOut = (current >= 0 && direction > 0) || (current <= 0 && direction < 0)
-    val step = if (magnitude < 5.0 || (magnitude == 5.0 && !goingOut)) 0.5 else 2.5
-    return (current + direction * step).coerceIn(MIN_LOAD, MAX_LOAD)
-}
-
-/** Seconds step by 1 up to 15 s, by 5 up to 2 min, then by 30. */
-internal fun stepSeconds(current: Int, direction: Int): Int {
-    val step = when {
-        current < 15 || (current == 15 && direction < 0) -> 1
-        current < 120 || (current == 120 && direction < 0) -> 5
-        else -> 30
-    }
-    return (current + direction * step).coerceIn(1, 3600)
-}

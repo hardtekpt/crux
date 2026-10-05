@@ -80,6 +80,7 @@ private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
     areaId = areaId,
     problemId = problemId,
     angle = angle,
+    effort = effort,
 )
 
 internal fun ClimbEntity.toModel() = Climb(
@@ -98,6 +99,7 @@ internal fun ClimbEntity.toModel() = Climb(
     areaId = areaId,
     problemId = problemId,
     angle = angle,
+    effort = effort,
 )
 
 internal fun PersonalBestRow.toModel() = PersonalBest(

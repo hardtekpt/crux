@@ -44,12 +44,13 @@ class PlacesMigration : AutoMigrationSpec {
         AreaEntity::class,
         ProblemEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6, spec = PlacesMigration::class),
+        AutoMigration(from = 6, to = 7),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {

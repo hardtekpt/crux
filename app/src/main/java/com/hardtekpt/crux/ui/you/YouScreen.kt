@@ -30,7 +30,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -53,7 +55,16 @@ import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
-import com.hardtekpt.crux.ui.components.CruxTextField
+import com.hardtekpt.crux.ui.LocalUnits
+import com.hardtekpt.crux.ui.components.input.RulerInput
+import com.hardtekpt.crux.ui.lengthDifference
+import com.hardtekpt.crux.ui.measureInput
+import com.hardtekpt.crux.ui.measurement
+import com.hardtekpt.crux.ui.typicalValue
+import com.hardtekpt.crux.ui.weight
+import com.hardtekpt.crux.ui.weightChange
+import com.hardtekpt.crux.ui.weightUnit
+import com.hardtekpt.crux.ui.weightValue
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
@@ -143,6 +154,7 @@ fun YouContent(
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
+    val units = LocalUnits.current
     var editing by rememberSaveable { mutableStateOf<MeasurementType?>(null) }
 
     Column(
@@ -171,11 +183,11 @@ fun YouContent(
                     val summary = uiState.summary
                     StatTile(
                         label = "Weight",
-                        value = summary?.latest?.value?.oneDecimal() ?: "–",
-                        unit = summary?.let { "kg" },
+                        value = summary?.latest?.value?.let { units.weight(it).value } ?: "–",
+                        unit = summary?.let { units.weightUnit() },
                         delta = when {
                             summary == null -> "no weigh-ins yet"
-                            summary.change != null -> "${summary.change.signedOneDecimal()} kg · ${summary.window}"
+                            summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
                             else -> "weighed ${summary.latest.date.shortLabel()}"
                         },
                         modifier = Modifier.weight(1f),
@@ -209,10 +221,10 @@ fun YouContent(
                 val previous = uiState.weights.getOrNull(index + 1)
                 CruxListRow(
                     title = entry.date.dayLabel(),
-                    supporting = previous?.let { "${(entry.value - it.value).signedOneDecimal()} kg from ${it.date.shortLabel()}" },
+                    supporting = previous?.let { "${units.weightChange(entry.value - it.value)} from ${it.date.shortLabel()}" },
                     trailing = {
                         Text(
-                            "${entry.value.oneDecimal()} kg",
+                            units.weight(entry.value).toString(),
                             style = CruxTheme.type.grade,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -239,6 +251,7 @@ fun YouContent(
 /** Bodyweight over a chosen window, with the change across it in the header. */
 @Composable
 private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Modifier) {
+    val units = LocalUnits.current
     var range by rememberSaveable { mutableStateOf(ChartRange.Quarter) }
     val today = LocalDate.now()
     val start = range.start(today)
@@ -247,7 +260,7 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
 
     ChartCard(
         title = "Bodyweight",
-        trailing = change?.let { "${it.signedOneDecimal()} kg over ${range.label}" },
+        trailing = change?.let { "${units.weightChange(it)} over ${range.label}" },
         modifier = modifier.testTag("weight_chart_card"),
     ) {
         CruxSegmentedButtons(
@@ -266,11 +279,11 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
             )
         } else {
             TimeSeriesChart(
-                points = inRange.map { SeriesPoint(it.date.toEpochDay().toDouble(), it.value) },
+                points = inRange.map { SeriesPoint(it.date.toEpochDay().toDouble(), units.weightValue(it.value)) },
                 formatX = { LocalDate.ofEpochDay(it.toLong()).shortLabel() },
                 formatY = { it.oneDecimal() },
-                unit = " kg",
-                description = "Bodyweight from ${inRange.first().value.oneDecimal()} to ${inRange.last().value.oneDecimal()} kg " +
+                unit = " ${units.weightUnit()}",
+                description = "Bodyweight from ${units.weight(inRange.first().value)} to ${units.weight(inRange.last().value)} " +
                     "between ${inRange.first().date.shortLabel()} and ${inRange.last().date.shortLabel()}",
             )
         }
@@ -282,6 +295,7 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
 private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
     val space = CruxTheme.space
     val ape = uiState.apeIndex
+    val units = LocalUnits.current
     Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
         Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             BodyStatTile(MeasurementType.HEIGHT, uiState, onEdit, Modifier.weight(1f))
@@ -290,8 +304,8 @@ private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit)
         Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             StatTile(
                 label = "Ape index",
-                value = ape?.differenceCm?.let { signedWhole(it) } ?: "–",
-                unit = ape?.let { "cm" },
+                value = ape?.differenceCm?.let { units.lengthDifference(it).value } ?: "–",
+                unit = ape?.differenceCm?.let { units.lengthDifference(it).unit },
                 delta = ape?.let { "ratio ${String.format(java.util.Locale.UK, "%.2f", it.ratio)}" } ?: "add height and wingspan",
                 modifier = Modifier
                     .weight(1f)
@@ -315,10 +329,11 @@ private fun BodyStatTile(
     modifier: Modifier = Modifier,
 ) {
     val latest = uiState.latest[type]
+    val shown = latest?.let { LocalUnits.current.measurement(type, it.value) }
     StatTile(
         label = type.label,
-        value = latest?.value?.wholeOrOneDecimal() ?: "–",
-        unit = latest?.let { type.unit },
+        value = shown?.value ?: "–",
+        unit = shown?.unit,
         delta = latest?.let { "set ${it.date.shortLabel()}" } ?: "tap to add",
         modifier = modifier
             .fillMaxHeight()
@@ -329,44 +344,36 @@ private fun BodyStatTile(
     )
 }
 
-/** `+6`, `−3`, `±0` for a difference in whole centimetres. */
-private fun signedWhole(value: Double): String {
-    val rounded = Math.round(value)
-    return when {
-        rounded > 0 -> "+$rounded"
-        rounded < 0 -> "−${-rounded}"
-        else -> "±0"
-    }
-}
 
+/** Sets a body stat on a ruler, opened on the last value (or a typical one), in the climber's units. */
 @Composable
 private fun MeasurementDialog(type: MeasurementType, initial: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
-    var text by rememberSaveable(type) { mutableStateOf(initial?.wholeOrOneDecimal().orEmpty()) }
-    var error by rememberSaveable(type) { mutableStateOf<String?>(null) }
+    val units = LocalUnits.current
+    val input = remember(type, units) { units.measureInput(type) }
+    val start = input.toDisplay(initial ?: type.typicalValue())
+    var shown by rememberSaveable(type, units) { mutableDoubleStateOf(input.scale.valueAt(input.scale.indexOf(start))) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.extraLarge,
         title = { Text(type.label, style = MaterialTheme.typography.headlineSmall) },
         text = {
-            CruxTextField(
-                label = type.description,
-                value = text,
-                onValueChange = {
-                    text = it
-                    error = null
-                },
-                helper = type.unit,
-                error = error,
-                keyboardType = KeyboardType.Decimal,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("field_measurement"),
+            RulerInput(
+                title = type.description,
+                value = shown,
+                onValueChange = { shown = it },
+                scale = input.scale,
+                display = input.display,
+                unit = input.unit,
+                delta = initial?.let { "Last set ${units.measurement(type, it)}" } ?: "Drag the scale, or tap the number to type",
+                parseTyped = input.parse,
+                typeUnit = input.typeUnit,
+                testTag = "ruler_measurement",
             )
         },
         confirmButton = {
             TextButton(
-                onClick = { parseMeasurement(type, text).onSuccess(onSave).onFailure { error = it.message } },
+                onClick = { onSave(input.toStored(shown).coerceIn(type.range)) },
                 modifier = Modifier.testTag("save_measurement"),
             ) { Text("Save") }
         },

@@ -64,6 +64,23 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate6To7AddsAnEmptyEffort() {
+        helper.createDatabase(DB, 6).apply {
+            execSQL(
+                "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis) " +
+                    "VALUES (1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 7, true)
+        db.query("SELECT gradeIndex, effort FROM climbs WHERE id = 1").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(10, cursor.getInt(0))
+            assertEquals(true, cursor.isNull(1))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

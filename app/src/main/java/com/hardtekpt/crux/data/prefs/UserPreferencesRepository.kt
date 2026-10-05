@@ -15,6 +15,9 @@ import javax.inject.Singleton
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
+/** How weights and lengths are shown. Data is always stored in kg and cm. */
+enum class UnitSystem(val label: String) { METRIC("Metric"), IMPERIAL("Imperial") }
+
 /** The grade scale the climber picked per discipline. New climbs are logged in it. */
 data class GradeScales(
     val boulder: GradeScale = Discipline.BOULDER.defaultScale,
@@ -38,6 +41,14 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = mode.name }
+    }
+
+    val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
+        prefs[UNITS]?.let { name -> UnitSystem.entries.firstOrNull { it.name == name } } ?: UnitSystem.METRIC
+    }
+
+    suspend fun setUnits(units: UnitSystem) {
+        dataStore.edit { it[UNITS] = units.name }
     }
 
     /** Demo mode shows the separate demo data set; off means the climber's own data. */
@@ -70,6 +81,7 @@ class UserPreferencesRepository @Inject constructor(
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")

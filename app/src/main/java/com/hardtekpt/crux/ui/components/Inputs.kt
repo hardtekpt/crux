@@ -2,6 +2,12 @@ package com.hardtekpt.crux.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +36,25 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import com.hardtekpt.crux.ui.components.input.rememberTicker
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -194,7 +219,10 @@ fun CruxStepper(
     )
 }
 
-/** Stepper with caller-defined steps, for values like load that step unevenly. */
+/**
+ * Stepper with caller-defined steps, for values like load that step unevenly. Hold a button
+ * to repeat (faster after a moment), or drag sideways on the value to scrub through steps.
+ */
 @Composable
 fun CruxValueStepper(
     display: String,
@@ -208,45 +236,123 @@ fun CruxValueStepper(
     testTagPrefix: String = "stepper",
 ) {
     val colors = MaterialTheme.colorScheme
-    val buttonColors = IconButtonDefaults.filledIconButtonColors(
-        containerColor = colors.surface,
-        contentColor = colors.onSurface,
-    )
+    val tick = rememberTicker()
+    val decrease by rememberUpdatedState(if (canDecrease) onDecrease else null)
+    val increase by rememberUpdatedState(if (canIncrease) onIncrease else null)
+    var scrubbing by remember { mutableStateOf(false) }
     Row(
         modifier = modifier
             .background(colors.surfaceContainer, CircleShape)
+            .border(CruxTheme.size.borderHairline, colors.outline, CircleShape)
             .padding(CruxTheme.space.s1),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
     ) {
-        FilledIconButton(
-            onClick = onDecrease,
-            enabled = canDecrease,
-            colors = buttonColors,
-            modifier = Modifier
-                .size(CruxTheme.size.touchTarget)
-                .testTag("${testTagPrefix}_minus"),
-        ) { Icon(Icons.Rounded.Remove, contentDescription = "Decrease $unit") }
+        RepeatButton(Icons.Rounded.Remove, "Decrease $unit", enabled && canDecrease, onDecrease, Modifier.testTag("${testTagPrefix}_minus"))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.widthIn(min = 44.dp),
+            modifier = Modifier
+                .widthIn(min = 56.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(if (scrubbing) colors.primaryContainer else Color.Transparent)
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    val stepPx = SCRUB_STEP.toPx()
+                    var travelled = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { scrubbing = true; travelled = 0f },
+                        onDragEnd = { scrubbing = false },
+                        onDragCancel = { scrubbing = false },
+                    ) { change, dx ->
+                        change.consume()
+                        travelled += dx
+                        val step = when {
+                            travelled >= stepPx -> increase
+                            travelled <= -stepPx -> decrease
+                            else -> return@detectHorizontalDragGestures
+                        }
+                        travelled = 0f
+                        step?.let {
+                            it()
+                            tick(false)
+                        }
+                    }
+                }
+                .padding(vertical = 2.dp),
         ) {
             Text(
                 display,
                 style = CruxTheme.type.metricMedium,
-                color = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
+                color = when {
+                    !enabled -> colors.onSurface.copy(alpha = 0.38f)
+                    scrubbing -> colors.onPrimaryContainer
+                    else -> colors.onSurface
+                },
                 maxLines = 1,
                 modifier = Modifier.testTag("${testTagPrefix}_value"),
             )
             Text(unit.uppercase(), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
         }
-        FilledIconButton(
-            onClick = onIncrease,
-            enabled = canIncrease,
-            colors = buttonColors,
-            modifier = Modifier
-                .size(CruxTheme.size.touchTarget)
-                .testTag("${testTagPrefix}_plus"),
-        ) { Icon(Icons.Rounded.Add, contentDescription = "Increase $unit") }
+        RepeatButton(Icons.Rounded.Add, "Increase $unit", enabled && canIncrease, onIncrease, Modifier.testTag("${testTagPrefix}_plus"))
+    }
+}
+
+/** 16 dp of drag on a stepper's value moves it one step. */
+private val SCRUB_STEP = 16.dp
+
+/**
+ * One press steps once; holding repeats after 400 ms every 90 ms, then every 30 ms once ten
+ * steps have gone by. Stops at a bound because the button disables.
+ */
+@Composable
+private fun RepeatButton(
+    icon: ImageVector,
+    description: String,
+    enabled: Boolean,
+    onStep: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val tick = rememberTicker()
+    val step by rememberUpdatedState(onStep)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(CruxTheme.size.controlHeight)
+            .clip(CircleShape)
+            .background(if (enabled) colors.surfaceContainerHigh else colors.surfaceContainerHigh.copy(alpha = 0.5f))
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = description
+                if (!enabled) disabled()
+                onClick {
+                    if (enabled) step()
+                    enabled
+                }
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                coroutineScope {
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        step()
+                        tick(false)
+                        val repeat = launch {
+                            delay(400)
+                            var count = 0
+                            while (true) {
+                                step()
+                                tick(false)
+                                count++
+                                delay(if (count > 10) 30 else 90)
+                            }
+                        }
+                        waitForUpOrCancellation()
+                        repeat.cancel()
+                    }
+                }
+            },
+    ) {
+        Icon(icon, contentDescription = null, tint = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f))
     }
 }

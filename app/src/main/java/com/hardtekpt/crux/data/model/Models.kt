@@ -18,6 +18,8 @@ data class Climb(
     val areaId: Long? = null,
     val problemId: Long? = null,
     val angle: Int? = null,
+    /** How hard it felt, 1 to 10. */
+    val effort: Int? = null,
 ) {
     val grade: String get() = gradeScale.label(gradeIndex)
 }
@@ -38,6 +40,8 @@ data class NewClimb(
     val areaId: Long? = null,
     val problemId: Long? = null,
     val angle: Int? = null,
+    /** How hard it felt, 1 to 10. */
+    val effort: Int? = null,
 )
 
 data class PersonalBest(

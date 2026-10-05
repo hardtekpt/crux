@@ -1,5 +1,9 @@
 package com.hardtekpt.crux
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.hardtekpt.crux.data.prefs.UnitSystem
+import com.hardtekpt.crux.ui.LocalUnits
+
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -35,6 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val units by viewModel.units.collectAsStateWithLifecycle()
             val darkTheme = themeMode.isDark()
 
             // Keep status/nav bar icons readable against whichever theme is in use.
@@ -45,7 +50,9 @@ class MainActivity : ComponentActivity() {
             }
 
             CruxTheme(darkTheme = darkTheme) {
-                CruxApp()
+                CompositionLocalProvider(LocalUnits provides units) {
+                    CruxApp()
+                }
             }
         }
     }
@@ -69,5 +76,11 @@ class MainViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ThemeMode.DARK,
+    )
+
+    val units: StateFlow<UnitSystem> = preferences.units.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = UnitSystem.METRIC,
     )
 }

@@ -58,6 +58,8 @@ data class LogClimbDraft(
     val areaId: Long? = null,
     val problemId: Long? = null,
     val angle: Int? = null,
+    /** How hard it felt, 1 to 10; optional. */
+    val effort: Int? = null,
     /** Save the named climb as a problem at the picked place. */
     val saveAsProblem: Boolean = false,
     val dateError: String? = null,
@@ -132,6 +134,7 @@ class LogClimbViewModel @Inject constructor(
                     areaId = climb.areaId,
                     problemId = climb.problemId,
                     angle = climb.angle,
+                    effort = climb.effort,
                 )
             }
             return
@@ -201,6 +204,8 @@ class LogClimbViewModel @Inject constructor(
     fun clearProblem() = _draft.update { it.copy(problemId = null) }
 
     fun setSaveAsProblem(save: Boolean) = _draft.update { it.copy(saveAsProblem = save) }
+
+    fun setEffort(effort: Int?) = _draft.update { it.copy(effort = effort?.coerceIn(1, 10)) }
 
     fun setAngle(angle: Int) = _draft.update { it.copy(angle = angle.coerceIn(0, 70)) }
 
@@ -296,6 +301,7 @@ class LogClimbViewModel @Inject constructor(
                 areaId = draft.areaId.takeIf { place != null },
                 problemId = problemId,
                 angle = draft.angle.takeIf { place?.type == PlaceType.BOARD },
+                effort = draft.effort,
             )
             if (draft.isEditing) climbRepository.updateClimb(draft.climbId, climb) else climbRepository.logClimb(climb)
             _draft.update { it.copy(isSaving = false, saved = true) }

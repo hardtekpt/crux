@@ -56,6 +56,8 @@ import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
+import com.hardtekpt.crux.ui.components.input.GradeStrip
+import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -428,18 +430,13 @@ fun ProblemEditorScreen(
                 modifier = Modifier.testTag("field_problem_name"),
             )
             Eyebrow("Grade · ${draft.gradeScale.label}")
-            val listState = rememberLazyListState(initialFirstVisibleItemIndex = (draft.gradeIndex - 2).coerceAtLeast(0))
-            LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(space.s2), contentPadding = PaddingValues(end = space.s4)) {
-                itemsIndexed(draft.gradeScale.grades) { index, grade ->
-                    CruxFilterChip(
-                        label = grade,
-                        selected = index == draft.gradeIndex,
-                        onClick = { viewModel.update { it.copy(gradeIndex = index) } },
-                        labelStyle = CruxTheme.type.gradeSmall,
-                        modifier = Modifier.testTag("problem_grade_$grade"),
-                    )
-                }
-            }
+            GradeStrip(
+                grades = draft.gradeScale.grades,
+                selectedIndex = draft.gradeIndex,
+                onSelect = { index -> viewModel.update { it.copy(gradeIndex = index) } },
+                tagPrefix = "problem_grade",
+                modifier = Modifier.bleed(space.s4),
+            )
             if (areas.isNotEmpty()) {
                 Eyebrow(type?.areaLabel ?: "Wall")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {

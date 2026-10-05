@@ -34,7 +34,12 @@ import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.components.TrendDirection
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
+import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.oneDecimal
+import com.hardtekpt.crux.ui.weight
+import com.hardtekpt.crux.ui.weightChange
+import com.hardtekpt.crux.ui.weightUnit
+import com.hardtekpt.crux.ui.weightValue
 import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.relativeLabel
@@ -97,11 +102,12 @@ fun DashboardWidgetContent(
             if (weight == null) {
                 StatTile(label = "Bodyweight", value = "–", delta = "log a weigh-in", modifier = modifier)
             } else {
+                val units = LocalUnits.current
                 StatTile(
                     label = "Bodyweight",
-                    value = weight.latest.value.oneDecimal(),
-                    unit = "kg",
-                    delta = weight.change?.let { "${it.signedOneDecimal()} kg · ${weight.window}" }
+                    value = units.weight(weight.latest.value).value,
+                    unit = units.weightUnit(),
+                    delta = weight.change?.let { "${units.weightChange(it)} · ${weight.window}" }
                         ?: "weighed ${weight.latest.date.shortLabel()}",
                     modifier = modifier.clickable(onClick = actions.openYou),
                     valueModifier = Modifier.testTag("bodyweight"),
@@ -194,19 +200,20 @@ private fun WeightTrendWidget(state: HomeUiState, large: Boolean, modifier: Modi
     val start = state.today.minusDays(91)
     val points = state.weights.filter { !it.date.isBefore(start) }.sortedBy { it.date }
     val change = if (points.size > 1) points.last().value - points.first().value else null
+    val units = LocalUnits.current
     ChartCard(
         title = "Weight trend",
-        trailing = change?.let { "${it.signedOneDecimal()} kg over 3M" },
+        trailing = change?.let { "${units.weightChange(it)} over 3M" },
         modifier = modifier,
     ) {
         if (points.size < 2) {
             EmptyWidgetText("Log two weigh-ins to see the trend.")
         } else {
             TimeSeriesChart(
-                points = points.map { SeriesPoint(it.date.toEpochDay().toDouble(), it.value) },
+                points = points.map { SeriesPoint(it.date.toEpochDay().toDouble(), units.weightValue(it.value)) },
                 formatX = { LocalDate.ofEpochDay(it.toLong()).shortLabel() },
                 formatY = { it.oneDecimal() },
-                unit = " kg",
+                unit = " ${units.weightUnit()}",
                 height = if (large) 190.dp else 120.dp,
                 description = "Bodyweight over the last 3 months",
             )

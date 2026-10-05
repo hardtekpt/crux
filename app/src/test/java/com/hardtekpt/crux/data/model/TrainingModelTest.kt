@@ -1,7 +1,5 @@
 package com.hardtekpt.crux.data.model
 
-import com.hardtekpt.crux.ui.train.stepLoad
-import com.hardtekpt.crux.ui.train.stepSeconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,24 +53,5 @@ class TrainingModelTest {
         )
         assertEquals(20, plan.estimatedMinutes)
         assertEquals(1, plan.exerciseCount)
-    }
-
-    @Test
-    fun `load steps by half a kilo near zero and 2,5 beyond 5 kg`() {
-        assertEquals(0.5, stepLoad(0.0, 1), 0.0)
-        assertEquals(5.0, stepLoad(4.5, 1), 0.0)
-        assertEquals(7.5, stepLoad(5.0, 1), 0.0)
-        assertEquals(5.0, stepLoad(7.5, -1), 0.0)
-        assertEquals(4.5, stepLoad(5.0, -1), 0.0)
-        assertEquals(-0.5, stepLoad(0.0, -1), 0.0)
-    }
-
-    @Test
-    fun `seconds step finely for hangs and coarsely for long holds`() {
-        assertEquals(11, stepSeconds(10, 1))
-        assertEquals(20, stepSeconds(15, 1))
-        assertEquals(14, stepSeconds(15, -1))
-        assertEquals(150, stepSeconds(120, 1))
-        assertEquals(115, stepSeconds(120, -1))
     }
 }

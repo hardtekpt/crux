@@ -112,8 +112,9 @@ fun formatDuration(seconds: Int): String = when {
     else -> "${seconds / 60} min ${seconds % 60} s"
 }
 
+/** `10`, `7.5`, `1.25`: up to two decimals, so the small plates show, and no trailing zeros. */
 fun formatKg(kg: Double): String =
-    if (kg == kg.roundToInt().toDouble()) kg.roundToInt().toString() else String.format(Locale.UK, "%.1f", kg)
+    if (kg == kg.roundToInt().toDouble()) kg.roundToInt().toString() else String.format(Locale.UK, "%.2f", kg).trimEnd('0').trimEnd('.')
 
 /** One exercise placed in a plan, with its targets. */
 data class PlanItem(
