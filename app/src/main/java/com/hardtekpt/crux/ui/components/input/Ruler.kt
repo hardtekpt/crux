@@ -1,10 +1,12 @@
 package com.hardtekpt.crux.ui.components.input
 
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.spring
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.animation.core.FloatExponentialDecaySpec
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -86,7 +88,8 @@ data class RulerScale(
     fun valueAt(index: Int): Double = Math.round((min + index * step) * 1000) / 1000.0
 }
 
-private val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+/** How far a flick carries the scale before it settles. */
+private val FlingDecay = FloatExponentialDecaySpec(frictionMultiplier = 3f)
 
 /**
  * A horizontal scale slid under a fixed needle, for body measurements: drag or flick it and
@@ -116,26 +119,55 @@ fun RulerInput(
     val currentOnChange by rememberUpdatedState(onValueChange)
     val currentValue by rememberUpdatedState(value)
 
-    var offset by remember(scale) { mutableFloatStateOf(scale.indexOf(value) * stepPx) }
-    var dragging by remember { mutableStateOf(false) }
+    var offset by remember(scale, stepPx) { mutableFloatStateOf(scale.indexOf(value) * stepPx) }
+    // True from the first touch until the scale has settled on a tick. Only then does the
+    // scale follow the value; while moving, the value follows the scale. One direction at a
+    // time, so the two never chase each other.
+    var moving by remember { mutableStateOf(false) }
+    var settle by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
     var typing by rememberSaveable { mutableStateOf(false) }
 
-    // A value changed from outside (typing, a unit switch) moves the scale.
-    LaunchedEffect(value, scale) {
-        if (!dragging) offset = scale.indexOf(value) * stepPx
+    // A value changed from outside (typing, a unit switch, TalkBack) moves the scale.
+    LaunchedEffect(value, scale, stepPx) {
+        if (!moving) offset = scale.indexOf(value) * stepPx
     }
     // The scale moving picks values, with a tick per step and a firmer one on long ticks.
     LaunchedEffect(scale, stepPx) {
         snapshotFlow { (offset / stepPx).roundToInt().coerceIn(0, scale.steps) }
             .distinctUntilChanged()
             .collect { index ->
-                val next = scale.valueAt(index)
-                if (dragging && next != currentValue) tick(index % scale.majorEvery == 0)
-                if (scale.indexOf(currentValue) != index) currentOnChange(next)
+                if (!moving || scale.indexOf(currentValue) == index) return@collect
+                tick(index % scale.majorEvery == 0)
+                currentOnChange(scale.valueAt(index))
             }
     }
 
     val dragState = rememberDraggableState { delta -> offset = (offset - delta).coerceIn(0f, maxOffset) }
+    // Glides on after a flick and comes to rest exactly on the nearest tick. It runs in its
+    // own scope, so recompositions while the value changes can't cut it short.
+    fun settleFrom(velocity: Float) {
+        settle?.cancel()
+        settle = scope.launch {
+            try {
+                val glide = if (reduceMotion) 0f else FlingDecay.getTargetValue(offset, -velocity) - offset
+                val target = ((offset + glide) / stepPx).roundToInt().coerceIn(0, scale.steps) * stepPx
+                if (reduceMotion) {
+                    offset = target
+                } else {
+                    animate(
+                        initialValue = offset,
+                        targetValue = target,
+                        initialVelocity = -velocity,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+                    ) { v, _ -> offset = v.coerceIn(0f, maxOffset) }
+                    offset = target
+                }
+            } finally {
+                moving = false
+            }
+        }
+    }
     val measurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, color = colors.onSurfaceVariant)
     val nudge = { by: Int -> onValueChange(scale.valueAt((scale.indexOf(value) + by).coerceIn(0, scale.steps))) }
@@ -195,21 +227,11 @@ fun RulerInput(
                 .draggable(
                     state = dragState,
                     orientation = Orientation.Horizontal,
-                    onDragStarted = { dragging = true },
-                    onDragStopped = { velocity ->
-                        if (!reduceMotion) {
-                            animateDecay(offset, -velocity, FloatExponentialDecaySpec(frictionMultiplier = 2f)) { v, _ ->
-                                offset = v.coerceIn(0f, maxOffset)
-                            }
-                        }
-                        val target = (offset / stepPx).roundToInt().coerceIn(0, scale.steps) * stepPx
-                        if (reduceMotion) {
-                            offset = target
-                        } else {
-                            animate(offset, target, animationSpec = tween(150, easing = Emphasized)) { v, _ -> offset = v }
-                        }
-                        dragging = false
+                    onDragStarted = {
+                        settle?.cancel()
+                        moving = true
                     },
+                    onDragStopped = { velocity -> settleFrom(velocity) },
                 ),
         ) {
             Canvas(

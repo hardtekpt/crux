@@ -33,6 +33,9 @@ class PickerScroll internal constructor(
 ) {
     internal var external by mutableStateOf(false)
 
+    /** The last pick this list reported itself; echoes of it must not scroll the list back. */
+    internal var reported = -1
+
     /** Scrolls to [index] as if the climber flicked there; values on the way are picked. */
     fun scrollTo(index: Int) {
         scope.launch { if (reduceMotion) list.scrollToItem(index) else list.animateScrollToItem(index) }
@@ -63,6 +66,7 @@ fun rememberPickerScroll(
             .collect { index ->
                 if (!picker.external && index != currentSelected) {
                     tick(currentStrongAt(index))
+                    picker.reported = index
                     currentOnSelect(index)
                 }
             }
@@ -70,6 +74,9 @@ fun rememberPickerScroll(
     LaunchedEffect(selected, count) {
         if (count == 0) return@LaunchedEffect
         val target = selected.coerceIn(0, count - 1)
+        // Our own report coming back: the list is already there, or has moved on since.
+        if (target == picker.reported) return@LaunchedEffect
+        picker.reported = -1
         val centred = list.layoutInfo.centredIndex()
         if (centred != target && !list.isScrollInProgress) {
             picker.external = true
