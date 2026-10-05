@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window theme only; the real styling lives in Compose (ui/theme). -->
-    <style name="Theme.Crux" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Window theme only; the real styling lives in Compose (ui/theme). Dark surface
+         avoids a light flash before the first frame since dark is the app default. -->
+    <style name="Theme.Crux" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/crux_surface_dark</item>
+    </style>
 </resources>

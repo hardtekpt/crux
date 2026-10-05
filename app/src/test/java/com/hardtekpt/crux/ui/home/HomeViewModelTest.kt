@@ -33,9 +33,18 @@ class HomeViewModelTest {
         viewModel.uiState.test {
             assertEquals(0, awaitLoaded().totalClimbs)
             viewModel.logSampleClimb()
-            assertEquals(1, awaitItem().totalClimbs)
+            assertEquals(
+                HomeUiState(isLoading = false, totalClimbs = 1, climbsThisWeek = 1),
+                awaitUntil { it.totalClimbs == 1 && it.climbsThisWeek == 1 },
+            )
         }
     }
+}
+
+private suspend fun ReceiveTurbine<HomeUiState>.awaitUntil(predicate: (HomeUiState) -> Boolean): HomeUiState {
+    var item = awaitItem()
+    while (!predicate(item)) item = awaitItem()
+    return item
 }
 
 /** Skips the initial loading placeholder emitted before the repository answers. */
@@ -48,6 +57,7 @@ private suspend fun ReceiveTurbine<HomeUiState>.awaitLoaded(): HomeUiState {
 private class FakeClimbRepository : ClimbRepository {
     private val count = MutableStateFlow(0)
     override fun observeClimbCount(): Flow<Int> = count
+    override fun observeClimbCountSince(sinceEpochMillis: Long): Flow<Int> = count
     override suspend fun logClimb(name: String, grade: String, notes: String?) {
         count.value += 1
     }

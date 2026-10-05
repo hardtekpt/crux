@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1F2A30</color>
+    <color name="crux_surface_dark">#0F1413</color>
+    <color name="ic_launcher_background">#0F1413</color>
+    <color name="ic_launcher_foreground">#67D6DE</color>
 </resources>

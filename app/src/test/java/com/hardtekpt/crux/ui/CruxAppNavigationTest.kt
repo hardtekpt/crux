@@ -26,7 +26,7 @@ class CruxAppNavigationTest {
     @Before
     fun setUp() {
         composeRule.setContent {
-            CruxTheme(dynamicColor = false) {
+            CruxTheme {
                 CruxApp(home = { HomeContent(HomeUiState(isLoading = false), onLogClimb = {}) })
             }
         }

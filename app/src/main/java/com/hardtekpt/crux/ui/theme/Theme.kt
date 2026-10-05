@@ -1,40 +1,43 @@
 package com.hardtekpt.crux.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 
-// Placeholder Material 3 theme. Colours and typography get replaced by the
-// Crux design system tokens once they are finalised.
-private val LightColors = lightColorScheme()
-private val DarkColors = darkColorScheme()
-val CruxTypography = Typography()
+private val LocalCruxColors = staticCompositionLocalOf { CruxDarkExtendedColors }
+private val LocalCruxType = staticCompositionLocalOf { CruxType() }
 
+/**
+ * The Crux design system on Material 3. Dynamic colour is deliberately off: the
+ * palette is the brand. Dark is the app default; callers pass the resolved mode.
+ */
 @Composable
 fun CruxTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColors
-        else -> LightColors
+    CompositionLocalProvider(
+        LocalCruxColors provides if (darkTheme) CruxDarkExtendedColors else CruxLightExtendedColors,
+        LocalCruxType provides CruxType(),
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) CruxDarkColorScheme else CruxLightColorScheme,
+            typography = CruxTypography,
+            shapes = CruxShapes,
+            content = content,
+        )
     }
+}
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = CruxTypography,
-        content = content,
-    )
+/** Entry point for the tokens Material 3 has no slot for. */
+object CruxTheme {
+    val colors: CruxColors
+        @Composable @ReadOnlyComposable get() = LocalCruxColors.current
+    val type: CruxType
+        @Composable @ReadOnlyComposable get() = LocalCruxType.current
+    val space = CruxSpace
+    val size = CruxSize
+    val shape = CruxShape
 }

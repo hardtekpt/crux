@@ -13,6 +13,9 @@ interface ClimbDao {
     @Query("SELECT COUNT(*) FROM climbs")
     fun observeCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM climbs WHERE loggedAtEpochMillis >= :sinceEpochMillis")
+    fun observeCountSince(sinceEpochMillis: Long): Flow<Int>
+
     @Insert
     suspend fun insert(climb: ClimbEntity): Long
 }

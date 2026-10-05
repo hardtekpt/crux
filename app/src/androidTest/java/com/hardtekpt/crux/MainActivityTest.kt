@@ -34,7 +34,7 @@ class MainActivityTest {
 
     @Test
     fun bottomBarReachesEveryTopLevelScreen() {
-        listOf("Workouts", "Journal", "Stats", "Home").forEach { name ->
+        listOf("Train", "Journal", "Progress", "You", "Home").forEach { name ->
             composeRule.onNodeWithTag("nav_$name").performClick()
             composeRule.onNodeWithTag("screen_$name").assertIsDisplayed()
         }

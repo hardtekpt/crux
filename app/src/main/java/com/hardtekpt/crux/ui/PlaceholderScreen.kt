@@ -1,27 +1,31 @@
 package com.hardtekpt.crux.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.CruxTopAppBar
+import com.hardtekpt.crux.ui.components.EmptyState
 
-/** Temporary screen body used until each feature's real views are built. */
+/** A root destination whose real views are not built yet: app bar plus its empty state. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlaceholderScreen(title: String, subtitle: String, modifier: Modifier = Modifier) {
+fun PlaceholderScreen(
+    title: String,
+    icon: ImageVector,
+    headline: String,
+    sentence: String,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp)
             .testTag("screen_$title"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
-        Text(subtitle, style = MaterialTheme.typography.bodyLarge)
+        CruxTopAppBar(title = title)
+        EmptyState(icon = icon, headline = headline, sentence = sentence)
     }
 }
