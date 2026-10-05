@@ -115,6 +115,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id")
     suspend fun get(id: Long): ExerciseEntity?
 
+    @Query("SELECT * FROM exercises ORDER BY name COLLATE NOCASE")
+    suspend fun getAll(): List<ExerciseEntity>
+
     /** How many plans use an exercise; shown before deleting it. */
     @Query(
         """
@@ -151,6 +154,10 @@ interface TemplateDao {
     @Transaction
     @Query("SELECT * FROM workout_templates WHERE id = :id")
     suspend fun get(id: Long): TemplateWithBlocks?
+
+    @Transaction
+    @Query("SELECT * FROM workout_templates ORDER BY position, id")
+    suspend fun getAll(): List<TemplateWithBlocks>
 
     @Query("SELECT COUNT(*) FROM workout_templates")
     suspend fun count(): Int

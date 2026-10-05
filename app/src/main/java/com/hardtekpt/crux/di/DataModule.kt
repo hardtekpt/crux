@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.di
 
+import android.content.ContentResolver
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -56,6 +57,13 @@ object DatabaseModule {
     @Singleton
     fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("user_prefs") }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AndroidModule {
+    @Provides
+    fun provideContentResolver(@ApplicationContext context: Context): ContentResolver = context.contentResolver
 }
 
 @Module

@@ -63,13 +63,16 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    backupViewModel: BackupViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val backupState by backupViewModel.state.collectAsStateWithLifecycle()
     SettingsContent(
         uiState = uiState,
         onBack = onBack,
         onGradeScale = viewModel::setGradeScale,
         onThemeMode = viewModel::setThemeMode,
+        backup = { BackupCard(backupState, backupViewModel) },
     )
 }
 
@@ -80,6 +83,7 @@ fun SettingsContent(
     onGradeScale: (GradeScale) -> Unit,
     onThemeMode: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
+    backup: @Composable () -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -131,6 +135,9 @@ fun SettingsContent(
                     onSelect = onThemeMode,
                 )
             }
+
+            Eyebrow("Your data", Modifier.padding(top = space.s4))
+            backup()
         }
     }
 }

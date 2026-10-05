@@ -30,6 +30,9 @@ interface BodyMeasurementDao {
     @Query("SELECT COUNT(*) FROM body_measurements")
     suspend fun count(): Int
 
+    @Query("SELECT * FROM body_measurements ORDER BY dateEpochDay, createdAtMillis")
+    suspend fun getAll(): List<BodyMeasurementEntity>
+
     @Insert
     suspend fun insert(measurement: BodyMeasurementEntity): Long
 

@@ -22,6 +22,9 @@ interface ClimbDao {
     @Query("SELECT COUNT(*) FROM climbs")
     suspend fun count(): Int
 
+    @Query("SELECT * FROM climbs ORDER BY dateEpochDay, createdAtMillis")
+    suspend fun getAll(): List<ClimbEntity>
+
     /**
      * Hardest send per discipline, scale and style. Grades in different scales are never
      * compared, so each scale keeps its own bests. SQLite returns the other columns from the
