@@ -126,7 +126,7 @@ fun LazyListScope.placesList(
         }
     }
     // Favourites first, then the rest in their usual order.
-    val shown = places?.filter { filter == null || it.place.type == filter }?.sortedByDescending { it.place.favourite }
+    val shown = places?.filter { filter == null || filter in it.place.types }?.sortedByDescending { it.place.favourite }
     item {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Eyebrow(
@@ -179,10 +179,10 @@ class PlaceDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Saves a wall; a replaced or removed image file is deleted. */
-    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?) {
+    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, type: PlaceType?) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.saveArea(placeId, areaId, name, angle, image)
+            repository.saveArea(placeId, areaId, name, angle, image, type)
             if (previousImage != image) images.delete(previousImage)
         }
     }
@@ -244,7 +244,8 @@ fun PlaceDetailScreen(
             },
         )
         val current = detail ?: return@Column
-        val areaLabel = current.place.type.areaLabel
+        // One kind of place says Wall, Sector or Set; a mixed place says Area.
+        val areaLabel = if (current.place.hasSeveralTypes) "Area" else current.place.type.areaLabel
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
@@ -252,7 +253,7 @@ fun PlaceDetailScreen(
         ) {
             item {
                 Text(
-                    listOfNotNull(current.place.type.label, current.place.location, scaleLine(current)).joinToString(" · "),
+                    listOfNotNull(current.place.typesLabel, current.place.location, scaleLine(current)).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -304,7 +305,14 @@ fun PlaceDetailScreen(
                             )
                         }
                         Eyebrow(
-                            area?.let { a -> listOfNotNull(a.name, a.angle?.let { "$it°" }, a.resetDate?.let { "reset ${it.shortLabel()}" }).joinToString(" · ") }
+                            area?.let { a ->
+                                listOfNotNull(
+                                    a.name,
+                                    current.place.typeOf(a).label.takeIf { current.place.hasSeveralTypes },
+                                    a.angle?.let { "$it°" },
+                                    a.resetDate?.let { "reset ${it.shortLabel()}" },
+                                ).joinToString(" · ")
+                            }
                                 ?: "No ${areaLabel.lowercase()}",
                             Modifier.weight(1f),
                         )
@@ -346,11 +354,11 @@ fun PlaceDetailScreen(
     if (addingArea || editingArea != null) {
         AreaDialog(
             area = editingArea,
-            label = place?.type?.areaLabel ?: "Wall",
-            isBoard = place?.type == PlaceType.BOARD,
+            types = place?.types ?: listOf(PlaceType.GYM),
+            initialType = place?.typeOf(editingArea) ?: PlaceType.GYM,
             viewModel = viewModel,
-            onSave = { name, angle, image ->
-                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath)
+            onSave = { name, angle, image, type ->
+                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath, type)
                 addingArea = false
                 editingArea = null
             },
@@ -412,12 +420,15 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
 @Composable
 private fun AreaDialog(
     area: Area?,
-    label: String,
-    isBoard: Boolean,
+    types: List<PlaceType>,
+    initialType: PlaceType,
     viewModel: PlaceDetailViewModel,
-    onSave: (String, Int?, String?) -> Unit,
+    onSave: (String, Int?, String?, PlaceType) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var type by rememberSaveable { mutableStateOf(initialType) }
+    val label = type.areaLabel
+    val isBoard = type == PlaceType.BOARD
     var name by rememberSaveable { mutableStateOf(area?.name.orEmpty()) }
     var angle by rememberSaveable { mutableStateOf(area?.angle?.toString().orEmpty()) }
     var image by rememberSaveable { mutableStateOf(area?.imagePath) }
@@ -463,6 +474,14 @@ private fun AreaDialog(
                 verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
+                // A mixed place: say which part of it this is.
+                if (types.size > 1) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.testTag("area_types")) {
+                        types.forEach { t ->
+                            CruxFilterChip(t.label, t == type, { type = t }, Modifier.testTag("area_type_${t.name}"))
+                        }
+                    }
+                }
                 CruxTextField(
                     label = "Name",
                     value = name,
@@ -543,7 +562,7 @@ private fun AreaDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
+            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image, type) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }
         },

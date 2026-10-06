@@ -179,13 +179,28 @@ class StarterDataSeeder(private val clock: Clock) {
         // Saved places with their walls; every named sample climb is a problem on one of them.
         val placeDao = db.placeDao()
         val placeIds = SAMPLE_PLACES.associate { sample ->
-            sample.name to placeDao.insertPlace(PlaceEntity(name = sample.name, type = sample.type, location = sample.location, createdAtMillis = now))
+            sample.name to placeDao.insertPlace(PlaceEntity(
+                name = sample.name,
+                type = sample.type,
+                location = sample.location,
+                createdAtMillis = now,
+                extraTypes = if (sample.boardAreas.isNotEmpty()) PlaceType.BOARD.name else "",
+                defaultAngle = 40.takeIf { sample.boardAreas.isNotEmpty() },
+            ))
         }
         val areaIds = SAMPLE_PLACES.flatMap { sample ->
             sample.areas.mapIndexed { position, area ->
                 (sample.name to area) to placeDao.insertArea(AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = position))
             }
         }.toMap()
+        // A gym with a board: its board sets are areas of the board kind.
+        SAMPLE_PLACES.forEach { sample ->
+            sample.boardAreas.forEachIndexed { index, area ->
+                placeDao.insertArea(
+                    AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = sample.areas.size + index, type = PlaceType.BOARD, angle = 40),
+                )
+            }
+        }
         val problemIds = mutableMapOf<Pair<String, String>, Long>()
         SAMPLE_CLIMBS.filter { it.name != null }.forEach { climb ->
             val key = climb.place to climb.name!!
@@ -370,10 +385,17 @@ private data class SampleClimb(
     val area: String? = null,
 )
 
-private data class SamplePlace(val name: String, val type: PlaceType, val location: String, val areas: List<String>)
+private data class SamplePlace(
+    val name: String,
+    val type: PlaceType,
+    val location: String,
+    val areas: List<String>,
+    /** Sets on a board inside the place, which makes it a gym with a board. */
+    val boardAreas: List<String> = emptyList(),
+)
 
 private val SAMPLE_PLACES = listOf(
-    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall")),
+    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall"), boardAreas = listOf("Kilter benchmarks")),
     SamplePlace("Arco", PlaceType.CRAG, "Trentino", listOf("Policromuro", "Massi di Prabi")),
     SamplePlace("The Arch", PlaceType.GYM, "London", listOf("Overhang", "Lead wall")),
 )

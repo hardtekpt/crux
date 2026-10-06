@@ -48,6 +48,7 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
+import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.Problem
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Venue
@@ -76,7 +77,12 @@ data class WhereActions(
     val setAngle: (Int) -> Unit,
     val setVenue: (Venue) -> Unit,
     val setPlaceText: (String) -> Unit,
+    /** At a place with several kinds: which one this climb was at. */
+    val selectPlaceType: (PlaceType) -> Unit = {},
 )
+
+/** The kind of climbing the draft is at, within [place]'s kinds. */
+private fun Place.typeFor(draft: LogClimbDraft): PlaceType = types.firstOrNull { it.venue == draft.venue } ?: type
 
 private enum class WhereStep { PLACE, AREA, PROBLEM }
 
@@ -101,7 +107,7 @@ fun WhereSection(
         place?.name ?: draft.place.takeIf { it.isNotBlank() },
         area?.name,
         problem?.let { "${it.problem.name} ${it.problem.grade}" } ?: "new problem".takeIf { draft.saveAsProblem && place != null },
-        draft.angle?.takeIf { place?.type == PlaceType.BOARD }?.let { "$it°" },
+        draft.angle?.takeIf { place != null && draft.venue == Venue.BOARD }?.let { "$it°" },
     ).joinToString(" · ")
 
     // Favourite places as one-tap picks; tapping the picked one again clears it.
@@ -126,8 +132,8 @@ fun WhereSection(
     }
     WhereRow(
         summary = summary.ifBlank { null },
-        kind = place?.type?.label ?: draft.venue.label,
-        icon = place?.let { placeIcon(it.type) } ?: Icons.Rounded.EditLocationAlt,
+        kind = place?.typeFor(draft)?.label ?: draft.venue.label,
+        icon = place?.let { placeIcon(it.typeFor(draft)) } ?: Icons.Rounded.EditLocationAlt,
         onClick = { open = true },
     )
     if (open) {
@@ -183,19 +189,19 @@ private fun WhereSheet(
     var step by rememberSaveable { mutableStateOf(WhereStep.PLACE) }
     var creatingPlace by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    val problemNoun = if (place?.type == PlaceType.CRAG || draft.discipline == Discipline.ROUTE) "route" else "problem"
+    val problemNoun = if (draft.venue == Venue.CRAG || draft.discipline == Discipline.ROUTE) "route" else "problem"
     // With no place the later steps have nothing to show.
     val current = if (place == null) WhereStep.PLACE else step
     val next = {
         step = when (current) {
-            WhereStep.PLACE -> if (detail?.areas?.isNotEmpty() == true) WhereStep.AREA else WhereStep.PROBLEM
+            WhereStep.PLACE -> if (detail?.areas?.isNotEmpty() == true || place?.hasSeveralTypes == true) WhereStep.AREA else WhereStep.PROBLEM
             WhereStep.AREA, WhereStep.PROBLEM -> WhereStep.PROBLEM
         }
     }
     val stepLabel = { s: WhereStep ->
         when (s) {
             WhereStep.PLACE -> "Place"
-            WhereStep.AREA -> place?.type?.areaLabel ?: "Area"
+            WhereStep.AREA -> place?.let { if (it.hasSeveralTypes) "Area" else it.type.areaLabel } ?: "Area"
             WhereStep.PROBLEM -> problemNoun.replaceFirstChar { it.uppercase() }
         }
     }
@@ -252,6 +258,19 @@ private fun WhereSheet(
                 contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
                 modifier = Modifier.navigationBarsPadding(),
             ) {
+                // A place with several kinds: pick which part of it first; walls and problems follow.
+                if (place != null && place.hasSeveralTypes && current != WhereStep.PLACE) {
+                    item(key = "place_type") {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                            modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
+                        ) {
+                            place.types.forEach { t ->
+                                CruxFilterChip(t.label, place.typeFor(draft) == t, { actions.selectPlaceType(t) }, Modifier.testTag("where_type_${t.name}"))
+                            }
+                        }
+                    }
+                }
                 when (current) {
                     WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = next, onNew = { creatingPlace = true })
                     WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = next)
@@ -271,7 +290,7 @@ private fun WhereSheet(
                         }
                     }
                 }
-                if (place?.type == PlaceType.BOARD) {
+                if (place != null && draft.venue == Venue.BOARD) {
                     item(key = "angle") {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = CruxTheme.space.s3)) {
                             Text("Angle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -318,7 +337,7 @@ private fun LazyListScope.placeStep(
     items(places, key = { "place_${it.place.id}" }) { summary ->
         PickRow(
             title = summary.place.name,
-            supporting = listOfNotNull(summary.place.type.label, summary.place.location).joinToString(" · "),
+            supporting = listOfNotNull(summary.place.typesLabel, summary.place.location).joinToString(" · "),
             icon = placeIcon(summary.place.type),
             selected = draft.placeId == summary.place.id,
             tag = "place_${summary.place.name}",
@@ -333,13 +352,14 @@ private fun LazyListScope.placeStep(
 }
 
 private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, actions: WhereActions, onPicked: () -> Unit) {
+    val type = detail.place.typeFor(draft)
     item(key = "area_any") {
-        PickRow("Any ${detail.place.type.areaLabel.lowercase()}", selected = draft.areaId == null, tag = "area_any") {
+        PickRow("Any ${type.areaLabel.lowercase()}", selected = draft.areaId == null, tag = "area_any") {
             actions.selectArea(null)
             onPicked()
         }
     }
-    items(detail.areas, key = { "area_${it.id}" }) { area ->
+    items(detail.areas.filter { detail.place.typeOf(it) == type }, key = { "area_${it.id}" }) { area ->
         PickRow(
             title = area.name,
             supporting = area.angle?.let { "$it°" },
@@ -360,9 +380,13 @@ private fun LazyListScope.problemStep(
     actions: WhereActions,
     onPicked: () -> Unit,
 ) {
+    // At a mixed place, only problems on this kind's walls (or on no wall).
+    val type = detail.place.typeFor(draft)
+    val areaType = detail.areas.associate { it.id to detail.place.typeOf(it) }
     val matches = detail.problems
         .filter { !it.problem.retired }
         .filter { draft.areaId == null || it.problem.areaId == draft.areaId }
+        .filter { p -> p.problem.areaId == null || areaType[p.problem.areaId] == type }
         .filter { query.isBlank() || it.problem.name.contains(query.trim(), ignoreCase = true) || it.problem.grade.equals(query.trim(), true) }
     if (query.isBlank()) {
         item(key = "problem_none") {

@@ -48,12 +48,36 @@ class LogClimbViewModelTest {
 
     private suspend fun boardWithProblem(): Pair<Long, Long> {
         val placeId = places.savePlace(
-            PlaceInput(name = "Moon board", type = PlaceType.BOARD, location = null, boulderScale = GradeScale.V_SCALE, routeScale = null, defaultAngle = 40, notes = null),
+            PlaceInput(name = "Moon board", types = listOf(PlaceType.BOARD), location = null, boulderScale = GradeScale.V_SCALE, routeScale = null, defaultAngle = 40, notes = null),
         )
         val problemId = places.saveProblem(
             ProblemInput(placeId = placeId, areaId = null, name = "Hard moves", discipline = Discipline.BOULDER, gradeScale = GradeScale.V_SCALE, gradeIndex = 6, tape = null, notes = null),
         )
         return placeId to problemId
+    }
+
+    @Test
+    fun `at a gym with a board, the wall picked says which kind of climb it was`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(name = "Block Lab", types = listOf(PlaceType.GYM, PlaceType.BOARD), location = null, boulderScale = null, routeScale = null, defaultAngle = 40, notes = null),
+        )
+        val cave = places.saveArea(placeId, 0, "Cave", null, null, PlaceType.GYM)
+        val kilter = places.saveArea(placeId, 0, "Kilter", 40, null, PlaceType.BOARD)
+        viewModel.selectPlace(placeId)
+        withTimeout(5_000) { viewModel.placeDetail.first { it?.areas?.size == 2 } }
+        assertEquals(Venue.GYM, viewModel.draft.value.venue)
+
+        viewModel.selectArea(kilter)
+        assertEquals(Venue.BOARD, viewModel.draft.value.venue)
+        // Switching back to the gym drops the board's wall.
+        viewModel.selectPlaceType(PlaceType.GYM)
+        assertEquals(Venue.GYM, viewModel.draft.value.venue)
+        assertEquals(null, viewModel.draft.value.areaId)
+        viewModel.selectArea(cave)
+        viewModel.save()
+        val saved = withTimeout(5_000) { repository.climbs.first { it.isNotEmpty() } }.single()
+        assertEquals(Venue.GYM, saved.venue)
+        assertEquals(cave, saved.areaId)
     }
 
     @Test
@@ -193,7 +217,7 @@ class LogClimbViewModelTest {
     fun `a place with local colour grades logs the colour, not a converted grade`() = runBlocking {
         val placeId = places.savePlace(
             PlaceInput(
-                name = "Tape Gym", type = PlaceType.GYM, location = null,
+                name = "Tape Gym", types = listOf(PlaceType.GYM), location = null,
                 boulderScale = GradeScale.LOCAL_BOULDER, routeScale = null, defaultAngle = null, notes = null,
                 localScale = LocalScale.DEFAULT_COLOURS,
             ),

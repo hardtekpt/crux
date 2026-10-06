@@ -47,7 +47,7 @@ class PlacesMigration : AutoMigrationSpec {
         com.hardtekpt.crux.data.NoteEntity::class,
         com.hardtekpt.crux.data.ExerciseRecordEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
@@ -61,6 +61,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
         AutoMigration(from = 13, to = 14),
+        AutoMigration(from = 14, to = 15),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {

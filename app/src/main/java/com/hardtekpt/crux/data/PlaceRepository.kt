@@ -29,7 +29,8 @@ import javax.inject.Inject
 data class PlaceInput(
     val id: Long = 0,
     val name: String,
-    val type: PlaceType,
+    /** Every kind of climbing here, main first; at least one. */
+    val types: List<PlaceType>,
     val location: String?,
     val boulderScale: GradeScale?,
     val routeScale: GradeScale?,
@@ -65,7 +66,7 @@ interface PlaceRepository {
     suspend fun getProblem(id: Long): Problem?
     suspend fun savePlace(input: PlaceInput): Long
     suspend fun deletePlace(id: Long)
-    suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long
+    suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, type: PlaceType? = null): Long
     suspend fun deleteArea(id: Long)
     /** Records a reset today and retires the problems that were on the wall. */
     suspend fun resetArea(id: Long)
@@ -151,7 +152,8 @@ class OfflinePlaceRepository @Inject constructor(
         val entity = PlaceEntity(
             id = existing?.id ?: 0,
             name = input.name.trim(),
-            type = input.type,
+            type = input.types.first(),
+            extraTypes = input.types.drop(1).distinct().filter { it != input.types.first() }.joinToString(",") { it.name },
             location = input.location?.trim()?.takeIf { it.isNotEmpty() },
             boulderScale = input.boulderScale,
             routeScale = input.routeScale,
@@ -166,6 +168,9 @@ class OfflinePlaceRepository @Inject constructor(
         )
         return if (existing != null) {
             dao.updatePlace(entity)
+            // Areas of a kind the place no longer has fall back to its main kind.
+            dao.getAllAreas().filter { it.placeId == existing.id && it.type != null && it.type !in input.types }
+                .forEach { dao.updateArea(it.copy(type = null)) }
             existing.id
         } else {
             dao.insertPlace(entity)
@@ -180,15 +185,18 @@ class OfflinePlaceRepository @Inject constructor(
         }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, type: PlaceType?): Long {
         val dao = dbs.current().placeDao()
+        // The main kind is stored as null, so areas follow it if the main kind changes.
+        val main = dao.getPlace(placeId)?.type
+        val stored = type?.takeIf { it != main }
         return if (areaId != 0L) {
             val existing = dao.getAllAreas().first { it.id == areaId }
-            dao.updateArea(existing.copy(name = name.trim(), angle = angle, imagePath = imagePath))
+            dao.updateArea(existing.copy(name = name.trim(), angle = angle, imagePath = imagePath, type = stored))
             areaId
         } else {
             dao.insertArea(
-                AreaEntity(placeId = placeId, name = name.trim(), angle = angle, position = dao.nextAreaPosition(placeId), imagePath = imagePath),
+                AreaEntity(placeId = placeId, name = name.trim(), angle = angle, position = dao.nextAreaPosition(placeId), imagePath = imagePath, type = stored),
             )
         }
     }
@@ -255,9 +263,13 @@ class OfflinePlaceRepository @Inject constructor(
 internal fun PlaceEntity.toModel() = Place(
     id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale), favourite,
     mapLocation = if (latitude != null && longitude != null) MapLocation(latitude, longitude, address) else null,
+    types = listOf(type) + PlaceEntity.parseTypes(extraTypes).filter { it != type },
 )
 
-internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath)
+internal fun PlaceEntity.Companion.parseTypes(text: String): List<PlaceType> =
+    text.split(',').mapNotNull { name -> PlaceType.entries.firstOrNull { it.name == name.trim() } }.distinct()
+
+internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath, type)
 
 internal fun ProblemEntity.toModel() = Problem(
     id = id,

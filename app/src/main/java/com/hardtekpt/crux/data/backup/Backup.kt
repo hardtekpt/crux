@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.data.backup
 
+import com.hardtekpt.crux.data.parseTypes
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
@@ -135,6 +136,8 @@ data class AreaDto(
     val resetDate: String? = null,
     /** The wall's photo or map as base64 JPEG. Older backups omit it. */
     val image: String? = null,
+    /** Which of the place's kinds the area is; older backups omit it (the main kind). */
+    val type: PlaceType? = null,
 )
 
 @Serializable
@@ -168,6 +171,8 @@ data class PlaceDto(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val address: String? = null,
+    /** The other kinds of climbing at the place; older backups omit it. */
+    val extraTypes: List<PlaceType> = emptyList(),
 )
 
 @Serializable
@@ -411,6 +416,7 @@ class BackupRepository(
                         latitude = dto.latitude,
                         longitude = dto.longitude,
                         address = dto.address,
+                        extraTypes = dto.extraTypes.filter { it != dto.type }.joinToString(",") { it.name },
                     ),
                 )
                 val areaIds = dto.areas.mapIndexed { position, area ->
@@ -424,6 +430,7 @@ class BackupRepository(
                             imagePath = area.image?.let { encoded ->
                                 runCatching { Base64.getDecoder().decode(encoded) }.getOrNull()?.let { images?.importBytes(it) }
                             },
+                            type = area.type?.takeIf { it != dto.type },
                         ),
                     )
                 }.toMap()
@@ -597,10 +604,12 @@ private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) 
     latitude = latitude,
     longitude = longitude,
     address = address,
+    extraTypes = PlaceEntity.parseTypes(extraTypes),
 )
 
 private fun AreaEntity.toDto() = AreaDto(
     name = name,
+    type = type,
     angle = angle,
     resetDate = resetEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
 )

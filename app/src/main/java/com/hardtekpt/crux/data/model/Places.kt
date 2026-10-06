@@ -2,6 +2,10 @@ package com.hardtekpt.crux.data.model
 
 import java.time.LocalDate
 
+/**
+ * A physical place: a gym, crag or board, or several of them in one location (a gym with a
+ * board). [type] is the main kind; [types] lists every kind here, main first.
+ */
 data class Place(
     val id: Long,
     val name: String,
@@ -18,7 +22,16 @@ data class Place(
     val favourite: Boolean = false,
     /** Where it is on the map, if the climber set it. */
     val mapLocation: MapLocation? = null,
+    val types: List<PlaceType> = listOf(type),
 ) {
+    val hasSeveralTypes: Boolean get() = types.size > 1
+
+    /** "Gym · Board" */
+    val typesLabel: String get() = types.joinToString(" · ") { it.label }
+
+    /** The kind of climbing an area is: its own, or the place's main kind. */
+    fun typeOf(area: Area?): PlaceType = area?.type?.takeIf { it in types } ?: type
+
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale
         Discipline.ROUTE -> routeScale
@@ -40,6 +53,8 @@ data class Area(
     val resetDate: LocalDate?,
     /** A photo of the wall or a map with it marked; a file name in app storage. */
     val imagePath: String? = null,
+    /** Which of the place's kinds this is; null means the place's main kind. */
+    val type: PlaceType? = null,
 )
 
 data class Problem(

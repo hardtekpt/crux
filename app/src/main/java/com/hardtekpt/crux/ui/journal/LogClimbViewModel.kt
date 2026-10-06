@@ -184,7 +184,7 @@ class LogClimbViewModel @Inject constructor(
                     areaId = null,
                     problemId = null,
                     venue = place?.type?.venue ?: draft.venue,
-                    angle = if (place?.type == PlaceType.BOARD) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
+                    angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
                     local = place?.localScale,
                     saveAsProblem = false,
@@ -199,7 +199,7 @@ class LogClimbViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             val id = placeRepository.savePlace(
-                PlaceInput(name = name, type = type, location = null, boulderScale = null, routeScale = null, defaultAngle = null, notes = null),
+                PlaceInput(name = name, types = listOf(type), location = null, boulderScale = null, routeScale = null, defaultAngle = null, notes = null),
             )
             applyPlace(id)
         }
@@ -209,7 +209,18 @@ class LogClimbViewModel @Inject constructor(
         // Changing the wall drops a problem that is not on it.
         val problemOnWall = it.problemId?.let { pid -> placeDetail.value?.problems?.firstOrNull { p -> p.problem.id == pid } }
         val keepProblem = problemOnWall != null && (id == null || problemOnWall.problem.areaId == id)
-        it.copy(areaId = id, problemId = if (keepProblem) it.problemId else null)
+        // At a mixed place, the wall says which kind of climbing this was.
+        val detail = placeDetail.value
+        val venue = id?.let { areaId -> detail?.areas?.firstOrNull { a -> a.id == areaId } }?.let { a -> detail?.place?.typeOf(a)?.venue } ?: it.venue
+        it.copy(areaId = id, problemId = if (keepProblem) it.problemId else null, venue = venue)
+    }
+
+    /** At a place with several kinds: which one this climb was at. A wall of another kind is dropped. */
+    fun selectPlaceType(type: PlaceType) = _draft.update {
+        val detail = placeDetail.value
+        val area = it.areaId?.let { id -> detail?.areas?.firstOrNull { a -> a.id == id } }
+        val keepArea = area != null && detail?.place?.typeOf(area) == type
+        it.copy(venue = type.venue, areaId = if (keepArea) it.areaId else null, problemId = if (keepArea) it.problemId else null)
     }
 
     /** Fills the form from a problem; everything stays editable. */
@@ -218,6 +229,7 @@ class LogClimbViewModel @Inject constructor(
         it.copy(
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
+            venue = placeDetail.value?.let { d -> d.place.typeOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }).venue } ?: it.venue,
             discipline = problem.discipline,
             scaleOverride = problem.gradeScale,
             gradeIndex = problem.gradeIndex,
@@ -371,7 +383,7 @@ class LogClimbViewModel @Inject constructor(
                 gradeIndex = draft.gradeIndex,
                 style = draft.style,
                 attempts = if (draft.style.singleAttempt) 1 else draft.attempts,
-                venue = place?.type?.venue ?: draft.venue,
+                venue = place?.let { p -> draft.venue.takeIf { v -> p.types.any { t -> t.venue == v } } ?: p.type.venue } ?: draft.venue,
                 date = draft.date,
                 name = draft.name,
                 place = place?.name ?: draft.place,
@@ -379,7 +391,7 @@ class LogClimbViewModel @Inject constructor(
                 placeId = place?.id,
                 areaId = draft.areaId.takeIf { place != null },
                 problemId = problemId,
-                angle = draft.angle.takeIf { place?.type == PlaceType.BOARD },
+                angle = draft.angle.takeIf { place != null && draft.venue == Venue.BOARD },
                 effort = draft.effort,
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),

@@ -101,9 +101,12 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     .background(colors.surface.copy(alpha = 0.88f))
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
-                Icon(placeIcon(place.type), contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+                // Every kind of climbing here, each with its icon in its own colour.
+                place.types.forEach { t ->
+                    Icon(placeIcon(t), contentDescription = null, tint = t.accent(), modifier = Modifier.size(16.dp))
+                }
                 Text(
-                    place.type.label.uppercase(),
+                    place.types.joinToString(" · ") { it.label.uppercase() },
                     style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp),
                     color = colors.onSurface,
                 )
@@ -147,7 +150,7 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
             }
             Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.fillMaxWidth()) {
                 PlaceStat("Climbs", summary.climbs, Modifier.weight(1f))
-                PlaceStat(place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))
+                PlaceStat(if (place.hasSeveralTypes) "Areas" else place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))
                 PlaceStat("Projects", summary.openProjects, Modifier.weight(1f), highlight = summary.openProjects > 0)
             }
         }

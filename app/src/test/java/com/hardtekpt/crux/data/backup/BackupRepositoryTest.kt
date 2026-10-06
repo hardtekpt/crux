@@ -59,6 +59,10 @@ class BackupRepositoryTest {
         // Places come back with their walls and problems, and climbs link to them again.
         assertEquals(source.placeDao().getPlaces().size, target.placeDao().getPlaces().size)
         assertEquals(source.placeDao().getAllAreas().size, target.placeDao().getAllAreas().size)
+        // A gym with a board keeps both kinds, and its board set stays a board area.
+        val blockLab = target.placeDao().getPlaces().first { it.name == "Block Lab" }
+        assertEquals("BOARD", blockLab.extraTypes)
+        assertEquals(com.hardtekpt.crux.data.model.PlaceType.BOARD, target.placeDao().getAllAreas().first { it.name == "Kilter benchmarks" }.type)
         assertEquals(source.placeDao().getAllProblems().size, target.placeDao().getAllProblems().size)
         val linkedSource = source.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }
         val linkedTarget = target.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }

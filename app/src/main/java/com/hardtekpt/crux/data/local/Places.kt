@@ -14,7 +14,10 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.PlaceType
 import kotlinx.coroutines.flow.Flow
 
-/** A gym, crag or board the climber logs at. */
+/**
+ * A physical place the climber logs at. It can hold several kinds of climbing (a gym with a
+ * board, a crag with a bouldering area): [type] is the main one, [extraTypes] the others.
+ */
 @Entity(tableName = "places", indices = [Index("name")])
 data class PlaceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -37,7 +40,11 @@ data class PlaceEntity(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val address: String? = null,
-)
+    /** Other kinds of climbing here besides [type], comma-separated names (schema 15). */
+    @ColumnInfo(defaultValue = "") val extraTypes: String = "",
+) {
+    companion object
+}
 
 /** A wall or sector inside a place; for a board, a named angle or set. */
 @Entity(
@@ -57,6 +64,8 @@ data class AreaEntity(
     val position: Int = 0,
     /** File name of an attached photo or map in app storage (schema 8). */
     val imagePath: String? = null,
+    /** Which of the place's kinds this area is (schema 15); null means the place's main one. */
+    val type: PlaceType? = null,
 )
 
 /** A problem or route at a place, optionally on one of its areas. */

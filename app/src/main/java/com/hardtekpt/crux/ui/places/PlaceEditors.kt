@@ -120,7 +120,8 @@ private const val MAX_NAME = 40
 data class PlaceDraft(
     val id: Long = 0,
     val name: String = "",
-    val type: PlaceType = PlaceType.GYM,
+    /** Every kind of climbing here, in the order picked; the first is the main kind. */
+    val types: List<PlaceType> = listOf(PlaceType.GYM),
     val location: String = "",
     /** Null = use my settings. */
     val boulderScale: GradeScale? = null,
@@ -138,7 +139,18 @@ data class PlaceDraft(
     val doneId: Long? = null,
 ) {
     val isNew: Boolean get() = id == 0L
-    val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
+    val type: PlaceType get() = types.first()
+    val hasBoard: Boolean get() = PlaceType.BOARD in types
+    /** Only a board: no routes, and "where it is" rather than a city. */
+    val onlyBoard: Boolean get() = types == listOf(PlaceType.BOARD)
+    val usesLocal: Boolean get() = boulderScale?.isLocal == true || (!onlyBoard && routeScale?.isLocal == true)
+
+    /** Adds or removes a kind; the last one can't be removed. */
+    fun toggle(t: PlaceType): PlaceDraft = when {
+        t !in types -> copy(types = types + t)
+        types.size > 1 -> copy(types = types - t)
+        else -> this
+    }
 }
 
 @HiltViewModel
@@ -156,7 +168,7 @@ class PlaceEditorViewModel @Inject constructor(
                 repository.getPlace(placeId)?.let { p ->
                     _draft.update {
                         it.copy(
-                            name = p.name, type = p.type, location = p.location.orEmpty(),
+                            name = p.name, types = p.types, location = p.location.orEmpty(),
                             boulderScale = p.boulderScale, routeScale = p.routeScale,
                             defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
                             localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
@@ -195,11 +207,11 @@ class PlaceEditorViewModel @Inject constructor(
                 PlaceInput(
                     id = d.id,
                     name = d.name,
-                    type = d.type,
+                    types = d.types,
                     location = d.location,
                     boulderScale = d.boulderScale,
                     routeScale = d.routeScale,
-                    defaultAngle = d.defaultAngle.takeIf { d.type == PlaceType.BOARD },
+                    defaultAngle = d.defaultAngle.takeIf { d.hasBoard },
                     notes = d.notes,
                     localScale = local.takeIf { d.usesLocal },
                     favourite = d.favourite,
@@ -264,8 +276,24 @@ fun PlaceEditorScreen(
                 .padding(top = space.s2, bottom = space.s6),
             verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
-            FormSection("What it is") {
-                CruxSegmentedButtons(PlaceType.entries, draft.type, { it.label }, { t -> viewModel.update { it.copy(type = t) } })
+            FormSection("What's here", "Pick every kind of climbing at this place") {
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("place_types")) {
+                    PlaceType.entries.forEach { t ->
+                        CruxFilterChip(
+                            label = t.label,
+                            selected = t in draft.types,
+                            onClick = { viewModel.update { it.toggle(t) } },
+                            modifier = Modifier.testTag("place_type_${t.name}"),
+                        )
+                    }
+                }
+                if (draft.types.size > 1) {
+                    Text(
+                        "${draft.type.label} is the main one; walls, sectors and sets each belong to one of these.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 CruxTextField(
                     label = "Name",
                     value = draft.name,
@@ -278,7 +306,7 @@ fun PlaceEditorScreen(
                     error = draft.nameError,
                     modifier = Modifier.testTag("field_place_name"),
                 )
-                if (draft.type == PlaceType.BOARD) {
+                if (draft.hasBoard) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
                             Text("Usual angle", style = MaterialTheme.typography.titleMedium)
@@ -291,10 +319,10 @@ fun PlaceEditorScreen(
 
             FormSection("Where · optional") {
                 CruxTextField(
-                    label = if (draft.type == PlaceType.BOARD) "Where it is" else "City or area",
+                    label = if (draft.onlyBoard) "Where it is" else "City or area",
                     value = draft.location,
                     onValueChange = { v -> viewModel.update { it.copy(location = v.take(MAX_NAME)) } },
-                    placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
+                    placeholder = if (draft.onlyBoard) "Home" else "Lisbon",
                 )
                 MapLocationField(
                     location = draft.mapLocation,
@@ -306,7 +334,7 @@ fun PlaceEditorScreen(
             FormSection("Grades", "Used for climbs logged here") {
                 CruxCard(fill = CruxCardFill.Low) {
                     ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
-                    if (draft.type != PlaceType.BOARD) {
+                    if (!draft.onlyBoard) {
                         HorizontalDivider(Modifier.padding(vertical = space.s1), color = MaterialTheme.colorScheme.outlineVariant)
                         ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
                     }
@@ -720,7 +748,7 @@ class ProblemEditorViewModel @Inject constructor(
 
     val areas: StateFlow<List<Area>> = repository.observePlaceDetail(placeId).map { it?.areas.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val placeType: StateFlow<PlaceType?> = repository.observePlaceDetail(placeId).map { it?.place?.type }
+    val place: StateFlow<com.hardtekpt.crux.data.model.Place?> = repository.observePlaceDetail(placeId).map { it?.place }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -799,7 +827,7 @@ fun ProblemEditorScreen(
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val areas by viewModel.areas.collectAsStateWithLifecycle()
-    val type by viewModel.placeType.collectAsStateWithLifecycle()
+    val place by viewModel.place.collectAsStateWithLifecycle()
     LaunchedEffect(draft.done) { if (draft.done) onDone(draft.deleted) }
     val space = CruxTheme.space
     val noun = if (draft.discipline == Discipline.ROUTE) "route" else "problem"
@@ -823,7 +851,7 @@ fun ProblemEditorScreen(
                 .padding(horizontal = space.s4),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            if (type != PlaceType.BOARD) {
+            if (place?.types != listOf(PlaceType.BOARD)) {
                 CruxSegmentedButtons(Discipline.entries, draft.discipline, { it.label }, viewModel::setDiscipline)
             }
             CruxTextField(
@@ -844,7 +872,7 @@ fun ProblemEditorScreen(
                 modifier = Modifier.bleed(space.s4),
             )
             if (areas.isNotEmpty()) {
-                Eyebrow(type?.areaLabel ?: "Wall")
+                Eyebrow(place?.let { if (it.hasSeveralTypes) "Area" else it.type.areaLabel } ?: "Wall")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     CruxFilterChip("None", draft.areaId == null, { viewModel.update { it.copy(areaId = null) } })
                     areas.forEach { area ->

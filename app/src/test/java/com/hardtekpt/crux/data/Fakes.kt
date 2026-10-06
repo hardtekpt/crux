@@ -137,7 +137,7 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
 
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
-        val place = Place(id, input.name, input.type, input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale)
+        val place = Place(id, input.name, input.types.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale, types = input.types)
         places.value = places.value.filterNot { it.id == id } + place
         return id
     }
@@ -148,9 +148,9 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.filterNot { it.placeId == id }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, type: com.hardtekpt.crux.data.model.PlaceType?): Long {
         val id = areaId.takeIf { it != 0L } ?: nextId++
-        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath)
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath, type)
         return id
     }
 

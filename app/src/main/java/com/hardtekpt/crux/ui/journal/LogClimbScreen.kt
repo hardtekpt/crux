@@ -96,6 +96,7 @@ fun LogClimbScreen(
         setAngle = viewModel::setAngle,
         setVenue = viewModel::setVenue,
         setPlaceText = viewModel::setPlace,
+        selectPlaceType = viewModel::selectPlaceType,
     )
     LogClimbContent(
         draft = draft,
