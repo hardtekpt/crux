@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
-/** A free note: how training feels, an injury to watch, beta to remember (schema 13). */
+/** A free note: how training feels, an injury to watch, beta to remember (schema 13; tag 14). */
 @Entity(tableName = "notes", indices = [Index("createdAtMillis")])
 data class NoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -25,6 +25,8 @@ data class NoteEntity(
     val updatedAtMillis: Long,
     /** Pinned notes stay at the top of the list. */
     val pinned: Boolean = false,
+    /** An optional short label, like "injury" or "beta", to group notes by. */
+    val tag: String? = null,
 )
 
 @Dao
@@ -53,6 +55,7 @@ data class Note(
     val text: String,
     val created: LocalDate,
     val pinned: Boolean,
+    val tag: String? = null,
 ) {
     /** The first line, for lists; the rest is the body. */
     val title: String get() = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
@@ -64,7 +67,7 @@ interface NoteRepository {
     fun observeNotes(): Flow<List<Note>>
     suspend fun getNote(id: Long): Note?
     /** Creates when [id] is 0; returns the note's id. */
-    suspend fun saveNote(id: Long, text: String, pinned: Boolean): Long
+    suspend fun saveNote(id: Long, text: String, pinned: Boolean, tag: String? = null): Long
     suspend fun deleteNote(id: Long)
 }
 
@@ -76,15 +79,16 @@ class OfflineNoteRepository @Inject constructor(
 
     override suspend fun getNote(id: Long): Note? = dbs.current().noteDao().get(id)?.toModel()
 
-    override suspend fun saveNote(id: Long, text: String, pinned: Boolean): Long {
+    override suspend fun saveNote(id: Long, text: String, pinned: Boolean, tag: String?): Long {
         val dao = dbs.current().noteDao()
+        val label = tag?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
         val now = clock.millis()
         val existing = if (id != 0L) dao.get(id) else null
         return if (existing != null) {
-            dao.update(existing.copy(text = text.trim(), pinned = pinned, updatedAtMillis = now))
+            dao.update(existing.copy(text = text.trim(), pinned = pinned, tag = label, updatedAtMillis = now))
             existing.id
         } else {
-            dao.insert(NoteEntity(text = text.trim(), createdAtMillis = now, updatedAtMillis = now, pinned = pinned))
+            dao.insert(NoteEntity(text = text.trim(), createdAtMillis = now, updatedAtMillis = now, pinned = pinned, tag = label))
         }
     }
 
@@ -95,5 +99,6 @@ class OfflineNoteRepository @Inject constructor(
         text = text,
         created = Instant.ofEpochMilli(createdAtMillis).atZone(clock.zone ?: ZoneId.systemDefault()).toLocalDate(),
         pinned = pinned,
+        tag = tag,
     )
 }

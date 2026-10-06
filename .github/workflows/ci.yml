@@ -1,0 +1,27 @@
+# Pushes to dev (and PRs into main) run the unit tests and make sure a release build still compiles.
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Test
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build release APK (debug-signed)
+        run: ./gradlew assembleRelease

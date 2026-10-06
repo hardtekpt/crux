@@ -1,6 +1,8 @@
 package com.hardtekpt.crux.data.seed
 
 import androidx.room.withTransaction
+import com.hardtekpt.crux.data.ExerciseRecordEntity
+import com.hardtekpt.crux.data.NoteEntity
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
@@ -57,6 +59,10 @@ class StarterDataSeeder(private val clock: Clock) {
             if (db.exerciseDao().count() == 0 && db.templateDao().count() == 0) insertLibraryAndPlans(db)
             if (includeSampleData && db.climbDao().count() == 0 && db.bodyMeasurementDao().count() == 0) {
                 insertSampleData(db)
+            }
+            // Added on their own check so demo data sets made before the profile page get them too.
+            if (includeSampleData && db.exerciseRecordDao().getAll().isEmpty() && db.noteDao().getAll().isEmpty()) {
+                insertProfileSamples(db)
             }
         }
     }
@@ -127,6 +133,44 @@ class StarterDataSeeder(private val clock: Clock) {
                 )
             }
         }
+    }
+
+    /** A few exercise results, notes and circumferences so the demo profile isn't empty. */
+    private suspend fun insertProfileSamples(db: CruxDatabase) {
+        val today = LocalDate.now(clock)
+        val now = clock.millis()
+        val exercises = db.exerciseDao().getAll().associate { it.name to it.id }
+        SAMPLE_RECORDS.forEachIndexed { index, record ->
+            val exerciseId = exercises[record.exercise] ?: return@forEachIndexed
+            db.exerciseRecordDao().insert(
+                ExerciseRecordEntity(
+                    exerciseId = exerciseId,
+                    dateEpochDay = today.minusDays(record.daysAgo.toLong()).toEpochDay(),
+                    reps = record.reps,
+                    seconds = record.seconds,
+                    loadKg = record.loadKg,
+                    createdAtMillis = now + index,
+                ),
+            )
+        }
+        SAMPLE_NOTES.forEachIndexed { index, (daysAgo, text) ->
+            val at = now - daysAgo * 86_400_000L + index
+            db.noteDao().insert(NoteEntity(text = text, createdAtMillis = at, updatedAtMillis = at, pinned = index == 0, tag = SAMPLE_NOTE_TAGS[index]))
+        }
+        val girths = listOf(
+            MeasurementType.FOREARM to 29.5,
+            MeasurementType.FOREARM_RIGHT to 30.5,
+            MeasurementType.BICEP_RIGHT to 33.5,
+            MeasurementType.BICEP to 33.0,
+            MeasurementType.CHEST to 98.0,
+            MeasurementType.WAIST to 78.0,
+        )
+        val measured = db.bodyMeasurementDao().getAll().map { it.type }.toSet()
+        db.bodyMeasurementDao().insertAll(
+            girths.filter { it.first !in measured }.map { (type, cm) ->
+                BodyMeasurementEntity(type = type, value = cm, dateEpochDay = today.minusDays(12).toEpochDay(), createdAtMillis = now)
+            },
+        )
     }
 
     private suspend fun insertSampleData(db: CruxDatabase) {
@@ -205,6 +249,31 @@ class StarterDataSeeder(private val clock: Clock) {
         )
     }
 }
+
+private data class SampleRecord(
+    val exercise: String,
+    val daysAgo: Int,
+    val reps: Int? = null,
+    val seconds: Int? = null,
+    val loadKg: Double? = null,
+)
+
+private val SAMPLE_RECORDS = listOf(
+    SampleRecord("Half-crimp hang", 30, seconds = 10, loadKg = 12.5),
+    SampleRecord("Half-crimp hang", 16, seconds = 10, loadKg = 15.0),
+    SampleRecord("Half-crimp hang", 3, seconds = 10, loadKg = 17.5),
+    SampleRecord("Weighted pull-ups", 21, reps = 5, loadKg = 20.0),
+    SampleRecord("Weighted pull-ups", 6, reps = 5, loadKg = 22.5),
+    SampleRecord("Front lever tucks", 9, seconds = 14),
+)
+
+private val SAMPLE_NOTE_TAGS = listOf("injury", "beta", "training")
+
+private val SAMPLE_NOTES = listOf(
+    2 to "Left ring finger a bit tender after the crimpy session. Open-hand only this week.",
+    5 to "Blue at the cave: heel hook on the arete, then match the sloper before going left.",
+    11 to "Felt strong on the board. Warm-up on the 4x4 circuit worked well.",
+)
 
 private data class StarterExercise(
     val name: String,

@@ -96,6 +96,15 @@ import com.hardtekpt.crux.ui.you.NoteEditorScreen
 import com.hardtekpt.crux.ui.you.RecordEditorScreen
 import com.hardtekpt.crux.ui.you.ExerciseRecordsScreen
 import com.hardtekpt.crux.ui.navigation.NotesRoute
+import com.hardtekpt.crux.ui.navigation.MeasurementsRoute
+import com.hardtekpt.crux.ui.navigation.CircumferencesRoute
+import com.hardtekpt.crux.ui.navigation.PlacesRoute
+import com.hardtekpt.crux.ui.navigation.GradeConverterRoute
+import com.hardtekpt.crux.ui.you.GradeConverterScreen
+import com.hardtekpt.crux.ui.journal.JournalActions
+import com.hardtekpt.crux.ui.you.MeasurementsScreen
+import com.hardtekpt.crux.ui.you.CircumferencesScreen
+import com.hardtekpt.crux.ui.you.PlacesScreen
 import com.hardtekpt.crux.ui.navigation.NoteEditorRoute
 import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseRecordsRoute
@@ -173,7 +182,42 @@ fun CruxApp() {
             navigation<JournalGraph>(startDestination = JournalRoute) {
                 page<JournalRoute> {
                     JournalScreen(
-                        onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                        actions = JournalActions(
+                            openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                            openNote = { navController.navigate(NoteEditorRoute(it)) },
+                            openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                        ),
+                    )
+                }
+            }
+            navigation<ProgressGraph>(startDestination = ProgressRoute) {
+                page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) }) }
+            }
+            navigation<YouGraph>(startDestination = YouRoute) {
+                page<YouRoute> {
+                    YouScreen(
+                        actions = ProfileActions(
+                            logWeight = { navController.navigate(LogWeightRoute) },
+                            openSettings = { navController.navigate(SettingsRoute) },
+                            logRecord = { navController.navigate(RecordEditorRoute()) },
+                            openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                            openMeasurements = { navController.navigate(MeasurementsRoute) },
+                            openCircumferences = { navController.navigate(CircumferencesRoute) },
+                            openNotes = { navController.navigate(NotesRoute) },
+                            openPlaces = { navController.navigate(PlacesRoute) },
+                            openConverter = { navController.navigate(GradeConverterRoute) },
+                        ),
+                    )
+                }
+                page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
+                page<MeasurementsRoute> {
+                    MeasurementsScreen(onBack = navController::popBackStack, onLogWeight = { navController.navigate(LogWeightRoute) })
+                }
+                page<CircumferencesRoute> { CircumferencesScreen(onBack = navController::popBackStack) }
+                page<GradeConverterRoute> { GradeConverterScreen(onBack = navController::popBackStack) }
+                page<PlacesRoute> {
+                    PlacesScreen(
+                        onBack = navController::popBackStack,
                         onOpenPlace = { navController.navigate(PlaceDetailRoute(it)) },
                         onNewPlace = { navController.navigate(PlaceEditorRoute()) },
                     )
@@ -194,7 +238,7 @@ fun CruxApp() {
                         onSaved = { id ->
                             when {
                                 // Deleted: leave the editor and the place it belonged to.
-                                id == 0L -> navController.popBackStack<JournalRoute>(inclusive = false)
+                                id == 0L -> navController.popBackStack<PlacesRoute>(inclusive = false)
                                 // Created: swap the editor for the new place.
                                 editingId == 0L -> navController.navigate(PlaceDetailRoute(id)) {
                                     popUpTo<PlaceEditorRoute> { inclusive = true }
@@ -226,25 +270,6 @@ fun CruxApp() {
                         },
                     )
                 }
-            }
-            navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) }) }
-            }
-            navigation<YouGraph>(startDestination = YouRoute) {
-                page<YouRoute> {
-                    YouScreen(
-                        actions = ProfileActions(
-                            logWeight = { navController.navigate(LogWeightRoute) },
-                            openSettings = { navController.navigate(SettingsRoute) },
-                            newNote = { navController.navigate(NoteEditorRoute()) },
-                            openNote = { navController.navigate(NoteEditorRoute(it)) },
-                            openNotes = { navController.navigate(NotesRoute) },
-                            logRecord = { navController.navigate(RecordEditorRoute()) },
-                            openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
-                        ),
-                    )
-                }
-                page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
                 page<NotesRoute> {
                     NotesScreen(
                         onBack = navController::popBackStack,

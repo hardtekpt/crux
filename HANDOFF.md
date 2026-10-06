@@ -7,7 +7,7 @@ video), and track the climber (weight, body stats, circumferences, personal reco
 consistency). Built for Boss's Pixel 8a, with an emulator for testing.
 
 ## Where things are
-- Repo: `C:\Users\ffvd\Projects\crux` (git, branch `main`, no remote). Commit messages end with
+- Repo: `C:\Users\ffvd\Projects\crux` (git, remote `hardtekpt/crux`; work on `dev`, release by merging to `main` — see CLAUDE.md). Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 - Dev script: `.\crux.cmd run` (emulator `Crux_Pixel_9`), `.\crux.cmd run -Device 192.168.1.128:<port>`
   (phone over wireless debugging; the port changes, last one was **42117** — ask Boss when
@@ -31,6 +31,13 @@ Kotlin 2.4, AGP 9.4 (built-in Kotlin), Compose (BOM 2026.09), Material 3, Naviga
 Two databases: the climber's own and a demo one (Settings → Demo mode).
 
 ## What's done (latest first)
+- **Profile rework + Journal timeline** (schema 14): You tab = climber card, consistency, records,
+  compact weight tracker (sparkline + Log), and a menu list → Measurements (body stats, weight chart,
+  weigh-ins), Circumferences (left/right for forearm, bicep, thigh; chest, waist), Notes, Places
+  (moved out of Journal; place/problem pages now live in the You graph), Settings. Notes have an
+  optional tag (chips in the editor, filter on Notes). Journal is one timeline (climbs per place,
+  training results, notes) with All/Climbs/Training/Notes filters; workout sessions slot in as
+  another `TimelineEntry` once the session logger exists. `FOREARM`/`BICEP`/`THIGH` mean the left side.
 - `b5f1d55` **Profile page** (You tab): climber card (tape strip, days/climbs this year, hardest
   boulder/route), consistency grid (GitHub-style, weekly streaks), personal records per exercise
   (log a result; per-exercise history; PR = heaviest load, then reps, or longest hold), measurements

@@ -29,6 +29,10 @@ import kotlinx.serialization.Serializable
 @Serializable data object ProgressRoute
 @Serializable data object YouRoute
 @Serializable data object SettingsRoute
+@Serializable data object MeasurementsRoute
+@Serializable data object CircumferencesRoute
+@Serializable data object PlacesRoute
+@Serializable data object GradeConverterRoute
 
 // Full-screen forms above the tabs; the nav bar hides while they are open.
 /** Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where. */

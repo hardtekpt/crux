@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.you
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -320,7 +321,20 @@ fun NoteCard(note: Note, onClick: () -> Unit, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(note.created.shortLabel().uppercase(), style = Mono11, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Text(note.created.shortLabel().uppercase(), style = Mono11, color = colors.onSurfaceVariant)
+            note.tag?.let { tag ->
+                Text(
+                    tag.uppercase(),
+                    style = Mono11,
+                    color = colors.primary,
+                    modifier = Modifier
+                        .padding(start = CruxTheme.space.s2)
+                        .border(CruxTheme.size.borderHairline, colors.primary.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .testTag("note_tag"),
+                )
+            }
+            Spacer(Modifier.weight(1f))
             if (note.pinned) Icon(Icons.Rounded.PushPin, contentDescription = "Pinned", tint = colors.primary, modifier = Modifier.height(16.dp))
         }
         Text(note.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

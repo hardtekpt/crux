@@ -1,5 +1,10 @@
 package com.hardtekpt.crux.ui.you
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.rounded.Sell
+import com.hardtekpt.crux.ui.components.CruxFilterChip
+import kotlinx.coroutines.flow.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -114,11 +119,25 @@ fun NotesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, onNew: () -> Unit, v
             EmptyState(icon = Icons.AutoMirrored.Rounded.Notes, headline = "No notes yet", sentence = "Add one with the + above or from the Log button.")
             return@Column
         }
+        val tags = list.mapNotNull { it.tag }.distinct().sorted()
+        var tag by rememberSaveable { mutableStateOf<String?>(null) }
+        val shown = list.filter { tag == null || it.tag == tag }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
+            modifier = Modifier.testTag("notes_list"),
         ) {
-            items(list, key = { it.id }) { note -> NoteCard(note, onClick = { onOpen(note.id) }) }
+            if (tags.isNotEmpty()) {
+                // Tapping the picked tag again shows every note.
+                item(key = "tag_filters") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        tags.forEach { t ->
+                            CruxFilterChip(label = t, selected = tag == t, onClick = { tag = if (tag == t) null else t }, modifier = Modifier.testTag("note_filter_$t"))
+                        }
+                    }
+                }
+            }
+            items(shown, key = { it.id }) { note -> NoteCard(note, onClick = { onOpen(note.id) }) }
         }
     }
 }
@@ -127,6 +146,7 @@ data class NoteDraft(
     val id: Long = 0,
     val text: String = "",
     val pinned: Boolean = false,
+    val tag: String? = null,
     val confirmDelete: Boolean = false,
     val done: Boolean = false,
 ) {
@@ -142,16 +162,22 @@ class NoteEditorViewModel @Inject constructor(
     private val _draft = MutableStateFlow(NoteDraft(id = noteId))
     val draft: StateFlow<NoteDraft> = _draft.asStateFlow()
 
+    /** Tags already used on other notes, offered as one-tap picks. */
+    val knownTags: StateFlow<List<String>> = repository.observeNotes()
+        .map { notes -> notes.mapNotNull { it.tag }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     init {
         if (noteId != 0L) {
             viewModelScope.launch {
-                repository.getNote(noteId)?.let { note -> _draft.update { it.copy(text = note.text, pinned = note.pinned) } }
+                repository.getNote(noteId)?.let { note -> _draft.update { it.copy(text = note.text, pinned = note.pinned, tag = note.tag) } }
             }
         }
     }
 
     fun setText(text: String) = _draft.update { it.copy(text = text.take(MAX_NOTE)) }
     fun togglePin() = _draft.update { it.copy(pinned = !it.pinned) }
+    fun setTag(tag: String?) = _draft.update { it.copy(tag = tag?.trim()?.lowercase()?.take(MAX_TAG)?.takeIf { t -> t.isNotEmpty() }) }
 
     fun save() {
         val d = _draft.value
@@ -160,7 +186,7 @@ class NoteEditorViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            repository.saveNote(d.id, d.text, d.pinned)
+            repository.saveNote(d.id, d.text, d.pinned, d.tag)
             _draft.update { it.copy(done = true) }
         }
     }
@@ -176,6 +202,7 @@ class NoteEditorViewModel @Inject constructor(
 
     companion object {
         const val MAX_NOTE = 4_000
+        const val MAX_TAG = 24
     }
 }
 
@@ -183,6 +210,8 @@ class NoteEditorViewModel @Inject constructor(
 @Composable
 fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val knownTags by viewModel.knownTags.collectAsStateWithLifecycle()
+    var typingTag by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(draft.done) { if (draft.done) onDone() }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { if (draft.isNew) runCatching { focus.requestFocus() } }
@@ -207,6 +236,27 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
                 }
             },
         )
+        // Optional tag: earlier tags as one-tap chips, or a new one typed in.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(space.s2),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = space.s4, vertical = space.s1)
+                .testTag("note_tags"),
+        ) {
+            Icon(Icons.Rounded.Sell, contentDescription = "Tag", tint = colors.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            (listOfNotNull(draft.tag) + knownTags).distinct().forEach { t ->
+                CruxFilterChip(
+                    label = t,
+                    selected = draft.tag == t,
+                    onClick = { viewModel.setTag(if (draft.tag == t) null else t) },
+                    modifier = Modifier.testTag("tag_$t"),
+                )
+            }
+            CruxFilterChip(label = "New tag", selected = false, onClick = { typingTag = true }, modifier = Modifier.testTag("new_tag"))
+        }
         OutlinedTextField(
             value = draft.text,
             onValueChange = viewModel::setText,
@@ -236,6 +286,35 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
                 .navigationBarsPadding()
                 .padding(space.s4)
                 .testTag("save_note"),
+        )
+    }
+    if (typingTag) {
+        var text by rememberSaveable { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { typingTag = false },
+            containerColor = colors.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text("New tag", style = MaterialTheme.typography.headlineSmall) },
+            text = {
+                CruxTextField(
+                    label = "",
+                    value = text,
+                    onValueChange = { text = it.take(NoteEditorViewModel.MAX_TAG) },
+                    placeholder = "injury, beta, training…",
+                    modifier = Modifier.testTag("field_tag"),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setTag(text)
+                        typingTag = false
+                    },
+                    enabled = text.isNotBlank(),
+                    modifier = Modifier.testTag("confirm_tag"),
+                ) { Text("Add") }
+            },
+            dismissButton = { TextButton(onClick = { typingTag = false }) { Text("Cancel") } },
         )
     }
     if (draft.confirmDelete) {
