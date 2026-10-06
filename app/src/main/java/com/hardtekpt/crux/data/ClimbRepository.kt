@@ -30,19 +30,20 @@ interface ClimbRepository {
     suspend fun deleteClimb(id: Long)
     fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>>
     fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>>
-    /** Attaches a photo to a climb, replacing any; null removes it. Returns the old file name. */
-    suspend fun setClimbImage(climbId: Long, path: String?): String?
+    /** Attaches a photo or video to a climb, replacing any of that kind; null removes it. Returns the old file name. */
+    suspend fun setClimbMedia(climbId: Long, kind: MediaKind, path: String?): String?
 }
 
 class OfflineClimbRepository @Inject constructor(
     private val dbs: CruxDatabases,
     private val clock: Clock,
 ) : ClimbRepository {
-    /** Climbs from a query, each with its photo if it has one. */
+    /** Climbs from a query, each with its photo and video if it has them. */
     private fun withMedia(query: (CruxDatabase) -> Flow<List<ClimbEntity>>): Flow<List<Climb>> = dbs.observe { db ->
-        combine(query(db), db.climbMediaDao().observeImages()) { climbs, images ->
-            val byClimb = images.associate { it.climbId to it.path }
-            climbs.map { it.toModel().copy(imagePath = byClimb[it.id]) }
+        combine(query(db), db.climbMediaDao().observeAll()) { climbs, media ->
+            val images = media.filter { it.kind == MediaKind.IMAGE }.associate { it.climbId to it.path }
+            val videos = media.filter { it.kind == MediaKind.VIDEO }.associate { it.climbId to it.path }
+            climbs.map { it.toModel().copy(imagePath = images[it.id], videoPath = videos[it.id]) }
         }
     }
 
@@ -61,16 +62,20 @@ class OfflineClimbRepository @Inject constructor(
 
     override suspend fun getClimb(id: Long): Climb? {
         val db = dbs.current()
-        return db.climbDao().get(id)?.toModel()?.copy(imagePath = db.climbMediaDao().get(id, MediaKind.IMAGE)?.path)
+        val media = db.climbMediaDao()
+        return db.climbDao().get(id)?.toModel()?.copy(
+            imagePath = media.get(id, MediaKind.IMAGE)?.path,
+            videoPath = media.get(id, MediaKind.VIDEO)?.path,
+        )
     }
 
-    override suspend fun setClimbImage(climbId: Long, path: String?): String? {
+    override suspend fun setClimbMedia(climbId: Long, kind: MediaKind, path: String?): String? {
         val db = dbs.current()
         return db.withTransaction {
             val dao = db.climbMediaDao()
-            val old = dao.get(climbId, MediaKind.IMAGE)?.path
-            dao.delete(climbId, MediaKind.IMAGE)
-            if (path != null) dao.insert(ClimbMediaEntity(climbId = climbId, kind = MediaKind.IMAGE, path = path, createdAtMillis = clock.millis()))
+            val old = dao.get(climbId, kind)?.path
+            dao.delete(climbId, kind)
+            if (path != null) dao.insert(ClimbMediaEntity(climbId = climbId, kind = kind, path = path, createdAtMillis = clock.millis()))
             old
         }
     }

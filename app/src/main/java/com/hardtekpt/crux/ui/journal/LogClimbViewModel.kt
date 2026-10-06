@@ -12,6 +12,7 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import android.net.Uri
 import com.hardtekpt.crux.data.images.ImageFiles
+import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.model.GradeSystem
 import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.NewClimb
@@ -71,6 +72,11 @@ data class LogClimbDraft(
     val savedImagePath: String? = null,
     val addingImage: Boolean = false,
     val imageFailed: Boolean = false,
+    /** An attached video, and the one saved before this edit. */
+    val videoPath: String? = null,
+    val savedVideoPath: String? = null,
+    val addingVideo: Boolean = false,
+    val videoFailed: Boolean = false,
     /** Save the named climb as a problem at the picked place. */
     val saveAsProblem: Boolean = false,
     val dateError: String? = null,
@@ -150,6 +156,8 @@ class LogClimbViewModel @Inject constructor(
                     effort = climb.effort,
                     imagePath = climb.imagePath,
                     savedImagePath = climb.imagePath,
+                    videoPath = climb.videoPath,
+                    savedVideoPath = climb.videoPath,
                 )
             }
             // Local grades need the place's list to show the strip.
@@ -283,19 +291,40 @@ class LogClimbViewModel @Inject constructor(
 
     fun captureUri(): Uri = images.newCaptureUri()
 
-    override fun onCleared() {
-        // A photo added and then abandoned with the form.
-        val draft = _draft.value
-        if (!draft.saved && draft.imagePath != null && draft.imagePath != draft.savedImagePath) {
-            val orphan = draft.imagePath
-            kotlinx.coroutines.GlobalScope.launch { images.delete(orphan) }
+    /** Copies a picked or recorded video in; it is attached when the climb is saved. */
+    fun attachVideo(uri: Uri) {
+        _draft.update { it.copy(addingVideo = true, videoFailed = false) }
+        viewModelScope.launch {
+            val name = runCatching { images.importVideo(uri) }.getOrNull()
+            val replaced = _draft.value.videoPath.takeIf { it != _draft.value.savedVideoPath }
+            if (name != null) images.delete(replaced)
+            _draft.update { it.copy(videoPath = name ?: it.videoPath, addingVideo = false, videoFailed = name == null) }
         }
+    }
+
+    fun removeVideo() {
+        val draft = _draft.value
+        if (draft.videoPath != draft.savedVideoPath) viewModelScope.launch { images.delete(draft.videoPath) }
+        _draft.update { it.copy(videoPath = null) }
+    }
+
+    fun videoCaptureUri(): Uri = images.newVideoCaptureUri()
+
+    override fun onCleared() {
+        // Media added and then abandoned with the form.
+        val draft = _draft.value
+        if (draft.saved) return
+        listOf(draft.imagePath.takeIf { it != draft.savedImagePath }, draft.videoPath.takeIf { it != draft.savedVideoPath })
+            .filterNotNull()
+            .forEach { orphan -> kotlinx.coroutines.GlobalScope.launch { images.delete(orphan) } }
     }
 
     fun confirmDelete() {
         viewModelScope.launch {
             images.delete(_draft.value.savedImagePath)
             if (_draft.value.imagePath != _draft.value.savedImagePath) images.delete(_draft.value.imagePath)
+            images.delete(_draft.value.savedVideoPath)
+            if (_draft.value.videoPath != _draft.value.savedVideoPath) images.delete(_draft.value.videoPath)
             climbRepository.deleteClimb(climbId)
             _draft.update { it.copy(confirmDelete = false, saved = true) }
         }
@@ -362,8 +391,12 @@ class LogClimbViewModel @Inject constructor(
                 climbRepository.logClimb(climb)
             }
             if (draft.imagePath != draft.savedImagePath) {
-                climbRepository.setClimbImage(id, draft.imagePath)
+                climbRepository.setClimbMedia(id, MediaKind.IMAGE, draft.imagePath)
                 images.delete(draft.savedImagePath)
+            }
+            if (draft.videoPath != draft.savedVideoPath) {
+                climbRepository.setClimbMedia(id, MediaKind.VIDEO, draft.videoPath)
+                images.delete(draft.savedVideoPath)
             }
             _draft.update { it.copy(isSaving = false, saved = true) }
             // The next new climb starts at the same place.

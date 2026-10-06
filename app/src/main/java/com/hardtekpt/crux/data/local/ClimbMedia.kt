@@ -9,11 +9,11 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-/** What a piece of climb media is. Only images can be attached so far; video is planned. */
+/** What a piece of climb media is: a photo or a video, at most one of each per climb. */
 enum class MediaKind { IMAGE, VIDEO }
 
 /**
- * A photo (and later a video) attached to a logged climb (schema 10). Files live in app
+ * A photo or video attached to a logged climb (schema 10). Files live in app
  * storage; this keeps the file name. Deleting the climb deletes its rows.
  */
 @Entity(
@@ -33,8 +33,8 @@ data class ClimbMediaEntity(
 
 @Dao
 interface ClimbMediaDao {
-    @Query("SELECT * FROM climb_media WHERE kind = 'IMAGE'")
-    fun observeImages(): Flow<List<ClimbMediaEntity>>
+    @Query("SELECT * FROM climb_media")
+    fun observeAll(): Flow<List<ClimbMediaEntity>>
 
     @Query("SELECT * FROM climb_media WHERE climbId = :climbId AND kind = :kind LIMIT 1")
     suspend fun get(climbId: Long, kind: MediaKind): ClimbMediaEntity?

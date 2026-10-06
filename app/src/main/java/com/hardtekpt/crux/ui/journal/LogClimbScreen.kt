@@ -10,6 +10,9 @@ import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.ImageViewer
+import com.hardtekpt.crux.ui.components.VideoPlayer
+import com.hardtekpt.crux.ui.components.VideoThumbnail
+import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -116,6 +119,9 @@ fun LogClimbScreen(
                 onAttach = viewModel::attachImage,
                 onRemove = viewModel::removeImage,
                 captureUri = viewModel::captureUri,
+                onAttachVideo = viewModel::attachVideo,
+                onRemoveVideo = viewModel::removeVideo,
+                videoCaptureUri = viewModel::videoCaptureUri,
             )
         },
     )
@@ -294,8 +300,8 @@ fun LogClimbContent(
 }
 
 /**
- * A photo of the climb, from the gallery or the camera, and a place held for video. The
- * photo is copied into the app and attached when the climb is saved.
+ * A photo and a video of the climb, each from the gallery or the camera. They are copied
+ * into the app and attached when the climb is saved.
  */
 @Composable
 private fun ClimbMedia(
@@ -303,6 +309,9 @@ private fun ClimbMedia(
     onAttach: (Uri) -> Unit,
     onRemove: () -> Unit,
     captureUri: () -> Uri,
+    onAttachVideo: (Uri) -> Unit,
+    onRemoveVideo: () -> Unit,
+    videoCaptureUri: () -> Uri,
 ) {
     val space = CruxTheme.space
     var capture by rememberSaveable { mutableStateOf<String?>(null) }
@@ -312,6 +321,13 @@ private fun ClimbMedia(
         if (saved) capture?.let { onAttach(Uri.parse(it)) }
     }
     val pick = { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    var videoCapture by rememberSaveable { mutableStateOf<String?>(null) }
+    var playing by rememberSaveable { mutableStateOf(false) }
+    val videoGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(onAttachVideo) }
+    val recorder = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { saved ->
+        if (saved) videoCapture?.let { onAttachVideo(Uri.parse(it)) }
+    }
+    val pickVideo = { videoGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) }
 
     Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s2)) {
         Eyebrow("Photo and video · optional")
@@ -346,19 +362,46 @@ private fun ClimbMedia(
                 )
             }
         }
-        // Video logs are planned; the button holds their place.
-        CruxButton(
-            "Video · coming soon",
-            {},
-            enabled = false,
-            variant = CruxButtonVariant.Outlined,
-            size = CruxButtonSize.Small,
-            icon = Icons.Rounded.Videocam,
-            modifier = Modifier.testTag("climb_video_soon"),
-        )
+        val video = draft.videoPath
+        when {
+            draft.addingVideo -> Text("Adding video…", style = MaterialTheme.typography.bodyMedium)
+            video != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s3)) {
+                VideoThumbnail(video, "Climb video", onClick = { playing = true }, size = 72.dp, modifier = Modifier.testTag("climb_video"))
+                CruxButton("Replace", pickVideo, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                CruxButton("Remove", onRemoveVideo, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_climb_video"))
+            }
+            else -> Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                CruxButton(
+                    "Choose video",
+                    pickVideo,
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.VideoLibrary,
+                    modifier = Modifier.testTag("choose_climb_video"),
+                )
+                CruxButton(
+                    "Record video",
+                    {
+                        val uri = videoCaptureUri()
+                        videoCapture = uri.toString()
+                        recorder.launch(uri)
+                    },
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.Videocam,
+                    modifier = Modifier.testTag("record_climb_video"),
+                )
+            }
+        }
+        if (draft.videoFailed) {
+            Text("That video could not be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
         if (draft.imageFailed) {
             Text("That photo couldn't be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
+    }
+    if (playing && draft.videoPath != null) {
+        VideoPlayer(draft.videoPath, draft.name.ifBlank { "Climb video" }) { playing = false }
     }
     if (viewing && draft.imagePath != null) {
         ImageViewer(draft.imagePath, draft.name.ifBlank { "Climb photo" }) { viewing = false }

@@ -56,4 +56,16 @@ class LogClimbPhotoTest {
         val id = climbs.climbs.value.single().id
         assertEquals("photo_1.jpg", climbs.images[id])
     }
+
+    @Test
+    fun `a video is attached alongside the photo and removing it before save leaves none`() = runBlocking {
+        viewModel.attachImage(Uri.parse("content://photos/1"))
+        viewModel.attachVideo(Uri.parse("content://videos/1"))
+        withTimeout(5_000) { viewModel.draft.first { it.imagePath != null && it.videoPath != null } }
+        viewModel.save()
+        withTimeout(5_000) { viewModel.draft.first { it.saved } }
+        val id = climbs.climbs.value.single().id
+        assertEquals(true, climbs.videos[id]!!.endsWith(".mp4"))
+        assertEquals(true, climbs.images[id]!!.endsWith(".jpg"))
+    }
 }

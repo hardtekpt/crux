@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -135,6 +136,108 @@ fun ImageViewer(name: String, title: String, onDismiss: () -> Unit) {
                         },
                 )
             }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(CruxTheme.space.s4),
+            )
+            IconButton(
+                onClick = onDismiss,
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(CruxTheme.space.s2),
+            ) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
+        }
+    }
+}
+
+/** The first frame of a stored video, off the main thread. */
+@Composable
+fun rememberVideoFrame(file: File, maxPx: Int): ImageBitmap? {
+    val frame by produceState<ImageBitmap?>(null, file, maxPx) {
+        value = withContext(Dispatchers.IO) {
+            if (!file.exists()) return@withContext null
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(file.path)
+                retriever.getScaledFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, maxPx, maxPx)?.asImageBitmap()
+            } catch (e: RuntimeException) {
+                null
+            } finally {
+                retriever.release()
+            }
+        }
+    }
+    return frame
+}
+
+/** A square crop of a video's first frame with a play mark; tap to play it. */
+@Composable
+fun VideoThumbnail(
+    name: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 48.dp,
+) {
+    val colors = MaterialTheme.colorScheme
+    val px = with(LocalDensity.current) { size.roundToPx() } * 2
+    val frame = rememberVideoFrame(areaImageFile(name), px)
+    val shape = MaterialTheme.shapes.small
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(colors.surfaceContainerHigh, shape)
+            .border(CruxTheme.size.borderHairline, colors.outlineVariant, shape)
+            .clickable(onClickLabel = "Play $description", onClick = onClick),
+    ) {
+        if (frame != null) {
+            Image(frame, contentDescription = description, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(size / 2.4f)
+                .background(Color.Black.copy(alpha = 0.55f), androidx.compose.foundation.shape.CircleShape),
+        ) {
+            Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White)
+        }
+    }
+}
+
+/** Plays a stored video full screen with the system play, pause and seek controls. */
+@Composable
+fun VideoPlayer(name: String, title: String, onDismiss: () -> Unit) {
+    val file = areaImageFile(name)
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .testTag("video_player"),
+        ) {
+            androidx.compose.ui.viewinterop.AndroidView(
+                factory = { context ->
+                    android.widget.VideoView(context).apply {
+                        val controls = android.widget.MediaController(context)
+                        controls.setAnchorView(this)
+                        setMediaController(controls)
+                        setVideoPath(file.path)
+                        setOnPreparedListener { start() }
+                    }
+                },
+                onRelease = { it.stopPlayback() },
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize(),
+            )
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium,

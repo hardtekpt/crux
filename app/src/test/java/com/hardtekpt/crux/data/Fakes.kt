@@ -63,10 +63,12 @@ class FakeClimbRepository : ClimbRepository {
     }
 
     val images = mutableMapOf<Long, String>()
+    val videos = mutableMapOf<Long, String>()
 
-    override suspend fun setClimbImage(climbId: Long, path: String?): String? {
-        val old = images[climbId]
-        if (path == null) images.remove(climbId) else images[climbId] = path
+    override suspend fun setClimbMedia(climbId: Long, kind: com.hardtekpt.crux.data.local.MediaKind, path: String?): String? {
+        val store = if (kind == com.hardtekpt.crux.data.local.MediaKind.IMAGE) images else videos
+        val old = store[climbId]
+        if (path == null) store.remove(climbId) else store[climbId] = path
         return old
     }
 
@@ -238,4 +240,6 @@ class FakeImageFiles : com.hardtekpt.crux.data.images.ImageFiles {
         if (name != null) deleted += name
     }
     override fun newCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
+    override suspend fun importVideo(uri: android.net.Uri): String = "video_${next++}.mp4"
+    override fun newVideoCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
 }

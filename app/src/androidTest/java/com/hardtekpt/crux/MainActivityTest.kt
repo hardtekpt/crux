@@ -160,6 +160,7 @@ class MainActivityTest {
         composeRule.waitForTag("screen_PlanEditor")
         composeRule.textFieldIn("field_plan_name").performTextInput("Power day")
         composeRule.onNodeWithTag("add_exercise_to_block").performClick()
+        composeRule.waitForTag("exercise_search")
         composeRule.textFieldIn("exercise_search").performTextInput("Campus")
         composeRule.onNodeWithTag("pick_Campus ladders").performClick()
         composeRule.waitForTag("target_sheet")

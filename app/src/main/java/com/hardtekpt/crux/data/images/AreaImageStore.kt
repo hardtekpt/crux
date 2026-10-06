@@ -22,6 +22,10 @@ interface ImageFiles {
     suspend fun delete(name: String?)
     /** Where the camera writes a new photo before it is imported. */
     fun newCaptureUri(): Uri
+    /** Copies a picked or recorded video in as it is (no re-encoding); returns its file name. */
+    suspend fun importVideo(uri: Uri): String
+    /** Where the camera writes a new video before it is imported. */
+    fun newVideoCaptureUri(): Uri
 }
 
 /**
@@ -74,6 +78,24 @@ class AreaImageStore @Inject constructor(
         return FileProvider.getUriForFile(context, "${context.packageName}.images", capture)
     }
 
+    override suspend fun importVideo(uri: Uri): String = withContext(Dispatchers.IO) {
+        val name = newName(VIDEO_EXT)
+        val target = file(name)
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } }
+                ?: throw IllegalArgumentException("Can't read $uri")
+        } catch (e: Exception) {
+            target.delete()
+            throw e
+        }
+        name
+    }
+
+    override fun newVideoCaptureUri(): Uri {
+        val capture = File(File(context.cacheDir, CAPTURE_DIR).apply { mkdirs() }, "capture$VIDEO_EXT")
+        return FileProvider.getUriForFile(context, "${context.packageName}.images", capture)
+    }
+
     private fun save(bitmap: Bitmap): String {
         val name = newName()
         file(name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITY, it) }
@@ -81,12 +103,13 @@ class AreaImageStore @Inject constructor(
         return name
     }
 
-    private fun newName() = "${UUID.randomUUID()}.jpg"
+    private fun newName(ext: String = ".jpg") = "${UUID.randomUUID()}$ext"
 
     companion object {
         const val DIR = "area_images"
         const val CAPTURE_DIR = "camera"
         const val MAX_SIDE = 2048
         const val QUALITY = 85
+        const val VIDEO_EXT = ".mp4"
     }
 }

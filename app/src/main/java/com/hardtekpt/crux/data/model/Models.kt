@@ -23,8 +23,9 @@ data class Climb(
     /** Local grades only: the label and tape colour as logged. */
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
-    /** An attached photo, as a file name in app storage. */
+    /** An attached photo and video, as file names in app storage. */
     val imagePath: String? = null,
+    val videoPath: String? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
