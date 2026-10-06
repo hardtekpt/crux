@@ -44,6 +44,7 @@ import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.Shown
 import com.hardtekpt.crux.ui.measurement
+import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 
@@ -161,14 +162,24 @@ private fun valueText(shown: Shown, size: Int): AnnotatedString {
 fun ProportionsFigure(
     height: Double?,
     wingspan: Double?,
+    reach: Double?,
+    weightKg: Double?,
+    bodyFat: Double?,
     onEdit: (MeasurementType) -> Unit,
+    onLogWeight: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     val units = LocalUnits.current
     val ink = colors.onSurface
+    // Reach drawn to scale against height (head top y = 12, floor y = 430), kept on the figure.
+    val reachTop = if (reach != null && height != null && height > 0) {
+        (430f - (reach / height).toFloat() * 418f).coerceIn(-130f, 0f)
+    } else {
+        -115f
+    }
     Figure(
-        box = ViewBox(-70f, -80f, 520f, 520f),
+        box = ViewBox(-70f, -150f, 540f, 600f),
         modifier = modifier.testTag("proportions_figure"),
         draw = { s ->
             line(s, -70f, 431f, 450f, 431f, colors.outlineVariant, 2f)
@@ -184,6 +195,16 @@ fun ProportionsFigure(
             line(s, 412.5f, -34f, 412.5f, -14f, ink, 2f)
             line(s, -12.5f, -14f, -12.5f, 80f, colors.outline, 1.2f, floatArrayOf(3f, 4f))
             line(s, 412.5f, -14f, 412.5f, 80f, colors.outline, 1.2f, floatArrayOf(3f, 4f))
+            // Standing reach: a dashed line up the right side to where the hand reaches.
+            line(s, 446f, 430f, 446f, reachTop, colors.primary, 2f, floatArrayOf(6f, 5f))
+            line(s, 436f, reachTop, 456f, reachTop, colors.primary, 2f)
+            // Weight and body fat as callouts pinned to the torso.
+            line(s, 120f, 196f, 172f, 160f, colors.outline, 1.2f, floatArrayOf(2f, 3f))
+            line(s, 282f, 226f, 228f, 196f, colors.outline, 1.2f, floatArrayOf(2f, 3f))
+            listOf(Offset(174f, 158f), Offset(226f, 194f)).forEach { pin ->
+                drawCircle(colors.surface, radius = 7f * s.scale, center = Offset(s.px(pin.x), s.py(pin.y)))
+                drawCircle(colors.primary, radius = 5f * s.scale, center = Offset(s.px(pin.x), s.py(pin.y)))
+            }
         },
         labels = { s ->
             Placed(s, x = -60f, top = 221f - 30f, anchor = Anchor.Center) {
@@ -198,6 +219,19 @@ fun ProportionsFigure(
                 ) {
                     Text("HEIGHT", style = Eyebrow, color = colors.onSurfaceVariant)
                     DimensionValue(height?.let { units.measurement(MeasurementType.HEIGHT, it) }, "you_height")
+                }
+            }
+            Placed(s, x = 434f, top = reachTop + 4f, anchor = Anchor.End) {
+                Callout("REACH", reach?.let { units.measurement(MeasurementType.STANDING_REACH, it) }, "you_standing_reach", Alignment.End, "stat_STANDING_REACH") {
+                    onEdit(MeasurementType.STANDING_REACH)
+                }
+            }
+            Placed(s, x = 6f, top = 166f, anchor = Anchor.Start) {
+                Callout("WEIGHT", weightKg?.let { units.weight(it) }, "figure_weight", Alignment.Start, "figure_log_weight", onLogWeight)
+            }
+            Placed(s, x = 290f, top = 196f, anchor = Anchor.Start) {
+                Callout("BODY FAT", bodyFat?.let { units.measurement(MeasurementType.BODY_FAT, it) }, "you_body_fat", Alignment.Start, "stat_BODY_FAT") {
+                    onEdit(MeasurementType.BODY_FAT)
                 }
             }
             Placed(s, x = 200f, top = -80f, anchor = Anchor.Center) {
@@ -215,6 +249,22 @@ fun ProportionsFigure(
             }
         },
     )
+}
+
+/** A label and value laid on the figure, tappable to update it. */
+@Composable
+private fun Callout(label: String, shown: Shown?, valueTag: String, align: Alignment.Horizontal, tag: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = align,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .testTag(tag),
+    ) {
+        Text(label, style = Eyebrow, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DimensionValue(shown, valueTag)
+    }
 }
 
 @Composable

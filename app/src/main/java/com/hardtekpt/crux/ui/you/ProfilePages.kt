@@ -96,7 +96,7 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
                 val ape = uiState.apeIndex
                 CruxCard(fill = CruxCardFill.Default, modifier = Modifier.testTag("proportions_card")) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Eyebrow("Proportions", Modifier.weight(1f))
+                        Eyebrow("Your body · tap to update", Modifier.weight(1f))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -116,15 +116,13 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
                     ProportionsFigure(
                         height = uiState.latest[MeasurementType.HEIGHT]?.value,
                         wingspan = uiState.latest[MeasurementType.WINGSPAN]?.value,
+                        reach = uiState.latest[MeasurementType.STANDING_REACH]?.value,
+                        weightKg = uiState.summary?.latest?.value,
+                        bodyFat = uiState.latest[MeasurementType.BODY_FAT]?.value,
                         onEdit = { editing = it },
+                        onLogWeight = onLogWeight,
                         modifier = Modifier.padding(top = space.s2),
                     )
-                }
-            }
-            item(key = "tiles") {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
-                    BodyStatTile(MeasurementType.STANDING_REACH, uiState, { editing = it }, Modifier.weight(1f))
-                    BodyStatTile(MeasurementType.BODY_FAT, uiState, { editing = it }, Modifier.weight(1f))
                 }
             }
             if (uiState.weights.size > 3) {
