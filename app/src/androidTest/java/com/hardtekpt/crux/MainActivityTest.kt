@@ -83,6 +83,8 @@ class MainActivityTest {
     @Test
     fun loggingAWeightUpdatesYou() {
         composeRule.onNodeWithTag("nav_You").performClick()
+        // Measurements sit below the climber card, consistency and records on the profile.
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
         composeRule.onNodeWithTag("log_weight").performClick()
         composeRule.waitForTag("screen_LogWeight")
         composeRule.onNodeWithTag("ruler_weight_value").performClick()
@@ -91,8 +93,9 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_weight").performClick()
 
         composeRule.waitForTag("screen_You")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
         composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("you_weight").assertTextEquals("72.5 kg") }.isSuccess
+            runCatching { composeRule.onNodeWithTag("you_weight", useUnmergedTree = true).assertTextEquals("72.5 kg") }.isSuccess
         }
         composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("weight_row"))
         assertEquals(1, composeRule.onAllNodesWithTag("weight_row").fetchSemanticsNodes().size)
