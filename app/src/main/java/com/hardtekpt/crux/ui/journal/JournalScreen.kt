@@ -110,6 +110,10 @@ data class JournalUiState(
     /** Choices for the filter sheet, from what has been logged. */
     val places: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    val today: LocalDate = LocalDate.now(),
+    /** Days with anything logged since Monday, and climbs among them. */
+    val weekDays: Int = 0,
+    val weekClimbs: Int = 0,
 )
 
 @HiltViewModel
@@ -129,7 +133,12 @@ class JournalViewModel @Inject constructor(
         query,
     ) { climbs, results, notes, q ->
         val all = buildTimeline(climbs, results, notes)
+        val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val week = all.filter { !it.date.isBefore(monday) }
         JournalUiState(
+            today = today,
+            weekDays = week.size,
+            weekClimbs = week.sumOf { day -> day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size } },
             isLoading = false,
             all = all,
             days = all.matching(q, today),
@@ -192,11 +201,14 @@ fun JournalContent(
             )
             return
         }
-        JournalHeader(uiState, onQuery, onOpenFilters = { showFilters = true }, Modifier.padding(horizontal = space.s4))
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s2, bottom = space.s4 + LocalNavBarClearance.current),
             modifier = Modifier.testTag("journal_list"),
         ) {
+            // The header is today's day on the timeline: today's entries follow it directly.
+            val todayDay = uiState.days.firstOrNull { it.date == uiState.today }
+            item(key = "header") { JournalHeader(uiState, todayDay, onQuery, onOpenFilters = { showFilters = true }) }
+            item(key = "header_link") { RailLink(Modifier.height(space.s4)) }
             if (uiState.days.isEmpty() && !uiState.isLoading) {
                 item(key = "empty") {
                     val query = uiState.query
@@ -211,7 +223,7 @@ fun JournalContent(
                 }
             }
             uiState.days.forEachIndexed { index, day ->
-                item(key = "day_${day.date}") { DayHeader(day, first = index == 0) }
+                if (day != todayDay) item(key = "day_${day.date}") { DayHeader(day, first = index == 0) }
                 items(day.entries, key = { it.key }) { entry ->
                     when (entry) {
                         is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
@@ -227,19 +239,68 @@ fun JournalContent(
     }
 }
 
-/** Search with a Filters button beside it, the type pills, then what's applied as removable chips. */
+/**
+ * The journal's header, a panel that is also today's spot on the timeline: today's date
+ * tile sits on the timeline's line, with this week's tally, then search and Filters, the
+ * type pills, and any applied filters.
+ */
 @Composable
 private fun JournalHeader(
     uiState: JournalUiState,
+    todayDay: TimelineDay?,
     onQuery: ((JournalQuery) -> JournalQuery) -> Unit,
     onOpenFilters: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
+    val space = CruxTheme.space
     val query = uiState.query
     val focus = LocalFocusManager.current
-    Column(modifier.testTag("journal_header"), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+    val today = uiState.today
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(colors.surfaceContainerLow)
+            .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(24.dp))
+            .padding(top = space.s4, bottom = space.s4)
+            .testTag("journal_header"),
+        verticalArrangement = Arrangement.spacedBy(space.s4),
+    ) {
+        // Today, on the timeline's line.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(GUTTER), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.primaryContainer)
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                        .testTag("journal_today"),
+                ) {
+                    Text(today.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp), color = colors.onPrimaryContainer)
+                    Text(today.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onPrimaryContainer)
+                }
+            }
+            Column(Modifier.padding(start = space.s2, end = space.s4).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "Today · ${today.dayOfWeek.getDisplayName(DateTextStyle.FULL, Locale.UK)}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    listOf(
+                        todayDay?.let { daySummary(it) } ?: "Nothing logged yet today",
+                        "this week ${uiState.weekDays} ${if (uiState.weekDays == 1) "day" else "days"}, ${uiState.weekClimbs} ${if (uiState.weekClimbs == 1) "climb" else "climbs"}",
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(space.s3),
+            modifier = Modifier.padding(horizontal = space.s4),
+        ) {
             OutlinedTextField(
                 value = query.search,
                 onValueChange = { text -> onQuery { it.copy(search = text.take(60)) } },
@@ -264,9 +325,9 @@ private fun JournalHeader(
                 textStyle = MaterialTheme.typography.bodyMedium,
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = colors.surfaceContainer,
-                    focusedContainerColor = colors.surfaceContainer,
-                    unfocusedBorderColor = colors.outlineVariant,
+                    unfocusedContainerColor = colors.surfaceContainerHigh,
+                    focusedContainerColor = colors.surfaceContainerHigh,
+                    unfocusedBorderColor = Color.Transparent,
                 ),
                 modifier = Modifier
                     .weight(1f)
@@ -277,10 +338,10 @@ private fun JournalHeader(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
-                        .background(if (query.activeFilters > 0) colors.primaryContainer else colors.surfaceContainer)
-                        .border(CruxTheme.size.borderHairline, if (query.activeFilters > 0) colors.primary else colors.outlineVariant, CircleShape)
+                        .background(if (query.activeFilters > 0) colors.primaryContainer else colors.surfaceContainerHigh)
+                        .then(if (query.activeFilters > 0) Modifier.border(CruxTheme.size.borderEmphasis, colors.primary, CircleShape) else Modifier)
                         .clickable(onClick = onOpenFilters)
                         .testTag("journal_open_filters"),
                 ) {
@@ -300,9 +361,32 @@ private fun JournalHeader(
                 }
             }
         }
-        TypePills(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
-        AppliedFilters(query, onQuery)
+        Box(Modifier.padding(horizontal = space.s4)) { TypePills(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } }) }
+        if (query.activeFilters > 0) {
+            Box(Modifier.padding(start = space.s4)) { AppliedFilters(query, onQuery) }
+        }
     }
+}
+
+/** The timeline's faint line on its own, linking the header to the first day. */
+@Composable
+private fun RailLink(modifier: Modifier = Modifier) {
+    Box(modifier.width(GUTTER), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)))
+    }
+}
+
+/** A day's tally: climbs and sends, results, notes. */
+private fun daySummary(day: TimelineDay): String {
+    val climbs = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size }
+    val sends = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { e -> e.day.climbs.count { it.style.isSend } }
+    val results = day.entries.filterIsInstance<TimelineEntry.Training>().sumOf { it.results.size }
+    val notes = day.entries.count { it is TimelineEntry.NoteEntry }
+    return listOfNotNull(
+        climbs.takeIf { it > 0 }?.let { "$it ${if (it == 1) "climb" else "climbs"} · $sends sent" },
+        results.takeIf { it > 0 }?.let { "$it ${if (it == 1) "result" else "results"}" },
+        notes.takeIf { it > 0 }?.let { "$it ${if (it == 1) "note" else "notes"}" },
+    ).joinToString(" · ")
 }
 
 /** Four equal pills with live counts. */
@@ -325,7 +409,7 @@ private fun TypePills(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit
                         CircleShape,
                     )
                     .clickable { onSelect(option) }
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
+                    .padding(horizontal = 6.dp, vertical = 10.dp)
                     .testTag("journal_filter_${option.name}"),
             ) {
                 Text(option.label, style = MaterialTheme.typography.labelMedium, color = if (selected) colors.onPrimaryContainer else colors.onSurface, maxLines = 1)
@@ -463,23 +547,16 @@ private fun TimelineRow(dot: Color, modifier: Modifier = Modifier, content: @Com
 @Composable
 private fun DayHeader(day: TimelineDay, first: Boolean) {
     val colors = MaterialTheme.colorScheme
-    val climbs = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size }
-    val sends = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { e -> e.day.climbs.count { it.style.isSend } }
-    val results = day.entries.filterIsInstance<TimelineEntry.Training>().sumOf { it.results.size }
-    val notes = day.entries.count { it is TimelineEntry.NoteEntry }
-    val summary = listOfNotNull(
-        climbs.takeIf { it > 0 }?.let { "$it ${if (it == 1) "climb" else "climbs"} · $sends sent" },
-        results.takeIf { it > 0 }?.let { "$it ${if (it == 1) "result" else "results"}" },
-        notes.takeIf { it > 0 }?.let { "$it ${if (it == 1) "note" else "notes"}" },
-    ).joinToString(" · ")
+    val summary = daySummary(day)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (first) 0.dp else CruxTheme.space.s4, bottom = CruxTheme.space.s2)
+            .height(IntrinsicSize.Min)
             .testTag("journal_day"),
     ) {
-        Box(Modifier.width(GUTTER), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(GUTTER).fillMaxHeight(), contentAlignment = Alignment.Center) {
+            RailLink(Modifier.fillMaxHeight())
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -491,7 +568,7 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
                 Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onSurfaceVariant)
             }
         }
-        Column(Modifier.padding(start = CruxTheme.space.s2)) {
+        Column(Modifier.padding(start = CruxTheme.space.s2, top = CruxTheme.space.s4, bottom = CruxTheme.space.s2)) {
             Text(day.date.dayLabel(), style = MaterialTheme.typography.titleSmall)
             Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
