@@ -319,7 +319,11 @@ fun PlaceDetailScreen(
                     PlaceFigure(
                         value = live.size,
                         label = if (live.size == 1) "problem up" else "problems up",
-                        detail = "${current.areas.size} ${if (current.areas.size == 1) "wall or set" else "walls and sets"}",
+                        detail = run {
+                            val n = current.areas.size
+                            val noun = if (current.place.hasSeveralTypes) "area" else current.place.type.areaLabel.lowercase()
+                            "on $n ${if (n == 1) noun else noun + "s"}"
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     PlaceFigure(
@@ -355,7 +359,8 @@ fun PlaceDetailScreen(
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
-                                if (pair.size == 1) Box(Modifier.weight(1f))
+                                // A lone facility takes the full width; an odd one out keeps the grid.
+                                if (pair.size == 1 && sections.size > 1) Box(Modifier.weight(1f))
                             }
                         }
                     }
@@ -570,7 +575,7 @@ private fun FacilityTile(
         }
         Text(
             listOfNotNull(
-                section.type.label,
+                section.type.label.takeIf { !it.equals(section.name, ignoreCase = true) },
                 "$areas ${if (areas == 1) section.type.areaLabel.lowercase() else section.type.areaLabel.lowercase() + "s"}",
                 angle?.let { "$it°" },
             ).joinToString(" · "),
