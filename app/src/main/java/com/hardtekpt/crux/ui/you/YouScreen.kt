@@ -319,7 +319,7 @@ fun YouContent(
                     Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
                         ProfileStat("${uiState.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = uiState.weekStreak > 0)
                         ProfileStat("${uiState.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
-                        ProfileStat(uiState.daysLast30.toString(), "Days, 30d", Modifier.weight(1f))
+                        ProfileStat(uiState.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
                     }
                 }
             }
@@ -362,17 +362,7 @@ fun YouContent(
             item(key = "body_label") { Eyebrow("Body · tap to update", Modifier.padding(top = space.s2)) }
             item(key = "body") { BodyStatGrid(uiState, onEdit = { editing = it }) }
             item(key = "girth_label") { Eyebrow("Circumferences", Modifier.padding(top = space.s2)) }
-            item(key = "girth") {
-                val types = listOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)
-                Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
-                    types.chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
-                            pair.forEach { BodyStatTile(it, uiState, { editing = it }, Modifier.weight(1f)) }
-                            if (pair.size == 1) Box(Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
+            item(key = "girth") { CircumferenceCard(uiState, onEdit = { editing = it }) }
             if (uiState.weights.isNotEmpty()) {
                 item(key = "weight_history_label") {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s2)) {
@@ -506,6 +496,48 @@ private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit)
         Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
             BodyStatTile(MeasurementType.BODY_FAT, uiState, onEdit, Modifier.weight(1f))
             Box(Modifier.weight(1f))
+        }
+    }
+}
+
+/**
+ * Circumferences as one tape-measure card: a row per body part, so five empty ones stay
+ * compact. Tap a row to set it on the ruler.
+ */
+@Composable
+private fun CircumferenceCard(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
+    val units = LocalUnits.current
+    val space = CruxTheme.space
+    val types = listOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)
+    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("circumferences")) {
+        types.forEachIndexed { index, type ->
+            if (index > 0) androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            val latest = uiState.latest[type]
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { onEdit(type) }
+                    .padding(vertical = space.s2)
+                    .testTag("stat_${type.name}"),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(type.label, style = MaterialTheme.typography.titleSmall)
+                    latest?.let {
+                        Text("set ${it.date.shortLabel()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (latest != null) {
+                    Text(
+                        units.measurement(type, latest.value).toString(),
+                        style = CruxTheme.type.grade,
+                        modifier = Modifier.testTag("you_${type.name.lowercase()}"),
+                    )
+                } else {
+                    Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
     }
 }

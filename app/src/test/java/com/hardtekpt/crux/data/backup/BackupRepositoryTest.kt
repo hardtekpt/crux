@@ -49,8 +49,10 @@ class BackupRepositoryTest {
         assertEquals(source.climbDao().count(), target.climbDao().count())
         assertEquals(source.bodyMeasurementDao().count(), target.bodyMeasurementDao().count())
         assertEquals(source.climbDao().count(), result.added[BackupSection.JOURNAL])
-        assertEquals("Left finger tweak, easy on crimps", target.noteDao().getAll().single().text)
-        val record = target.exerciseRecordDao().getAll().single()
+        assertEquals(source.noteDao().getAll().size, target.noteDao().getAll().size)
+        assert(target.noteDao().getAll().any { it.text == "Left finger tweak, easy on crimps" })
+        assertEquals(source.exerciseRecordDao().getAll().size, target.exerciseRecordDao().getAll().size)
+        val record = target.exerciseRecordDao().getAll().single { it.createdAtMillis == 2L }
         assertEquals(12.5, record.loadKg!!, 0.0)
         assertEquals(exercise.name, target.exerciseDao().getAll().first { it.id == record.exerciseId }.name)
 
