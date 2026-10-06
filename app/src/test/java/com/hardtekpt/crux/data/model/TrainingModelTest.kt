@@ -54,4 +54,13 @@ class TrainingModelTest {
         assertEquals(20, plan.estimatedMinutes)
         assertEquals(1, plan.exerciseCount)
     }
+
+    @Test
+    fun `added load shows in pounds under imperial, to the nearest half pound`() {
+        assertEquals("5 × 5 · +22 lb", ExerciseTarget(sets = 5, reps = 5, loadKg = 10.0).prescription(MetricType.WEIGHTED_REPS, imperial = true))
+        assertEquals("−5.5 lb", signedLoad(-2.5, imperial = true))
+        assertEquals("+2.5 kg", signedLoad(2.5, imperial = false))
+        // Pounds typed in come back as the same pounds.
+        assertEquals(22.5, loadValue(poundsToKg(22.5), imperial = true), 0.0)
+    }
 }

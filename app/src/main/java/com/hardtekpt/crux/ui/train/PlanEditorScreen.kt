@@ -215,7 +215,7 @@ private fun BlockCard(
             block.items.forEachIndexed { itemIndex, item ->
                 CruxListRow(
                     title = item.exercise.name,
-                    supporting = listOfNotNull(item.target.prescription(item.exercise.metric), item.target.restLabel()?.let { "rest $it" })
+                    supporting = listOfNotNull(item.target.prescription(item.exercise.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL), item.target.restLabel()?.let { "rest $it" })
                         .joinToString(" · "),
                     onClick = { onEditItem(itemIndex) },
                     trailing = {
@@ -331,7 +331,7 @@ private fun TargetSheet(
         ) {
             Text(exercise.name, style = MaterialTheme.typography.headlineSmall)
             Text(
-                target.prescription(metric),
+                target.prescription(metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                 style = CruxTheme.type.code,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -428,12 +428,13 @@ private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange:
 @Composable
 private fun LoadRow(target: ExerciseTarget, open: Boolean, onToggle: () -> Unit, onChange: (ExerciseTarget) -> Unit) {
     val load = target.loadKg
+    val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
     InputRow(
         "Added load",
-        (if (load > 0) "+" else if (load < 0) "−" else "") + formatKg(kotlin.math.abs(load)),
+        (if (load > 0) "+" else if (load < 0) "−" else "") + com.hardtekpt.crux.data.model.formatLoad(load, imperial),
         open,
         onToggle,
-        unit = "kg",
+        unit = com.hardtekpt.crux.data.model.loadUnit(imperial),
         testTag = "load",
     ) {
         LoadWheel(load, { onChange(target.copy(loadKg = it)) }, minKg = MIN_LOAD, maxKg = MAX_LOAD)

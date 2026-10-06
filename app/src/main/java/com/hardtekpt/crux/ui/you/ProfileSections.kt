@@ -261,8 +261,8 @@ fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier, hig
 }
 
 /** "+20 kg × 5", "45 s", "12 reps": a result in the terms its exercise is measured in. */
-fun ExerciseRecord.describe(metric: MetricType): String {
-    val load = loadKg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatKg(kotlin.math.abs(it)) + " kg" }
+fun ExerciseRecord.describe(metric: MetricType, imperial: Boolean = false): String {
+    val load = loadKg?.let { com.hardtekpt.crux.data.model.signedLoad(it, imperial).takeIf { s -> !s.startsWith("0 ") } }
     val time = seconds?.let { formatDuration(it) }
     val count = reps?.let { "$it ${if (metric.usesIntervals) "repeats" else "reps"}" }
     return when {
@@ -297,7 +297,7 @@ fun RecordRow(best: ExerciseBest, onClick: () -> Unit, modifier: Modifier = Modi
             )
         }
         Text(
-            best.best.describe(best.exercise.metric),
+            best.best.describe(best.exercise.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
             style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold, fontSize = 15.sp),
             color = colors.secondary,
         )

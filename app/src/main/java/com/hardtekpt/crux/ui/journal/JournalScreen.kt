@@ -682,7 +682,7 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
                         Icon(Icons.Rounded.EmojiEvents, contentDescription = "Personal record", tint = colors.secondary, modifier = Modifier.size(16.dp))
                     }
                     Text(
-                        result.record.describe(result.exercise.metric),
+                        result.record.describe(result.exercise.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                         style = CruxTheme.type.gradeSmall,
                         color = if (result.isBest) colors.secondary else colors.onSurface,
                     )

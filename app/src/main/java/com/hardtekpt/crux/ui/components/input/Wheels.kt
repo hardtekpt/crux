@@ -332,7 +332,8 @@ fun DurationWheel(
 
 /**
  * Added load: sign, whole kilos and a plate fraction on three wheels. Minus is assisted
- * (pulley or band). Chips add or take off the small plates.
+ * (pulley or band). Chips add or take off the small plates. Under Imperial the wheels step
+ * in pounds and half pounds; the value is still kept in kilograms.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -343,9 +344,17 @@ fun LoadWheel(
     minKg: Double = -50.0,
     maxKg: Double = 150.0,
 ) {
-    val parts = LoadParts.of(kg)
-    val wholes = remember(minKg, maxKg) { (0..maxOf(abs(minKg), maxKg).toInt()).toList() }
-    val set = { next: LoadParts -> onKgChange(next.kg.coerceIn(minKg, maxKg)) }
+    val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+    // The wheels work in the display unit; changes go back out in kilograms.
+    val toKg = { shown: Double -> if (imperial) com.hardtekpt.crux.data.model.poundsToKg(shown) else shown }
+    val shownValue = com.hardtekpt.crux.data.model.loadValue(kg, imperial)
+    val fractions = if (imperial) LoadParts.HALVES else LoadParts.FRACTIONS
+    val parts = if (imperial) LoadParts.ofHalves(shownValue) else LoadParts.of(kg)
+    val minShown = com.hardtekpt.crux.data.model.loadValue(minKg, imperial)
+    val maxShown = com.hardtekpt.crux.data.model.loadValue(maxKg, imperial)
+    val wholes = remember(minShown, maxShown) { (0..maxOf(abs(minShown), maxShown).toInt()).toList() }
+    val set = { next: LoadParts -> onKgChange(toKg(next.value(imperial)).coerceIn(minKg, maxKg)) }
+    val unitLabel = com.hardtekpt.crux.data.model.loadUnit(imperial)
     var typing by rememberSaveable { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
         WheelGroup {
@@ -362,29 +371,30 @@ fun LoadWheel(
                 selectedIndex = parts.whole.coerceAtMost(wholes.last()),
                 onSelect = { set(parts.copy(whole = wholes[it])) },
                 label = { it.toString() },
-                description = "Kilograms",
+                description = if (imperial) "Pounds" else "Kilograms",
                 strongAt = { wholes[it] % 5 == 0 },
                 onTapSelected = { typing = true },
             )
             CruxWheel(
-                items = LoadParts.FRACTIONS,
-                selectedIndex = parts.quarter,
+                items = fractions,
+                selectedIndex = parts.quarter.coerceAtMost(fractions.lastIndex),
                 onSelect = { set(parts.copy(quarter = it)) },
                 label = { it },
-                description = "Fraction of a kilogram",
+                description = if (imperial) "Half a pound" else "Fraction of a kilogram",
                 width = 56.dp,
             )
-            WheelText("kg", unit = true)
+            WheelText(unitLabel, unit = true)
         }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2, Alignment.CenterHorizontally),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            listOf(-2.5, -1.25, 1.25, 2.5).forEach { delta ->
+            // The small plates: 1.25 and 2.5 kg, or 2.5 and 5 lb.
+            (if (imperial) listOf(-5.0, -2.5, 2.5, 5.0) else listOf(-2.5, -1.25, 1.25, 2.5)).forEach { delta ->
                 CruxFilterChip(
                     label = (if (delta > 0) "+" else "−") + formatKg(abs(delta)),
                     selected = false,
-                    onClick = { onKgChange((kg + delta).coerceIn(minKg, maxKg)) },
+                    onClick = { onKgChange(toKg(shownValue + delta).coerceIn(minKg, maxKg)) },
                     modifier = Modifier.testTag("load_${if (delta > 0) "plus" else "minus"}_${abs(delta)}"),
                 )
             }
@@ -393,13 +403,16 @@ fun LoadWheel(
     if (typing) {
         TypeValueDialog(
             title = "Added load",
-            initial = formatKg(kg),
-            unit = "kg, minus for assisted",
+            initial = formatKg(shownValue),
+            unit = "$unitLabel, minus for assisted",
             keyboardType = KeyboardType.Text,
             onDismiss = { typing = false },
-            parse = { text -> text.replace(',', '.').replace('−', '-').trim().toDoubleOrNull()?.takeIf { it in minKg..maxKg } },
-            error = "Pick ${formatKg(minKg)} to ${formatKg(maxKg)} kg",
-            onConfirm = { onKgChange(LoadParts.of(it).kg); typing = false },
+            parse = { text -> text.replace(',', '.').replace('−', '-').trim().toDoubleOrNull()?.takeIf { it in minShown..maxShown } },
+            error = "Pick ${formatKg(minShown)} to ${formatKg(maxShown)} $unitLabel",
+            onConfirm = {
+                onKgChange(if (imperial) toKg((it * 2).roundToInt() / 2.0) else LoadParts.of(it).kg)
+                typing = false
+            },
         )
     }
 }
@@ -408,9 +421,19 @@ fun LoadWheel(
 data class LoadParts(val negative: Boolean, val whole: Int, val quarter: Int) {
     val kg: Double get() = (whole + quarter * 0.25).let { if (negative) -it else it }
 
+    /** The value in the wheels' unit: quarters of a kilo, or halves of a pound. */
+    fun value(imperial: Boolean): Double = if (imperial) (whole + quarter * 0.5).let { if (negative) -it else it } else kg
+
     companion object {
         val SIGNS = listOf("+", "−")
         val FRACTIONS = listOf(".00", ".25", ".50", ".75")
+        val HALVES = listOf(".0", ".5")
+
+        /** A value in pounds, split into whole pounds and a half. */
+        fun ofHalves(lb: Double): LoadParts {
+            val halves = (abs(lb) * 2).roundToInt()
+            return LoadParts(negative = lb < 0, whole = halves / 2, quarter = halves % 2)
+        }
 
         fun of(kg: Double): LoadParts {
             val quarters = (abs(kg) * 4).roundToInt()

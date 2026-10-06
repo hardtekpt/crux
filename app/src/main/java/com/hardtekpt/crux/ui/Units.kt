@@ -32,6 +32,8 @@ data class Shown(val value: String, val unit: String?) {
 
 fun UnitSystem.weightUnit(): String = if (this == UnitSystem.IMPERIAL) "lb" else "kg"
 
+val UnitSystem.isImperial: Boolean get() = this == UnitSystem.IMPERIAL
+
 /** Kilograms in the display unit, as a number (for charts and differences). */
 fun UnitSystem.weightValue(kg: Double): Double = if (this == UnitSystem.IMPERIAL) kg * LB_PER_KG else kg
 

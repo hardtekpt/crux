@@ -60,8 +60,8 @@ data class ExerciseTarget(
     val restSeconds: Int = 120,
     val repRestSeconds: Int = 0,
 ) {
-    /** `5 × 5 · +10 kg`, `6 × 10 s · +5 kg`, `3 × 12`, `3 × 6 × 7 s on / 3 s off · +5 kg`. */
-    fun prescription(metric: MetricType): String = buildString {
+    /** `5 × 5 · +10 kg` (or `+22 lb`), `6 × 10 s · +5 kg`, `3 × 12`, `3 × 6 × 7 s on / 3 s off · +5 kg`. */
+    fun prescription(metric: MetricType, imperial: Boolean = false): String = buildString {
         append("$sets × ")
         when {
             metric.usesIntervals -> append("$reps × ${formatDuration(seconds)} on / ${formatDuration(repRestSeconds)} off")
@@ -70,9 +70,7 @@ data class ExerciseTarget(
         }
         if (metric.usesLoad && loadKg != 0.0) {
             append(" · ")
-            append(if (loadKg > 0) "+" else "−")
-            append(formatKg(kotlin.math.abs(loadKg)))
-            append(" kg")
+            append(signedLoad(loadKg, imperial))
         }
     }
 
@@ -112,6 +110,26 @@ fun formatDuration(seconds: Int): String = when {
     else -> "${seconds / 60} min ${seconds % 60} s"
 }
 
+private const val LB_PER_KG = 2.2046226218
+
+/** Added load in the display unit: kilograms, or pounds to the nearest half pound. */
+fun loadValue(kg: Double, imperial: Boolean): Double =
+    if (imperial) (kg * LB_PER_KG * 2).roundToInt() / 2.0 else kg
+
+/** Pounds back to the kilograms everything is stored in. */
+fun poundsToKg(lb: Double): Double = lb / LB_PER_KG
+
+fun loadUnit(imperial: Boolean): String = if (imperial) "lb" else "kg"
+
+/** `10`, `7.5` or `22` (lb): the number only, without sign or unit. */
+fun formatLoad(kg: Double, imperial: Boolean): String = formatKg(kotlin.math.abs(loadValue(kg, imperial)))
+
+/** `+10 kg`, `−5 kg`, `+22 lb`, `0 kg`. Minus is assisted. */
+fun signedLoad(kg: Double, imperial: Boolean): String {
+    val sign = if (kg > 0) "+" else if (kg < 0) "−" else ""
+    return sign + formatLoad(kg, imperial) + " " + loadUnit(imperial)
+}
+
 /** `10`, `7.5`, `1.25`: up to two decimals, so the small plates show, and no trailing zeros. */
 fun formatKg(kg: Double): String =
     if (kg == kg.roundToInt().toDouble()) kg.roundToInt().toString() else String.format(Locale.UK, "%.2f", kg).trimEnd('0').trimEnd('.')
@@ -121,7 +139,7 @@ data class PlanItem(
     val exercise: Exercise,
     val target: ExerciseTarget,
 ) {
-    val prescription: String get() = target.prescription(exercise.metric)
+    fun prescription(imperial: Boolean = false): String = target.prescription(exercise.metric, imperial)
 }
 
 data class PlanBlock(

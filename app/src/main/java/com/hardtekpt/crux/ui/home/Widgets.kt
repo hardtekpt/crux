@@ -175,7 +175,7 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
                 plan.blocks.flatMap { it.items }.forEach { item ->
                     Row {
                         Text(item.exercise.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Text(item.prescription, style = CruxTheme.type.code, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(item.prescription(LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL), style = CruxTheme.type.code, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

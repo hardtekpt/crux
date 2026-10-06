@@ -421,8 +421,11 @@ fun RecordEditorScreen(onDone: () -> Unit, viewModel: RecordEditorViewModel = hi
                 if (m.usesLoad) {
                     InputRow(
                         "Added load",
-                        (if (draft.loadKg > 0) "+" else if (draft.loadKg < 0) "−" else "") + formatKg(kotlin.math.abs(draft.loadKg)),
-                        open == "load", { toggle("load") }, unit = "kg", testTag = "record_load",
+                        (if (draft.loadKg > 0) "+" else if (draft.loadKg < 0) "−" else "") +
+                            com.hardtekpt.crux.data.model.formatLoad(draft.loadKg, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                        open == "load", { toggle("load") },
+                        unit = com.hardtekpt.crux.data.model.loadUnit(com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                        testTag = "record_load",
                     ) { LoadWheel(draft.loadKg, { v -> viewModel.update { it.copy(loadKg = v) } }) }
                 }
                 if (m.usesReps || m.usesIntervals) {
@@ -501,7 +504,7 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                     Column(Modifier.weight(1f)) {
                         Text("PERSONAL RECORD", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                         Text(
-                            pr?.describe(ex.metric) ?: "–",
+                            pr?.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL) ?: "–",
                             style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp),
                             modifier = Modifier.testTag("exercise_pr"),
                         )
@@ -515,7 +518,7 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
             item { Eyebrow("All results · ${results.size}", Modifier.padding(top = space.s3)) }
             items(results, key = { it.id }) { record ->
                 CruxListRow(
-                    title = record.describe(ex.metric),
+                    title = record.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                     supporting = listOfNotNull(record.date.dayLabel(), record.notes, "PR".takeIf { record.id == pr?.id }).joinToString(" · "),
                     trailing = {
                         IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }

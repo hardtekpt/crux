@@ -118,7 +118,7 @@ fun TemplateDetailScreen(
                     val item = block.items[itemIndex]
                     CruxListRow(
                         title = item.exercise.name,
-                        supporting = item.prescription,
+                        supporting = item.prescription(com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                         trailing = item.target.restLabel()?.let { rest ->
                             {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
