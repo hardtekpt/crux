@@ -21,6 +21,9 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeLeft
 import com.hardtekpt.crux.data.seed.StarterData
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -305,6 +308,20 @@ class MainActivityTest {
         composeRule.onNodeWithTag("delete_climb").performClick()
         composeRule.onNodeWithTag("confirm_delete").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
+    fun swipingSidewaysMovesBetweenTabs() {
+        composeRule.waitForTag("screen_Home")
+        composeRule.onNodeWithTag("screen_Home").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
+        composeRule.waitForTag("screen_Train")
+        // Let the tab change finish before swiping again.
+        composeRule.waitForIdle()
+        // Across the header: the plan cards below scroll sideways themselves and keep the swipe.
+        composeRule.onNodeWithTag("screen_Train").performTouchInput {
+            swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.06f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.06f))
+        }
+        composeRule.waitForTag("screen_Home")
     }
 
     private fun openSettings() {
