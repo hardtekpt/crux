@@ -1,5 +1,29 @@
 package com.hardtekpt.crux.ui.you
 
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Leaderboard
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Straighten
+import com.hardtekpt.crux.data.ClimbRepository
+import com.hardtekpt.crux.data.ExerciseBest
+import com.hardtekpt.crux.data.Note
+import com.hardtekpt.crux.data.NoteRepository
+import com.hardtekpt.crux.data.RecordRepository
+import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.PersonalBest
+import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.data.prefs.ThemeMode
+import com.hardtekpt.crux.data.prefs.UnitSystem
+import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.ui.components.CruxButtonSize
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
+import java.time.Clock
+import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -92,6 +116,23 @@ data class YouUiState(
     val summary: WeightSummary? = null,
     /** Newest value of each body stat. */
     val latest: Map<MeasurementType, Measurement> = emptyMap(),
+    /** Climbs and recorded results per day, for the consistency grid. */
+    val activity: Map<LocalDate, Int> = emptyMap(),
+    val today: LocalDate = LocalDate.now(),
+    val climbingSince: LocalDate? = null,
+    val daysThisYear: Int = 0,
+    val climbsThisYear: Int = 0,
+    /** Weeks in a row, up to this one, with at least one day on the wall. */
+    val weekStreak: Int = 0,
+    val bestWeekStreak: Int = 0,
+    val daysLast30: Int = 0,
+    val hardestBoulder: PersonalBest? = null,
+    val hardestRoute: PersonalBest? = null,
+    val records: List<ExerciseBest> = emptyList(),
+    val notes: List<Note> = emptyList(),
+    val units: UnitSystem = UnitSystem.METRIC,
+    val scales: GradeScales = GradeScales(),
+    val theme: ThemeMode = ThemeMode.DARK,
 ) {
     val apeIndex: ApeIndex? get() = apeIndex(latest[MeasurementType.WINGSPAN]?.value, latest[MeasurementType.HEIGHT]?.value)
 }
@@ -102,16 +143,85 @@ data class ApeIndex(val differenceCm: Double, val ratio: Double)
 fun apeIndex(wingspanCm: Double?, heightCm: Double?): ApeIndex? =
     if (wingspanCm == null || heightCm == null || heightCm <= 0) null else ApeIndex(wingspanCm - heightCm, wingspanCm / heightCm)
 
+/** Weeks in a row ending at [lastWeek] with any activity, and the longest such run. */
+fun weekStreaks(activeDays: Set<LocalDate>, lastWeek: LocalDate): Pair<Int, Int> {
+    if (activeDays.isEmpty()) return 0 to 0
+    val monday = { d: LocalDate -> d.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) }
+    val weeks = activeDays.map(monday).toSortedSet()
+    var best = 0
+    var run = 0
+    var previous: LocalDate? = null
+    for (week in weeks) {
+        run = if (previous != null && previous.plusWeeks(1) == week) run + 1 else 1
+        best = maxOf(best, run)
+        previous = week
+    }
+    // The current run counts this week if active, else up to last week (this week isn't over).
+    var current = 0
+    var week = monday(lastWeek)
+    if (week !in weeks) week = week.minusWeeks(1)
+    while (week in weeks) {
+        current++
+        week = week.minusWeeks(1)
+    }
+    return current to best
+}
+
 @HiltViewModel
 class YouViewModel @Inject constructor(
     private val bodyRepository: BodyRepository,
+    climbRepository: ClimbRepository,
+    recordRepository: RecordRepository,
+    noteRepository: NoteRepository,
+    preferences: UserPreferencesRepository,
+    clock: Clock,
 ) : ViewModel() {
+    private val today = LocalDate.now(clock)
+
+    private data class Body(val weights: List<Measurement>, val latest: Map<MeasurementType, Measurement>)
+    private data class Prefs(val units: UnitSystem, val scales: GradeScales, val theme: ThemeMode)
+
+    private val body = combine(bodyRepository.observeWeights(), bodyRepository.observeLatest(), ::Body)
+    private val prefs = combine(preferences.units, preferences.gradeScales, preferences.themeMode, ::Prefs)
+
     val uiState: StateFlow<YouUiState> = combine(
-        bodyRepository.observeWeights(),
-        bodyRepository.observeLatest(),
-    ) { weights, latest ->
-        YouUiState(isLoading = false, weights = weights, summary = weights.weightSummary(), latest = latest)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState())
+        body,
+        climbRepository.observeClimbs(),
+        climbRepository.observePersonalBests(),
+        combine(recordRepository.observeBests(), noteRepository.observeNotes(), ::Pair),
+        prefs,
+    ) { body, climbs, bests, (records, notes), prefs ->
+        val climbDays = climbs.groupingBy { it.date }.eachCount()
+        val recordDays = records.flatMap { listOf(it.best.date) }.groupingBy { it }.eachCount()
+        val activity = (climbDays.keys + recordDays.keys).associateWith { (climbDays[it] ?: 0) + (recordDays[it] ?: 0) }
+        val (streak, bestStreak) = weekStreaks(climbDays.keys, today)
+        fun hardest(discipline: Discipline): PersonalBest? {
+            val standard = bests.filter { it.discipline == discipline && !it.gradeScale.isLocal }
+            return standard.filter { it.gradeScale == prefs.scales.forDiscipline(discipline) }.maxByOrNull { it.gradeIndex }
+                ?: standard.maxByOrNull { it.gradeIndex }
+        }
+        YouUiState(
+            isLoading = false,
+            weights = body.weights,
+            summary = body.weights.weightSummary(),
+            latest = body.latest,
+            activity = activity,
+            today = today,
+            climbingSince = climbs.minOfOrNull { it.date },
+            daysThisYear = climbDays.keys.count { it.year == today.year },
+            climbsThisYear = climbs.count { it.date.year == today.year },
+            weekStreak = streak,
+            bestWeekStreak = bestStreak,
+            daysLast30 = climbDays.keys.count { !it.isBefore(today.minusDays(29)) && !it.isAfter(today) },
+            hardestBoulder = hardest(Discipline.BOULDER),
+            hardestRoute = hardest(Discipline.ROUTE),
+            records = records,
+            notes = notes,
+            units = prefs.units,
+            scales = prefs.scales,
+            theme = prefs.theme,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState(today = today))
 
     fun setMeasurement(type: MeasurementType, value: Double) {
         viewModelScope.launch { bodyRepository.setMeasurement(type, value) }
@@ -128,34 +238,48 @@ fun parseMeasurement(type: MeasurementType, text: String): Result<Double> {
     return Result.failure(IllegalArgumentException("Enter a ${type.label.lowercase()} between $low and $high$unit"))
 }
 
+/** Where the profile's taps lead. */
+data class ProfileActions(
+    val logWeight: () -> Unit = {},
+    val openSettings: () -> Unit = {},
+    val newNote: () -> Unit = {},
+    val openNote: (Long) -> Unit = {},
+    val openNotes: () -> Unit = {},
+    val logRecord: () -> Unit = {},
+    val openRecords: (Long) -> Unit = {},
+)
+
 @Composable
 fun YouScreen(
-    onLogWeight: () -> Unit,
-    onOpenSettings: () -> Unit,
+    actions: ProfileActions,
     viewModel: YouViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     YouContent(
         uiState = uiState,
-        onLogWeight = onLogWeight,
+        actions = actions,
         onSetMeasurement = viewModel::setMeasurement,
-        onOpenSettings = onOpenSettings,
     )
 }
 
+/**
+ * The climber's profile, top to bottom: a climber card with the headline numbers; how
+ * consistent you've been; personal records; measurements (weight, body, circumferences);
+ * notes; and preferences.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouContent(
     uiState: YouUiState,
-    onLogWeight: () -> Unit,
+    actions: ProfileActions,
     onSetMeasurement: (MeasurementType, Double) -> Unit,
-    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     val units = LocalUnits.current
     var editing by rememberSaveable { mutableStateOf<MeasurementType?>(null) }
+    var allWeights by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -167,70 +291,135 @@ fun YouContent(
             title = "You",
             scrollBehavior = scrollBehavior,
             actions = {
-                IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("open_settings")) {
+                IconButton(onClick = actions.openSettings, modifier = Modifier.testTag("open_settings")) {
                     Icon(Icons.Rounded.Settings, contentDescription = "Settings")
                 }
             },
         )
         LazyColumn(
             modifier = Modifier.testTag("you_list"),
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s6 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            item { Eyebrow("Weight") }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s3), verticalAlignment = Alignment.CenterVertically) {
-                    val summary = uiState.summary
-                    StatTile(
-                        label = "Weight",
-                        value = summary?.latest?.value?.let { units.weight(it).value } ?: "–",
-                        unit = summary?.let { units.weightUnit() },
-                        delta = when {
-                            summary == null -> "no weigh-ins yet"
-                            summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
-                            else -> "weighed ${summary.latest.date.shortLabel()}"
-                        },
-                        modifier = Modifier.weight(1f),
-                        valueModifier = Modifier.testTag("you_weight"),
-                    )
-                    // Outlined on purpose: logging a measurement is not this screen's main job.
-                    CruxButton(
-                        text = "Log weight",
-                        onClick = onLogWeight,
-                        variant = CruxButtonVariant.Outlined,
-                        icon = Icons.Rounded.Add,
-                        modifier = Modifier.testTag("log_weight"),
-                    )
+            item(key = "card") {
+                ClimberCard(
+                    daysThisYear = uiState.daysThisYear,
+                    climbsThisYear = uiState.climbsThisYear,
+                    climbingSince = uiState.climbingSince,
+                    hardestBoulder = uiState.hardestBoulder,
+                    hardestRoute = uiState.hardestRoute,
+                )
+            }
+
+            // ---- Consistency
+            item(key = "consistency_header") { ProfileSectionHeader("Consistency") }
+            item(key = "consistency") {
+                CruxCard(fill = CruxCardFill.Low) {
+                    ConsistencyGrid(uiState.activity, uiState.today)
+                    Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
+                        ProfileStat("${uiState.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = uiState.weekStreak > 0)
+                        ProfileStat("${uiState.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
+                        ProfileStat(uiState.daysLast30.toString(), "Days, 30d", Modifier.weight(1f))
+                    }
+                }
+            }
+
+            // ---- Personal records
+            item(key = "records_header") { ProfileSectionHeader("Personal records", action = "Log a record", onAction = actions.logRecord) }
+            if (uiState.records.isEmpty()) {
+                item(key = "records_empty") {
+                    InlineEmptyState(icon = Icons.Rounded.EmojiEvents, text = "Log a result on an exercise, like a max hang or a 1-arm pull, and your best shows here.")
+                }
+            }
+            items(uiState.records, key = { "record_${it.exercise.id}" }) { best ->
+                RecordRow(best, onClick = { actions.openRecords(best.exercise.id) })
+            }
+
+            // ---- Measurements
+            item(key = "measure_header") { ProfileSectionHeader("Measurements", action = "Log weight", onAction = actions.logWeight) }
+            item(key = "weight") {
+                val summary = uiState.summary
+                StatTile(
+                    label = "Weight",
+                    value = summary?.latest?.value?.let { units.weight(it).value } ?: "–",
+                    unit = summary?.let { units.weightUnit() },
+                    delta = when {
+                        summary == null -> "no weigh-ins yet"
+                        summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
+                        else -> "weighed ${summary.latest.date.shortLabel()}"
+                    },
+                    valueModifier = Modifier.testTag("you_weight"),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable(onClick = actions.logWeight)
+                        .testTag("log_weight"),
+                )
+            }
+            if (uiState.weights.isNotEmpty()) {
+                item(key = "weight_chart") { WeightTrendCard(uiState.weights) }
+            }
+            item(key = "body_label") { Eyebrow("Body · tap to update", Modifier.padding(top = space.s2)) }
+            item(key = "body") { BodyStatGrid(uiState, onEdit = { editing = it }) }
+            item(key = "girth_label") { Eyebrow("Circumferences", Modifier.padding(top = space.s2)) }
+            item(key = "girth") {
+                val types = listOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)
+                Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
+                    types.chunked(2).forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.height(IntrinsicSize.Min)) {
+                            pair.forEach { BodyStatTile(it, uiState, { editing = it }, Modifier.weight(1f)) }
+                            if (pair.size == 1) Box(Modifier.weight(1f))
+                        }
+                    }
                 }
             }
             if (uiState.weights.isNotEmpty()) {
-                item { WeightTrendCard(uiState.weights) }
-            }
-            item { Eyebrow("Climbing body · tap to update", Modifier.padding(top = space.s3)) }
-            item { BodyStatGrid(uiState, onEdit = { editing = it }) }
-            item { Eyebrow("Weight history", Modifier.padding(top = space.s3)) }
-            if (!uiState.isLoading && uiState.weights.isEmpty()) {
-                item {
-                    InlineEmptyState(
-                        icon = Icons.Rounded.MonitorWeight,
-                        text = "No weigh-ins yet. Tap Log weight to start tracking.",
-                    )
+                item(key = "weight_history_label") {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s2)) {
+                        Eyebrow("Weigh-ins", Modifier.weight(1f))
+                        if (uiState.weights.size > 3) {
+                            CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", { allWeights = !allWeights }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                        }
+                    }
                 }
             }
-            itemsIndexed(uiState.weights, key = { _, it -> it.id }) { index, entry ->
-                val previous = uiState.weights.getOrNull(index + 1)
+            val shownWeights = if (allWeights) uiState.weights else uiState.weights.take(3)
+            itemsIndexed(shownWeights, key = { _, it -> "w_${it.id}" }) { index, entry ->
+                val previous = uiState.weights.getOrNull(uiState.weights.indexOf(entry) + 1)
                 CruxListRow(
                     title = entry.date.dayLabel(),
                     supporting = previous?.let { "${units.weightChange(entry.value - it.value)} from ${it.date.shortLabel()}" },
                     trailing = {
-                        Text(
-                            units.weight(entry.value).toString(),
-                            style = CruxTheme.type.grade,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Text(units.weight(entry.value).toString(), style = CruxTheme.type.grade, color = MaterialTheme.colorScheme.onSurface)
                     },
                     modifier = Modifier.testTag("weight_row"),
                 )
+            }
+
+            // ---- Notes
+            item(key = "notes_header") {
+                ProfileSectionHeader("Notes", action = if (uiState.notes.size > 3) "All ${uiState.notes.size}" else "New note", onAction = if (uiState.notes.size > 3) actions.openNotes else actions.newNote)
+            }
+            if (uiState.notes.isEmpty()) {
+                item(key = "notes_empty") {
+                    InlineEmptyState(icon = Icons.AutoMirrored.Rounded.Notes, text = "Jot down how training feels, a niggle to watch or beta to remember. Add one from the Log button too.")
+                }
+            }
+            items(uiState.notes.take(3), key = { "note_${it.id}" }) { note ->
+                NoteCard(note, onClick = { actions.openNote(note.id) })
+            }
+
+            // ---- Preferences
+            item(key = "prefs_header") { ProfileSectionHeader("Preferences") }
+            item(key = "prefs") {
+                CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("preferences")) {
+                    Column(Modifier.padding(vertical = space.s1).fillMaxWidth()) {
+                        PreferenceRow(Icons.Rounded.Straighten, "Units", uiState.units.label, actions.openSettings)
+                        PreferenceRow(Icons.Rounded.Leaderboard, "Grades", "${uiState.scales.boulder.label} · ${uiState.scales.route.label}", actions.openSettings)
+                        PreferenceRow(Icons.Rounded.Palette, "Theme", uiState.theme.label, actions.openSettings)
+                        PreferenceRow(Icons.Rounded.Backup, "Data and backup", "Demo, export, import", actions.openSettings)
+                    }
+                }
             }
         }
     }

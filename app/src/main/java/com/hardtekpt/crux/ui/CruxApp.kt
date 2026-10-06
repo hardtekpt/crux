@@ -90,6 +90,15 @@ import com.hardtekpt.crux.ui.train.TemplateDetailScreen
 import com.hardtekpt.crux.ui.train.TrainScreen
 import com.hardtekpt.crux.ui.you.LogWeightScreen
 import com.hardtekpt.crux.ui.you.YouScreen
+import com.hardtekpt.crux.ui.you.ProfileActions
+import com.hardtekpt.crux.ui.you.NotesScreen
+import com.hardtekpt.crux.ui.you.NoteEditorScreen
+import com.hardtekpt.crux.ui.you.RecordEditorScreen
+import com.hardtekpt.crux.ui.you.ExerciseRecordsScreen
+import com.hardtekpt.crux.ui.navigation.NotesRoute
+import com.hardtekpt.crux.ui.navigation.NoteEditorRoute
+import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
+import com.hardtekpt.crux.ui.navigation.ExerciseRecordsRoute
 
 @Composable
 fun CruxApp() {
@@ -105,6 +114,8 @@ fun CruxApp() {
         ExerciseEditorRoute::class,
         PlaceEditorRoute::class,
         ProblemEditorRoute::class,
+        NoteEditorRoute::class,
+        RecordEditorRoute::class,
     )
     val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
@@ -222,14 +233,36 @@ fun CruxApp() {
             navigation<YouGraph>(startDestination = YouRoute) {
                 page<YouRoute> {
                     YouScreen(
-                        onLogWeight = { navController.navigate(LogWeightRoute) },
-                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        actions = ProfileActions(
+                            logWeight = { navController.navigate(LogWeightRoute) },
+                            openSettings = { navController.navigate(SettingsRoute) },
+                            newNote = { navController.navigate(NoteEditorRoute()) },
+                            openNote = { navController.navigate(NoteEditorRoute(it)) },
+                            openNotes = { navController.navigate(NotesRoute) },
+                            logRecord = { navController.navigate(RecordEditorRoute()) },
+                            openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                        ),
                     )
                 }
                 page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
+                page<NotesRoute> {
+                    NotesScreen(
+                        onBack = navController::popBackStack,
+                        onOpen = { navController.navigate(NoteEditorRoute(it)) },
+                        onNew = { navController.navigate(NoteEditorRoute()) },
+                    )
+                }
+                page<ExerciseRecordsRoute> {
+                    ExerciseRecordsScreen(
+                        onBack = navController::popBackStack,
+                        onAdd = { navController.navigate(RecordEditorRoute(it)) },
+                    )
+                }
             }
             page<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
             page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
+            page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }
+            page<RecordEditorRoute> { RecordEditorScreen(onDone = navController::popBackStack) }
         }
         }
 
@@ -271,7 +304,8 @@ fun CruxApp() {
                 when (action) {
                     QuickLogAction.LogClimb -> navController.navigate(LogClimbRoute())
                     QuickLogAction.LogWeight -> navController.navigate(LogWeightRoute)
-                    QuickLogAction.StartWorkout, QuickLogAction.AddNote -> Unit
+                    QuickLogAction.AddNote -> navController.navigate(NoteEditorRoute())
+                    QuickLogAction.StartWorkout -> Unit
                 }
             },
         )

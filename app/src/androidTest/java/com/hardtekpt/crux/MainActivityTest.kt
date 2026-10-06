@@ -330,6 +330,20 @@ class MainActivityTest {
         composeRule.onNodeWithTag("screen_Journal").assertIsDisplayed()
     }
 
+    @Test
+    fun aNoteFromTheLogButtonShowsOnTheProfile() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_AddNote").performClick()
+        composeRule.waitForTag("screen_NoteEditor")
+        composeRule.onNodeWithTag("field_note").performTextInput("Left ring finger tweak")
+        composeRule.onNodeWithTag("save_note").performClick()
+
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("screen_You")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("note_card"))
+        composeRule.onNode(hasTestTag("note_card") and hasText("Left ring finger tweak", substring = true)).assertIsDisplayed()
+    }
+
     private fun openSettings() {
         composeRule.onNodeWithTag("nav_You").performClick()
         composeRule.waitForIdle()

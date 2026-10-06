@@ -82,6 +82,12 @@ abstract class RepositoryModule {
     abstract fun bindClimbRepository(impl: OfflineClimbRepository): ClimbRepository
 
     @Binds
+    abstract fun bindNoteRepository(impl: com.hardtekpt.crux.data.OfflineNoteRepository): com.hardtekpt.crux.data.NoteRepository
+
+    @Binds
+    abstract fun bindRecordRepository(impl: com.hardtekpt.crux.data.OfflineRecordRepository): com.hardtekpt.crux.data.RecordRepository
+
+    @Binds
     abstract fun bindImageFiles(impl: com.hardtekpt.crux.data.images.AreaImageStore): com.hardtekpt.crux.data.images.ImageFiles
 
     @Binds

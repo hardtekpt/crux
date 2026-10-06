@@ -116,6 +116,12 @@ enum class MeasurementType(
     WINGSPAN("Wingspan", "cm", 100.0..260.0, "Fingertip to fingertip, arms straight out"),
     STANDING_REACH("Standing reach", "cm", 150.0..320.0, "Highest point you touch flat-footed, one arm up"),
     BODY_FAT("Body fat", "%", 3.0..60.0, "From a scale or calipers"),
+    // Circumferences, measured relaxed with a soft tape.
+    FOREARM("Forearm", "cm", 15.0..60.0, "Widest point, arm relaxed"),
+    BICEP("Bicep", "cm", 15.0..70.0, "Widest point, arm relaxed"),
+    CHEST("Chest", "cm", 60.0..160.0, "Across the nipples, breathing out"),
+    WAIST("Waist", "cm", 50.0..160.0, "At the navel, relaxed"),
+    THIGH("Thigh", "cm", 30.0..100.0, "Widest point, standing"),
     ;
 
     companion object {

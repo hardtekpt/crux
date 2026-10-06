@@ -35,6 +35,9 @@ class BackupRepositoryTest {
     fun `export then import restores every section`() = runTest {
         val source = newDb()
         StarterDataSeeder(FIXED_CLOCK).seed(source, includeSampleData = true)
+        source.noteDao().insert(com.hardtekpt.crux.data.NoteEntity(text = "Left finger tweak, easy on crimps", createdAtMillis = 1, updatedAtMillis = 1))
+        val exercise = source.exerciseDao().getAll().first()
+        source.exerciseRecordDao().insert(com.hardtekpt.crux.data.ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2))
         val text = BackupRepository(source, FIXED_CLOCK).export(BackupSection.entries.toSet())
 
         val target = newDb()
@@ -46,6 +49,10 @@ class BackupRepositoryTest {
         assertEquals(source.climbDao().count(), target.climbDao().count())
         assertEquals(source.bodyMeasurementDao().count(), target.bodyMeasurementDao().count())
         assertEquals(source.climbDao().count(), result.added[BackupSection.JOURNAL])
+        assertEquals("Left finger tweak, easy on crimps", target.noteDao().getAll().single().text)
+        val record = target.exerciseRecordDao().getAll().single()
+        assertEquals(12.5, record.loadKg!!, 0.0)
+        assertEquals(exercise.name, target.exerciseDao().getAll().first { it.id == record.exerciseId }.name)
 
         // Places come back with their walls and problems, and climbs link to them again.
         assertEquals(source.placeDao().getPlaces().size, target.placeDao().getPlaces().size)

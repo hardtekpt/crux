@@ -44,6 +44,7 @@ fun UnitSystem.weightChange(kg: Double): String = "${weightValue(kg).signedOneDe
 fun UnitSystem.measurement(type: MeasurementType, value: Double): Shown = when {
     type == MeasurementType.WEIGHT -> weight(value)
     type.isLength && this == UnitSystem.IMPERIAL -> Shown(feetInches(value / CM_PER_INCH), null)
+    type.isCircumference && this == UnitSystem.IMPERIAL -> Shown((value / CM_PER_INCH).wholeOrOneDecimal(), "in")
     else -> Shown(value.wholeOrOneDecimal(), type.unit)
 }
 
@@ -122,6 +123,32 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "kg",
         )
+        type.isCircumference && imperial -> MeasureInput(
+            scale = RulerScale(
+                min = floor(type.range.start / CM_PER_INCH),
+                max = floor(type.range.endInclusive / CM_PER_INCH),
+                step = 0.25,
+                midEvery = 2,
+                majorEvery = 4,
+                labelEvery = 8,
+                spacing = 10.dp,
+            ),
+            unit = "in",
+            toDisplay = { it / CM_PER_INCH },
+            toStored = { (it * CM_PER_INCH * 10).roundToInt() / 10.0 },
+            display = { it.wholeOrOneDecimal() },
+            parse = decimal,
+            typeUnit = "in",
+        )
+        type.isCircumference -> MeasureInput(
+            scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 2, majorEvery = 10, labelEvery = 10, spacing = 10.dp),
+            unit = "cm",
+            toDisplay = { it },
+            toStored = { it },
+            display = { it.wholeOrOneDecimal() },
+            parse = decimal,
+            typeUnit = "cm",
+        )
         type.isLength && imperial -> MeasureInput(
             scale = RulerScale(
                 min = floor(type.range.start / CM_PER_INCH),
@@ -168,4 +195,13 @@ fun MeasurementType.typicalValue(): Double = when (this) {
     MeasurementType.WINGSPAN -> 178.0
     MeasurementType.STANDING_REACH -> 225.0
     MeasurementType.BODY_FAT -> 15.0
+    MeasurementType.FOREARM -> 29.0
+    MeasurementType.BICEP -> 33.0
+    MeasurementType.CHEST -> 98.0
+    MeasurementType.WAIST -> 80.0
+    MeasurementType.THIGH -> 55.0
 }
+
+/** Tape measurements around a limb or the body. */
+val MeasurementType.isCircumference: Boolean
+    get() = this in setOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)

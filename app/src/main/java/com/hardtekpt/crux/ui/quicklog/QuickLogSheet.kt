@@ -33,7 +33,7 @@ enum class QuickLogAction(
     LogClimb("Log climb", "A send or an attempt, with grade and style", Icons.Rounded.Landscape, true),
     LogWeight("Log weight", "Today's bodyweight", Icons.Rounded.MonitorWeight, true),
     StartWorkout("Start a workout", "Coming next, with the session logger", Icons.Rounded.FitnessCenter, false),
-    AddNote("Add a note", "Coming next", Icons.AutoMirrored.Rounded.Notes, false),
+    AddNote("Add a note", "A thought, a niggle, beta to remember", Icons.AutoMirrored.Rounded.Notes, true),
 }
 
 /** The Log FAB's sheet: the four things a climber logs, two of them live in the MVP. */

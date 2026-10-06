@@ -39,7 +39,9 @@ enum class BackupSection(val label: String, val description: String, val availab
     PLANS("Plan list", "Session plans, with the exercises they use"),
     JOURNAL("Journal", "Every climb you logged, with its photo"),
     PLACES("Places", "Gyms, crags and boards, with their walls, wall images and problems"),
-    BODY("Body stats", "Weigh-ins and height"),
+    BODY("Body stats", "Weigh-ins, body stats and circumferences"),
+    RECORDS("Personal records", "Results logged on exercises"),
+    NOTES("Notes", "Everything in your notes"),
     SESSIONS("Session history", "Arrives with the session logger", available = false),
 }
 
@@ -56,6 +58,8 @@ data class BackupFile(
     val climbs: List<ClimbDto>? = null,
     val places: List<PlaceDto>? = null,
     val bodyMeasurements: List<MeasurementDto>? = null,
+    val records: List<RecordDto>? = null,
+    val notes: List<NoteDto>? = null,
     /** Reserved for the session logger; always null for now. */
     val sessions: List<String>? = null,
 ) {
@@ -66,6 +70,8 @@ data class BackupFile(
         BackupSection.JOURNAL -> climbs?.size
         BackupSection.PLACES -> places?.size
         BackupSection.BODY -> bodyMeasurements?.size
+        BackupSection.RECORDS -> records?.size
+        BackupSection.NOTES -> notes?.size
         BackupSection.SESSIONS -> sessions?.size
     }
 
@@ -163,6 +169,20 @@ data class PlaceDto(
     val longitude: Double? = null,
     val address: String? = null,
 )
+
+@Serializable
+data class RecordDto(
+    val exercise: ExerciseDto,
+    val date: String,
+    val reps: Int? = null,
+    val seconds: Int? = null,
+    val loadKg: Double? = null,
+    val notes: String? = null,
+    val loggedAt: Long,
+)
+
+@Serializable
+data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, val pinned: Boolean = false)
 
 @Serializable
 data class MeasurementDto(val type: MeasurementType, val value: Double, val date: String, val loggedAt: Long)
@@ -263,6 +283,20 @@ class BackupRepository(
                 null
             },
             bodyMeasurements = if (BackupSection.BODY in sections) db.bodyMeasurementDao().getAll().map { it.toDto() } else null,
+            records = if (BackupSection.RECORDS in sections) {
+                db.exerciseRecordDao().getAll().mapNotNull { r ->
+                    byId[r.exerciseId]?.let { ex ->
+                        RecordDto(ex.toDto(), java.time.LocalDate.ofEpochDay(r.dateEpochDay).toString(), r.reps, r.seconds, r.loadKg, r.notes, r.createdAtMillis)
+                    }
+                }
+            } else {
+                null
+            },
+            notes = if (BackupSection.NOTES in sections) {
+                db.noteDao().getAll().map { NoteDto(it.text, it.createdAtMillis, it.updatedAtMillis, it.pinned) }
+            } else {
+                null
+            },
         )
         return json.encodeToString(file)
     }
@@ -482,6 +516,45 @@ class BackupRepository(
                 )
                 seen += key
                 added.merge(BackupSection.BODY, 1, Int::plus)
+            }
+        }
+        if (BackupSection.RECORDS in sections) {
+            val dao = db.exerciseRecordDao()
+            val seen = dao.getAll().map { it.exerciseId to it.createdAtMillis }.toMutableSet()
+            file.records?.forEach { dto ->
+                // The exercise comes along if the library doesn't have it yet.
+                val exerciseId = exerciseId(dto.exercise, countAs = null)
+                if ((exerciseId to dto.loggedAt) in seen) {
+                    skipped.merge(BackupSection.RECORDS, 1, Int::plus)
+                    return@forEach
+                }
+                dao.insert(
+                    com.hardtekpt.crux.data.ExerciseRecordEntity(
+                        exerciseId = exerciseId,
+                        dateEpochDay = java.time.LocalDate.parse(dto.date).toEpochDay(),
+                        reps = dto.reps,
+                        seconds = dto.seconds,
+                        loadKg = dto.loadKg,
+                        notes = dto.notes,
+                        createdAtMillis = dto.loggedAt,
+                    ),
+                )
+                seen += exerciseId to dto.loggedAt
+                added.merge(BackupSection.RECORDS, 1, Int::plus)
+            }
+        }
+
+        if (BackupSection.NOTES in sections) {
+            val dao = db.noteDao()
+            val seen = dao.getAll().map { it.createdAtMillis to it.text }.toMutableSet()
+            file.notes?.forEach { dto ->
+                if ((dto.createdAt to dto.text) in seen) {
+                    skipped.merge(BackupSection.NOTES, 1, Int::plus)
+                    return@forEach
+                }
+                dao.insert(com.hardtekpt.crux.data.NoteEntity(text = dto.text, createdAtMillis = dto.createdAt, updatedAtMillis = dto.updatedAt, pinned = dto.pinned))
+                seen += dto.createdAt to dto.text
+                added.merge(BackupSection.NOTES, 1, Int::plus)
             }
         }
         return ImportResult(added, skipped)

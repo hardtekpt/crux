@@ -34,6 +34,10 @@ import kotlinx.serialization.Serializable
 /** Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where. */
 @Serializable data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0)
 @Serializable data object LogWeightRoute
+@Serializable data object NotesRoute
+@Serializable data class NoteEditorRoute(val noteId: Long = 0)
+@Serializable data class RecordEditorRoute(val exerciseId: Long = 0)
+@Serializable data class ExerciseRecordsRoute(val exerciseId: Long)
 
 /** The five root destinations from the app blueprint. */
 enum class TopLevelDestination(
