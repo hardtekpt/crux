@@ -179,10 +179,10 @@ class PlaceDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Saves a wall; a replaced or removed image file is deleted. */
-    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, type: PlaceType?) {
+    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, sectionId: Long?) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.saveArea(placeId, areaId, name, angle, image, type)
+            repository.saveArea(placeId, areaId, name, angle, image, sectionId)
             if (previousImage != image) images.delete(previousImage)
         }
     }
@@ -308,7 +308,7 @@ fun PlaceDetailScreen(
                             area?.let { a ->
                                 listOfNotNull(
                                     a.name,
-                                    current.place.typeOf(a).label.takeIf { current.place.hasSeveralTypes },
+                                    current.place.sectionOf(a)?.name?.takeIf { current.place.hasSeveralTypes },
                                     a.angle?.let { "$it°" },
                                     a.resetDate?.let { "reset ${it.shortLabel()}" },
                                 ).joinToString(" · ")
@@ -354,11 +354,12 @@ fun PlaceDetailScreen(
     if (addingArea || editingArea != null) {
         AreaDialog(
             area = editingArea,
-            types = place?.types ?: listOf(PlaceType.GYM),
-            initialType = place?.typeOf(editingArea) ?: PlaceType.GYM,
+            sections = place?.sections.orEmpty(),
+            initialSection = place?.sectionOf(editingArea),
+            fallbackType = place?.type ?: PlaceType.GYM,
             viewModel = viewModel,
-            onSave = { name, angle, image, type ->
-                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath, type)
+            onSave = { name, angle, image, sectionId ->
+                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath, sectionId)
                 addingArea = false
                 editingArea = null
             },
@@ -420,13 +421,15 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
 @Composable
 private fun AreaDialog(
     area: Area?,
-    types: List<PlaceType>,
-    initialType: PlaceType,
+    sections: List<com.hardtekpt.crux.data.model.Section>,
+    initialSection: com.hardtekpt.crux.data.model.Section?,
+    fallbackType: PlaceType,
     viewModel: PlaceDetailViewModel,
-    onSave: (String, Int?, String?, PlaceType) -> Unit,
+    onSave: (String, Int?, String?, Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var type by rememberSaveable { mutableStateOf(initialType) }
+    var sectionId by rememberSaveable { mutableStateOf(initialSection?.id) }
+    val type = sections.firstOrNull { it.id == sectionId }?.type ?: fallbackType
     val label = type.areaLabel
     val isBoard = type == PlaceType.BOARD
     var name by rememberSaveable { mutableStateOf(area?.name.orEmpty()) }
@@ -436,7 +439,7 @@ private fun AreaDialog(
     var failed by remember { mutableStateOf(false) }
     var captureUri by rememberSaveable { mutableStateOf<String?>(null) }
     // A mixed place says "area" in the title; the chips say which kind it is.
-    val noun = if (types.size > 1) "area" else label.lowercase()
+    val noun = if (sections.size > 1) "area" else label.lowercase()
 
     // A new image replaces one added earlier in this dialog; the wall's saved image is only
     // dropped once the dialog is saved.
@@ -476,10 +479,13 @@ private fun AreaDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 // A mixed place: say which part of it this is.
-                if (types.size > 1) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.testTag("area_types")) {
-                        types.forEach { t ->
-                            CruxFilterChip(t.label, t == type, { type = t }, Modifier.testTag("area_type_${t.name}"))
+                if (sections.size > 1) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                        modifier = Modifier.testTag("area_sections"),
+                    ) {
+                        sections.forEach { section ->
+                            CruxFilterChip(section.name, section.id == sectionId, { sectionId = section.id }, Modifier.testTag("area_section_${section.name}"))
                         }
                     }
                 }
@@ -563,7 +569,7 @@ private fun AreaDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image, type) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
+            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image, sectionId) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }
         },

@@ -46,13 +46,33 @@ data class PlaceEntity(
     companion object
 }
 
+/**
+ * One part of a place, with its own kind and name: "Main gym", "Spray wall", "Moonboard".
+ * A place has one or more; kinds can repeat (two boards). Schema 16.
+ */
+@Entity(
+    tableName = "sections",
+    foreignKeys = [
+        ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("placeId")],
+)
+data class SectionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val placeId: Long,
+    val type: PlaceType,
+    val name: String,
+    val position: Int = 0,
+)
+
 /** A wall or sector inside a place; for a board, a named angle or set. */
 @Entity(
     tableName = "areas",
     foreignKeys = [
         ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = SectionEntity::class, parentColumns = ["id"], childColumns = ["sectionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("placeId")],
+    indices = [Index("placeId"), Index("sectionId")],
 )
 data class AreaEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -64,8 +84,10 @@ data class AreaEntity(
     val position: Int = 0,
     /** File name of an attached photo or map in app storage (schema 8). */
     val imagePath: String? = null,
-    /** Which of the place's kinds this area is (schema 15); null means the place's main one. */
+    /** Schema 15's kind for the area; replaced by [sectionId] in schema 16 and no longer used. */
     val type: PlaceType? = null,
+    /** The section the area is in (schema 16); null means the place's first section. */
+    val sectionId: Long? = null,
 )
 
 /** A problem or route at a place, optionally on one of its areas. */
@@ -148,6 +170,30 @@ interface PlaceDao {
 
     @Query("DELETE FROM places WHERE id = :id")
     suspend fun deletePlace(id: Long)
+
+    @Query("SELECT * FROM sections WHERE placeId = :placeId ORDER BY position, id")
+    fun observeSections(placeId: Long): Flow<List<SectionEntity>>
+
+    @Query("SELECT * FROM sections WHERE placeId = :placeId ORDER BY position, id")
+    suspend fun getSections(placeId: Long): List<SectionEntity>
+
+    @Query("SELECT * FROM sections ORDER BY placeId, position, id")
+    fun observeAllSections(): Flow<List<SectionEntity>>
+
+    @Query("SELECT * FROM sections ORDER BY placeId, position, id")
+    suspend fun getAllSections(): List<SectionEntity>
+
+    @Insert
+    suspend fun insertSection(section: SectionEntity): Long
+
+    @Update
+    suspend fun updateSection(section: SectionEntity)
+
+    @Query("DELETE FROM sections WHERE id = :id")
+    suspend fun deleteSection(id: Long)
+
+    @Query("UPDATE climbs SET sectionId = NULL WHERE sectionId = :id")
+    suspend fun unlinkClimbsFromSection(id: Long)
 
     @Query("SELECT * FROM areas WHERE placeId = :placeId ORDER BY position, name COLLATE NOCASE")
     fun observeAreas(placeId: Long): Flow<List<AreaEntity>>

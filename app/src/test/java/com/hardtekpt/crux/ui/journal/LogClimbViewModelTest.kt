@@ -10,6 +10,7 @@ import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.PlaceType
+import com.hardtekpt.crux.data.SectionInput
 import androidx.lifecycle.SavedStateHandle
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
@@ -57,27 +58,37 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `at a gym with a board, the wall picked says which kind of climb it was`() = runBlocking {
+    fun `at a gym with two boards, the section or wall picked says where the climb was`() = runBlocking {
         val placeId = places.savePlace(
-            PlaceInput(name = "Block Lab", types = listOf(PlaceType.GYM, PlaceType.BOARD), location = null, boulderScale = null, routeScale = null, defaultAngle = 40, notes = null),
+            PlaceInput(
+                name = "Block Lab", location = null, boulderScale = null, routeScale = null, defaultAngle = 40, notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Main gym"),
+                    SectionInput(type = PlaceType.BOARD, name = "Spray wall"),
+                    SectionInput(type = PlaceType.BOARD, name = "Moonboard"),
+                ),
+            ),
         )
-        val cave = places.saveArea(placeId, 0, "Cave", null, null, PlaceType.GYM)
-        val kilter = places.saveArea(placeId, 0, "Kilter", 40, null, PlaceType.BOARD)
+        val (gym, spray, moon) = places.getPlace(placeId)!!.sections.map { it.id }
+        val cave = places.saveArea(placeId, 0, "Cave", null, null, gym)
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, moon)
         viewModel.selectPlace(placeId)
         withTimeout(5_000) { viewModel.placeDetail.first { it?.areas?.size == 2 } }
+        assertEquals(gym, viewModel.draft.value.sectionId)
         assertEquals(Venue.GYM, viewModel.draft.value.venue)
 
-        viewModel.selectArea(kilter)
+        // A wall picks its section; picking another section drops a wall that isn't in it.
+        viewModel.selectArea(benchmarks)
+        assertEquals(moon, viewModel.draft.value.sectionId)
         assertEquals(Venue.BOARD, viewModel.draft.value.venue)
-        // Switching back to the gym drops the board's wall.
-        viewModel.selectPlaceType(PlaceType.GYM)
-        assertEquals(Venue.GYM, viewModel.draft.value.venue)
+        viewModel.selectSection(spray)
         assertEquals(null, viewModel.draft.value.areaId)
-        viewModel.selectArea(cave)
         viewModel.save()
         val saved = withTimeout(5_000) { repository.climbs.first { it.isNotEmpty() } }.single()
-        assertEquals(Venue.GYM, saved.venue)
-        assertEquals(cave, saved.areaId)
+        assertEquals(Venue.BOARD, saved.venue)
+        assertEquals(spray, saved.sectionId)
+        assertEquals(null, saved.areaId)
+        assertTrue(cave > 0)
     }
 
     @Test

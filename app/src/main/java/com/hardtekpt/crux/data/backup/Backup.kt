@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.data.backup
 
 import com.hardtekpt.crux.data.parseTypes
+import com.hardtekpt.crux.data.local.SectionEntity
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
@@ -127,6 +128,8 @@ data class ClimbDto(
     val gradeColour: Long? = null,
     /** The climb's photo as base64 JPEG. Older backups omit it. */
     val image: String? = null,
+    /** The name of the place's section it was in. Older backups omit it. */
+    val section: String? = null,
 )
 
 @Serializable
@@ -138,7 +141,13 @@ data class AreaDto(
     val image: String? = null,
     /** Which of the place's kinds the area is; older backups omit it (the main kind). */
     val type: PlaceType? = null,
+    /** The name of the section it's in; older backups omit it. */
+    val section: String? = null,
 )
+
+/** One named part of a place. */
+@Serializable
+data class SectionDto(val type: PlaceType, val name: String)
 
 @Serializable
 data class ProblemDto(
@@ -173,6 +182,8 @@ data class PlaceDto(
     val address: String? = null,
     /** The other kinds of climbing at the place; older backups omit it. */
     val extraTypes: List<PlaceType> = emptyList(),
+    /** The place's named parts, in order; older backups omit it and get one per kind. */
+    val sections: List<SectionDto> = emptyList(),
 )
 
 @Serializable
@@ -251,6 +262,7 @@ class BackupRepository(
             },
             climbs = if (BackupSection.JOURNAL in sections) {
                 val places = db.placeDao().getPlaces().associateBy { it.id }
+                val sectionNames = db.placeDao().getAllSections().associate { it.id to it.name }
                 val areas = db.placeDao().getAllAreas().associateBy { it.id }
                 val problems = db.placeDao().getAllProblems().associateBy { it.id }
                 val photos = db.climbMediaDao().getAll().filter { it.kind == MediaKind.IMAGE }.associate { it.climbId to it.path }
@@ -260,6 +272,7 @@ class BackupRepository(
                         place = place?.name ?: climb.place,
                         placeType = place?.type,
                         area = climb.areaId?.let(areas::get)?.name,
+                        section = climb.sectionId?.let(sectionNames::get),
                         problem = climb.problemId?.let(problems::get)?.name,
                         angle = climb.angle,
                         effort = climb.effort,
@@ -272,17 +285,21 @@ class BackupRepository(
             places = if (BackupSection.PLACES in sections) {
                 val areas = db.placeDao().getAllAreas().groupBy { it.placeId }
                 val problems = db.placeDao().getAllProblems().groupBy { it.placeId }
+                val sections = db.placeDao().getAllSections().groupBy { it.placeId }
                 db.placeDao().getPlaces().map { place ->
+                    val placeSections = sections[place.id].orEmpty().sortedWith(compareBy({ it.position }, { it.id }))
+                    val sectionNames = placeSections.associate { it.id to it.name }
                     val placeAreas = areas[place.id].orEmpty().sortedBy { it.position }
                     val areaNames = placeAreas.associate { it.id to it.name }
                     place.toDto(
                         areas = placeAreas.map { area ->
                             area.toDto().copy(
                                 image = area.imagePath?.let { images?.readBytes(it) }?.let { Base64.getEncoder().encodeToString(it) },
+                                section = area.sectionId?.let(sectionNames::get),
                             )
                         },
                         problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
-                    )
+                    ).copy(sections = placeSections.map { SectionDto(it.type, it.name) })
                 }
             } else {
                 null
@@ -419,6 +436,17 @@ class BackupRepository(
                         extraTypes = dto.extraTypes.filter { it != dto.type }.joinToString(",") { it.name },
                     ),
                 )
+                // Sections: as backed up, or one per kind for older backups.
+                val sectionDtos = dto.sections.ifEmpty {
+                    (listOf(dto.type) + dto.extraTypes.filter { it != dto.type }).distinct().map { SectionDto(it, it.label) }
+                }
+                val sectionIds = sectionDtos.mapIndexed { position, section ->
+                    section to placeDao.insertSection(SectionEntity(placeId = placeId, type = section.type, name = section.name, position = position))
+                }
+                fun sectionFor(name: String?, type: PlaceType?): Long? =
+                    sectionIds.firstOrNull { (section, _) -> name != null && section.name.equals(name, ignoreCase = true) }?.second
+                        ?: sectionIds.firstOrNull { (section, _) -> section.type == (type ?: dto.type) }?.second
+                        ?: sectionIds.firstOrNull()?.second
                 val areaIds = dto.areas.mapIndexed { position, area ->
                     area.name.lowercase() to placeDao.insertArea(
                         AreaEntity(
@@ -431,6 +459,7 @@ class BackupRepository(
                                 runCatching { Base64.getDecoder().decode(encoded) }.getOrNull()?.let { images?.importBytes(it) }
                             },
                             type = area.type?.takeIf { it != dto.type },
+                            sectionId = sectionFor(area.section, area.type),
                         ),
                     )
                 }.toMap()
@@ -464,6 +493,7 @@ class BackupRepository(
             val places = placeDao.getPlaces().associateBy { it.type to it.name.lowercase() }
             val areas = placeDao.getAllAreas().groupBy { it.placeId }
             val problems = placeDao.getAllProblems().groupBy { it.placeId }
+            val sections = placeDao.getAllSections().groupBy { it.placeId }
             val climbDao = db.climbDao()
             val seen = climbDao.getAll().map { it.toDto().identity() }.toMutableSet()
             file.climbs?.forEach { dto ->
@@ -487,6 +517,11 @@ class BackupRepository(
                         place = dto.place,
                         notes = dto.notes,
                         placeId = place?.id,
+                        sectionId = place?.let { p ->
+                            val here = sections[p.id].orEmpty()
+                            here.firstOrNull { dto.section != null && it.name.equals(dto.section, ignoreCase = true) }?.id
+                                ?: here.firstOrNull { it.type.venue == dto.venue }?.id
+                        },
                         areaId = dto.area?.let { name -> areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
                         problemId = dto.problem?.let { name -> problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
                         angle = dto.angle,
@@ -587,7 +622,7 @@ private fun ClimbEntity.toDto() = ClimbDto(
 )
 
 /** Two climbs are the same entry when everything but notes and saved-place links matches. */
-private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null, image = null)
+private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null, image = null, section = null)
 
 private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) = PlaceDto(
     name = name,

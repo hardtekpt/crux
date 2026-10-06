@@ -81,6 +81,35 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate15To16GivesEachKindASectionAndLinksAreasAndClimbs() {
+        helper.createDatabase(DB, 15).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Block Lab', 'GYM', 0, 0, 'BOARD')")
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (2, 'Arco', 'CRAG', 0, 0, '')")
+            execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (1, 1, 'Cave', 0, NULL)")
+            execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (2, 1, 'Kilter', 1, 'BOARD')")
+            val climb = "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, placeId, areaId) VALUES "
+            execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'BOARD', 20000, 0, 1, NULL)")
+            execSQL(climb + "(2, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0, 1, 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 16, true)
+        val sections = db.query("SELECT id, placeId, type, name FROM sections ORDER BY placeId, position").use { c ->
+            buildList { while (c.moveToNext()) add(listOf(c.getLong(0), c.getLong(1), c.getString(2), c.getString(3))) }
+        }
+        assertEquals(listOf(listOf(1L, "GYM", "Gym"), listOf(1L, "BOARD", "Board"), listOf(2L, "CRAG", "Crag")), sections.map { it.drop(1) })
+        val gym = sections[0][0]
+        val board = sections[1][0]
+        db.query("SELECT sectionId FROM areas ORDER BY id").use { c ->
+            c.moveToNext(); assertEquals(gym, c.getLong(0))
+            c.moveToNext(); assertEquals(board, c.getLong(0))
+        }
+        db.query("SELECT sectionId FROM climbs ORDER BY id").use { c ->
+            c.moveToNext(); assertEquals(board, c.getLong(0))
+            c.moveToNext(); assertEquals(gym, c.getLong(0))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

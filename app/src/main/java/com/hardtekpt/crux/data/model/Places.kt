@@ -23,14 +23,20 @@ data class Place(
     /** Where it is on the map, if the climber set it. */
     val mapLocation: MapLocation? = null,
     val types: List<PlaceType> = listOf(type),
+    /** The named parts of the place, in order; at least one once saved. */
+    val sections: List<Section> = emptyList(),
 ) {
-    val hasSeveralTypes: Boolean get() = types.size > 1
+    /** More than one section (or kind): pickers ask which part of the place. */
+    val hasSeveralTypes: Boolean get() = sections.size > 1 || types.size > 1
 
-    /** "Gym · Board" */
-    val typesLabel: String get() = types.joinToString(" · ") { it.label }
+    /** "Main gym · Spray wall · Moonboard", or the kinds when there are no sections. */
+    val typesLabel: String get() = if (sections.isNotEmpty()) sections.joinToString(" · ") { it.name } else types.joinToString(" · ") { it.label }
 
-    /** The kind of climbing an area is: its own, or the place's main kind. */
-    fun typeOf(area: Area?): PlaceType = area?.type?.takeIf { it in types } ?: type
+    /** The section an area is in: its own, or the place's first. */
+    fun sectionOf(area: Area?): Section? = sections.firstOrNull { it.id == area?.sectionId } ?: sections.firstOrNull()
+
+    /** The kind of climbing an area is: its section's, or the place's main kind. */
+    fun typeOf(area: Area?): PlaceType = sectionOf(area)?.type ?: area?.type?.takeIf { it in types } ?: type
 
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale
@@ -41,6 +47,9 @@ data class Place(
     fun systemFor(discipline: Discipline): GradeSystem? =
         scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
 }
+
+/** One named part of a place: a kind and a name, like Board "Moonboard". */
+data class Section(val id: Long, val placeId: Long, val type: PlaceType, val name: String)
 
 /** A point on the map and the address or place name found for it. */
 data class MapLocation(val latitude: Double, val longitude: Double, val address: String?)
@@ -53,8 +62,10 @@ data class Area(
     val resetDate: LocalDate?,
     /** A photo of the wall or a map with it marked; a file name in app storage. */
     val imagePath: String? = null,
-    /** Which of the place's kinds this is; null means the place's main kind. */
+    /** Which of the place's kinds this is; null means the place's main kind (schema 15). */
     val type: PlaceType? = null,
+    /** The section it's in; null means the place's first. */
+    val sectionId: Long? = null,
 )
 
 data class Problem(

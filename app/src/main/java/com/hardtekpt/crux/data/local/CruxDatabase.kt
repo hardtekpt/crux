@@ -10,6 +10,42 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Schema 6 adds places, areas and problems. Every distinct place name already typed into a
  * climb becomes a place of the matching kind, and those climbs are linked to it.
  */
+/**
+ * Schema 16 turns each place's kinds into named sections: one per kind it had, named after
+ * the kind, with its areas and climbs linked to the section of their kind.
+ */
+class SectionsMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        val kinds = listOf("GYM" to "Gym", "CRAG" to "Crag", "BOARD" to "Board")
+        kinds.forEach { (kind, label) ->
+            db.execSQL("INSERT INTO sections (placeId, type, name, position) SELECT id, '$kind', '$label', 0 FROM places WHERE type = '$kind'")
+        }
+        kinds.forEach { (kind, label) ->
+            db.execSQL(
+                "INSERT INTO sections (placeId, type, name, position) SELECT id, '$kind', '$label', 1 FROM places " +
+                    "WHERE type != '$kind' AND (',' || extraTypes || ',') LIKE '%,$kind,%'",
+            )
+        }
+        db.execSQL(
+            """
+            UPDATE areas SET sectionId = (
+                SELECT s.id FROM sections s JOIN places p ON p.id = s.placeId
+                WHERE s.placeId = areas.placeId AND s.type = COALESCE(areas.type, p.type)
+                ORDER BY s.position, s.id LIMIT 1
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            UPDATE climbs SET sectionId = COALESCE(
+                (SELECT a.sectionId FROM areas a WHERE a.id = climbs.areaId),
+                (SELECT s.id FROM sections s WHERE s.placeId = climbs.placeId AND s.type = climbs.venue ORDER BY s.position, s.id LIMIT 1)
+            ) WHERE placeId IS NOT NULL
+            """.trimIndent(),
+        )
+    }
+}
+
 class PlacesMigration : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -41,13 +77,14 @@ class PlacesMigration : AutoMigrationSpec {
         TemplateBlockEntity::class,
         TemplateExerciseEntity::class,
         PlaceEntity::class,
+        SectionEntity::class,
         AreaEntity::class,
         ProblemEntity::class,
         ClimbMediaEntity::class,
         com.hardtekpt.crux.data.NoteEntity::class,
         com.hardtekpt.crux.data.ExerciseRecordEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
@@ -62,6 +99,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 12, to = 13),
         AutoMigration(from = 13, to = 14),
         AutoMigration(from = 14, to = 15),
+        AutoMigration(from = 15, to = 16, spec = SectionsMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {

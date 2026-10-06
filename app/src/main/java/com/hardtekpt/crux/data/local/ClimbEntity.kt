@@ -37,6 +37,8 @@ data class ClimbEntity(
     /** For local grades: the label and tape colour as logged (schema 9). */
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
+    /** The section of the place it was climbed in, e.g. the place's Moonboard (schema 16). */
+    val sectionId: Long? = null,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */

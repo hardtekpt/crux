@@ -88,6 +88,7 @@ import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.PlaceType
+import com.hardtekpt.crux.data.SectionInput
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxButton
@@ -117,11 +118,54 @@ private const val MAX_NAME = 40
 
 // ---- Place editor --------------------------------------------------------------------
 
+/** One part of the place: its kind as chips, a name, and a remove button when there are others. */
+@Composable
+private fun SectionEditor(
+    section: SectionDraft,
+    index: Int,
+    removable: Boolean,
+    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
+    onRemove: () -> Unit,
+) {
+    val space = CruxTheme.space
+    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.weight(1f)) {
+                PlaceType.entries.forEach { t ->
+                    CruxFilterChip(
+                        label = t.label,
+                        selected = section.type == t,
+                        onClick = { onChange { it.copy(type = t) } },
+                        modifier = Modifier.testTag("section_${index}_${t.name}"),
+                    )
+                }
+            }
+            if (removable) {
+                IconButton(onClick = onRemove, modifier = Modifier.testTag("remove_section_$index")) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Remove this part")
+                }
+            }
+        }
+        CruxTextField(
+            label = "",
+            value = section.name,
+            onValueChange = { v -> onChange { it.copy(name = v.take(40)) } },
+            placeholder = when (section.type) {
+                PlaceType.GYM -> "Main gym"
+                PlaceType.CRAG -> "Main crag"
+                PlaceType.BOARD -> "Moonboard"
+            },
+            helper = "Name, optional: \"${section.type.label}\" if left blank",
+            modifier = Modifier.testTag("section_name_$index"),
+        )
+    }
+}
+
 data class PlaceDraft(
     val id: Long = 0,
     val name: String = "",
-    /** Every kind of climbing here, in the order picked; the first is the main kind. */
-    val types: List<PlaceType> = listOf(PlaceType.GYM),
+    /** The named parts of the place, in order: a kind and a name each. At least one. */
+    val sections: List<SectionDraft> = listOf(SectionDraft(type = PlaceType.GYM)),
     val location: String = "",
     /** Null = use my settings. */
     val boulderScale: GradeScale? = null,
@@ -139,19 +183,22 @@ data class PlaceDraft(
     val doneId: Long? = null,
 ) {
     val isNew: Boolean get() = id == 0L
+    val types: List<PlaceType> get() = sections.map { it.type }.distinct()
     val type: PlaceType get() = types.first()
     val hasBoard: Boolean get() = PlaceType.BOARD in types
     /** Only a board: no routes, and "where it is" rather than a city. */
     val onlyBoard: Boolean get() = types == listOf(PlaceType.BOARD)
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (!onlyBoard && routeScale?.isLocal == true)
 
-    /** Adds or removes a kind; the last one can't be removed. */
-    fun toggle(t: PlaceType): PlaceDraft = when {
-        t !in types -> copy(types = types + t)
-        types.size > 1 -> copy(types = types - t)
-        else -> this
-    }
+    fun addSection(type: PlaceType) = copy(sections = sections + SectionDraft(type = type, key = (sections.maxOfOrNull { it.key } ?: 0) + 1))
+    fun updateSection(key: Int, change: (SectionDraft) -> SectionDraft) = copy(sections = sections.map { if (it.key == key) change(it) else it })
+
+    /** The last section can't be removed. */
+    fun removeSection(key: Int) = if (sections.size > 1) copy(sections = sections.filterNot { it.key == key }) else this
 }
+
+/** One section in the place form. [key] tells rows apart before they have an id. */
+data class SectionDraft(val id: Long = 0, val type: PlaceType, val name: String = "", val key: Int = 0)
 
 @HiltViewModel
 class PlaceEditorViewModel @Inject constructor(
@@ -168,7 +215,10 @@ class PlaceEditorViewModel @Inject constructor(
                 repository.getPlace(placeId)?.let { p ->
                     _draft.update {
                         it.copy(
-                            name = p.name, types = p.types, location = p.location.orEmpty(),
+                            name = p.name,
+                            sections = p.sections.ifEmpty { p.types.map { t -> com.hardtekpt.crux.data.model.Section(0, p.id, t, t.label) } }
+                                .mapIndexed { index, section -> SectionDraft(section.id, section.type, section.name, index) },
+                            location = p.location.orEmpty(),
                             boulderScale = p.boulderScale, routeScale = p.routeScale,
                             defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
                             localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
@@ -207,7 +257,7 @@ class PlaceEditorViewModel @Inject constructor(
                 PlaceInput(
                     id = d.id,
                     name = d.name,
-                    types = d.types,
+                    sections = d.sections.map { SectionInput(it.id, it.type, it.name) },
                     location = d.location,
                     boulderScale = d.boulderScale,
                     routeScale = d.routeScale,
@@ -276,23 +326,27 @@ fun PlaceEditorScreen(
                 .padding(top = space.s2, bottom = space.s6),
             verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
-            FormSection("What's here", "Pick every kind of climbing at this place") {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("place_types")) {
+            FormSection("What's here", "Each part of the place, like a main gym, a spray wall and a Moonboard") {
+                draft.sections.forEachIndexed { index, section ->
+                    SectionEditor(
+                        section = section,
+                        index = index,
+                        removable = draft.sections.size > 1,
+                        onChange = { change -> viewModel.update { it.updateSection(section.key, change) } },
+                        onRemove = { viewModel.update { it.removeSection(section.key) } },
+                    )
+                }
+                // Add another part, starting from a kind.
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("add_section")) {
+                    Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     PlaceType.entries.forEach { t ->
                         CruxFilterChip(
-                            label = t.label,
-                            selected = t in draft.types,
-                            onClick = { viewModel.update { it.toggle(t) } },
-                            modifier = Modifier.testTag("place_type_${t.name}"),
+                            label = "+ ${t.label}",
+                            selected = false,
+                            onClick = { viewModel.update { it.addSection(t) } },
+                            modifier = Modifier.testTag("add_section_${t.name}"),
                         )
                     }
-                }
-                if (draft.types.size > 1) {
-                    Text(
-                        "${draft.type.label} is the main one; walls, sectors and sets each belong to one of these.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 CruxTextField(
                     label = "Name",

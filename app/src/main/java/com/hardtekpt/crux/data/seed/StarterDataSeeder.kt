@@ -8,6 +8,7 @@ import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.local.AreaEntity
+import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.local.PlaceEntity
 import com.hardtekpt.crux.data.local.ProblemEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
@@ -64,8 +65,9 @@ class StarterData @Inject constructor(
 /**
  * Bump when the sample data changes, so demo databases filled with an older set are refilled.
  * 2: Block Lab became a gym with a board (6 Oct 2026).
+ * 3: places have named sections; Block Lab is "Main gym" plus "Kilter board".
  */
-const val SAMPLE_DATA_VERSION = 2
+const val SAMPLE_DATA_VERSION = 3
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -206,16 +208,26 @@ class StarterDataSeeder(private val clock: Clock) {
                 defaultAngle = 40.takeIf { sample.boardAreas.isNotEmpty() },
             ))
         }
+        // Each place gets its main section; a place with a board gets a board section too.
+        val mainSections = SAMPLE_PLACES.associate { sample ->
+            sample.name to placeDao.insertSection(
+                SectionEntity(placeId = placeIds.getValue(sample.name), type = sample.type, name = sample.sectionName ?: sample.type.label, position = 0),
+            )
+        }
         val areaIds = SAMPLE_PLACES.flatMap { sample ->
             sample.areas.mapIndexed { position, area ->
-                (sample.name to area) to placeDao.insertArea(AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = position))
+                (sample.name to area) to placeDao.insertArea(
+                    AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = position, sectionId = mainSections.getValue(sample.name)),
+                )
             }
         }.toMap()
-        // A gym with a board: its board sets are areas of the board kind.
-        SAMPLE_PLACES.forEach { sample ->
+        SAMPLE_PLACES.filter { it.boardAreas.isNotEmpty() }.forEach { sample ->
+            val board = placeDao.insertSection(
+                SectionEntity(placeId = placeIds.getValue(sample.name), type = PlaceType.BOARD, name = sample.boardName, position = 1),
+            )
             sample.boardAreas.forEachIndexed { index, area ->
                 placeDao.insertArea(
-                    AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = sample.areas.size + index, type = PlaceType.BOARD, angle = 40),
+                    AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = sample.areas.size + index, type = PlaceType.BOARD, angle = 40, sectionId = board),
                 )
             }
         }
@@ -410,10 +422,12 @@ private data class SamplePlace(
     val areas: List<String>,
     /** Sets on a board inside the place, which makes it a gym with a board. */
     val boardAreas: List<String> = emptyList(),
+    val sectionName: String? = null,
+    val boardName: String = "Board",
 )
 
 private val SAMPLE_PLACES = listOf(
-    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall"), boardAreas = listOf("Kilter benchmarks")),
+    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall"), boardAreas = listOf("Benchmarks", "Circuits"), sectionName = "Main gym", boardName = "Kilter board"),
     SamplePlace("Arco", PlaceType.CRAG, "Trentino", listOf("Policromuro", "Massi di Prabi")),
     SamplePlace("The Arch", PlaceType.GYM, "London", listOf("Overhang", "Lead wall")),
 )

@@ -62,6 +62,8 @@ data class LogClimbDraft(
     val place: String = "",
     val notes: String = "",
     val placeId: Long? = null,
+    /** Which part of the place (its main gym, its Moonboard). */
+    val sectionId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
     val angle: Int? = null,
@@ -150,6 +152,7 @@ class LogClimbViewModel @Inject constructor(
                     place = climb.place.orEmpty(),
                     notes = climb.notes.orEmpty(),
                     placeId = climb.placeId,
+                    sectionId = climb.sectionId,
                     areaId = climb.areaId,
                     problemId = climb.problemId,
                     angle = climb.angle,
@@ -181,9 +184,10 @@ class LogClimbViewModel @Inject constructor(
                 val override = place?.scaleFor(draft.discipline)
                 val next = draft.copy(
                     placeId = place?.id,
+                    sectionId = place?.sections?.firstOrNull()?.id,
                     areaId = null,
                     problemId = null,
-                    venue = place?.type?.venue ?: draft.venue,
+                    venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
                     angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
                     local = place?.localScale,
@@ -209,18 +213,29 @@ class LogClimbViewModel @Inject constructor(
         // Changing the wall drops a problem that is not on it.
         val problemOnWall = it.problemId?.let { pid -> placeDetail.value?.problems?.firstOrNull { p -> p.problem.id == pid } }
         val keepProblem = problemOnWall != null && (id == null || problemOnWall.problem.areaId == id)
-        // At a mixed place, the wall says which kind of climbing this was.
+        // At a place with several parts, the wall says which part this was.
         val detail = placeDetail.value
-        val venue = id?.let { areaId -> detail?.areas?.firstOrNull { a -> a.id == areaId } }?.let { a -> detail?.place?.typeOf(a)?.venue } ?: it.venue
-        it.copy(areaId = id, problemId = if (keepProblem) it.problemId else null, venue = venue)
+        val section = id?.let { areaId -> detail?.areas?.firstOrNull { a -> a.id == areaId } }?.let { a -> detail?.place?.sectionOf(a) }
+        it.copy(
+            areaId = id,
+            problemId = if (keepProblem) it.problemId else null,
+            sectionId = section?.id ?: it.sectionId,
+            venue = section?.type?.venue ?: it.venue,
+        )
     }
 
-    /** At a place with several kinds: which one this climb was at. A wall of another kind is dropped. */
-    fun selectPlaceType(type: PlaceType) = _draft.update {
+    /** At a place with several parts: which one this climb was at. A wall in another part is dropped. */
+    fun selectSection(sectionId: Long) = _draft.update {
         val detail = placeDetail.value
-        val area = it.areaId?.let { id -> detail?.areas?.firstOrNull { a -> a.id == id } }
-        val keepArea = area != null && detail?.place?.typeOf(area) == type
-        it.copy(venue = type.venue, areaId = if (keepArea) it.areaId else null, problemId = if (keepArea) it.problemId else null)
+        val section = detail?.place?.sections?.firstOrNull { s -> s.id == sectionId } ?: return@update it
+        val area = it.areaId?.let { id -> detail.areas.firstOrNull { a -> a.id == id } }
+        val keepArea = area != null && detail.place.sectionOf(area)?.id == sectionId
+        it.copy(
+            sectionId = sectionId,
+            venue = section.type.venue,
+            areaId = if (keepArea) it.areaId else null,
+            problemId = if (keepArea) it.problemId else null,
+        )
     }
 
     /** Fills the form from a problem; everything stays editable. */
@@ -230,6 +245,7 @@ class LogClimbViewModel @Inject constructor(
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
             venue = placeDetail.value?.let { d -> d.place.typeOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }).venue } ?: it.venue,
+            sectionId = placeDetail.value?.let { d -> d.place.sectionOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) })?.id } ?: it.sectionId,
             discipline = problem.discipline,
             scaleOverride = problem.gradeScale,
             gradeIndex = problem.gradeIndex,
@@ -383,7 +399,11 @@ class LogClimbViewModel @Inject constructor(
                 gradeIndex = draft.gradeIndex,
                 style = draft.style,
                 attempts = if (draft.style.singleAttempt) 1 else draft.attempts,
-                venue = place?.let { p -> draft.venue.takeIf { v -> p.types.any { t -> t.venue == v } } ?: p.type.venue } ?: draft.venue,
+                venue = place?.let { p ->
+                    p.sections.firstOrNull { s -> s.id == draft.sectionId }?.type?.venue
+                        ?: draft.venue.takeIf { v -> p.types.any { t -> t.venue == v } } ?: p.type.venue
+                } ?: draft.venue,
+                sectionId = draft.sectionId.takeIf { place != null && place.sections.any { s -> s.id == it } },
                 date = draft.date,
                 name = draft.name,
                 place = place?.name ?: draft.place,

@@ -77,12 +77,15 @@ data class WhereActions(
     val setAngle: (Int) -> Unit,
     val setVenue: (Venue) -> Unit,
     val setPlaceText: (String) -> Unit,
-    /** At a place with several kinds: which one this climb was at. */
-    val selectPlaceType: (PlaceType) -> Unit = {},
+    /** At a place with several parts: which one this climb was at. */
+    val selectSection: (Long) -> Unit = {},
 )
 
-/** The kind of climbing the draft is at, within [place]'s kinds. */
-private fun Place.typeFor(draft: LogClimbDraft): PlaceType = types.firstOrNull { it.venue == draft.venue } ?: type
+/** The part of [this] place the draft is at: the picked section, else the first. */
+private fun Place.sectionFor(draft: LogClimbDraft) = sections.firstOrNull { it.id == draft.sectionId } ?: sections.firstOrNull()
+
+/** The kind of climbing the draft is at, within [this] place. */
+private fun Place.typeFor(draft: LogClimbDraft): PlaceType = sectionFor(draft)?.type ?: types.firstOrNull { it.venue == draft.venue } ?: type
 
 private enum class WhereStep { PLACE, AREA, PROBLEM }
 
@@ -105,6 +108,7 @@ fun WhereSection(
 
     val summary = listOfNotNull(
         place?.name ?: draft.place.takeIf { it.isNotBlank() },
+        place?.takeIf { it.hasSeveralTypes }?.sectionFor(draft)?.name,
         area?.name,
         problem?.let { "${it.problem.name} ${it.problem.grade}" } ?: "new problem".takeIf { draft.saveAsProblem && place != null },
         draft.angle?.takeIf { place != null && draft.venue == Venue.BOARD }?.let { "$it°" },
@@ -265,8 +269,8 @@ private fun WhereSheet(
                             horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                             modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
                         ) {
-                            place.types.forEach { t ->
-                                CruxFilterChip(t.label, place.typeFor(draft) == t, { actions.selectPlaceType(t) }, Modifier.testTag("where_type_${t.name}"))
+                            place.sections.forEach { section ->
+                                CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, { actions.selectSection(section.id) }, Modifier.testTag("where_section_${section.name}"))
                             }
                         }
                     }
@@ -356,13 +360,14 @@ private fun LazyListScope.placeStep(
 
 private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, actions: WhereActions, onPicked: () -> Unit) {
     val type = detail.place.typeFor(draft)
+    val section = detail.place.sectionFor(draft)
     item(key = "area_any") {
         PickRow("Any ${type.areaLabel.lowercase()}", selected = draft.areaId == null, tag = "area_any") {
             actions.selectArea(null)
             onPicked()
         }
     }
-    items(detail.areas.filter { detail.place.typeOf(it) == type }, key = { "area_${it.id}" }) { area ->
+    items(detail.areas.filter { section == null || detail.place.sectionOf(it)?.id == section.id }, key = { "area_${it.id}" }) { area ->
         PickRow(
             title = area.name,
             supporting = area.angle?.let { "$it°" },
@@ -384,12 +389,12 @@ private fun LazyListScope.problemStep(
     onPicked: () -> Unit,
 ) {
     // At a mixed place, only problems on this kind's walls (or on no wall).
-    val type = detail.place.typeFor(draft)
-    val areaType = detail.areas.associate { it.id to detail.place.typeOf(it) }
+    val section = detail.place.sectionFor(draft)
+    val areaSection = detail.areas.associate { it.id to detail.place.sectionOf(it)?.id }
     val matches = detail.problems
         .filter { !it.problem.retired }
         .filter { draft.areaId == null || it.problem.areaId == draft.areaId }
-        .filter { p -> p.problem.areaId == null || areaType[p.problem.areaId] == type }
+        .filter { p -> p.problem.areaId == null || section == null || areaSection[p.problem.areaId] == section.id }
         .filter { query.isBlank() || it.problem.name.contains(query.trim(), ignoreCase = true) || it.problem.grade.equals(query.trim(), true) }
     if (query.isBlank()) {
         item(key = "problem_none") {

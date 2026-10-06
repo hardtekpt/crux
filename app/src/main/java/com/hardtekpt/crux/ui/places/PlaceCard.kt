@@ -148,6 +148,31 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            // The modules here: each part of the place with its kind, at a glance.
+            if (place.sections.isNotEmpty()) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                    verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                    modifier = Modifier.testTag("place_modules"),
+                ) {
+                    place.sections.forEach { section ->
+                        val tint = section.type.accent()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(tint.copy(alpha = 0.12f))
+                                .border(CruxTheme.size.borderHairline, tint.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .testTag("module_${section.name}"),
+                        ) {
+                            Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(16.dp))
+                            Text(section.name, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
+                        }
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.fillMaxWidth()) {
                 PlaceStat("Climbs", summary.climbs, Modifier.weight(1f))
                 PlaceStat(if (place.hasSeveralTypes) "Areas" else place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))

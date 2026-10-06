@@ -84,7 +84,7 @@ class FakeClimbRepository : ClimbRepository {
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour,
+        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId,
     )
 }
 
@@ -137,7 +137,10 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
 
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
-        val place = Place(id, input.name, input.types.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale, types = input.types)
+        val old = places.value.find { it.id == id }?.sections.orEmpty()
+        val sections = input.sections.map { s -> com.hardtekpt.crux.data.model.Section(s.id.takeIf { sid -> old.any { it.id == sid } } ?: nextId++, id, s.type, s.name.ifBlank { s.type.label }) }
+        val kinds = sections.map { it.type }.distinct()
+        val place = Place(id, input.name, kinds.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale, types = kinds, sections = sections)
         places.value = places.value.filterNot { it.id == id } + place
         return id
     }
@@ -148,9 +151,10 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.filterNot { it.placeId == id }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, type: com.hardtekpt.crux.data.model.PlaceType?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long?): Long {
         val id = areaId.takeIf { it != 0L } ?: nextId++
-        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath, type)
+        val section = sectionId ?: places.value.find { it.id == placeId }?.sections?.firstOrNull()?.id
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath, sectionId = section)
         return id
     }
 
