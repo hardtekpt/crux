@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -76,21 +77,7 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                 .fillMaxWidth()
                 .height(112.dp),
         ) {
-            val cover = summary.coverImage
-            val mapLocation = place.mapLocation
-            when {
-                cover != null -> {
-                    val image = rememberLocalImage(areaImageFile(cover), 900)
-                    Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.18f)))
-                    image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                    BannerShade()
-                }
-                mapLocation != null -> {
-                    MapPreview(mapLocation, Modifier.fillMaxSize())
-                    BannerShade()
-                }
-                else -> TypeArt(place.type, accent)
-            }
+            PlaceBannerArt(place, summary.coverImage)
             // The favourite star, top right; what's here shows as module chips below.
             if (place.favourite) {
                 Box(
@@ -162,6 +149,30 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
         }
     }
 }
+
+/** The banner behind a place: a wall photo, the map around its pin, or its kind drawn large. */
+@Composable
+internal fun BoxScope.PlaceBannerArt(place: com.hardtekpt.crux.data.model.Place, coverImage: String?) {
+    val accent = place.type.accent()
+    val mapLocation = place.mapLocation
+    when {
+        coverImage != null -> {
+            val image = rememberLocalImage(areaImageFile(coverImage), 900)
+            Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.18f)))
+            image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            BannerShade()
+        }
+        mapLocation != null -> {
+            MapPreview(mapLocation, Modifier.fillMaxSize())
+            BannerShade()
+        }
+        else -> TypeArt(place.type, accent)
+    }
+}
+
+/** A kind's colour: gyms in the primary, crags in sandstone, boards in lilac. */
+@Composable
+internal fun kindAccent(type: PlaceType): Color = type.accent()
 
 /** One number on a place card. Open projects light up so there is something to go back for. */
 @Composable

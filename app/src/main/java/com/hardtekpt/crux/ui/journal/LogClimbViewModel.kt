@@ -109,6 +109,7 @@ class LogClimbViewModel @Inject constructor(
     private val climbId: Long = savedStateHandle.get<Long>("climbId") ?: 0L
     private val routePlaceId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val routeProblemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
+    private val routeSectionId: Long = savedStateHandle.get<Long>("sectionId") ?: 0L
 
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
@@ -170,6 +171,12 @@ class LogClimbViewModel @Inject constructor(
         val problem = routeProblemId.takeIf { it != 0L }?.let { placeRepository.getProblem(it) }
         val placeId = problem?.placeId ?: routePlaceId.takeIf { it != 0L } ?: preferences.lastPlaceId.first()
         placeId?.let { applyPlace(it) }
+        // Logging from a facility on the place page starts in that facility.
+        if (routeSectionId != 0L && placeId != null) {
+            placeRepository.getPlace(placeId)?.sections?.firstOrNull { it.id == routeSectionId }?.let { section ->
+                _draft.update { it.copy(sectionId = section.id, venue = section.type.venue) }
+            }
+        }
         problem?.let(::pickProblem)
     }
 

@@ -1,5 +1,19 @@
 package com.hardtekpt.crux.ui.places
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.hardtekpt.crux.ui.theme.Archivo
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -172,11 +186,16 @@ class PlaceDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: PlaceRepository,
     private val images: AreaImageStore,
+    climbRepository: com.hardtekpt.crux.data.ClimbRepository,
 ) : ViewModel() {
     val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
 
     val detail: StateFlow<PlaceDetail?> = repository.observePlaceDetail(placeId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Climbs logged here, for the header's numbers and last visit. */
+    val climbs: StateFlow<List<com.hardtekpt.crux.data.model.Climb>> = climbRepository.observeClimbsAtPlace(placeId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Saves a wall; a replaced or removed image file is deleted. */
     fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, sectionId: Long?) {
@@ -220,10 +239,13 @@ fun PlaceDetailScreen(
     onEdit: (Long) -> Unit,
     onOpenProblem: (Long) -> Unit,
     onNewProblem: (Long) -> Unit,
-    onLogHere: (Long) -> Unit,
+    onLogHere: (placeId: Long, sectionId: Long?) -> Unit,
     viewModel: PlaceDetailViewModel = hiltViewModel(),
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
+    val climbs by viewModel.climbs.collectAsStateWithLifecycle()
+    // The facility the list shows; null shows every one.
+    var facility by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingArea by remember { mutableStateOf<Area?>(null) }
     var viewingArea by remember { mutableStateOf<Area?>(null) }
     var addingArea by rememberSaveable { mutableStateOf(false) }
@@ -233,7 +255,7 @@ fun PlaceDetailScreen(
 
     Column(Modifier.fillMaxSize().testTag("screen_PlaceDetail")) {
         CruxTopAppBar(
-            title = place?.name.orEmpty(),
+            title = "",
             onBack = onBack,
             actions = {
                 if (place != null) {
@@ -246,33 +268,107 @@ fun PlaceDetailScreen(
         val current = detail ?: return@Column
         // One kind of place says Wall, Sector or Set; a mixed place says Area.
         val areaLabel = if (current.place.hasSeveralTypes) "Area" else current.place.type.areaLabel
+        val sections = current.place.sections
+        val picked = sections.firstOrNull { it.id == facility }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
             modifier = Modifier.testTag("place_list"),
         ) {
-            item {
-                Text(
-                    listOfNotNull(current.place.typesLabel, current.place.location, scaleLine(current)).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // The banner, with the name and where it is on it.
+            item(key = "banner") {
+                Box(
+                    Modifier
+                        .padding(horizontal = 0.dp)
+                        .fillMaxWidth()
+                        .height(156.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .testTag("place_banner"),
+                ) {
+                    PlaceBannerArt(current.place, current.areas.sortedBy { it.id }.firstNotNullOfOrNull { it.imagePath })
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))))
+                            .padding(horizontal = space.s4, vertical = space.s3),
+                    ) {
+                        Text(
+                            current.place.name,
+                            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = (-0.4).sp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        val where = current.place.location ?: current.place.mapLocation?.address
+                        where?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
+                }
             }
-            current.place.mapLocation?.let { location ->
-                item {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    CruxListRow(
-                        title = location.address ?: "%.5f, %.5f".format(location.latitude, location.longitude),
-                        supporting = "Open in Maps",
-                        leading = { Icon(Icons.Rounded.Map, contentDescription = null) },
-                        onClick = { openInMaps(context, location, current.place.name) },
-                        modifier = Modifier.testTag("place_map_location"),
+            // The numbers, each with a plain label and what it means.
+            item(key = "stats") {
+                val live = current.problems.filter { !it.problem.retired }
+                val projects = live.count { it.isProject }
+                val lastVisit = climbs.maxOfOrNull { it.date }
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min).testTag("place_stats")) {
+                    PlaceFigure(
+                        value = climbs.size,
+                        label = if (climbs.size == 1) "climb logged" else "climbs logged",
+                        detail = lastVisit?.let { "last ${it.relativeLabel(LocalDate.now()).lowercase()}" } ?: "none yet",
+                        modifier = Modifier.weight(1f),
+                    )
+                    PlaceFigure(
+                        value = live.size,
+                        label = if (live.size == 1) "problem up" else "problems up",
+                        detail = "${current.areas.size} ${if (current.areas.size == 1) "wall or set" else "walls and sets"}",
+                        modifier = Modifier.weight(1f),
+                    )
+                    PlaceFigure(
+                        value = projects,
+                        label = if (projects == 1) "open project" else "open projects",
+                        detail = "tried, not sent",
+                        highlight = projects > 0,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                    CruxButton(text = "Log here", onClick = { onLogHere(current.place.id) }, icon = Icons.Rounded.Add, modifier = Modifier.testTag("log_here"))
+            // One tile per facility. With several, a tile filters the list and Log goes there.
+            if (sections.isNotEmpty()) {
+                item(key = "facilities") {
+                    Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("facilities")) {
+                        Eyebrow(if (sections.size > 1) "Facilities · tap one to filter" else "Facility")
+                        sections.chunked(2).forEach { pair ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+                                pair.forEach { section ->
+                                    val areas = current.areas.filter { current.place.sectionOf(it)?.id == section.id }
+                                    val problems = current.problems.count { p -> !p.problem.retired && areas.any { it.id == p.problem.areaId } }
+                                    FacilityTile(
+                                        section = section,
+                                        areas = areas.size,
+                                        problems = problems,
+                                        angle = current.place.defaultAngle.takeIf { section.type == PlaceType.BOARD },
+                                        scales = listOfNotNull(
+                                            current.place.boulderScale?.label,
+                                            current.place.routeScale?.label.takeIf { section.type != PlaceType.BOARD },
+                                        ),
+                                        selected = sections.size > 1 && facility == section.id,
+                                        onClick = { if (sections.size > 1) facility = if (facility == section.id) null else section.id },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (pair.size == 1) Box(Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+            item(key = "actions") {
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically) {
+                    CruxButton(
+                        text = picked?.let { "Log at ${it.name}" } ?: "Log here",
+                        onClick = { onLogHere(current.place.id, picked?.id) },
+                        icon = Icons.Rounded.Add,
+                        modifier = Modifier.weight(1f, fill = false).testTag("log_here"),
+                    )
                     CruxButton(
                         text = "Add problem",
                         onClick = { onNewProblem(current.place.id) },
@@ -281,11 +377,38 @@ fun PlaceDetailScreen(
                     )
                 }
             }
+            current.place.mapLocation?.let { location ->
+                item(key = "map") {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(space.s2),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { openInMaps(context, location, current.place.name) }
+                            .padding(vertical = space.s1)
+                            .testTag("place_map_location"),
+                    ) {
+                        Icon(Icons.Rounded.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        Text(
+                            location.address ?: "%.5f, %.5f".format(location.latitude, location.longitude),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text("Open in Maps", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
 
             val visible = current.problems.filter { showRetired || !it.problem.retired }
+            // With a facility picked, only its walls and their problems.
+            val shownAreas = current.areas.filter { picked == null || current.place.sectionOf(it)?.id == picked.id }
             val groups: List<Pair<Area?, List<ProblemWithStats>>> =
-                current.areas.map { area -> area to visible.filter { it.problem.areaId == area.id } } +
-                    listOf<Pair<Area?, List<ProblemWithStats>>>(null to visible.filter { it.problem.areaId == null })
+                shownAreas.map { area -> area to visible.filter { it.problem.areaId == area.id } } +
+                    listOf<Pair<Area?, List<ProblemWithStats>>>(null to visible.filter { picked == null && it.problem.areaId == null })
 
             groups.forEach { (area, problems) ->
                 if (area == null && problems.isEmpty()) return@forEach
@@ -328,7 +451,24 @@ fun PlaceDetailScreen(
                         )
                     }
                 }
-                items(problems, key = { "problem_${it.problem.id}" }) { item -> ProblemRow(item, current, onOpenProblem) }
+                if (problems.isNotEmpty()) {
+                    item(key = "problems_${area?.id ?: "none"}") {
+                        // A wall's problems as flat lines on one panel.
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                .border(CruxTheme.size.borderHairline, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                                .padding(horizontal = space.s3),
+                        ) {
+                            problems.forEachIndexed { index, item ->
+                                if (index > 0) androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                                ProblemLine(item, onOpenProblem)
+                            }
+                        }
+                    }
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
@@ -377,6 +517,108 @@ fun PlaceDetailScreen(
 private fun scaleLine(detail: PlaceDetail): String? {
     val scales = listOfNotNull(detail.place.boulderScale?.label, detail.place.routeScale?.label)
     return if (scales.isEmpty()) null else "grades in ${scales.joinToString(" / ")}"
+}
+
+/** One of the place's numbers: the figure, what it counts in words, and a line of context. */
+@Composable
+private fun PlaceFigure(value: Int, label: String, detail: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (highlight) colors.secondaryContainer else colors.surfaceContainerLow)
+            .border(CruxTheme.size.borderHairline, if (highlight) colors.secondary else colors.outlineVariant, RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        Text(value.toString(), style = CruxTheme.type.metricMedium, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
+        Text(detail, style = MaterialTheme.typography.bodySmall, color = if (highlight) colors.onSecondaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant)
+    }
+}
+
+/** A facility: its kind's icon and colour, name, and what's there. Picked, it lights up. */
+@Composable
+private fun FacilityTile(
+    section: com.hardtekpt.crux.data.model.Section,
+    areas: Int,
+    problems: Int,
+    angle: Int?,
+    scales: List<String>,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val tint = kindAccent(section.type)
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier
+            .fillMaxHeight()
+            .clip(shape)
+            .background(if (selected) tint.copy(alpha = 0.16f) else colors.surfaceContainerLow)
+            .border(if (selected) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline, if (selected) tint else colors.outlineVariant, shape)
+            .clickable(onClick = onClick)
+            .padding(12.dp)
+            .testTag("facility_${section.name}"),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(20.dp))
+            Text(section.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Text(
+            listOfNotNull(
+                section.type.label,
+                "$areas ${if (areas == 1) section.type.areaLabel.lowercase() else section.type.areaLabel.lowercase() + "s"}",
+                angle?.let { "$it°" },
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+        Text(
+            listOfNotNull("$problems ${if (problems == 1) "problem" else "problems"}", scales.joinToString(" / ").takeIf { it.isNotEmpty() }).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+    }
+}
+
+/** A problem as a flat line: its tape, grade, name and how it's going. */
+@Composable
+private fun ProblemLine(item: ProblemWithStats, onOpen: (Long) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val stats = item.stats
+    val sent = stats?.sent == true
+    val tape = item.problem.gradeColour?.let { com.hardtekpt.crux.ui.components.input.argb(it) }
+        ?: item.problem.tape?.let { CruxTheme.colors.tape[it.coerceIn(CruxTheme.colors.tape.indices)] }
+        ?: if (sent) CruxTheme.colors.success else colors.outline
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpen(item.problem.id) }
+            .padding(vertical = 10.dp)
+            .testTag("problem_row"),
+    ) {
+        Box(Modifier.width(4.dp).height(32.dp).clip(RoundedCornerShape(2.dp)).background(tape))
+        Text(item.problem.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
+        Column(Modifier.weight(1f)) {
+            Text(item.problem.name + if (item.problem.retired) " (retired)" else "", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                when {
+                    stats == null -> "Not tried yet"
+                    stats.sent -> "${if (stats.attempts == 1) "1 go" else "${stats.attempts} goes"} · sent ${stats.firstSend!!.shortLabel()}"
+                    else -> "Project · ${if (stats.attempts == 1) "1 go" else "${stats.attempts} goes"}"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (stats != null && !sent) colors.secondary else colors.onSurfaceVariant,
+            )
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = colors.onSurfaceVariant)
+    }
 }
 
 @Composable

@@ -36,7 +36,7 @@ import kotlinx.serialization.Serializable
 
 // Full-screen forms above the tabs; the nav bar hides while they are open.
 /** Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where. */
-@Serializable data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0)
+@Serializable data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0, val sectionId: Long = 0)
 @Serializable data object LogWeightRoute
 @Serializable data object NotesRoute
 @Serializable data class NoteEditorRoute(val noteId: Long = 0)
