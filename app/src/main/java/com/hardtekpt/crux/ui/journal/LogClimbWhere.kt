@@ -473,8 +473,8 @@ internal fun problemLine(item: ProblemWithStats, detail: PlaceDetail?): String {
     val stats = item.stats
     val progress = when {
         stats == null -> "not tried yet"
-        stats.sent -> "${stats.attempts} goes · sent ${stats.firstSend!!.shortLabel()}"
-        else -> "project · ${stats.attempts} goes"
+        stats.sent -> "${goes(stats.attempts)} · sent ${stats.firstSend!!.shortLabel()}"
+        else -> "project · ${goes(stats.attempts)}"
     }
     return listOfNotNull(area, progress).joinToString(" · ")
 }
@@ -519,3 +519,6 @@ fun TapeDot(tape: Int, modifier: Modifier = Modifier) {
             .background(colors[tape.coerceIn(colors.indices)], CircleShape),
     )
 }
+
+/** "1 go", "4 goes". */
+private fun goes(n: Int) = if (n == 1) "1 go" else "$n goes"

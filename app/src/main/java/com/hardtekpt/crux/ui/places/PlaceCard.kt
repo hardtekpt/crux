@@ -91,26 +91,7 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                 }
                 else -> TypeArt(place.type, accent)
             }
-            // The kind of place, top left; the favourite star, top right.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .padding(CruxTheme.space.s3)
-                    .clip(CircleShape)
-                    .background(colors.surface.copy(alpha = 0.88f))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                // Every kind of climbing here, each with its icon in its own colour.
-                place.types.forEach { t ->
-                    Icon(placeIcon(t), contentDescription = null, tint = t.accent(), modifier = Modifier.size(16.dp))
-                }
-                Text(
-                    place.types.joinToString(" · ") { it.label.uppercase() },
-                    style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp),
-                    color = colors.onSurface,
-                )
-            }
+            // The favourite star, top right; what's here shows as module chips below.
             if (place.favourite) {
                 Box(
                     contentAlignment = Alignment.Center,

@@ -326,6 +326,21 @@ fun PlaceEditorScreen(
                 .padding(top = space.s2, bottom = space.s6),
             verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
+            FormSection("Place") {
+                CruxTextField(
+                    label = "Name",
+                    value = draft.name,
+                    onValueChange = { v -> viewModel.update { it.copy(name = v) } },
+                    placeholder = when (draft.type) {
+                        PlaceType.GYM -> "Block Lab"
+                        PlaceType.CRAG -> "Arco"
+                        PlaceType.BOARD -> "Home Kilter"
+                    },
+                    error = draft.nameError,
+                    modifier = Modifier.testTag("field_place_name"),
+                )
+            }
+
             FormSection("What's here", "Each part of the place, like a main gym, a spray wall and a Moonboard") {
                 draft.sections.forEachIndexed { index, section ->
                     SectionEditor(
@@ -348,18 +363,6 @@ fun PlaceEditorScreen(
                         )
                     }
                 }
-                CruxTextField(
-                    label = "Name",
-                    value = draft.name,
-                    onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-                    placeholder = when (draft.type) {
-                        PlaceType.GYM -> "Block Lab"
-                        PlaceType.CRAG -> "Arco"
-                        PlaceType.BOARD -> "Home Kilter"
-                    },
-                    error = draft.nameError,
-                    modifier = Modifier.testTag("field_place_name"),
-                )
                 if (draft.hasBoard) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
