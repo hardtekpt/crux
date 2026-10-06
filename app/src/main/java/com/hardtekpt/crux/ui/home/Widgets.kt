@@ -40,7 +40,15 @@ import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightUnit
 import com.hardtekpt.crux.ui.weightValue
-import com.hardtekpt.crux.ui.places.ProjectRow
+import com.hardtekpt.crux.data.model.Project
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
@@ -261,8 +269,61 @@ private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) ->
         if (!state.isLoading && projects.isEmpty()) {
             EmptyWidgetText("No open projects. Log a go on a saved problem and it stays here until you send it.")
         }
-        Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s1)) {
-            projects.forEach { ProjectRow(it, onOpen) }
+        Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
+            projects.forEachIndexed { index, project ->
+                if (index > 0) {
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                }
+                ProjectLine(project, state.today, onOpen)
+            }
+        }
+    }
+}
+
+/**
+ * A project as a flat line inside the widget: its tape (or a grey mark), the grade, name and
+ * where it is, and on the right how many goes it has taken so far.
+ */
+@Composable
+private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val stats = project.stats
+    val tape = project.problem.tape?.let { CruxTheme.colors.tape[it.coerceIn(CruxTheme.colors.tape.indices)] } ?: colors.outline
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onOpen(project.problem.id) }
+            .padding(vertical = 10.dp)
+            .testTag("home_project"),
+    ) {
+        Box(
+            Modifier
+                .width(4.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(tape),
+        )
+        Text(project.problem.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
+        Column(Modifier.weight(1f)) {
+            Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(project.placeName, project.areaName, "last go ${stats.lastGo.relativeLabel(today).lowercase()}").joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(stats.attempts.toString(), style = CruxTheme.type.grade.copy(fontSize = 18.sp), color = colors.secondary)
+            Text(
+                "${if (stats.attempts == 1) "go" else "goes"} · ${stats.sessions} ${if (stats.sessions == 1) "day" else "days"}",
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceVariant,
+            )
         }
     }
 }
