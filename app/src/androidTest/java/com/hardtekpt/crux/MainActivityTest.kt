@@ -139,7 +139,7 @@ class MainActivityTest {
             runCatching { composeRule.onNodeWithTag("you_forearm_right", useUnmergedTree = true).assertTextEquals("31 cm") }.isSuccess
         }
         composeRule.onNodeWithTag("you_forearm", useUnmergedTree = true).assertTextEquals("29 cm")
-        composeRule.onNodeWithTag("diff_Forearm").assertTextEquals("R +2 cm")
+        composeRule.onNodeWithTag("diff_Forearm", useUnmergedTree = true).assertTextEquals("R +2 cm")
     }
 
     @Test
