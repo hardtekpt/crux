@@ -143,6 +143,25 @@ class MainActivityTest {
     }
 
     @Test
+    fun theGradeConverterTranslatesBetweenSystems() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_converter", "screen_GradeConverter")
+        composeRule.onNodeWithTag("convert_7a+").performClick()
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("value_YDS", useUnmergedTree = true).assertTextEquals("5.12a") }.isSuccess
+        }
+        // Tapping a result converts from that system instead, at the same difficulty.
+        composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("result_YDS"))
+        composeRule.onNodeWithTag("result_YDS").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("converter_grade"))
+        composeRule.onNodeWithTag("converter_grade").assertTextEquals("5.12a")
+        composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("converter_discipline"))
+        composeRule.onNodeWithTag("segment_Boulders").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("result_V"))
+        composeRule.onNodeWithTag("value_V", useUnmergedTree = true).assertTextEquals("V5")
+    }
+
+    @Test
     fun choosingVScaleInSettingsChangesTheClimbForm() {
         composeRule.onNodeWithTag("nav_You").performClick()
         composeRule.onNodeWithTag("open_settings").performClick()

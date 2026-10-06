@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -254,6 +255,7 @@ data class ProfileActions(
     val openCircumferences: () -> Unit = {},
     val openNotes: () -> Unit = {},
     val openPlaces: () -> Unit = {},
+    val openConverter: () -> Unit = {},
 )
 
 @Composable
@@ -386,6 +388,13 @@ fun YouContent(
                             },
                             actions.openPlaces,
                             Modifier.testTag("menu_places"),
+                        )
+                        PreferenceRow(
+                            Icons.Rounded.SwapHoriz,
+                            "Grade converter",
+                            "French, YDS, Font, V…",
+                            actions.openConverter,
+                            Modifier.testTag("menu_converter"),
                         )
                         PreferenceRow(
                             Icons.Rounded.Settings,

@@ -99,6 +99,8 @@ import com.hardtekpt.crux.ui.navigation.NotesRoute
 import com.hardtekpt.crux.ui.navigation.MeasurementsRoute
 import com.hardtekpt.crux.ui.navigation.CircumferencesRoute
 import com.hardtekpt.crux.ui.navigation.PlacesRoute
+import com.hardtekpt.crux.ui.navigation.GradeConverterRoute
+import com.hardtekpt.crux.ui.you.GradeConverterScreen
 import com.hardtekpt.crux.ui.journal.JournalActions
 import com.hardtekpt.crux.ui.you.MeasurementsScreen
 import com.hardtekpt.crux.ui.you.CircumferencesScreen
@@ -203,6 +205,7 @@ fun CruxApp() {
                             openCircumferences = { navController.navigate(CircumferencesRoute) },
                             openNotes = { navController.navigate(NotesRoute) },
                             openPlaces = { navController.navigate(PlacesRoute) },
+                            openConverter = { navController.navigate(GradeConverterRoute) },
                         ),
                     )
                 }
@@ -211,6 +214,7 @@ fun CruxApp() {
                     MeasurementsScreen(onBack = navController::popBackStack, onLogWeight = { navController.navigate(LogWeightRoute) })
                 }
                 page<CircumferencesRoute> { CircumferencesScreen(onBack = navController::popBackStack) }
+                page<GradeConverterRoute> { GradeConverterScreen(onBack = navController::popBackStack) }
                 page<PlacesRoute> {
                     PlacesScreen(
                         onBack = navController::popBackStack,
