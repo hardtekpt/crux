@@ -145,6 +145,12 @@ fun HomeContent(
 
     // Drag state, all in root coordinates so it survives the widget changing rows.
     val bounds = remember { mutableStateMapOf<String, Rect>() }
+    // A removed widget's last position must not linger: a drag could aim at it, move nothing,
+    // and stop looking for the widget that is really there.
+    LaunchedEffect(dashboard.widgets) {
+        val ids = dashboard.widgets.map { it.id }.toSet()
+        bounds.keys.retainAll(ids)
+    }
     var draggingId by remember { mutableStateOf<String?>(null) }
     var dragStart by remember { mutableStateOf(Offset.Zero) }
     var dragTotal by remember { mutableStateOf(Offset.Zero) }
@@ -164,7 +170,8 @@ fun HomeContent(
     fun retarget() {
         val id = draggingId ?: return
         val center = dragCenter() ?: return
-        val target = bounds.entries.firstOrNull { (other, rect) -> other != id && rect.contains(center) }?.key
+        val live = dashboard.widgets.map { it.id }.toSet()
+        val target = bounds.entries.firstOrNull { (other, rect) -> other != id && other in live && rect.contains(center) }?.key
         if (target != null && target != lastTarget) {
             editor.move(id, target)
             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
