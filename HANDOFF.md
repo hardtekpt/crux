@@ -7,7 +7,7 @@ video), and track the climber (weight, body stats, circumferences, personal reco
 consistency). Built for Boss's Pixel 8a, with an emulator for testing.
 
 ## Where things are
-- Repo: `C:\Users\ffvd\Projects\crux` (git, branch `main`, no remote). Commit messages end with
+- Repo: `C:\Users\ffvd\Projects\crux` (git, remote `hardtekpt/crux`; work on `dev`, release by merging to `main` — see CLAUDE.md). Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 - Dev script: `.\crux.cmd run` (emulator `Crux_Pixel_9`), `.\crux.cmd run -Device 192.168.1.128:<port>`
   (phone over wireless debugging; the port changes, last one was **42117** — ask Boss when

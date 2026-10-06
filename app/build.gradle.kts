@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,15 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
 }
+
+// Version lives in version.properties; versionCode follows from it so it always increases.
+val versionProps = Properties().apply { rootProject.file("version.properties").inputStream().use(::load) }
+val appVersionName: String = versionProps.getProperty("VERSION_NAME")
+val appVersionCode: Int = appVersionName.split(".").map(String::toInt)
+    .let { (major, minor, patch) -> major * 10000 + minor * 100 + patch }
+
+// Release signing comes from the environment (CI secrets); without it, release builds use the debug key.
+val releaseKeystore: String? = System.getenv("CRUX_KEYSTORE_FILE")
 
 android {
     namespace = "com.hardtekpt.crux"
@@ -17,10 +28,21 @@ android {
         applicationId = "com.hardtekpt.crux"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "com.hardtekpt.crux.HiltTestRunner"
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("CRUX_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CRUX_KEY_ALIAS")
+                keyPassword = System.getenv("CRUX_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -30,6 +52,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
