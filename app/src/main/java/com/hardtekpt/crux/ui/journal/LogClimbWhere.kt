@@ -272,7 +272,10 @@ private fun WhereSheet(
                     }
                 }
                 when (current) {
-                    WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = next, onNew = { creatingPlace = true })
+                    // The new place's walls may not have loaded yet, so decide from its summary.
+                    WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = { picked ->
+                        step = if (picked.walls > 0 || picked.place.hasSeveralTypes) WhereStep.AREA else WhereStep.PROBLEM
+                    }, onNew = { creatingPlace = true })
                     WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = next)
                     WhereStep.PROBLEM -> if (detail != null) problemStep(draft, detail, query, problemNoun, actions, onPicked = onClose)
                 }
@@ -328,7 +331,7 @@ private fun LazyListScope.placeStep(
     draft: LogClimbDraft,
     places: List<PlaceSummary>,
     actions: WhereActions,
-    onPicked: () -> Unit,
+    onPicked: (PlaceSummary) -> Unit,
     onNew: () -> Unit,
 ) {
     item(key = "place_none") {
@@ -343,7 +346,7 @@ private fun LazyListScope.placeStep(
             tag = "place_${summary.place.name}",
         ) {
             if (draft.placeId != summary.place.id) actions.selectPlace(summary.place.id)
-            onPicked()
+            onPicked(summary)
         }
     }
     item(key = "place_new") {

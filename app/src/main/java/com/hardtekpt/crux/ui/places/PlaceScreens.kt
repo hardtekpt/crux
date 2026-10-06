@@ -435,7 +435,8 @@ private fun AreaDialog(
     var loading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var captureUri by rememberSaveable { mutableStateOf<String?>(null) }
-    val noun = label.lowercase()
+    // A mixed place says "area" in the title; the chips say which kind it is.
+    val noun = if (types.size > 1) "area" else label.lowercase()
 
     // A new image replaces one added earlier in this dialog; the wall's saved image is only
     // dropped once the dialog is saved.
