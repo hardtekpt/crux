@@ -47,6 +47,7 @@ import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -104,6 +105,8 @@ fun TrainScreen(
         Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
+            // Swipe sideways to move between Plans and Exercises.
+            .swipeBetweenTabs { direction -> TrainView.entries.getOrNull(view.ordinal + direction)?.let { view = it } }
             .testTag("screen_Train"),
     ) {
         CruxTopAppBar(title = "Train", scrollBehavior = scrollBehavior)

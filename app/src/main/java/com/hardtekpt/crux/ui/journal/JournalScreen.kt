@@ -44,6 +44,7 @@ import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -128,6 +129,8 @@ fun JournalContent(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
+            // Swipe sideways to move between Climbs and Places.
+            .swipeBetweenTabs { direction -> JournalView.entries.getOrNull(view.ordinal + direction)?.let(onView) }
             .testTag("screen_Journal"),
     ) {
         CruxTopAppBar(title = "Journal", scrollBehavior = scrollBehavior)

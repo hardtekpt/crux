@@ -311,17 +311,19 @@ class MainActivityTest {
     }
 
     @Test
-    fun swipingSidewaysMovesBetweenTabs() {
-        composeRule.waitForTag("screen_Home")
-        composeRule.onNodeWithTag("screen_Home").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
-        composeRule.waitForTag("screen_Train")
-        // Let the tab change finish before swiping again.
+    fun swipingSidewaysMovesBetweenAPagesTabs() {
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("screen_Journal")
         composeRule.waitForIdle()
-        // Across the header: the plan cards below scroll sideways themselves and keep the swipe.
-        composeRule.onNodeWithTag("screen_Train").performTouchInput {
-            swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.06f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.06f))
+        composeRule.onNodeWithTag("screen_Journal").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
+        composeRule.waitForTag("places_list")
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("screen_Journal").performTouchInput {
+            swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.08f))
         }
-        composeRule.waitForTag("screen_Home")
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("places_list").fetchSemanticsNodes().isEmpty() }
+        // The main tab itself didn't change.
+        composeRule.onNodeWithTag("screen_Journal").assertIsDisplayed()
     }
 
     private fun openSettings() {

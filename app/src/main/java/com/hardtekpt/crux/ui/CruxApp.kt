@@ -22,7 +22,6 @@ import com.hardtekpt.crux.ui.navigation.FloatingNavBar
 import com.hardtekpt.crux.ui.navigation.cruxEnter
 import com.hardtekpt.crux.ui.navigation.cruxExit
 import com.hardtekpt.crux.ui.navigation.cruxPopEnter
-import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.navigation.cruxPopExit
 import com.hardtekpt.crux.ui.navigation.cruxPredictivePopEnter
 import com.hardtekpt.crux.ui.navigation.cruxPredictivePopExit
@@ -120,18 +119,10 @@ fun CruxApp() {
             .background(MaterialTheme.colorScheme.surface),
     ) {
         CompositionLocalProvider(LocalNavBarClearance provides if (onForm) 0.dp else navBarClearance(bottomInset)) {
-        // On a tab's own screen, a sideways swipe moves to the next or previous tab.
-        val onTabRoot = currentDestination.isAny(HomeRoute::class, TrainRoute::class, JournalRoute::class, ProgressRoute::class, YouRoute::class)
         NavHost(
             navController = navController,
             startDestination = HomeGraph,
-            modifier = Modifier
-                .fillMaxSize()
-                .swipeBetweenTabs(enabled = onTabRoot && !showQuickLog) { direction ->
-                    val tabs = TopLevelDestination.entries
-                    val from = selectedTab?.ordinal ?: return@swipeBetweenTabs
-                    tabs.getOrNull(from + direction)?.let(navController::navigateToTab)
-                },
+            modifier = Modifier.fillMaxSize(),
             enterTransition = cruxEnter,
             exitTransition = cruxExit,
             popEnterTransition = cruxPopEnter,

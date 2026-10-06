@@ -13,13 +13,14 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 /**
- * A sideways swipe across a tab's main screen moves to the neighbouring tab: right to left
- * goes to the next one, left to right to the previous. It only listens after the screen has
+ * A sideways swipe moves between a page's own tabs (Journal's Climbs and Places, Train's
+ * Plans and Exercises): right to left goes to the next one, left to right to the
+ * previous. It only listens after the content has
  * had its turn, so anything that handles its own horizontal drag (wheels, rulers, grade and
  * day strips, scrolling rows, the dashboard's drag) keeps the gesture and no tab switch
  * happens. Mostly-vertical drags are left to scrolling.
  */
-fun Modifier.swipeBetweenTabs(enabled: Boolean, onSwipe: (direction: Int) -> Unit): Modifier = composed {
+fun Modifier.swipeBetweenTabs(enabled: Boolean = true, onSwipe: (direction: Int) -> Unit): Modifier = composed {
     val currentEnabled by rememberUpdatedState(enabled)
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     pointerInput(Unit) {
