@@ -80,14 +80,23 @@ class OfflinePlaceRepository @Inject constructor(
 ) : PlaceRepository {
 
     override fun observePlaces(): Flow<List<PlaceSummary>> = dbs.observe { db ->
-        combine(db.placeDao().observePlaces(), db.placeDao().observeActivity()) { places, activity ->
+        val dao = db.placeDao()
+        combine(dao.observePlaces(), dao.observeActivity(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats()) { places, activity, areas, problems, problemStats ->
             val byPlace = activity.associateBy { it.placeId }
+            val areasByPlace = areas.groupBy { it.placeId }
+            val liveProblems = problems.filter { !it.retired }.groupBy { it.placeId }
+            val statsByProblem = problemStats.associateBy { it.problemId }
             places.map { entity ->
                 val stats = byPlace[entity.id]
+                val here = liveProblems[entity.id].orEmpty()
                 PlaceSummary(
                     place = entity.toModel(),
                     climbs = stats?.climbs ?: 0,
                     lastVisit = stats?.lastEpochDay?.let(LocalDate::ofEpochDay),
+                    walls = areasByPlace[entity.id]?.size ?: 0,
+                    problems = here.size,
+                    openProjects = here.count { p -> statsByProblem[p.id]?.let { it.firstSendEpochDay == null } == true },
+                    coverImage = areasByPlace[entity.id].orEmpty().sortedBy { it.position }.firstNotNullOfOrNull { it.imagePath },
                 )
             }.sortedWith(compareByDescending<PlaceSummary> { it.lastVisit }.thenBy { it.place.name.lowercase() })
         }

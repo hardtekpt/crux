@@ -79,6 +79,13 @@ data class PlaceSummary(
     val place: Place,
     val climbs: Int,
     val lastVisit: LocalDate?,
+    /** How many walls (sectors, sets) and current problems it has. */
+    val walls: Int = 0,
+    val problems: Int = 0,
+    /** Problems here you've tried and not sent yet. */
+    val openProjects: Int = 0,
+    /** A wall's photo or map to show on the place's card, if any wall has one. */
+    val coverImage: String? = null,
 )
 
 data class PlaceDetail(

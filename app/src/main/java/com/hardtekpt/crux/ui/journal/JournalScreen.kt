@@ -145,7 +145,7 @@ fun JournalContent(
         if (view == JournalView.Places) {
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-                verticalArrangement = Arrangement.spacedBy(space.s2),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
                 modifier = Modifier.testTag("places_list"),
             ) {
                 placesList(places, onOpenPlace, onNewPlace, placeFilter, onPlaceFilter)

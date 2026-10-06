@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Domain
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -154,36 +155,12 @@ fun LazyListScope.placesList(
         }
     }
     items(shown.orEmpty(), key = { "place_${it.place.id}" }) { summary ->
-        val today = LocalDate.now()
-        CruxListRow(
-            title = summary.place.name,
-            supporting = listOfNotNull(
-                summary.place.type.label,
-                summary.place.location,
-                when (summary.climbs) {
-                    0 -> "no climbs yet"
-                    1 -> "1 climb"
-                    else -> "${summary.climbs} climbs"
-                },
-                summary.lastVisit?.let { "last ${it.relativeLabel(today).lowercase()}" },
-            ).joinToString(" · "),
-            leading = { Icon(placeIcon(summary.place.type), contentDescription = summary.place.type.label) },
-            trailing = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (summary.place.favourite) {
-                        Icon(Icons.Rounded.Star, contentDescription = "Favourite", tint = MaterialTheme.colorScheme.primary)
-                    }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
-                }
-            },
-            onClick = { onOpen(summary.place.id) },
-            modifier = Modifier.testTag("place_row"),
-        )
+        PlaceCard(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
     }
 }
 
 fun placeIcon(type: PlaceType) = when (type) {
-    PlaceType.GYM -> Icons.Rounded.Place
+    PlaceType.GYM -> Icons.Rounded.Domain
     PlaceType.CRAG -> Icons.Rounded.Landscape
     PlaceType.BOARD -> Icons.Rounded.GridView
 }
