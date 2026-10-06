@@ -58,6 +58,13 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[DEMO_MODE] = enabled }
     }
 
+    /** Which version of the sample data the demo database holds; 0 before any. */
+    val demoDataVersion: Flow<Int> = dataStore.data.map { it[DEMO_DATA_VERSION] ?: 0 }
+
+    suspend fun setDemoDataVersion(version: Int) {
+        dataStore.edit { it[DEMO_DATA_VERSION] = version }
+    }
+
     /** The place last logged at, so the next log starts there. */
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
@@ -81,6 +88,7 @@ class UserPreferencesRepository @Inject constructor(
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")

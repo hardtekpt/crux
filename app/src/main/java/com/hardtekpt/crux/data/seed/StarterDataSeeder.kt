@@ -28,6 +28,7 @@ import com.hardtekpt.crux.data.model.Venue
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 import com.hardtekpt.crux.data.local.CruxDatabases
 import javax.inject.Singleton
 
@@ -39,15 +40,32 @@ import javax.inject.Singleton
 @Singleton
 class StarterData @Inject constructor(
     private val dbs: CruxDatabases,
+    private val preferences: com.hardtekpt.crux.data.prefs.UserPreferencesRepository,
     clock: Clock,
 ) {
     private val seeder = StarterDataSeeder(clock)
 
-    suspend fun seedDemoIfEmpty() = seeder.seed(dbs.demo, includeSampleData = true)
+    /**
+     * Fills the demo database, and refills it from scratch when the sample data has changed
+     * since it was filled. Only ever touches the demo database, never the climber's own.
+     */
+    suspend fun seedDemoIfEmpty() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (preferences.demoDataVersion.first() < SAMPLE_DATA_VERSION) {
+            dbs.demo.clearAllTables()
+            preferences.setDemoDataVersion(SAMPLE_DATA_VERSION)
+        }
+        seeder.seed(dbs.demo, includeSampleData = true)
+    }
 
     /** Adds the starter exercises and plans to whichever data set is active. */
     suspend fun addStarterLibraryToCurrent(): Int = seeder.addStarterLibrary(dbs.current())
 }
+
+/**
+ * Bump when the sample data changes, so demo databases filled with an older set are refilled.
+ * 2: Block Lab became a gym with a board (6 Oct 2026).
+ */
+const val SAMPLE_DATA_VERSION = 2
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
