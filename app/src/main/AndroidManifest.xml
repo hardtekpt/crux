@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Map tiles and address search when picking a place on the map. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Optional: centre the map on where you are. Asked for only when you tap My location. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- Lets the app find the Health Connect provider on Android 13 and below. -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />

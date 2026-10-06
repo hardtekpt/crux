@@ -71,6 +71,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
+    // OpenStreetMap map view for picking a place on a map; no account or API key needed.
+    implementation(libs.osmdroid.android)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

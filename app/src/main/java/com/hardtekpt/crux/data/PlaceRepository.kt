@@ -10,6 +10,7 @@ import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.data.model.MapLocation
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
@@ -36,6 +37,7 @@ data class PlaceInput(
     val notes: String?,
     val localScale: LocalScale? = null,
     val favourite: Boolean = false,
+    val mapLocation: MapLocation? = null,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -149,6 +151,9 @@ class OfflinePlaceRepository @Inject constructor(
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
             localScale = input.localScale?.encode(),
             favourite = input.favourite,
+            latitude = input.mapLocation?.latitude,
+            longitude = input.mapLocation?.longitude,
+            address = input.mapLocation?.address,
         )
         return if (existing != null) {
             dao.updatePlace(entity)
@@ -238,7 +243,10 @@ class OfflinePlaceRepository @Inject constructor(
     }
 }
 
-internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale), favourite)
+internal fun PlaceEntity.toModel() = Place(
+    id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale), favourite,
+    mapLocation = if (latitude != null && longitude != null) MapLocation(latitude, longitude, address) else null,
+)
 
 internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath)
 

@@ -4,6 +4,9 @@ import com.hardtekpt.crux.data.model.GradeSystem
 import com.hardtekpt.crux.data.model.LocalGrade
 import com.hardtekpt.crux.data.model.LocalKind
 import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.data.model.MapLocation
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.input.TapeSwatch
 import com.hardtekpt.crux.ui.components.input.argb
@@ -110,6 +113,7 @@ data class PlaceDraft(
     val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
     val localError: String? = null,
     val favourite: Boolean = false,
+    val mapLocation: MapLocation? = null,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
     /** Set once saved or deleted: the id to open, or 0 after a delete. */
@@ -139,6 +143,7 @@ class PlaceEditorViewModel @Inject constructor(
                             defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
                             localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
                             favourite = p.favourite,
+                            mapLocation = p.mapLocation,
                         )
                     }
                 }
@@ -180,6 +185,7 @@ class PlaceEditorViewModel @Inject constructor(
                     notes = d.notes,
                     localScale = local.takeIf { d.usesLocal },
                     favourite = d.favourite,
+                    mapLocation = d.mapLocation,
                 ),
             )
             _draft.update { it.copy(doneId = id) }
@@ -247,6 +253,11 @@ fun PlaceEditorScreen(
                 onValueChange = { v -> viewModel.update { it.copy(location = v.take(MAX_NAME)) } },
                 placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
                 helper = "Optional",
+            )
+            MapLocationField(
+                location = draft.mapLocation,
+                placeName = draft.name,
+                onChange = { loc -> viewModel.update { it.copy(mapLocation = loc) } },
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
@@ -322,6 +333,49 @@ fun PlaceEditorScreen(
                 }
             },
             dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Keep") } },
+        )
+    }
+}
+
+/** Where the place is on the map: optional, picked or searched on a map. */
+@Composable
+private fun MapLocationField(location: MapLocation?, placeName: String, onChange: (MapLocation?) -> Unit) {
+    var picking by rememberSaveable { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+        Text("On the map", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (location == null) {
+            CruxButton(
+                text = "Pick on the map",
+                onClick = { picking = true },
+                variant = CruxButtonVariant.Outlined,
+                icon = Icons.Rounded.Map,
+                modifier = Modifier.testTag("pick_map_location"),
+            )
+            Text("Optional. Search an address or place, or drop the pin by hand.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            CruxCard(modifier = Modifier.testTag("map_location")) {
+                Text(
+                    location.address ?: "%.5f, %.5f".format(location.latitude, location.longitude),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+                    CruxButton("Change", { picking = true }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    CruxButton("Open in Maps", { openInMaps(context, location, placeName.ifBlank { "Place" }) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    CruxButton("Remove", { onChange(null) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
+                }
+            }
+        }
+    }
+    if (picking) {
+        LocationPickerDialog(
+            initial = location,
+            placeName = placeName,
+            onPick = {
+                onChange(it)
+                picking = false
+            },
+            onDismiss = { picking = false },
         )
     }
 }

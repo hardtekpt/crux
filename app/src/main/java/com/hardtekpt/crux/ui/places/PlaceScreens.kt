@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.hardtekpt.crux.data.images.AreaImageStore
@@ -278,6 +279,18 @@ fun PlaceDetailScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            current.place.mapLocation?.let { location ->
+                item {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    CruxListRow(
+                        title = location.address ?: "%.5f, %.5f".format(location.latitude, location.longitude),
+                        supporting = "Open in Maps",
+                        leading = { Icon(Icons.Rounded.Map, contentDescription = null) },
+                        onClick = { openInMaps(context, location, current.place.name) },
+                        modifier = Modifier.testTag("place_map_location"),
+                    )
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {

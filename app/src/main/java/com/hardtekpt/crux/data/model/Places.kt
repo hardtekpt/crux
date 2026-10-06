@@ -16,6 +16,8 @@ data class Place(
     val localScale: LocalScale? = null,
     /** Shown as a quick pick on Log climb. */
     val favourite: Boolean = false,
+    /** Where it is on the map, if the climber set it. */
+    val mapLocation: MapLocation? = null,
 ) {
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale
@@ -26,6 +28,9 @@ data class Place(
     fun systemFor(discipline: Discipline): GradeSystem? =
         scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
 }
+
+/** A point on the map and the address or place name found for it. */
+data class MapLocation(val latitude: Double, val longitude: Double, val address: String?)
 
 data class Area(
     val id: Long,

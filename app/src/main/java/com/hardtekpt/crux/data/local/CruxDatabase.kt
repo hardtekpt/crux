@@ -45,7 +45,7 @@ class PlacesMigration : AutoMigrationSpec {
         ProblemEntity::class,
         ClimbMediaEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
@@ -56,6 +56,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 8, to = 9),
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),
+        AutoMigration(from = 11, to = 12),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {

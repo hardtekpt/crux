@@ -33,6 +33,10 @@ data class PlaceEntity(
     val localScale: String? = null,
     /** Shown as a quick pick on Log climb (schema 11). */
     @ColumnInfo(defaultValue = "0") val favourite: Boolean = false,
+    /** Where it is on the map, and the address found for it (schema 12). Optional. */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String? = null,
 )
 
 /** A wall or sector inside a place; for a board, a named angle or set. */
