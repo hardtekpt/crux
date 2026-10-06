@@ -242,15 +242,12 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
         if (!state.isLoading && climbs.isEmpty()) {
             EmptyWidgetText("No climbs logged yet. Tap Log, then Log climb, to start the journal.")
         }
-        Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s1)) {
-            climbs.forEach { climb ->
-                CruxListRow(
-                    title = climb.displayName(),
-                    supporting = listOfNotNull(climb.outcomeLine(), climb.place, climb.date.relativeLabel(state.today))
-                        .joinToString(" · "),
-                    leading = { GradeBadge(climb.grade, climb.gradeState) },
-                    modifier = Modifier.testTag("recent_climb"),
-                )
+        Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
+            climbs.forEachIndexed { index, climb ->
+                if (index > 0) {
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                }
+                ClimbLine(climb, state.today, onOpenJournal)
             }
         }
     }
@@ -276,6 +273,56 @@ private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) ->
                 }
                 ProjectLine(project, state.today, onOpen)
             }
+        }
+    }
+}
+
+/**
+ * A recent climb as a flat line, like the projects above it: tape mark (the gym's colour on
+ * local scales, else green for a send and grey for a go), the grade, name and where, and
+ * how it went with when on the right.
+ */
+@Composable
+private fun ClimbLine(climb: com.hardtekpt.crux.data.model.Climb, today: LocalDate, onOpen: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val sent = climb.style.isSend
+    val tape = climb.gradeColour?.let { com.hardtekpt.crux.ui.components.input.argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onOpen)
+            .padding(vertical = 10.dp)
+            .testTag("recent_climb"),
+    ) {
+        Box(
+            Modifier
+                .width(4.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(tape),
+        )
+        Text(climb.grade, style = CruxTheme.type.grade, color = if (sent) colors.onSurface else colors.onSurfaceVariant, modifier = Modifier.width(44.dp), maxLines = 1)
+        Column(Modifier.weight(1f)) {
+            Text(climb.displayName(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(climb.place, climb.venue.label).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                climb.style.label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (sent) CruxTheme.colors.success else colors.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Text(climb.date.relativeLabel(today), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1)
         }
     }
 }
