@@ -34,8 +34,10 @@ jobs:
           name=$(grep '^VERSION_NAME=' version.properties | cut -d= -f2 | tr -d '[:space:]')
           tag="v$name"
           prerelease=false
-          # main moved without a version bump: publish a numbered prerelease instead of clobbering the tag.
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+          # A tag on this very commit is this release. A tag elsewhere means main moved without a
+          # version bump: publish a numbered prerelease instead of clobbering the tag.
+          tagged=$(git rev-parse -q --verify "refs/tags/$tag^{commit}" || true)
+          if [ -n "$tagged" ] && [ "$tagged" != "$GITHUB_SHA" ]; then
             tag="$tag-build.$GITHUB_RUN_NUMBER"
             prerelease=true
           fi
