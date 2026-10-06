@@ -1,5 +1,16 @@
 package com.hardtekpt.crux.ui.places
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -50,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -105,9 +117,13 @@ fun LocationPickerDialog(
         Configuration.getInstance().userAgentValue = context.packageName
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
+            // Draw tiles at the screen's density so street names are readable.
+            isTilesScaledToDpi = true
+            isVerticalMapRepetitionEnabled = false
+            minZoomLevel = 2.0
             setMultiTouchControls(true)
             zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
-            controller.setZoom(if (initial != null) 17.0 else 3.0)
+            controller.setZoom(if (initial != null) 17.0 else 3.5)
             controller.setCenter(GeoPoint(initial?.latitude ?: 30.0, initial?.longitude ?: 0.0))
         }
     }
@@ -127,6 +143,7 @@ fun LocationPickerDialog(
             map.onDetach()
         }
     }
+    val placeLabel = placeName.ifBlank { "the place" }
     val moveTo = { lat: Double, lng: Double ->
         map.controller.animateTo(GeoPoint(lat, lng), 17.0, 600L)
     }
@@ -162,113 +179,147 @@ fun LocationPickerDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    val locate = {
+        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (fine || coarse) {
+            lastKnown(context)?.let { (lat, lng) -> moveTo(lat, lng) } ?: run { message = "Your location isn't known yet. Try again outdoors." }
+        } else {
+            permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        }
+    }
+    val colors = MaterialTheme.colorScheme
+    val space = CruxTheme.space
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(colors.surface)
                 .testTag("location_picker"),
         ) {
+            // The dialog is its own window, so its keyboard is closed from in here.
+            val keyboardHere = LocalSoftwareKeyboardController.current
+            val focus = LocalFocusManager.current
+            val searchHere = {
+                keyboardHere?.hide()
+                focus.clearFocus()
+                search()
+            }
             AndroidView(factory = { map }, modifier = Modifier.fillMaxSize())
             // The pin sits over the map's centre; its tip marks the spot.
             Icon(
                 Icons.Rounded.Place,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = colors.primary,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(44.dp)
-                    .offset(y = (-22).dp),
+                    .size(48.dp)
+                    .offset(y = (-24).dp),
             )
 
+            // Search: one floating card, styled like the app's other surfaces.
             Column(
                 Modifier
                     .statusBarsPadding()
-                    .padding(CruxTheme.space.s3),
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                    .padding(space.s4)
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(colors.surfaceContainerHigh)
+                    .border(CruxTheme.size.borderHairline, colors.outlineVariant, MaterialTheme.shapes.large),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalIconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
-                    OutlinedTextField(
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = space.s1)) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
+                    TextField(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text("Search an address or place") },
+                        placeholder = { Text("Search an address or place", style = MaterialTheme.typography.bodyLarge) },
                         singleLine = true,
-                        trailingIcon = {
-                            IconButton(onClick = search) { Icon(Icons.Rounded.Search, contentDescription = "Search") }
-                        },
+                        textStyle = MaterialTheme.typography.bodyLarge,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { search() }),
+                        keyboardActions = KeyboardActions(onSearch = { searchHere() }),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = CruxTheme.space.s2)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
                             .testTag("location_search"),
                     )
+                    IconButton(onClick = searchHere) { Icon(Icons.Rounded.Search, contentDescription = "Search", tint = colors.primary) }
                 }
-                if (busy) Text("Searching…", style = MaterialTheme.typography.bodySmall)
-                if (results.size > 1) {
-                    CruxCard {
-                        results.take(5).forEach { address ->
-                            CruxListRow(
-                                title = address.label(),
-                                onClick = {
-                                    moveTo(address.latitude, address.longitude)
-                                    results = emptyList()
-                                },
-                                modifier = Modifier.testTag("location_result"),
-                            )
+                if (busy || results.size > 1 || message != null) {
+                    HorizontalDivider(color = colors.outlineVariant)
+                    Column(Modifier.padding(vertical = space.s1)) {
+                        if (busy) {
+                            Text("Searching…", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(space.s4))
+                        }
+                        message?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(space.s4))
+                        }
+                        if (results.size > 1) {
+                            results.take(5).forEach { address ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(space.s3),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            moveTo(address.latitude, address.longitude)
+                                            results = emptyList()
+                                        }
+                                        .padding(horizontal = space.s4, vertical = space.s3)
+                                        .testTag("location_result"),
+                                ) {
+                                    Icon(Icons.Rounded.Place, contentDescription = null, tint = colors.onSurfaceVariant)
+                                    Text(address.label(), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                                }
+                            }
                         }
                     }
                 }
-                message?.let {
-                    CruxCard { Text(it, style = MaterialTheme.typography.bodySmall) }
-                }
             }
 
+            // Bottom panel: what to do, and the two actions.
             Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(colors.surfaceContainerHigh)
                     .navigationBarsPadding()
-                    .padding(CruxTheme.space.s4),
+                    .padding(space.s4),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
             ) {
-                FilledTonalIconButton(
-                    onClick = {
-                        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        if (fine || coarse) {
-                            lastKnown(context)?.let { (lat, lng) -> moveTo(lat, lng) } ?: run { message = "Your location isn't known yet. Try again outdoors." }
-                        } else {
-                            permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                        }
-                    },
-                    modifier = Modifier.testTag("my_location"),
-                ) { Icon(Icons.Rounded.MyLocation, contentDescription = "My location") }
-                CruxButton(
-                    text = "Use this spot",
-                    size = CruxButtonSize.Large,
-                    onClick = {
-                        val centre = map.mapCenter
-                        scope.launch {
-                            val address = reverseGeocode(context, centre.latitude, centre.longitude)
-                            onPick(MapLocation(centre.latitude, centre.longitude, address?.label()))
-                        }
-                    },
-                    modifier = Modifier.testTag("use_location"),
-                )
+                Text("Move the map so the pin sits on $placeLabel.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s3)) {
+                    OutlinedIconButton(
+                        onClick = locate,
+                        border = BorderStroke(CruxTheme.size.borderHairline, colors.outline),
+                        modifier = Modifier
+                            .size(CruxTheme.size.controlHeightLarge)
+                            .testTag("my_location"),
+                    ) { Icon(Icons.Rounded.MyLocation, contentDescription = "My location") }
+                    CruxButton(
+                        text = "Use this spot",
+                        size = CruxButtonSize.Large,
+                        icon = Icons.Rounded.Check,
+                        onClick = {
+                            val centre = map.mapCenter
+                            scope.launch {
+                                val address = reverseGeocode(context, centre.latitude, centre.longitude)
+                                onPick(MapLocation(centre.latitude, centre.longitude, address?.label()))
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("use_location"),
+                    )
+                }
+                Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
             }
-            Text(
-                "© OpenStreetMap contributors",
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .navigationBarsPadding()
-                    .padding(CruxTheme.space.s2)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                    .padding(horizontal = CruxTheme.space.s1),
-            )
         }
     }
 }

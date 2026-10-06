@@ -163,7 +163,9 @@ fun CruxTextField(
 ) {
     val colors = MaterialTheme.colorScheme
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+        if (label.isNotBlank()) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+        }
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
@@ -185,12 +187,14 @@ fun CruxTextField(
                 errorBorderColor = colors.error,
             ),
         )
-        Text(
-            text = error ?: helper ?: "",
-            style = MaterialTheme.typography.bodySmall,
-            color = if (error != null) colors.error else colors.onSurfaceVariant,
-            minLines = 1,
-        )
+        // Only a field with something to say gets the line under it, so forms stay compact.
+        (error ?: helper)?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (error != null) colors.error else colors.onSurfaceVariant,
+            )
+        }
     }
 }
 

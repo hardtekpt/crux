@@ -1,5 +1,22 @@
 package com.hardtekpt.crux.ui.places
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import com.hardtekpt.crux.ui.components.CruxCardFill
+import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.data.model.GradeSystem
 import com.hardtekpt.crux.data.model.LocalGrade
 import com.hardtekpt.crux.data.model.LocalKind
@@ -16,6 +33,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -220,6 +238,17 @@ fun PlaceEditorScreen(
             title = if (draft.isNew) "New place" else "Edit place",
             onBack = onBack,
             actions = {
+                // Favourites show as quick picks on Log climb.
+                IconButton(
+                    onClick = { viewModel.update { it.copy(favourite = !it.favourite) } },
+                    modifier = Modifier.testTag("place_favourite"),
+                ) {
+                    Icon(
+                        if (draft.favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        contentDescription = if (draft.favourite) "Remove from favourites" else "Add to favourites",
+                        tint = if (draft.favourite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (!draft.isNew) {
                     IconButton(onClick = viewModel::requestDelete, modifier = Modifier.testTag("delete_place")) {
                         Icon(Icons.Rounded.Delete, contentDescription = "Delete place")
@@ -231,76 +260,76 @@ fun PlaceEditorScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = space.s4),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
+                .padding(horizontal = space.s4)
+                .padding(top = space.s2, bottom = space.s6),
+            verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
-            CruxSegmentedButtons(PlaceType.entries, draft.type, { it.label }, { t -> viewModel.update { it.copy(type = t) } })
-            CruxTextField(
-                label = "Name",
-                value = draft.name,
-                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-                placeholder = when (draft.type) {
-                    PlaceType.GYM -> "Block Lab"
-                    PlaceType.CRAG -> "Arco"
-                    PlaceType.BOARD -> "Home Kilter"
-                },
-                error = draft.nameError,
-                modifier = Modifier.testTag("field_place_name"),
-            )
-            CruxTextField(
-                label = if (draft.type == PlaceType.BOARD) "Where it is" else "City or area",
-                value = draft.location,
-                onValueChange = { v -> viewModel.update { it.copy(location = v.take(MAX_NAME)) } },
-                placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
-                helper = "Optional",
-            )
-            MapLocationField(
-                location = draft.mapLocation,
-                placeName = draft.name,
-                onChange = { loc -> viewModel.update { it.copy(mapLocation = loc) } },
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f)) {
-                    Text("Favourite", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Shown as a quick pick when you log a climb",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            FormSection("What it is") {
+                CruxSegmentedButtons(PlaceType.entries, draft.type, { it.label }, { t -> viewModel.update { it.copy(type = t) } })
+                CruxTextField(
+                    label = "Name",
+                    value = draft.name,
+                    onValueChange = { v -> viewModel.update { it.copy(name = v) } },
+                    placeholder = when (draft.type) {
+                        PlaceType.GYM -> "Block Lab"
+                        PlaceType.CRAG -> "Arco"
+                        PlaceType.BOARD -> "Home Kilter"
+                    },
+                    error = draft.nameError,
+                    modifier = Modifier.testTag("field_place_name"),
+                )
+                if (draft.type == PlaceType.BOARD) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Usual angle", style = MaterialTheme.typography.titleMedium)
+                            Text("Where new climbs here start", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        CruxStepper(draft.defaultAngle, { a -> viewModel.update { it.copy(defaultAngle = a) } }, 0..70, "deg", step = 5)
+                    }
+                }
+            }
+
+            FormSection("Where · optional") {
+                CruxTextField(
+                    label = if (draft.type == PlaceType.BOARD) "Where it is" else "City or area",
+                    value = draft.location,
+                    onValueChange = { v -> viewModel.update { it.copy(location = v.take(MAX_NAME)) } },
+                    placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
+                )
+                MapLocationField(
+                    location = draft.mapLocation,
+                    placeName = draft.name,
+                    onChange = { loc -> viewModel.update { it.copy(mapLocation = loc) } },
+                )
+            }
+
+            FormSection("Grades", "Used for climbs logged here") {
+                CruxCard(fill = CruxCardFill.Low) {
+                    ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
+                    if (draft.type != PlaceType.BOARD) {
+                        HorizontalDivider(Modifier.padding(vertical = space.s1), color = MaterialTheme.colorScheme.outlineVariant)
+                        ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
+                    }
+                }
+                if (draft.usesLocal) {
+                    LocalScaleEditor(
+                        scale = draft.localScale,
+                        error = draft.localError,
+                        onChange = { scale -> viewModel.update { it.copy(localScale = scale) } },
                     )
                 }
-                androidx.compose.material3.Switch(
-                    checked = draft.favourite,
-                    onCheckedChange = { f -> viewModel.update { it.copy(favourite = f) } },
-                    modifier = Modifier.testTag("place_favourite"),
+            }
+
+            FormSection("Notes · optional") {
+                CruxTextField(
+                    label = "",
+                    value = draft.notes,
+                    onValueChange = { v -> viewModel.update { it.copy(notes = v) } },
+                    placeholder = "Opening hours, parking, conditions",
+                    singleLine = false,
+                    minLines = 3,
                 )
             }
-            Eyebrow("Grades here")
-            ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
-            if (draft.type != PlaceType.BOARD) {
-                ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
-            }
-            if (draft.usesLocal) {
-                LocalScaleEditor(
-                    scale = draft.localScale,
-                    error = draft.localError,
-                    onChange = { scale -> viewModel.update { it.copy(localScale = scale) } },
-                )
-            }
-            if (draft.type == PlaceType.BOARD) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("Usual angle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    CruxStepper(draft.defaultAngle, { a -> viewModel.update { it.copy(defaultAngle = a) } }, 0..70, "deg", step = 5)
-                }
-            }
-            CruxTextField(
-                label = "Notes",
-                value = draft.notes,
-                onValueChange = { v -> viewModel.update { it.copy(notes = v) } },
-                placeholder = "Opening hours, parking, conditions",
-                helper = "Optional",
-                singleLine = false,
-                minLines = 2,
-            )
         }
         CruxButton(
             text = if (draft.isNew) "Add place" else "Save place",
@@ -337,31 +366,58 @@ fun PlaceEditorScreen(
     }
 }
 
-/** Where the place is on the map: optional, picked or searched on a map. */
+/** A titled group of fields; sections are spaced apart so the form reads in calm blocks. */
+@Composable
+private fun FormSection(title: String, hint: String? = null, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Eyebrow(title)
+            if (hint != null) {
+                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        content()
+    }
+}
+
+/**
+ * Where the place is on the map. Empty, it is one inviting row; set, it shows a small map
+ * with the pin, the address, and quiet actions under it.
+ */
 @Composable
 private fun MapLocationField(location: MapLocation?, placeName: String, onChange: (MapLocation?) -> Unit) {
     var picking by rememberSaveable { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
-        Text("On the map", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (location == null) {
-            CruxButton(
-                text = "Pick on the map",
-                onClick = { picking = true },
-                variant = CruxButtonVariant.Outlined,
-                icon = Icons.Rounded.Map,
-                modifier = Modifier.testTag("pick_map_location"),
-            )
-            Text("Optional. Search an address or place, or drop the pin by hand.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            CruxCard(modifier = Modifier.testTag("map_location")) {
+    if (location == null) {
+        CruxListRow(
+            title = "Add a map pin",
+            supporting = "Search an address, or drop a pin",
+            leading = { Icon(Icons.Rounded.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+            onClick = { picking = true },
+            modifier = Modifier.testTag("pick_map_location"),
+        )
+    } else {
+        val shape = MaterialTheme.shapes.large
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .border(CruxTheme.size.borderHairline, MaterialTheme.colorScheme.outlineVariant, shape)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .testTag("map_location"),
+        ) {
+            MapPreview(location, Modifier.fillMaxWidth().height(140.dp).clickable { picking = true })
+            Column(Modifier.padding(start = CruxTheme.space.s4, end = CruxTheme.space.s2, top = CruxTheme.space.s3, bottom = CruxTheme.space.s1)) {
                 Text(
                     location.address ?: "%.5f, %.5f".format(location.latitude, location.longitude),
                     style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+                Row {
                     CruxButton("Change", { picking = true }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                     CruxButton("Open in Maps", { openInMaps(context, location, placeName.ifBlank { "Place" }) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    Box(Modifier.weight(1f))
                     CruxButton("Remove", { onChange(null) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
                 }
             }
@@ -380,42 +436,68 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
     }
 }
 
-/** "Use my settings", one of the discipline's scales, or the place's own local grades. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One discipline's grading here, as a label and the current choice; tapping opens the
+ * choices. Keeps the section to two quiet lines instead of rows of chips.
+ */
 @Composable
 private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, onSelect: (GradeScale?) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-            CruxFilterChip("My settings", selected == null, { onSelect(null) })
-            discipline.scales.forEach { scale ->
-                CruxFilterChip(scale.label, selected == scale, { onSelect(scale) })
+    var open by remember { mutableStateOf(false) }
+    val options: List<Pair<GradeScale?, String>> =
+        listOf<Pair<GradeScale?, String>>(null to "My settings") +
+            discipline.scales.map { it to it.label } +
+            (discipline.localScale to "Local grades")
+    val current = options.firstOrNull { it.first == selected }?.second ?: "My settings"
+    Box {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClickLabel = "Change $label grades") { open = true }
+                .padding(vertical = CruxTheme.space.s1)
+                .testTag("scale_${discipline.name}"),
+        ) {
+            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(current, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Rounded.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        // Anchored at the right, under the current choice.
+        Box(Modifier.align(Alignment.BottomEnd)) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (scale, name) ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    trailingIcon = if (scale == selected) ({ Icon(Icons.Rounded.Check, contentDescription = null) }) else null,
+                    onClick = {
+                        onSelect(scale)
+                        open = false
+                    },
+                    modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}" else "scale_option_${name}"),
+                )
             }
-            CruxFilterChip(
-                "Local",
-                selected == discipline.localScale,
-                { onSelect(discipline.localScale) },
-                modifier = Modifier.testTag("local_${discipline.name}"),
-            )
+        }
         }
     }
 }
 
 /**
- * The place's own grades, easiest first: a run of numbers with a range, or a list of named
- * tape colours that can be recoloured, renamed, reordered, added and removed.
+ * The place's own grades, easiest first: a run of numbers with a range, or named tape
+ * colours. Each colour row is just its swatch and name; reordering and removing live in
+ * the row's menu so the list stays calm.
  */
 @Composable
 private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (LocalScale) -> Unit) {
     val space = CruxTheme.space
     var pickingColourFor by remember { mutableStateOf<Int?>(null) }
-    CruxCard(modifier = Modifier.testTag("local_scale_editor")) {
+    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("local_scale_editor")) {
         Text("Local grades", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Easiest first. Climbs here keep these grades; they are never converted to Font or French.",
+            "Easiest first. Never converted to Font or French.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = space.s2),
+            modifier = Modifier.padding(bottom = space.s3),
         )
         CruxSegmentedButtons(
             options = LocalKind.entries,
@@ -425,63 +507,45 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                 if (kind != scale.kind) onChange(if (kind == LocalKind.NUMBERS) LocalScale.DEFAULT_NUMBERS else LocalScale.DEFAULT_COLOURS)
             },
         )
+        Spacer(Modifier.height(space.s3))
         when (scale.kind) {
             LocalKind.NUMBERS -> {
                 val from = scale.grades.firstOrNull()?.name?.toIntOrNull() ?: 1
                 val to = scale.grades.lastOrNull()?.name?.toIntOrNull() ?: 10
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s3)) {
-                    Text("Easiest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    CruxStepper(from, { onChange(LocalScale.numbers(it, maxOf(to, it + 1))) }, 0..49, "from", testTagPrefix = "local_from")
+                Column(verticalArrangement = Arrangement.spacedBy(space.s3)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Easiest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        CruxStepper(from, { onChange(LocalScale.numbers(it, maxOf(to, it + 1))) }, 0..49, "from", testTagPrefix = "local_from")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Hardest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        CruxStepper(to, { onChange(LocalScale.numbers(from, it)) }, (from + 1)..50, "to", testTagPrefix = "local_to")
+                    }
+                    Text(
+                        "${scale.grades.size} grades: ${scale.labels.first()} to ${scale.labels.last()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s2)) {
-                    Text("Hardest", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    CruxStepper(to, { onChange(LocalScale.numbers(from, it)) }, (from + 1)..50, "to", testTagPrefix = "local_to")
-                }
-                Text(
-                    scale.labels.joinToString("  "),
-                    style = CruxTheme.type.code,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = space.s2),
-                )
             }
             LocalKind.COLOURS -> {
-                Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
+                Column(verticalArrangement = Arrangement.spacedBy(space.s1)) {
                     scale.grades.forEachIndexed { index, grade ->
-                        val set = { next: LocalGrade -> onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = next })) }
-                        val move = { by: Int ->
-                            val list = scale.grades.toMutableList()
-                            list.add(index + by, list.removeAt(index))
-                            onChange(scale.copy(grades = list))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s1)) {
-                            Text("${index + 1}", style = CruxTheme.type.gradeSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(20.dp))
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .clickable(onClickLabel = "Change colour") { pickingColourFor = index }
-                                    .testTag("local_colour_$index"),
-                            ) { TapeSwatch(argb(grade.colour ?: 0xFF9E9E9EL), 28.dp) }
-                            OutlinedTextField(
-                                value = grade.name,
-                                onValueChange = { set(grade.copy(name = it.take(16))) },
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("local_name_$index"),
-                            )
-                            IconButton(onClick = { move(-1) }, enabled = index > 0) {
-                                Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Easier")
-                            }
-                            IconButton(onClick = { move(1) }, enabled = index < scale.grades.lastIndex) {
-                                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "Harder")
-                            }
-                            IconButton(onClick = { onChange(scale.copy(grades = scale.grades.filterIndexed { i, _ -> i != index })) }, enabled = scale.grades.size > 2) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Remove ${grade.name}")
-                            }
-                        }
+                        LocalColourRow(
+                            index = index,
+                            grade = grade,
+                            isFirst = index == 0,
+                            isLast = index == scale.grades.lastIndex,
+                            canRemove = scale.grades.size > 2,
+                            onRename = { name -> onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = grade.copy(name = name.take(16)) })) },
+                            onPickColour = { pickingColourFor = index },
+                            onMove = { by ->
+                                val list = scale.grades.toMutableList()
+                                list.add(index + by, list.removeAt(index))
+                                onChange(scale.copy(grades = list))
+                            },
+                            onRemove = { onChange(scale.copy(grades = scale.grades.filterIndexed { i, _ -> i != index })) },
+                        )
                     }
                     CruxButton(
                         text = "Add a colour",
@@ -508,11 +572,12 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
             title = { Text("Tape colour", style = MaterialTheme.typography.headlineSmall) },
             text = {
                 @OptIn(ExperimentalLayoutApi::class)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
                     LocalScale.PALETTE.forEach { (name, colour) ->
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
+                                .width(56.dp)
                                 .clip(MaterialTheme.shapes.small)
                                 .clickable {
                                     val grade = scale.grades[index]
@@ -524,12 +589,95 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                                 .padding(CruxTheme.space.s1),
                         ) {
                             TapeSwatch(argb(colour), 32.dp)
-                            Text(name, style = MaterialTheme.typography.labelSmall)
+                            Text(name, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }
             },
             confirmButton = { TextButton(onClick = { pickingColourFor = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+/** One tape grade: its colour (tap to change), its name, and a menu to move or remove it. */
+@Composable
+private fun LocalColourRow(
+    index: Int,
+    grade: LocalGrade,
+    isFirst: Boolean,
+    isLast: Boolean,
+    canRemove: Boolean,
+    onRename: (String) -> Unit,
+    onPickColour: () -> Unit,
+    onMove: (Int) -> Unit,
+    onRemove: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .clickable(onClickLabel = "Change colour", onClick = onPickColour)
+                .testTag("local_colour_$index"),
+        ) { TapeSwatch(argb(grade.colour ?: 0xFF9E9E9EL), 28.dp) }
+        CruxTextField(
+            label = "",
+            value = grade.name,
+            onValueChange = onRename,
+            modifier = Modifier
+                .weight(1f)
+                .testTag("local_name_$index"),
+        )
+        Box {
+            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${grade.name} options") }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text("Move easier") }, enabled = !isFirst, onClick = { menu = false; onMove(-1) })
+                DropdownMenuItem(text = { Text("Move harder") }, enabled = !isLast, onClick = { menu = false; onMove(1) })
+                DropdownMenuItem(text = { Text("Remove") }, enabled = canRemove, onClick = { menu = false; onRemove() })
+            }
+        }
+    }
+}
+
+/** A small, still map centred on the pin, for showing where a place is. */
+@Composable
+fun MapPreview(location: MapLocation, modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Clipped and sized here: a map view will happily draw past its bounds otherwise.
+    Box(modifier.clipToBounds()) {
+        androidx.compose.ui.viewinterop.AndroidView(
+            factory = {
+                org.osmdroid.config.Configuration.getInstance().userAgentValue = context.packageName
+                org.osmdroid.views.MapView(context).apply {
+                    setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                    isTilesScaledToDpi = true
+                    zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
+                    setMultiTouchControls(false)
+                    // A picture, not a control: touches go to the card around it.
+                    setOnTouchListener { _, _ -> true }
+                    controller.setZoom(16.0)
+                }
+            },
+            update = { it.controller.setCenter(org.osmdroid.util.GeoPoint(location.latitude, location.longitude)) },
+            onRelease = { it.onDetach() },
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds(),
+        )
+        Icon(
+            Icons.Rounded.Place,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(32.dp)
+                .offset(y = (-16).dp),
         )
     }
 }
