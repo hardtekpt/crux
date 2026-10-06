@@ -1,7 +1,12 @@
 package com.hardtekpt.crux.data
 
 import com.hardtekpt.crux.data.local.CruxDatabases
+import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.ClimbEntity
+import com.hardtekpt.crux.data.local.ClimbMediaEntity
+import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.MediaKind
+import kotlinx.coroutines.flow.combine
 import com.hardtekpt.crux.data.local.PersonalBestRow
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.NewClimb
@@ -25,20 +30,27 @@ interface ClimbRepository {
     suspend fun deleteClimb(id: Long)
     fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>>
     fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>>
+    /** Attaches a photo to a climb, replacing any; null removes it. Returns the old file name. */
+    suspend fun setClimbImage(climbId: Long, path: String?): String?
 }
 
 class OfflineClimbRepository @Inject constructor(
     private val dbs: CruxDatabases,
     private val clock: Clock,
 ) : ClimbRepository {
-    override fun observeClimbs(): Flow<List<Climb>> =
-        dbs.observe { it.climbDao().observeAll() }.map { it.map(ClimbEntity::toModel) }
+    /** Climbs from a query, each with its photo if it has one. */
+    private fun withMedia(query: (CruxDatabase) -> Flow<List<ClimbEntity>>): Flow<List<Climb>> = dbs.observe { db ->
+        combine(query(db), db.climbMediaDao().observeImages()) { climbs, images ->
+            val byClimb = images.associate { it.climbId to it.path }
+            climbs.map { it.toModel().copy(imagePath = byClimb[it.id]) }
+        }
+    }
 
-    override fun observeRecentClimbs(limit: Int): Flow<List<Climb>> =
-        dbs.observe { it.climbDao().observeRecent(limit) }.map { it.map(ClimbEntity::toModel) }
+    override fun observeClimbs(): Flow<List<Climb>> = withMedia { it.climbDao().observeAll() }
 
-    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> =
-        dbs.observe { it.climbDao().observeSince(from.toEpochDay()) }.map { it.map(ClimbEntity::toModel) }
+    override fun observeRecentClimbs(limit: Int): Flow<List<Climb>> = withMedia { it.climbDao().observeRecent(limit) }
+
+    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> = withMedia { it.climbDao().observeSince(from.toEpochDay()) }
 
     override fun observeClimbCount(): Flow<Int> = dbs.observe { it.climbDao().observeCount() }
 
@@ -47,7 +59,21 @@ class OfflineClimbRepository @Inject constructor(
 
     override suspend fun logClimb(climb: NewClimb): Long = dbs.current().climbDao().insert(climb.toEntity(clock.millis()))
 
-    override suspend fun getClimb(id: Long): Climb? = dbs.current().climbDao().get(id)?.toModel()
+    override suspend fun getClimb(id: Long): Climb? {
+        val db = dbs.current()
+        return db.climbDao().get(id)?.toModel()?.copy(imagePath = db.climbMediaDao().get(id, MediaKind.IMAGE)?.path)
+    }
+
+    override suspend fun setClimbImage(climbId: Long, path: String?): String? {
+        val db = dbs.current()
+        return db.withTransaction {
+            val dao = db.climbMediaDao()
+            val old = dao.get(climbId, MediaKind.IMAGE)?.path
+            dao.delete(climbId, MediaKind.IMAGE)
+            if (path != null) dao.insert(ClimbMediaEntity(climbId = climbId, kind = MediaKind.IMAGE, path = path, createdAtMillis = clock.millis()))
+            old
+        }
+    }
 
     override suspend fun updateClimb(id: Long, climb: NewClimb) {
         val dao = dbs.current().climbDao()
@@ -57,11 +83,9 @@ class OfflineClimbRepository @Inject constructor(
 
     override suspend fun deleteClimb(id: Long) = dbs.current().climbDao().delete(id)
 
-    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> =
-        dbs.observe { it.climbDao().observeForProblem(problemId) }.map { it.map(ClimbEntity::toModel) }
+    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> = withMedia { it.climbDao().observeForProblem(problemId) }
 
-    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> =
-        dbs.observe { it.climbDao().observeAtPlace(placeId) }.map { it.map(ClimbEntity::toModel) }
+    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> = withMedia { it.climbDao().observeAtPlace(placeId) }
 }
 
 private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(

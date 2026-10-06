@@ -43,8 +43,9 @@ class PlacesMigration : AutoMigrationSpec {
         PlaceEntity::class,
         AreaEntity::class,
         ProblemEntity::class,
+        ClimbMediaEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
@@ -53,11 +54,13 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
+        AutoMigration(from = 9, to = 10),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
     abstract fun placeDao(): PlaceDao
     abstract fun climbDao(): ClimbDao
+    abstract fun climbMediaDao(): ClimbMediaDao
     abstract fun bodyMeasurementDao(): BodyMeasurementDao
     abstract fun templateDao(): TemplateDao
     abstract fun exerciseDao(): ExerciseDao

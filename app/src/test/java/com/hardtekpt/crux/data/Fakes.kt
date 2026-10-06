@@ -62,6 +62,14 @@ class FakeClimbRepository : ClimbRepository {
         climbs.value = climbs.value.map { if (it.id == id) climb.toClimb(id) else it }
     }
 
+    val images = mutableMapOf<Long, String>()
+
+    override suspend fun setClimbImage(climbId: Long, path: String?): String? {
+        val old = images[climbId]
+        if (path == null) images.remove(climbId) else images[climbId] = path
+        return old
+    }
+
     override suspend fun deleteClimb(id: Long) {
         climbs.value = climbs.value.filterNot { it.id == id }
     }
@@ -218,4 +226,16 @@ class FakeExerciseRepository : ExerciseRepository {
     override suspend fun deleteExercise(id: Long) {
         exercises.value = exercises.value.filterNot { it.id == id }
     }
+}
+
+/** Image files without Android storage: imports name the file after the uri, deletes are recorded. */
+class FakeImageFiles : com.hardtekpt.crux.data.images.ImageFiles {
+    val deleted = mutableListOf<String>()
+    var next = 0
+
+    override suspend fun importFrom(uri: android.net.Uri): String = "photo_${next++}.jpg"
+    override suspend fun delete(name: String?) {
+        if (name != null) deleted += name
+    }
+    override fun newCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
 }

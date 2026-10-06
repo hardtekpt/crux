@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.journal
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
 import com.hardtekpt.crux.data.FakeClimbRepository
+import com.hardtekpt.crux.data.FakeImageFiles
 import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.ProblemInput
@@ -36,13 +37,14 @@ class LogClimbViewModelTest {
 
     private val repository = FakeClimbRepository()
     private val places = FakePlaceRepository(repository)
+    private val imageFiles = FakeImageFiles()
     private val preferences by lazy {
         UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") })
     }
     private val viewModel by lazy { viewModel() }
 
     private fun viewModel(vararg args: Pair<String, Long>) =
-        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences)
+        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles)
 
     private suspend fun boardWithProblem(): Pair<Long, Long> {
         val placeId = places.savePlace(
@@ -210,4 +212,5 @@ class LogClimbViewModelTest {
         assertEquals("Blue", logged.gradeLabel)
         assertEquals("Blue", repository.climbs.value.single().grade)
     }
+
 }

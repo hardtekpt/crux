@@ -10,6 +10,8 @@ import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import android.net.Uri
+import com.hardtekpt.crux.data.images.ImageFiles
 import com.hardtekpt.crux.data.model.GradeSystem
 import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.NewClimb
@@ -64,6 +66,11 @@ data class LogClimbDraft(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10; optional. */
     val effort: Int? = null,
+    /** An attached photo (file name in app storage), and the one saved before this edit. */
+    val imagePath: String? = null,
+    val savedImagePath: String? = null,
+    val addingImage: Boolean = false,
+    val imageFailed: Boolean = false,
     /** Save the named climb as a problem at the picked place. */
     val saveAsProblem: Boolean = false,
     val dateError: String? = null,
@@ -87,6 +94,7 @@ class LogClimbViewModel @Inject constructor(
     private val placeRepository: PlaceRepository,
     private val clock: Clock,
     private val preferences: UserPreferencesRepository,
+    private val images: ImageFiles,
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
@@ -140,6 +148,8 @@ class LogClimbViewModel @Inject constructor(
                     problemId = climb.problemId,
                     angle = climb.angle,
                     effort = climb.effort,
+                    imagePath = climb.imagePath,
+                    savedImagePath = climb.imagePath,
                 )
             }
             // Local grades need the place's list to show the strip.
@@ -254,8 +264,38 @@ class LogClimbViewModel @Inject constructor(
     fun requestDelete() = _draft.update { it.copy(confirmDelete = true) }
     fun cancelDelete() = _draft.update { it.copy(confirmDelete = false) }
 
+    /** Copies a picked or captured photo in; it is attached when the climb is saved. */
+    fun attachImage(uri: Uri) {
+        _draft.update { it.copy(addingImage = true, imageFailed = false) }
+        viewModelScope.launch {
+            val name = runCatching { images.importFrom(uri) }.getOrNull()
+            val replaced = _draft.value.imagePath.takeIf { it != _draft.value.savedImagePath }
+            if (name != null) images.delete(replaced)
+            _draft.update { it.copy(imagePath = name ?: it.imagePath, addingImage = false, imageFailed = name == null) }
+        }
+    }
+
+    fun removeImage() {
+        val draft = _draft.value
+        if (draft.imagePath != draft.savedImagePath) viewModelScope.launch { images.delete(draft.imagePath) }
+        _draft.update { it.copy(imagePath = null) }
+    }
+
+    fun captureUri(): Uri = images.newCaptureUri()
+
+    override fun onCleared() {
+        // A photo added and then abandoned with the form.
+        val draft = _draft.value
+        if (!draft.saved && draft.imagePath != null && draft.imagePath != draft.savedImagePath) {
+            val orphan = draft.imagePath
+            kotlinx.coroutines.GlobalScope.launch { images.delete(orphan) }
+        }
+    }
+
     fun confirmDelete() {
         viewModelScope.launch {
+            images.delete(_draft.value.savedImagePath)
+            if (_draft.value.imagePath != _draft.value.savedImagePath) images.delete(_draft.value.imagePath)
             climbRepository.deleteClimb(climbId)
             _draft.update { it.copy(confirmDelete = false, saved = true) }
         }
@@ -315,7 +355,16 @@ class LogClimbViewModel @Inject constructor(
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),
             )
-            if (draft.isEditing) climbRepository.updateClimb(draft.climbId, climb) else climbRepository.logClimb(climb)
+            val id = if (draft.isEditing) {
+                climbRepository.updateClimb(draft.climbId, climb)
+                draft.climbId
+            } else {
+                climbRepository.logClimb(climb)
+            }
+            if (draft.imagePath != draft.savedImagePath) {
+                climbRepository.setClimbImage(id, draft.imagePath)
+                images.delete(draft.savedImagePath)
+            }
             _draft.update { it.copy(isSaving = false, saved = true) }
             // The next new climb starts at the same place.
             if (!draft.isEditing) preferences.setLastPlaceId(place?.id)

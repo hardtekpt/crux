@@ -29,6 +29,8 @@ import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.places.PlacesViewModel
 import com.hardtekpt.crux.ui.places.placesList
@@ -170,6 +172,9 @@ fun JournalContent(
                         title = climb.displayName(),
                         supporting = listOfNotNull(climb.outcomeLine(), climb.effort?.let { "felt $it/10" }, climb.notes).joinToString(" · "),
                         leading = { GradeBadge(climb.grade, climb.gradeState) },
+                        trailing = climb.imagePath?.let { image ->
+                            { ImageThumbnail(image, "Photo", onClick = { onOpenClimb(climb.id) }, size = 40.dp) }
+                        },
                         onClick = { onOpenClimb(climb.id) },
                         modifier = Modifier.testTag("journal_climb"),
                     )

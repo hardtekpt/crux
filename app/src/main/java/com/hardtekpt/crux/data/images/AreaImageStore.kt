@@ -15,8 +15,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
 
+/** Image files kept in app storage: wall photos and maps, and photos of climbs. */
+interface ImageFiles {
+    /** Copies a picked or captured image in; returns its file name. */
+    suspend fun importFrom(uri: Uri): String
+    suspend fun delete(name: String?)
+    /** Where the camera writes a new photo before it is imported. */
+    fun newCaptureUri(): Uri
+}
+
 /**
- * Pictures attached to walls: a photo of the wall or a gym map with it marked. Each is
+ * Pictures attached to walls and climbs: a photo of the wall or a gym map with it marked. Each is
  * copied into app storage, scaled down to at most [MAX_SIDE] px and saved as JPEG, so it
  * survives the original being deleted and stays small enough to back up. The database keeps
  * only the file name.
@@ -24,13 +33,12 @@ import kotlin.math.max
 @Singleton
 class AreaImageStore @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : ImageFiles {
     private val dir: File get() = File(context.filesDir, DIR).apply { mkdirs() }
 
     fun file(name: String): File = File(dir, name)
 
-    /** Copies a picked or captured image in; returns its file name. */
-    suspend fun importFrom(uri: Uri): String = withContext(Dispatchers.IO) {
+    override suspend fun importFrom(uri: Uri): String = withContext(Dispatchers.IO) {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
         // ImageDecoder applies the camera's EXIF rotation for us.
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
@@ -56,13 +64,12 @@ class AreaImageStore @Inject constructor(
         file(name).takeIf { it.exists() }?.readBytes()
     }
 
-    suspend fun delete(name: String?) {
+    override suspend fun delete(name: String?) {
         if (name == null) return
         withContext(Dispatchers.IO) { file(name).delete() }
     }
 
-    /** Where the camera writes a new photo before it is imported. */
-    fun newCaptureUri(): Uri {
+    override fun newCaptureUri(): Uri {
         val capture = File(File(context.cacheDir, CAPTURE_DIR).apply { mkdirs() }, "capture.jpg")
         return FileProvider.getUriForFile(context, "${context.packageName}.images", capture)
     }

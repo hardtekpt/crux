@@ -1,5 +1,15 @@
 package com.hardtekpt.crux.ui.journal
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import com.hardtekpt.crux.ui.components.ImageViewer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -100,6 +110,14 @@ fun LogClimbScreen(
         onPlace = viewModel::setPlace,
         onNotes = viewModel::setNotes,
         onSave = viewModel::save,
+        media = {
+            ClimbMedia(
+                draft = draft,
+                onAttach = viewModel::attachImage,
+                onRemove = viewModel::removeImage,
+                captureUri = viewModel::captureUri,
+            )
+        },
     )
     if (draft.confirmDelete) {
         AlertDialog(
@@ -137,6 +155,7 @@ fun LogClimbContent(
     where: @Composable () -> Unit = {},
     onDelete: () -> Unit = {},
     onEffort: (Int?) -> Unit = {},
+    media: @Composable () -> Unit = {},
     today: LocalDate = remember { LocalDate.now() },
 ) {
     val space = CruxTheme.space
@@ -253,6 +272,7 @@ fun LogClimbContent(
                 minLines = 3,
                 modifier = Modifier.testTag("field_notes"),
             )
+            media()
         }
         CruxButton(
             text = if (draft.isEditing) "Save changes" else "Log climb",
@@ -270,5 +290,77 @@ fun LogClimbContent(
 
     if (pickingDate) {
         PastDayDialog(draft.date, today, onDate) { pickingDate = false }
+    }
+}
+
+/**
+ * A photo of the climb, from the gallery or the camera, and a place held for video. The
+ * photo is copied into the app and attached when the climb is saved.
+ */
+@Composable
+private fun ClimbMedia(
+    draft: LogClimbDraft,
+    onAttach: (Uri) -> Unit,
+    onRemove: () -> Unit,
+    captureUri: () -> Uri,
+) {
+    val space = CruxTheme.space
+    var capture by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewing by rememberSaveable { mutableStateOf(false) }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(onAttach) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        if (saved) capture?.let { onAttach(Uri.parse(it)) }
+    }
+    val pick = { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s2)) {
+        Eyebrow("Photo and video · optional")
+        val image = draft.imagePath
+        when {
+            draft.addingImage -> Text("Adding photo…", style = MaterialTheme.typography.bodyMedium)
+            image != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s3)) {
+                ImageThumbnail(image, "Climb photo", onClick = { viewing = true }, size = 72.dp, modifier = Modifier.testTag("climb_photo"))
+                CruxButton("Replace", pick, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                CruxButton("Remove", onRemove, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_climb_photo"))
+            }
+            else -> Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                CruxButton(
+                    "Choose photo",
+                    pick,
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.Image,
+                    modifier = Modifier.testTag("choose_climb_photo"),
+                )
+                CruxButton(
+                    "Take photo",
+                    {
+                        val uri = captureUri()
+                        capture = uri.toString()
+                        camera.launch(uri)
+                    },
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.PhotoCamera,
+                    modifier = Modifier.testTag("take_climb_photo"),
+                )
+            }
+        }
+        // Video logs are planned; the button holds their place.
+        CruxButton(
+            "Video · coming soon",
+            {},
+            enabled = false,
+            variant = CruxButtonVariant.Outlined,
+            size = CruxButtonSize.Small,
+            icon = Icons.Rounded.Videocam,
+            modifier = Modifier.testTag("climb_video_soon"),
+        )
+        if (draft.imageFailed) {
+            Text("That photo couldn't be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+    if (viewing && draft.imagePath != null) {
+        ImageViewer(draft.imagePath, draft.name.ifBlank { "Climb photo" }) { viewing = false }
     }
 }

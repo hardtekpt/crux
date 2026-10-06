@@ -3,6 +3,8 @@ package com.hardtekpt.crux.data.backup
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
+import com.hardtekpt.crux.data.local.ClimbMediaEntity
+import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
@@ -35,7 +37,7 @@ import javax.inject.Singleton
 enum class BackupSection(val label: String, val description: String, val available: Boolean = true) {
     EXERCISES("Exercise list", "Your exercise library"),
     PLANS("Plan list", "Session plans, with the exercises they use"),
-    JOURNAL("Journal", "Every climb you logged"),
+    JOURNAL("Journal", "Every climb you logged, with its photo"),
     PLACES("Places", "Gyms, crags and boards, with their walls, wall images and problems"),
     BODY("Body stats", "Weigh-ins and height"),
     SESSIONS("Session history", "Arrives with the session logger", available = false),
@@ -116,6 +118,8 @@ data class ClimbDto(
     /** Local grades: the position in the place's scale and its tape colour; [grade] holds the label. */
     val gradeIndex: Int? = null,
     val gradeColour: Long? = null,
+    /** The climb's photo as base64 JPEG. Older backups omit it. */
+    val image: String? = null,
 )
 
 @Serializable
@@ -220,6 +224,7 @@ class BackupRepository(
                 val places = db.placeDao().getPlaces().associateBy { it.id }
                 val areas = db.placeDao().getAllAreas().associateBy { it.id }
                 val problems = db.placeDao().getAllProblems().associateBy { it.id }
+                val photos = db.climbMediaDao().getAll().filter { it.kind == MediaKind.IMAGE }.associate { it.climbId to it.path }
                 db.climbDao().getAll().map { climb ->
                     val place = climb.placeId?.let(places::get)
                     climb.toDto().copy(
@@ -229,6 +234,7 @@ class BackupRepository(
                         problem = climb.problemId?.let(problems::get)?.name,
                         angle = climb.angle,
                         effort = climb.effort,
+                        image = photos[climb.id]?.let { images?.readBytes(it) }?.let { Base64.getEncoder().encodeToString(it) },
                     )
                 }
             } else {
@@ -418,7 +424,7 @@ class BackupRepository(
                     return@forEach
                 }
                 val place = dto.placeType?.let { type -> dto.place?.let { places[type to it.lowercase()] } }
-                climbDao.insert(
+                val climbId = climbDao.insert(
                     ClimbEntity(
                         discipline = dto.discipline,
                         gradeScale = dto.gradeScale,
@@ -440,6 +446,10 @@ class BackupRepository(
                         gradeColour = dto.gradeColour,
                     ),
                 )
+                dto.image
+                    ?.let { encoded -> runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() }
+                    ?.let { images?.importBytes(it) }
+                    ?.let { path -> db.climbMediaDao().insert(ClimbMediaEntity(climbId = climbId, kind = MediaKind.IMAGE, path = path, createdAtMillis = now)) }
                 seen += dto.identity()
                 added.merge(BackupSection.JOURNAL, 1, Int::plus)
             }
@@ -489,7 +499,7 @@ private fun ClimbEntity.toDto() = ClimbDto(
 )
 
 /** Two climbs are the same entry when everything but notes and saved-place links matches. */
-private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null)
+private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null, image = null)
 
 private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) = PlaceDto(
     name = name,
