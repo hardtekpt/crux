@@ -286,11 +286,16 @@ private fun JournalHeader(
                     "Today · ${today.dayOfWeek.getDisplayName(DateTextStyle.FULL, Locale.UK)}",
                     style = MaterialTheme.typography.titleMedium,
                 )
+                // Today's and the week's tallies count everything, whatever the filters show.
+                val todayAll = uiState.all.firstOrNull { it.date == today }
                 Text(
-                    listOf(
-                        todayDay?.let { daySummary(it) } ?: "Nothing logged yet today",
-                        "this week ${uiState.weekDays} ${if (uiState.weekDays == 1) "day" else "days"}, ${uiState.weekClimbs} ${if (uiState.weekClimbs == 1) "climb" else "climbs"}",
-                    ).joinToString(" · "),
+                    todayAll?.let { daySummary(it) } ?: "Nothing logged yet today",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.testTag("journal_today_summary"),
+                )
+                Text(
+                    "This week: ${uiState.weekDays} ${if (uiState.weekDays == 1) "day" else "days"}, ${uiState.weekClimbs} ${if (uiState.weekClimbs == 1) "climb" else "climbs"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant,
                 )
@@ -435,9 +440,16 @@ private fun AppliedFilters(query: JournalQuery, onQuery: ((JournalQuery) -> Jour
         if (query.result != JournalResult.Any) AppliedChip(query.result.label) { onQuery { it.copy(result = JournalResult.Any) } }
         query.places.forEach { place -> AppliedChip(place) { onQuery { it.copy(places = it.places - place) } } }
         query.tags.forEach { tag -> AppliedChip("#$tag") { onQuery { it.copy(tags = it.tags - tag) } } }
-        TextButton(onClick = { onQuery { JournalQuery(kind = it.kind, search = it.search) } }, modifier = Modifier.testTag("journal_clear_filters")) {
-            Text("Clear all", style = MaterialTheme.typography.labelMedium)
-        }
+        Text(
+            "Clear all",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(CircleShape)
+                .clickable { onQuery { JournalQuery(kind = it.kind, search = it.search) } }
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .testTag("journal_clear_filters"),
+        )
     }
 }
 
