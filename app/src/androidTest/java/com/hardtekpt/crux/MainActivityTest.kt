@@ -201,14 +201,18 @@ class MainActivityTest {
         val handle = composeRule.onNodeWithTag("drag_WEIGHT_TREND")
         val from = composeRule.onNodeWithTag("widget_WEIGHT_TREND").fetchSemanticsNode().boundsInRoot
         val to = composeRule.onNodeWithTag("widget_RECENT_CLIMBS").fetchSemanticsNode().boundsInRoot
-        // Bring the dragged widget's centre onto the widget above it.
-        val distance = to.center.y - from.center.y
-        val steps = 30
+        // Bring the dragged widget's centre well inside the widget above it (its upper third),
+        // so a slow run that drops a few move events still lands on it.
+        val distance = (to.top + to.height / 3f) - from.center.y
+        val steps = 40
         handle.performTouchInput { down(center) }
         repeat(steps) {
             handle.performTouchInput { moveBy(androidx.compose.ui.geometry.Offset(0f, distance / steps)) }
             composeRule.waitForIdle()
         }
+        // Hold still a moment so the swap lays out before the finger lifts.
+        composeRule.mainClock.advanceTimeBy(200)
+        composeRule.waitForIdle()
         handle.performTouchInput { up() }
         composeRule.onNodeWithTag("done_editing").performClick()
 
