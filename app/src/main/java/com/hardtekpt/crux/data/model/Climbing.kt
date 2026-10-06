@@ -116,16 +116,30 @@ enum class MeasurementType(
     WINGSPAN("Wingspan", "cm", 100.0..260.0, "Fingertip to fingertip, arms straight out"),
     STANDING_REACH("Standing reach", "cm", 150.0..320.0, "Highest point you touch flat-footed, one arm up"),
     BODY_FAT("Body fat", "%", 3.0..60.0, "From a scale or calipers"),
-    // Circumferences, measured relaxed with a soft tape.
-    FOREARM("Forearm", "cm", 15.0..60.0, "Widest point, arm relaxed"),
-    BICEP("Bicep", "cm", 15.0..70.0, "Widest point, arm relaxed"),
+    // Circumferences, measured relaxed with a soft tape. Limbs have a left and a right;
+    // the plain names were stored before sides existed and stay as the left side.
+    FOREARM("Left forearm", "cm", 15.0..60.0, "Widest point, arm relaxed"),
+    BICEP("Left bicep", "cm", 15.0..70.0, "Widest point, arm relaxed"),
     CHEST("Chest", "cm", 60.0..160.0, "Across the nipples, breathing out"),
     WAIST("Waist", "cm", 50.0..160.0, "At the navel, relaxed"),
-    THIGH("Thigh", "cm", 30.0..100.0, "Widest point, standing"),
+    THIGH("Left thigh", "cm", 30.0..100.0, "Widest point, standing"),
+    FOREARM_RIGHT("Right forearm", "cm", 15.0..60.0, "Widest point, arm relaxed"),
+    BICEP_RIGHT("Right bicep", "cm", 15.0..70.0, "Widest point, arm relaxed"),
+    THIGH_RIGHT("Right thigh", "cm", 30.0..100.0, "Widest point, standing"),
     ;
 
     companion object {
         /** The climbing body stats on You, in display order. Weight has its own card. */
         val bodyStats = listOf(HEIGHT, WINGSPAN, STANDING_REACH, BODY_FAT)
+
+        /** Circumferences by body part: limbs as (left, right), the trunk as one value. */
+        val circumferenceParts: List<Pair<String, List<MeasurementType>>> = listOf(
+            "Forearm" to listOf(FOREARM, FOREARM_RIGHT),
+            "Bicep" to listOf(BICEP, BICEP_RIGHT),
+            "Thigh" to listOf(THIGH, THIGH_RIGHT),
+            "Chest" to listOf(CHEST),
+            "Waist" to listOf(WAIST),
+        )
+        val circumferences: List<MeasurementType> = circumferenceParts.flatMap { it.second }
     }
 }

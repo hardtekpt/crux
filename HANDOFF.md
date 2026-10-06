@@ -31,6 +31,13 @@ Kotlin 2.4, AGP 9.4 (built-in Kotlin), Compose (BOM 2026.09), Material 3, Naviga
 Two databases: the climber's own and a demo one (Settings → Demo mode).
 
 ## What's done (latest first)
+- **Profile rework + Journal timeline** (schema 14): You tab = climber card, consistency, records,
+  compact weight tracker (sparkline + Log), and a menu list → Measurements (body stats, weight chart,
+  weigh-ins), Circumferences (left/right for forearm, bicep, thigh; chest, waist), Notes, Places
+  (moved out of Journal; place/problem pages now live in the You graph), Settings. Notes have an
+  optional tag (chips in the editor, filter on Notes). Journal is one timeline (climbs per place,
+  training results, notes) with All/Climbs/Training/Notes filters; workout sessions slot in as
+  another `TimelineEntry` once the session logger exists. `FOREARM`/`BICEP`/`THIGH` mean the left side.
 - `b5f1d55` **Profile page** (You tab): climber card (tape strip, days/climbs this year, hardest
   boulder/route), consistency grid (GitHub-style, weekly streaks), personal records per exercise
   (log a result; per-exercise history; PR = heaviest load, then reps, or longest hold), measurements

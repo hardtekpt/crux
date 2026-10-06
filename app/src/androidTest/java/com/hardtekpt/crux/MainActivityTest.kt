@@ -97,27 +97,49 @@ class MainActivityTest {
         composeRule.waitForTag("screen_You")
         composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
         composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("you_weight", useUnmergedTree = true).assertTextEquals("72.5 kg") }.isSuccess
+            runCatching { composeRule.onNodeWithTag("you_weight", useUnmergedTree = true).assertTextEquals("72.5") }.isSuccess
         }
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("weight_row"))
+        // The full history is on Measurements.
+        openFromProfileMenu("menu_measurements", "screen_Measurements")
+        composeRule.onNodeWithTag("measurements_list").performScrollToNode(hasTestTag("weight_row"))
         assertEquals(1, composeRule.onAllNodesWithTag("weight_row").fetchSemanticsNodes().size)
     }
 
     @Test
     fun bodyStatsUpdateFromTheirTilesAndGiveTheApeIndex() {
         composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_measurements", "screen_Measurements")
         listOf("HEIGHT" to "178", "WINGSPAN" to "184").forEach { (type, value) ->
-            composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("stat_$type"))
+            composeRule.onNodeWithTag("measurements_list").performScrollToNode(hasTestTag("stat_$type"))
             composeRule.onNodeWithTag("stat_$type").performClick()
             composeRule.onNodeWithTag("ruler_measurement_value").performClick()
             composeRule.textFieldIn("field_type_value").performTextReplacement(value)
             composeRule.onNodeWithTag("confirm_type_value").performClick()
             composeRule.onNodeWithTag("save_measurement").performClick()
         }
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("you_ape_index"))
+        composeRule.onNodeWithTag("measurements_list").performScrollToNode(hasTestTag("you_ape_index"))
         composeRule.waitUntil(5_000) {
             runCatching { composeRule.onNodeWithTag("you_ape_index").assertTextEquals("+6 cm") }.isSuccess
         }
+    }
+
+    @Test
+    fun circumferencesKeepLeftAndRightApart() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_circumferences", "screen_Circumferences")
+        listOf("FOREARM" to "29", "FOREARM_RIGHT" to "31").forEach { (type, value) ->
+            composeRule.onNodeWithTag("circumferences_list").performScrollToNode(hasTestTag("stat_$type"))
+            composeRule.onNodeWithTag("stat_$type").performClick()
+            composeRule.onNodeWithTag("ruler_measurement_value").performClick()
+            composeRule.textFieldIn("field_type_value").performTextReplacement(value)
+            composeRule.onNodeWithTag("confirm_type_value").performClick()
+            composeRule.onNodeWithTag("save_measurement").performClick()
+        }
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("you_forearm_right", useUnmergedTree = true).assertTextEquals("31 cm") }.isSuccess
+        }
+        composeRule.onNodeWithTag("you_forearm", useUnmergedTree = true).assertTextEquals("29 cm")
+        composeRule.onNodeWithTag("diff_Forearm").assertTextEquals("R +2 cm")
     }
 
     @Test
@@ -250,8 +272,8 @@ class MainActivityTest {
 
     @Test
     fun placesHoldProblemsAndGoesOnThemBecomeProjects() {
-        composeRule.onNodeWithTag("nav_Journal").performClick()
-        composeRule.onNode(hasText("Places") and hasAnyAncestor(hasTestTag("journal_view"))).performClick()
+        composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_places", "screen_Places")
         composeRule.waitForTag("new_place")
         composeRule.onNodeWithTag("new_place").performClick()
         composeRule.waitForTag("screen_PlaceEditor")
@@ -321,32 +343,51 @@ class MainActivityTest {
 
     @Test
     fun swipingSidewaysMovesBetweenAPagesTabs() {
-        composeRule.onNodeWithTag("nav_Journal").performClick()
-        composeRule.waitForTag("screen_Journal")
+        composeRule.onNodeWithTag("nav_Train").performClick()
+        composeRule.waitForTag("screen_Train")
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("screen_Journal").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
-        composeRule.waitForTag("places_list")
+        composeRule.onNodeWithTag("screen_Train").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
+        composeRule.waitForTag("exercise_row")
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("screen_Journal").performTouchInput {
+        composeRule.onNodeWithTag("screen_Train").performTouchInput {
             swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.08f))
         }
-        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("places_list").fetchSemanticsNodes().isEmpty() }
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("exercise_row").fetchSemanticsNodes().isEmpty() }
         // The main tab itself didn't change.
-        composeRule.onNodeWithTag("screen_Journal").assertIsDisplayed()
+        composeRule.onNodeWithTag("screen_Train").assertIsDisplayed()
     }
 
     @Test
-    fun aNoteFromTheLogButtonShowsOnTheProfile() {
+    fun aTaggedNoteFromTheLogButtonShowsInTheJournalAndNotes() {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_AddNote").performClick()
         composeRule.waitForTag("screen_NoteEditor")
         composeRule.onNodeWithTag("field_note").performTextInput("Left ring finger tweak")
+        composeRule.onNodeWithTag("new_tag").performClick()
+        composeRule.textFieldIn("field_tag").performTextInput("Injury")
+        composeRule.onNodeWithTag("confirm_tag").performClick()
+        composeRule.waitForTag("tag_injury")
         composeRule.onNodeWithTag("save_note").performClick()
 
+        // The journal timeline shows it, and the Notes filter keeps it.
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_note")
+        composeRule.onNodeWithTag("journal_filter_Notes").performClick()
+        composeRule.onNode(hasTestTag("journal_note") and hasText("INJURY", substring = true)).assertIsDisplayed()
+        composeRule.onNodeWithTag("journal_filter_Climbs").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_note").fetchSemanticsNodes().isEmpty() }
+
         composeRule.onNodeWithTag("nav_You").performClick()
-        composeRule.waitForTag("screen_You")
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("note_card"))
+        openFromProfileMenu("menu_notes", "screen_Notes")
         composeRule.onNode(hasTestTag("note_card") and hasText("Left ring finger tweak", substring = true)).assertIsDisplayed()
+    }
+
+    /** Opens a page from the You tab's menu; the menu can sit under the nav bar, so use its click action. */
+    private fun openFromProfileMenu(tag: String, screen: String) {
+        composeRule.waitForTag("screen_You")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag(tag))
+        composeRule.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.waitForTag(screen)
     }
 
     private fun openSettings() {

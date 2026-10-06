@@ -63,6 +63,9 @@ data class ExerciseRecord(
     val notes: String?,
 )
 
+/** One logged result with its exercise, and whether it is that exercise's PR. */
+data class LoggedResult(val exercise: Exercise, val record: ExerciseRecord, val isBest: Boolean)
+
 /** An exercise's personal record, and how many results it was chosen from. */
 data class ExerciseBest(val exercise: Exercise, val best: ExerciseRecord, val results: Int)
 
@@ -86,6 +89,8 @@ fun MetricType.best(records: List<ExerciseRecord>): ExerciseRecord? =
 interface RecordRepository {
     /** Every exercise that has a result, with its best; most recently set PRs first. */
     fun observeBests(): Flow<List<ExerciseBest>>
+    /** Every result, newest first, for the journal. */
+    fun observeResults(): Flow<List<LoggedResult>>
     /** One exercise's results, newest first. */
     fun observeRecords(exerciseId: Long): Flow<List<ExerciseRecord>>
     suspend fun addRecord(exerciseId: Long, date: LocalDate, reps: Int?, seconds: Int?, loadKg: Double?, notes: String?): Long
@@ -104,6 +109,18 @@ class OfflineRecordRepository @Inject constructor(
                 val exercise = Exercise(entity.id, entity.name, entity.category, entity.metric, entity.notes)
                 exercise.metric.best(mine)?.let { ExerciseBest(exercise, it, mine.size) }
             }.sortedByDescending { it.best.date }
+        }
+    }
+
+    override fun observeResults(): Flow<List<LoggedResult>> = dbs.observe { db ->
+        combine(db.exerciseDao().observeAll(), db.exerciseRecordDao().observeAll()) { exercises, records ->
+            val byId = exercises.associateBy { it.id }
+            val models = records.map { it.toModel() }
+            val bests = models.groupBy { it.exerciseId }.mapNotNull { (id, list) -> byId[id]?.metric?.best(list)?.id }.toSet()
+            models.mapNotNull { record ->
+                val entity = byId[record.exerciseId] ?: return@mapNotNull null
+                LoggedResult(Exercise(entity.id, entity.name, entity.category, entity.metric, entity.notes), record, record.id in bests)
+            }.sortedByDescending { it.record.date }
         }
     }
 

@@ -155,10 +155,12 @@ class StarterDataSeeder(private val clock: Clock) {
         }
         SAMPLE_NOTES.forEachIndexed { index, (daysAgo, text) ->
             val at = now - daysAgo * 86_400_000L + index
-            db.noteDao().insert(NoteEntity(text = text, createdAtMillis = at, updatedAtMillis = at, pinned = index == 0))
+            db.noteDao().insert(NoteEntity(text = text, createdAtMillis = at, updatedAtMillis = at, pinned = index == 0, tag = SAMPLE_NOTE_TAGS[index]))
         }
         val girths = listOf(
             MeasurementType.FOREARM to 29.5,
+            MeasurementType.FOREARM_RIGHT to 30.5,
+            MeasurementType.BICEP_RIGHT to 33.5,
             MeasurementType.BICEP to 33.0,
             MeasurementType.CHEST to 98.0,
             MeasurementType.WAIST to 78.0,
@@ -264,6 +266,8 @@ private val SAMPLE_RECORDS = listOf(
     SampleRecord("Weighted pull-ups", 6, reps = 5, loadKg = 22.5),
     SampleRecord("Front lever tucks", 9, seconds = 14),
 )
+
+private val SAMPLE_NOTE_TAGS = listOf("injury", "beta", "training")
 
 private val SAMPLE_NOTES = listOf(
     2 to "Left ring finger a bit tender after the crimpy session. Open-hand only this week.",

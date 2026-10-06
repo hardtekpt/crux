@@ -182,7 +182,7 @@ data class RecordDto(
 )
 
 @Serializable
-data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, val pinned: Boolean = false)
+data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, val pinned: Boolean = false, val tag: String? = null)
 
 @Serializable
 data class MeasurementDto(val type: MeasurementType, val value: Double, val date: String, val loggedAt: Long)
@@ -293,7 +293,7 @@ class BackupRepository(
                 null
             },
             notes = if (BackupSection.NOTES in sections) {
-                db.noteDao().getAll().map { NoteDto(it.text, it.createdAtMillis, it.updatedAtMillis, it.pinned) }
+                db.noteDao().getAll().map { NoteDto(it.text, it.createdAtMillis, it.updatedAtMillis, it.pinned, it.tag) }
             } else {
                 null
             },
@@ -552,7 +552,7 @@ class BackupRepository(
                     skipped.merge(BackupSection.NOTES, 1, Int::plus)
                     return@forEach
                 }
-                dao.insert(com.hardtekpt.crux.data.NoteEntity(text = dto.text, createdAtMillis = dto.createdAt, updatedAtMillis = dto.updatedAt, pinned = dto.pinned))
+                dao.insert(com.hardtekpt.crux.data.NoteEntity(text = dto.text, createdAtMillis = dto.createdAt, updatedAtMillis = dto.updatedAt, pinned = dto.pinned, tag = dto.tag))
                 seen += dto.createdAt to dto.text
                 added.merge(BackupSection.NOTES, 1, Int::plus)
             }

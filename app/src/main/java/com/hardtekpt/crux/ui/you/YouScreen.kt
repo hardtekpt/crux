@@ -2,7 +2,10 @@ package com.hardtekpt.crux.ui.you
 
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.Accessibility
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.Palette
@@ -130,6 +133,7 @@ data class YouUiState(
     val hardestRoute: PersonalBest? = null,
     val records: List<ExerciseBest> = emptyList(),
     val notes: List<Note> = emptyList(),
+    val places: Int = 0,
     val units: UnitSystem = UnitSystem.METRIC,
     val scales: GradeScales = GradeScales(),
     val theme: ThemeMode = ThemeMode.DARK,
@@ -173,6 +177,7 @@ class YouViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     recordRepository: RecordRepository,
     noteRepository: NoteRepository,
+    placeRepository: com.hardtekpt.crux.data.PlaceRepository,
     preferences: UserPreferencesRepository,
     clock: Clock,
 ) : ViewModel() {
@@ -188,9 +193,9 @@ class YouViewModel @Inject constructor(
         body,
         climbRepository.observeClimbs(),
         climbRepository.observePersonalBests(),
-        combine(recordRepository.observeBests(), noteRepository.observeNotes(), ::Pair),
+        combine(recordRepository.observeBests(), noteRepository.observeNotes(), placeRepository.observePlaces(), ::Triple),
         prefs,
-    ) { body, climbs, bests, (records, notes), prefs ->
+    ) { body, climbs, bests, (records, notes, places), prefs ->
         val climbDays = climbs.groupingBy { it.date }.eachCount()
         val recordDays = records.flatMap { listOf(it.best.date) }.groupingBy { it }.eachCount()
         val activity = (climbDays.keys + recordDays.keys).associateWith { (climbDays[it] ?: 0) + (recordDays[it] ?: 0) }
@@ -217,6 +222,7 @@ class YouViewModel @Inject constructor(
             hardestRoute = hardest(Discipline.ROUTE),
             records = records,
             notes = notes,
+            places = places.size,
             units = prefs.units,
             scales = prefs.scales,
             theme = prefs.theme,
@@ -242,11 +248,12 @@ fun parseMeasurement(type: MeasurementType, text: String): Result<Double> {
 data class ProfileActions(
     val logWeight: () -> Unit = {},
     val openSettings: () -> Unit = {},
-    val newNote: () -> Unit = {},
-    val openNote: (Long) -> Unit = {},
-    val openNotes: () -> Unit = {},
     val logRecord: () -> Unit = {},
     val openRecords: (Long) -> Unit = {},
+    val openMeasurements: () -> Unit = {},
+    val openCircumferences: () -> Unit = {},
+    val openNotes: () -> Unit = {},
+    val openPlaces: () -> Unit = {},
 )
 
 @Composable
@@ -255,31 +262,24 @@ fun YouScreen(
     viewModel: YouViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    YouContent(
-        uiState = uiState,
-        actions = actions,
-        onSetMeasurement = viewModel::setMeasurement,
-    )
+    YouContent(uiState = uiState, actions = actions)
 }
 
 /**
  * The climber's profile, top to bottom: a climber card with the headline numbers; how
- * consistent you've been; personal records; measurements (weight, body, circumferences);
- * notes; and preferences.
+ * consistent you've been; personal records; a compact weight tracker; and a menu to the
+ * pages behind it (measurements, circumferences, notes, places, settings).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouContent(
     uiState: YouUiState,
     actions: ProfileActions,
-    onSetMeasurement: (MeasurementType, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     val units = LocalUnits.current
-    var editing by rememberSaveable { mutableStateOf<MeasurementType?>(null) }
-    var allWeights by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -335,101 +335,143 @@ fun YouContent(
                 RecordRow(best, onClick = { actions.openRecords(best.exercise.id) })
             }
 
-            // ---- Measurements
-            item(key = "measure_header") { ProfileSectionHeader("Measurements", action = "Log weight", onAction = actions.logWeight) }
-            item(key = "weight") {
-                val summary = uiState.summary
-                StatTile(
-                    label = "Weight",
-                    value = summary?.latest?.value?.let { units.weight(it).value } ?: "–",
-                    unit = summary?.let { units.weightUnit() },
-                    delta = when {
-                        summary == null -> "no weigh-ins yet"
-                        summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
-                        else -> "weighed ${summary.latest.date.shortLabel()}"
-                    },
-                    valueModifier = Modifier.testTag("you_weight"),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.large)
-                        .clickable(onClick = actions.logWeight)
-                        .testTag("log_weight"),
-                )
-            }
-            if (uiState.weights.isNotEmpty()) {
-                item(key = "weight_chart") { WeightTrendCard(uiState.weights) }
-            }
-            item(key = "body_label") { Eyebrow("Body · tap to update", Modifier.padding(top = space.s2)) }
-            item(key = "body") { BodyStatGrid(uiState, onEdit = { editing = it }) }
-            item(key = "girth_label") { Eyebrow("Circumferences", Modifier.padding(top = space.s2)) }
-            item(key = "girth") { CircumferenceCard(uiState, onEdit = { editing = it }) }
-            if (uiState.weights.isNotEmpty()) {
-                item(key = "weight_history_label") {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s2)) {
-                        Eyebrow("Weigh-ins", Modifier.weight(1f))
-                        if (uiState.weights.size > 3) {
-                            CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", { allWeights = !allWeights }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
-                        }
-                    }
-                }
-            }
-            val shownWeights = if (allWeights) uiState.weights else uiState.weights.take(3)
-            itemsIndexed(shownWeights, key = { _, it -> "w_${it.id}" }) { index, entry ->
-                val previous = uiState.weights.getOrNull(uiState.weights.indexOf(entry) + 1)
-                CruxListRow(
-                    title = entry.date.dayLabel(),
-                    supporting = previous?.let { "${units.weightChange(entry.value - it.value)} from ${it.date.shortLabel()}" },
-                    trailing = {
-                        Text(units.weight(entry.value).toString(), style = CruxTheme.type.grade, color = MaterialTheme.colorScheme.onSurface)
-                    },
-                    modifier = Modifier.testTag("weight_row"),
-                )
-            }
+            // ---- Weight
+            item(key = "weight_header") { ProfileSectionHeader("Weight") }
+            item(key = "weight") { WeightTracker(uiState, onLog = actions.logWeight) }
 
-            // ---- Notes
-            item(key = "notes_header") {
-                ProfileSectionHeader("Notes", action = if (uiState.notes.size > 3) "All ${uiState.notes.size}" else "New note", onAction = if (uiState.notes.size > 3) actions.openNotes else actions.newNote)
-            }
-            if (uiState.notes.isEmpty()) {
-                item(key = "notes_empty") {
-                    InlineEmptyState(icon = Icons.AutoMirrored.Rounded.Notes, text = "Jot down how training feels, a niggle to watch or beta to remember. Add one from the Log button too.")
-                }
-            }
-            items(uiState.notes.take(3), key = { "note_${it.id}" }) { note ->
-                NoteCard(note, onClick = { actions.openNote(note.id) })
-            }
-
-            // ---- Preferences
-            item(key = "prefs_header") { ProfileSectionHeader("Preferences") }
-            item(key = "prefs") {
-                CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("preferences")) {
+            // ---- The pages behind the profile
+            item(key = "menu_header") { ProfileSectionHeader("More about you") }
+            item(key = "menu") {
+                val ape = uiState.apeIndex
+                val height = uiState.latest[MeasurementType.HEIGHT]
+                val girths = MeasurementType.circumferences.count { it in uiState.latest }
+                CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("profile_menu")) {
                     Column(Modifier.padding(vertical = space.s1).fillMaxWidth()) {
-                        PreferenceRow(Icons.Rounded.Straighten, "Units", uiState.units.label, actions.openSettings)
-                        PreferenceRow(Icons.Rounded.Leaderboard, "Grades", "${uiState.scales.boulder.label} · ${uiState.scales.route.label}", actions.openSettings)
-                        PreferenceRow(Icons.Rounded.Palette, "Theme", uiState.theme.label, actions.openSettings)
-                        PreferenceRow(Icons.Rounded.Backup, "Data and backup", "Demo, export, import", actions.openSettings)
+                        PreferenceRow(
+                            Icons.Rounded.Accessibility,
+                            "Measurements",
+                            when {
+                                height != null && ape != null -> "${units.measurement(MeasurementType.HEIGHT, height.value)} · ape ${units.lengthDifference(ape.differenceCm)}"
+                                height != null -> units.measurement(MeasurementType.HEIGHT, height.value).toString()
+                                else -> "Height, reach, body fat"
+                            },
+                            actions.openMeasurements,
+                            Modifier.testTag("menu_measurements"),
+                        )
+                        PreferenceRow(
+                            Icons.Rounded.Straighten,
+                            "Circumferences",
+                            if (girths == 0) "Forearms, biceps, thighs" else "$girths of ${MeasurementType.circumferences.size} set",
+                            actions.openCircumferences,
+                            Modifier.testTag("menu_circumferences"),
+                        )
+                        PreferenceRow(
+                            Icons.AutoMirrored.Rounded.Notes,
+                            "Notes",
+                            when (uiState.notes.size) {
+                                0 -> "None yet"
+                                1 -> "1 note"
+                                else -> "${uiState.notes.size} notes"
+                            },
+                            actions.openNotes,
+                            Modifier.testTag("menu_notes"),
+                        )
+                        PreferenceRow(
+                            Icons.Rounded.Place,
+                            "Places",
+                            when (uiState.places) {
+                                0 -> "Gyms, crags, boards"
+                                1 -> "1 place"
+                                else -> "${uiState.places} places"
+                            },
+                            actions.openPlaces,
+                            Modifier.testTag("menu_places"),
+                        )
+                        PreferenceRow(
+                            Icons.Rounded.Settings,
+                            "Settings",
+                            "${uiState.units.label} · ${uiState.theme.label}",
+                            actions.openSettings,
+                            Modifier.testTag("menu_settings"),
+                        )
                     }
                 }
             }
         }
     }
+}
 
-    editing?.let { type ->
-        MeasurementDialog(
-            type = type,
-            initial = uiState.latest[type]?.value,
-            onDismiss = { editing = null },
-            onSave = {
-                onSetMeasurement(type, it)
-                editing = null
-            },
-        )
+/**
+ * The latest weigh-in, how it moved, and a small line of recent weigh-ins, with a Log button.
+ * The full chart and history live on Measurements.
+ */
+@Composable
+private fun WeightTracker(uiState: YouUiState, onLog: () -> Unit) {
+    val units = LocalUnits.current
+    val colors = MaterialTheme.colorScheme
+    val summary = uiState.summary
+    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("weight_tracker")) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        summary?.latest?.value?.let { units.weight(it).value } ?: "–",
+                        style = CruxTheme.type.metricMedium,
+                        modifier = Modifier.testTag("you_weight"),
+                    )
+                    if (summary != null) {
+                        Text(
+                            " ${units.weightUnit()}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 3.dp),
+                        )
+                    }
+                }
+                Text(
+                    when {
+                        summary == null -> "No weigh-ins yet"
+                        summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
+                        else -> "Weighed ${summary.latest.date.shortLabel()}"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+            }
+            val recent = uiState.weights.take(12).reversed()
+            if (recent.size >= 2) WeightSparkline(recent.map { it.value }, Modifier.size(width = 88.dp, height = 36.dp))
+            CruxButton(
+                text = "Log",
+                onClick = onLog,
+                variant = CruxButtonVariant.Tonal,
+                icon = Icons.Rounded.Add,
+                size = CruxButtonSize.Small,
+                modifier = Modifier.testTag("log_weight"),
+            )
+        }
+    }
+}
+
+/** Recent weigh-ins as a bare line, the latest one dotted. */
+@Composable
+private fun WeightSparkline(values: List<Double>, modifier: Modifier = Modifier) {
+    val line = MaterialTheme.colorScheme.primary
+    androidx.compose.foundation.Canvas(modifier) {
+        val low = values.min()
+        val high = values.max()
+        val span = (high - low).takeIf { it > 0 } ?: 1.0
+        val stepX = size.width / (values.size - 1)
+        val points = values.mapIndexed { i, v ->
+            androidx.compose.ui.geometry.Offset(i * stepX, (size.height - 4.dp.toPx()) * (1 - ((v - low) / span).toFloat()) + 2.dp.toPx())
+        }
+        points.zipWithNext { a, b -> drawLine(line, a, b, strokeWidth = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) }
+        drawCircle(line, radius = 3.5.dp.toPx(), center = points.last())
     }
 }
 
 /** Bodyweight over a chosen window, with the change across it in the header. */
 @Composable
-private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Modifier) {
+internal fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Modifier) {
     val units = LocalUnits.current
     var range by rememberSaveable { mutableStateOf(ChartRange.Quarter) }
     val today = LocalDate.now()
@@ -471,7 +513,7 @@ private fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Mod
 
 /** Height, wingspan, ape index, reach and body fat as tiles, two per row. */
 @Composable
-private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
+internal fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
     val space = CruxTheme.space
     val ape = uiState.apeIndex
     val units = LocalUnits.current
@@ -500,50 +542,8 @@ private fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit)
     }
 }
 
-/**
- * Circumferences as one tape-measure card: a row per body part, so five empty ones stay
- * compact. Tap a row to set it on the ruler.
- */
 @Composable
-private fun CircumferenceCard(uiState: YouUiState, onEdit: (MeasurementType) -> Unit) {
-    val units = LocalUnits.current
-    val space = CruxTheme.space
-    val types = listOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)
-    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("circumferences")) {
-        types.forEachIndexed { index, type ->
-            if (index > 0) androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            val latest = uiState.latest[type]
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable { onEdit(type) }
-                    .padding(vertical = space.s2)
-                    .testTag("stat_${type.name}"),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(type.label, style = MaterialTheme.typography.titleSmall)
-                    latest?.let {
-                        Text("set ${it.date.shortLabel()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                if (latest != null) {
-                    Text(
-                        units.measurement(type, latest.value).toString(),
-                        style = CruxTheme.type.grade,
-                        modifier = Modifier.testTag("you_${type.name.lowercase()}"),
-                    )
-                } else {
-                    Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BodyStatTile(
+internal fun BodyStatTile(
     type: MeasurementType,
     uiState: YouUiState,
     onEdit: (MeasurementType) -> Unit,
@@ -568,7 +568,7 @@ private fun BodyStatTile(
 
 /** Sets a body stat on a ruler, opened on the last value (or a typical one), in the climber's units. */
 @Composable
-private fun MeasurementDialog(type: MeasurementType, initial: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
+internal fun MeasurementDialog(type: MeasurementType, initial: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
     val units = LocalUnits.current
     val input = remember(type, units) { units.measureInput(type) }
     val start = input.toDisplay(initial ?: type.typicalValue())

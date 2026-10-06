@@ -67,6 +67,25 @@ class DerivedDataTest {
     }
 
     @Test
+    fun `timeline puts every kind of entry on its day, newest day first`() {
+        val note = com.hardtekpt.crux.data.Note(1, "Finger tweak", today.minusDays(1), pinned = false, tag = "injury")
+        val days = com.hardtekpt.crux.ui.journal.buildTimeline(
+            climbs = listOf(climb(1, today, "Arco"), climb(2, today.minusDays(1), "Arco")),
+            results = emptyList(),
+            notes = listOf(note),
+        )
+
+        assertEquals(listOf(today, today.minusDays(1)), days.map { it.date })
+        assertEquals(
+            listOf(com.hardtekpt.crux.ui.journal.JournalFilter.Climbs, com.hardtekpt.crux.ui.journal.JournalFilter.Notes),
+            days[1].entries.map { it.kind },
+        )
+        val state = com.hardtekpt.crux.ui.journal.JournalUiState(isLoading = false, days = days)
+        assertEquals(3, state.count(com.hardtekpt.crux.ui.journal.JournalFilter.All))
+        assertEquals(1, state.count(com.hardtekpt.crux.ui.journal.JournalFilter.Notes))
+    }
+
+    @Test
     fun `hardest send per discipline ignores style`() {
         val bests = listOf(
             best(Discipline.BOULDER, AscentStyle.FLASH, 9),

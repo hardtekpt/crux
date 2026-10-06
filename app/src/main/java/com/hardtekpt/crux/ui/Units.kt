@@ -195,13 +195,13 @@ fun MeasurementType.typicalValue(): Double = when (this) {
     MeasurementType.WINGSPAN -> 178.0
     MeasurementType.STANDING_REACH -> 225.0
     MeasurementType.BODY_FAT -> 15.0
-    MeasurementType.FOREARM -> 29.0
-    MeasurementType.BICEP -> 33.0
+    MeasurementType.FOREARM, MeasurementType.FOREARM_RIGHT -> 29.0
+    MeasurementType.BICEP, MeasurementType.BICEP_RIGHT -> 33.0
     MeasurementType.CHEST -> 98.0
     MeasurementType.WAIST -> 80.0
-    MeasurementType.THIGH -> 55.0
+    MeasurementType.THIGH, MeasurementType.THIGH_RIGHT -> 55.0
 }
 
 /** Tape measurements around a limb or the body. */
 val MeasurementType.isCircumference: Boolean
-    get() = this in setOf(MeasurementType.FOREARM, MeasurementType.BICEP, MeasurementType.CHEST, MeasurementType.WAIST, MeasurementType.THIGH)
+    get() = this in MeasurementType.circumferences
