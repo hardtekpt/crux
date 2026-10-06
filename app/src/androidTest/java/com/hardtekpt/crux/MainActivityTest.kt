@@ -85,9 +85,9 @@ class MainActivityTest {
         composeRule.onNodeWithTag("nav_You").performClick()
         // Measurements sit below the climber card, consistency and records on the profile.
         // Scrolling only until the tile shows can leave it under the floating nav bar, where a
-        // tap lands on the bar, so scroll to the circumferences further down to bring it clear.
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("stat_FOREARM"))
-        composeRule.onNodeWithTag("log_weight").performClick()
+        // touch would land on the bar, so trigger the tile's click action directly.
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
+        composeRule.onNodeWithTag("log_weight").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.waitForTag("screen_LogWeight")
         composeRule.onNodeWithTag("ruler_weight_value").performClick()
         composeRule.textFieldIn("field_type_value").performTextReplacement("72.5")
