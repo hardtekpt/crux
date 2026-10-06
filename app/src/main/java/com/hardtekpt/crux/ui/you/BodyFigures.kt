@@ -306,16 +306,18 @@ fun CircumferenceFigure(
                     val value = latest[site.left]
                     // Value above the band, name below it, inside the torso.
                     Placed(s, x = site.cx, top = site.y - 26f, anchor = Anchor.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
+                        Box(
+                            Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .clickable { onEdit(site.left) }
+                                .padding(horizontal = 4.dp)
                                 .testTag("stat_${site.left.name}"),
                         ) {
                             SiteValue(value?.let { units.measurement(site.left, it) }, site.left, 14)
-                            Text(site.name.uppercase(), style = Eyebrow.copy(fontSize = 8.sp), color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                         }
+                    }
+                    Placed(s, x = site.cx, top = site.y + 7f, anchor = Anchor.Center) {
+                        Text(site.name.uppercase(), style = Eyebrow.copy(fontSize = 8.sp), color = colors.onSurfaceVariant)
                     }
                 }
             }
