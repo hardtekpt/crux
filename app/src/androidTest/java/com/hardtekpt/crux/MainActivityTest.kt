@@ -84,7 +84,9 @@ class MainActivityTest {
     fun loggingAWeightUpdatesYou() {
         composeRule.onNodeWithTag("nav_You").performClick()
         // Measurements sit below the climber card, consistency and records on the profile.
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
+        // Scrolling only until the tile shows can leave it under the floating nav bar, where a
+        // tap lands on the bar, so scroll to the circumferences further down to bring it clear.
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("stat_FOREARM"))
         composeRule.onNodeWithTag("log_weight").performClick()
         composeRule.waitForTag("screen_LogWeight")
         composeRule.onNodeWithTag("ruler_weight_value").performClick()
