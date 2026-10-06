@@ -266,19 +266,20 @@ fun JournalContent(
 @Composable
 private fun FilterBar(uiState: JournalUiState, filter: JournalFilter, onFilter: (JournalFilter) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
+    // Four equal pills that always fit the width; the picked one shows its icon.
     Row(
-        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .testTag("journal_filters"),
     ) {
         JournalFilter.entries.forEach { option ->
             val selected = option == filter
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
                 modifier = Modifier
+                    .weight(1f)
                     .clip(CircleShape)
                     .background(if (selected) colors.primaryContainer else Color.Transparent)
                     .border(
@@ -287,12 +288,12 @@ private fun FilterBar(uiState: JournalUiState, filter: JournalFilter, onFilter: 
                         CircleShape,
                     )
                     .clickable { onFilter(option) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .padding(horizontal = 6.dp, vertical = 8.dp)
                     .testTag("journal_filter_${option.name}"),
             ) {
                 val content = if (selected) colors.onPrimaryContainer else colors.onSurface
-                Icon(option.icon, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
-                Text(option.label, style = MaterialTheme.typography.labelLarge, color = content)
+                if (selected) Icon(option.icon, contentDescription = null, tint = content, modifier = Modifier.size(14.dp))
+                Text(option.label, style = MaterialTheme.typography.labelMedium, color = content, maxLines = 1)
                 Text(uiState.count(option).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
             }
         }
@@ -361,7 +362,7 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
                     .padding(horizontal = 6.dp, vertical = 4.dp),
             ) {
                 Text(day.date.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, lineHeight = 24.sp))
-                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).uppercase(), style = MonoLabel.copy(fontSize = 10.sp), color = colors.onSurfaceVariant)
+                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 10.sp), color = colors.onSurfaceVariant)
             }
         }
         Column(Modifier.padding(start = CruxTheme.space.s3)) {

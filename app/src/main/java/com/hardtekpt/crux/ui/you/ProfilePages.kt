@@ -83,7 +83,6 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
         ) {
             item(key = "body_label") { Eyebrow("Body · tap to update") }
             item(key = "body") { BodyStatGrid(uiState, onEdit = { editing = it }) }
-            item(key = "weight_label") { Eyebrow("Bodyweight", Modifier.padding(top = space.s2)) }
             if (uiState.weights.isEmpty()) {
                 item(key = "weight_empty") {
                     CruxButton("Log your first weigh-in", onLogWeight, variant = CruxButtonVariant.Tonal, icon = Icons.Rounded.Add)
