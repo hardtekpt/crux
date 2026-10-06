@@ -310,7 +310,14 @@ private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Un
         Column(Modifier.weight(1f)) {
             Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(project.placeName, project.areaName, "last go ${stats.lastGo.relativeLabel(today).lowercase()}").joinToString(" · "),
+                listOfNotNull(project.placeName, project.areaName).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "${stats.sessions} ${if (stats.sessions == 1) "day" else "days"} on it · last go ${stats.lastGo.relativeLabel(today).lowercase()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,
@@ -320,9 +327,10 @@ private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Un
         Column(horizontalAlignment = Alignment.End) {
             Text(stats.attempts.toString(), style = CruxTheme.type.grade.copy(fontSize = 18.sp), color = colors.secondary)
             Text(
-                "${if (stats.attempts == 1) "go" else "goes"} · ${stats.sessions} ${if (stats.sessions == 1) "day" else "days"}",
-                style = MaterialTheme.typography.labelSmall,
+                if (stats.attempts == 1) "go" else "goes",
+                style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
+                maxLines = 1,
             )
         }
     }
