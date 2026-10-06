@@ -14,6 +14,8 @@ data class Place(
     val notes: String?,
     /** The place's own grades, used where a discipline's scale is local. */
     val localScale: LocalScale? = null,
+    /** Shown as a quick pick on Log climb. */
+    val favourite: Boolean = false,
 ) {
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale

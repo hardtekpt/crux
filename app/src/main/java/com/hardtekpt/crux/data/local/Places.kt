@@ -31,6 +31,8 @@ data class PlaceEntity(
     val createdAtMillis: Long,
     /** The place's own grades as JSON ([com.hardtekpt.crux.data.model.LocalScale]); schema 9. */
     val localScale: String? = null,
+    /** Shown as a quick pick on Log climb (schema 11). */
+    @ColumnInfo(defaultValue = "0") val favourite: Boolean = false,
 )
 
 /** A wall or sector inside a place; for a board, a named angle or set. */

@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.hardtekpt.crux.data.images.AreaImageStore
@@ -122,7 +123,8 @@ fun LazyListScope.placesList(
             }
         }
     }
-    val shown = places?.filter { filter == null || it.place.type == filter }
+    // Favourites first, then the rest in their usual order.
+    val shown = places?.filter { filter == null || it.place.type == filter }?.sortedByDescending { it.place.favourite }
     item {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Eyebrow(
@@ -165,7 +167,14 @@ fun LazyListScope.placesList(
                 summary.lastVisit?.let { "last ${it.relativeLabel(today).lowercase()}" },
             ).joinToString(" · "),
             leading = { Icon(placeIcon(summary.place.type), contentDescription = summary.place.type.label) },
-            trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (summary.place.favourite) {
+                        Icon(Icons.Rounded.Star, contentDescription = "Favourite", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+                }
+            },
             onClick = { onOpen(summary.place.id) },
             modifier = Modifier.testTag("place_row"),
         )

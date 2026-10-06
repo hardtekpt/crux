@@ -109,6 +109,7 @@ data class PlaceDraft(
     /** The place's own grades; kept while editing even if no discipline uses them. */
     val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
     val localError: String? = null,
+    val favourite: Boolean = false,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
     /** Set once saved or deleted: the id to open, or 0 after a delete. */
@@ -137,6 +138,7 @@ class PlaceEditorViewModel @Inject constructor(
                             boulderScale = p.boulderScale, routeScale = p.routeScale,
                             defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
                             localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
+                            favourite = p.favourite,
                         )
                     }
                 }
@@ -177,6 +179,7 @@ class PlaceEditorViewModel @Inject constructor(
                     defaultAngle = d.defaultAngle.takeIf { d.type == PlaceType.BOARD },
                     notes = d.notes,
                     localScale = local.takeIf { d.usesLocal },
+                    favourite = d.favourite,
                 ),
             )
             _draft.update { it.copy(doneId = id) }
@@ -245,6 +248,21 @@ fun PlaceEditorScreen(
                 placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
                 helper = "Optional",
             )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    Text("Favourite", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Shown as a quick pick when you log a climb",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                androidx.compose.material3.Switch(
+                    checked = draft.favourite,
+                    onCheckedChange = { f -> viewModel.update { it.copy(favourite = f) } },
+                    modifier = Modifier.testTag("place_favourite"),
+                )
+            }
             Eyebrow("Grades here")
             ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
             if (draft.type != PlaceType.BOARD) {

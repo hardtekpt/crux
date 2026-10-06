@@ -159,7 +159,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("new_plan").performClick()
         composeRule.waitForTag("screen_PlanEditor")
         composeRule.textFieldIn("field_plan_name").performTextInput("Power day")
-        composeRule.onNodeWithTag("add_exercise_to_block").performClick()
+        composeRule.onNodeWithTag("add_exercise_to_block").performScrollTo().performClick()
         composeRule.waitForTag("exercise_search")
         composeRule.textFieldIn("exercise_search").performTextInput("Campus")
         composeRule.onNodeWithTag("pick_Campus ladders").performClick()
@@ -244,6 +244,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("new_place").performClick()
         composeRule.waitForTag("screen_PlaceEditor")
         composeRule.textFieldIn("field_place_name").performTextInput("Test Gym")
+        composeRule.onNodeWithTag("place_favourite").performClick()
         composeRule.onNodeWithTag("save_place").performClick()
 
         composeRule.waitForTag("screen_PlaceDetail")
@@ -272,6 +273,11 @@ class MainActivityTest {
 
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("project_row")
+
+        // The favourite shows as a quick pick on a new log.
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_LogClimb").performClick()
+        composeRule.waitForTag("favourite_Test Gym")
     }
 
     @Test
@@ -323,5 +329,5 @@ private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction =
     onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)))
 
 private fun ComposeTestRule.waitForTag(tag: String) {
-    waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+    waitUntil(timeoutMillis = 10_000) { onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
 }

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -102,6 +104,26 @@ fun WhereSection(
         draft.angle?.takeIf { place?.type == PlaceType.BOARD }?.let { "$it°" },
     ).joinToString(" · ")
 
+    // Favourite places as one-tap picks; tapping the picked one again clears it.
+    val favourites = places.filter { it.place.favourite }
+    if (favourites.isNotEmpty()) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+            modifier = Modifier
+                .padding(bottom = CruxTheme.space.s2)
+                .testTag("favourite_places"),
+        ) {
+            items(favourites, key = { it.place.id }) { summary ->
+                val picked = draft.placeId == summary.place.id
+                CruxFilterChip(
+                    label = summary.place.name,
+                    selected = picked,
+                    onClick = { actions.selectPlace(if (picked) null else summary.place.id) },
+                    modifier = Modifier.testTag("favourite_${summary.place.name}"),
+                )
+            }
+        }
+    }
     WhereRow(
         summary = summary.ifBlank { null },
         kind = place?.type?.label ?: draft.venue.label,

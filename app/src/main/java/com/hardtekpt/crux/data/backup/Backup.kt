@@ -158,6 +158,7 @@ data class PlaceDto(
     val areas: List<AreaDto> = emptyList(),
     val problems: List<ProblemDto> = emptyList(),
     val localScale: LocalScale? = null,
+    val favourite: Boolean = false,
 )
 
 @Serializable
@@ -369,6 +370,7 @@ class BackupRepository(
                         notes = dto.notes,
                         createdAtMillis = now,
                         localScale = dto.localScale?.encode(),
+                        favourite = dto.favourite,
                     ),
                 )
                 val areaIds = dto.areas.mapIndexed { position, area ->
@@ -512,6 +514,7 @@ private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) 
     areas = areas,
     problems = problems,
     localScale = LocalScale.decode(localScale),
+    favourite = favourite,
 )
 
 private fun AreaEntity.toDto() = AreaDto(

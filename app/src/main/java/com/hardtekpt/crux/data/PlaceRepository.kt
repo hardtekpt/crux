@@ -35,6 +35,7 @@ data class PlaceInput(
     val defaultAngle: Int?,
     val notes: String?,
     val localScale: LocalScale? = null,
+    val favourite: Boolean = false,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -147,6 +148,7 @@ class OfflinePlaceRepository @Inject constructor(
             notes = input.notes?.trim()?.takeIf { it.isNotEmpty() },
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
             localScale = input.localScale?.encode(),
+            favourite = input.favourite,
         )
         return if (existing != null) {
             dao.updatePlace(entity)
@@ -236,7 +238,7 @@ class OfflinePlaceRepository @Inject constructor(
     }
 }
 
-internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale))
+internal fun PlaceEntity.toModel() = Place(id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale), favourite)
 
 internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath)
 
