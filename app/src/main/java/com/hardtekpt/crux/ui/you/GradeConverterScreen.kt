@@ -160,7 +160,6 @@ fun GradeConverterScreen(onBack: () -> Unit) {
                                     Text(target.region, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                                 }
                             }
-                            if (pair.size == 1) Column(Modifier.weight(1f)) {}
                         }
                     }
                 }
@@ -202,7 +201,7 @@ private fun ChartRow(cells: List<String>, highlighted: Boolean, header: Boolean 
             .clip(RoundedCornerShape(10.dp))
             .background(if (highlighted) colors.primaryContainer else androidx.compose.ui.graphics.Color.Transparent)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 7.dp)
+            .padding(vertical = 4.dp)
             .then(if (highlighted) Modifier.testTag("chart_row_lit") else Modifier),
     ) {
         cells.forEach { cell ->
