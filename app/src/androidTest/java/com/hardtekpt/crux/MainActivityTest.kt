@@ -376,6 +376,16 @@ class MainActivityTest {
         composeRule.onNode(hasTestTag("journal_note") and hasText("INJURY", substring = true)).assertIsDisplayed()
         composeRule.onNodeWithTag("journal_filter_Climbs").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_note").fetchSemanticsNodes().isEmpty() }
+        // Search finds it by its text; a tag filter from the sheet keeps it.
+        composeRule.onNodeWithTag("journal_filter_All").performClick()
+        composeRule.onNodeWithTag("journal_search").performTextInput("ring finger")
+        composeRule.waitForTag("journal_note")
+        composeRule.onNodeWithTag("journal_search_clear").performClick()
+        composeRule.onNodeWithTag("journal_open_filters").performClick()
+        composeRule.onNodeWithTag("tag_filter_injury").performClick()
+        composeRule.onNodeWithTag("journal_apply_filters").performClick()
+        composeRule.waitForTag("applied_#injury")
+        composeRule.onNodeWithTag("journal_note").assertIsDisplayed()
 
         composeRule.onNodeWithTag("nav_You").performClick()
         openFromProfileMenu("menu_notes", "screen_Notes")

@@ -7,6 +7,8 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
+import com.hardtekpt.crux.ui.journal.count
+import com.hardtekpt.crux.ui.journal.matching
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.ui.progress.ProgressUiState
@@ -80,9 +82,30 @@ class DerivedDataTest {
             listOf(com.hardtekpt.crux.ui.journal.JournalFilter.Climbs, com.hardtekpt.crux.ui.journal.JournalFilter.Notes),
             days[1].entries.map { it.kind },
         )
-        val state = com.hardtekpt.crux.ui.journal.JournalUiState(isLoading = false, days = days)
-        assertEquals(3, state.count(com.hardtekpt.crux.ui.journal.JournalFilter.All))
-        assertEquals(1, state.count(com.hardtekpt.crux.ui.journal.JournalFilter.Notes))
+        assertEquals(3, days.count())
+    }
+
+    @Test
+    fun `journal filters combine and search matches names and note text`() {
+        val note = com.hardtekpt.crux.data.Note(1, "Finger tweak on crimps", today.minusDays(1), pinned = false, tag = "injury")
+        val days = com.hardtekpt.crux.ui.journal.buildTimeline(
+            climbs = listOf(climb(1, today, "Arco"), climb(2, today.minusDays(1), "Block Lab"), climb(3, today.minusDays(40), "Arco")),
+            results = emptyList(),
+            notes = listOf(note),
+        )
+        fun shown(query: com.hardtekpt.crux.ui.journal.JournalQuery) = days.matching(query, today).count()
+        val q = com.hardtekpt.crux.ui.journal.JournalQuery()
+
+        assertEquals(4, shown(q))
+        // A place keeps only climbs there; with a date range on top, only recent ones.
+        assertEquals(2, shown(q.copy(places = setOf("Arco"))))
+        assertEquals(1, shown(q.copy(places = setOf("Arco"), period = com.hardtekpt.crux.ui.journal.JournalPeriod.Month)))
+        // A tag keeps only notes with it.
+        assertEquals(1, shown(q.copy(tags = setOf("injury"))))
+        // Search looks at note text and place names, every word must match.
+        assertEquals(1, shown(q.copy(search = "crimps")))
+        assertEquals(1, shown(q.copy(search = "block lab")))
+        assertEquals(0, shown(q.copy(search = "block crimps")))
     }
 
     @Test

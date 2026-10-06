@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,18 +25,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Landscape
-import androidx.compose.material.icons.rounded.Timeline
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,16 +51,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -59,17 +65,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
-import com.hardtekpt.crux.data.LoggedResult
 import com.hardtekpt.crux.data.Note
 import com.hardtekpt.crux.data.NoteRepository
 import com.hardtekpt.crux.data.RecordRepository
 import com.hardtekpt.crux.data.model.Climb
-import com.hardtekpt.crux.data.model.Venue
-import com.hardtekpt.crux.ui.components.EmptyState
+import com.hardtekpt.crux.ui.components.CruxButton
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
+import com.hardtekpt.crux.ui.components.EmptyState
+import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.VideoThumbnail
+import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -78,103 +86,61 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.you.describe
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import java.time.Clock
 import java.time.LocalDate
 import java.time.format.TextStyle as DateTextStyle
 import java.util.Locale
 import javax.inject.Inject
 
-/** One journal group: a day at a place. */
-data class JournalDay(
-    val date: LocalDate,
-    val place: String?,
-    val climbs: List<Climb>,
-) {
-    val key: String get() = "$date|${place.orEmpty()}|$venue"
-    val venue: Venue get() = climbs.first().venue
-    val title: String get() = listOfNotNull(date.dayLabel(), place, venue.label).joinToString(" · ")
-}
-
-/** Climbs arrive newest first; grouping keeps that order. */
-fun List<Climb>.groupByDayAndPlace(): List<JournalDay> =
-    groupBy { Triple(it.date, it.place, it.venue) }.map { (key, climbs) -> JournalDay(key.first, key.second, climbs) }
-
-/**
- * Something that happened on a day. Workout sessions will be another kind once the session
- * logger exists; until then training shows as the results logged on exercises.
- */
-sealed interface TimelineEntry {
-    val key: String
-    val kind: JournalFilter
-
-    /** Climbs at one place on one day. */
-    data class Climbs(val day: JournalDay) : TimelineEntry {
-        override val key get() = "climbs|${day.key}"
-        override val kind get() = JournalFilter.Climbs
-    }
-
-    /** Results logged on exercises that day. */
-    data class Training(val date: LocalDate, val results: List<LoggedResult>) : TimelineEntry {
-        override val key get() = "training|$date"
-        override val kind get() = JournalFilter.Training
-    }
-
-    data class NoteEntry(val note: Note) : TimelineEntry {
-        override val key get() = "note|${note.id}"
-        override val kind get() = JournalFilter.Notes
-    }
-}
-
-/** A day on the timeline with everything logged on it. */
-data class TimelineDay(val date: LocalDate, val entries: List<TimelineEntry>)
-
-enum class JournalFilter(val label: String, val icon: ImageVector) {
-    All("All", Icons.Rounded.Timeline),
-    Climbs("Climbs", Icons.Rounded.Landscape),
-    Training("Training", Icons.Rounded.FitnessCenter),
-    Notes("Notes", Icons.AutoMirrored.Rounded.Notes),
-}
-
-/** Newest day first; within a day, climbs, then training, then notes. */
-fun buildTimeline(climbs: List<Climb>, results: List<LoggedResult>, notes: List<Note>): List<TimelineDay> {
-    val entries = climbs.groupByDayAndPlace().map { it.date to TimelineEntry.Climbs(it) } +
-        results.groupBy { it.record.date }.map { (date, list) -> date to TimelineEntry.Training(date, list) } +
-        notes.sortedByDescending { it.id }.map { it.created to TimelineEntry.NoteEntry(it) }
-    return entries.groupBy({ it.first }, { it.second })
-        .toSortedMap(compareByDescending { it })
-        .map { (date, list) -> TimelineDay(date, list.sortedBy { it.kind.ordinal }) }
-}
-
 data class JournalUiState(
     val isLoading: Boolean = true,
+    /** Everything logged, before any filter. */
+    val all: List<TimelineDay> = emptyList(),
+    /** What the query lets through. */
     val days: List<TimelineDay> = emptyList(),
-) {
-    fun count(filter: JournalFilter): Int = days.sumOf { day ->
-        day.entries.filter { filter == JournalFilter.All || it.kind == filter }.sumOf { entry ->
-            when (entry) {
-                is TimelineEntry.Climbs -> entry.day.climbs.size
-                is TimelineEntry.Training -> entry.results.size
-                is TimelineEntry.NoteEntry -> 1
-            }
-        }
-    }
-}
+    val query: JournalQuery = JournalQuery(),
+    /** Per type pill, how many entries it would show with the other filters as they are. */
+    val counts: Map<JournalFilter, Int> = emptyMap(),
+    /** Choices for the filter sheet, from what has been logged. */
+    val places: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
+)
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     recordRepository: RecordRepository,
     noteRepository: NoteRepository,
+    clock: Clock,
 ) : ViewModel() {
+    private val today = LocalDate.now(clock)
+    private val query = MutableStateFlow(JournalQuery())
+
     val uiState: StateFlow<JournalUiState> = combine(
         climbRepository.observeClimbs(),
         recordRepository.observeResults(),
         noteRepository.observeNotes(),
-    ) { climbs, results, notes -> JournalUiState(isLoading = false, days = buildTimeline(climbs, results, notes)) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
+        query,
+    ) { climbs, results, notes, q ->
+        val all = buildTimeline(climbs, results, notes)
+        JournalUiState(
+            isLoading = false,
+            all = all,
+            days = all.matching(q, today),
+            query = q,
+            counts = JournalFilter.entries.associateWith { all.matching(q.copy(kind = it), today).count() },
+            places = climbs.mapNotNull { it.place }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key },
+            tags = notes.mapNotNull { it.tag }.distinct().sorted(),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
+
+    fun update(change: (JournalQuery) -> JournalQuery) = query.update(change)
 }
 
 /** Where the journal's taps lead. */
@@ -190,28 +156,27 @@ fun JournalScreen(
     viewModel: JournalViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var filter by rememberSaveable { mutableStateOf(JournalFilter.All) }
-    JournalContent(uiState = uiState, filter = filter, onFilter = { filter = it }, actions = actions)
+    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions)
 }
 
-private val RAIL = 52.dp
+private val GUTTER = 48.dp
 private val MonoLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
 
 /**
- * The journal as one timeline: a rail runs down the left with each day pinned to it like a
- * route card, and every climb, training result and note hangs off it. Filters at the top.
+ * The journal as one timeline, newest first. A header holds search, the type pills and a
+ * Filters button (dates, result, places, tags); chips under it show what's applied.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalContent(
     uiState: JournalUiState,
     modifier: Modifier = Modifier,
-    filter: JournalFilter = JournalFilter.All,
-    onFilter: (JournalFilter) -> Unit = {},
+    onQuery: ((JournalQuery) -> JournalQuery) -> Unit = {},
     actions: JournalActions = JournalActions(),
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
+    var showFilters by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -219,7 +184,7 @@ fun JournalContent(
             .testTag("screen_Journal"),
     ) {
         CruxTopAppBar(title = "Journal", scrollBehavior = scrollBehavior)
-        if (!uiState.isLoading && uiState.days.isEmpty()) {
+        if (!uiState.isLoading && uiState.all.isEmpty()) {
             EmptyState(
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 headline = "Nothing logged yet",
@@ -227,28 +192,25 @@ fun JournalContent(
             )
             return
         }
-        FilterBar(uiState, filter, onFilter, Modifier.padding(horizontal = space.s4, vertical = space.s2))
-        val days = uiState.days.mapNotNull { day ->
-            val shown = day.entries.filter { filter == JournalFilter.All || it.kind == filter }
-            if (shown.isEmpty()) null else day.copy(entries = shown)
-        }
+        JournalHeader(uiState, onQuery, onOpenFilters = { showFilters = true }, Modifier.padding(horizontal = space.s4))
         LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s2, bottom = space.s4 + LocalNavBarClearance.current),
+            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
             modifier = Modifier.testTag("journal_list"),
         ) {
-            if (days.isEmpty() && !uiState.isLoading) {
+            if (uiState.days.isEmpty() && !uiState.isLoading) {
                 item(key = "empty") {
+                    val query = uiState.query
                     InlineEmptyState(
-                        icon = filter.icon,
-                        text = when (filter) {
-                            JournalFilter.Training -> "No training yet. Results you log on exercises show here, and workout sessions will too once the session logger arrives."
-                            JournalFilter.Notes -> "No notes yet. Add one from the Log button."
-                            else -> "No climbs yet. Tap Log, then Log climb."
+                        icon = Icons.Rounded.Search,
+                        text = if (query.kind == JournalFilter.Training && query.activeFilters == 0 && query.search.isBlank()) {
+                            "No training yet. Results you log on exercises show here, and workout sessions will too once the session logger arrives."
+                        } else {
+                            "Nothing matches. Try another word or clear a filter."
                         },
                     )
                 }
             }
-            days.forEachIndexed { index, day ->
+            uiState.days.forEachIndexed { index, day ->
                 item(key = "day_${day.date}") { DayHeader(day, first = index == 0) }
                 items(day.entries, key = { it.key }) { entry ->
                     when (entry) {
@@ -260,21 +222,96 @@ fun JournalContent(
             }
         }
     }
+    if (showFilters) {
+        FilterSheet(uiState, onQuery, onDismiss = { showFilters = false })
+    }
 }
 
-/** Four pills with live counts; the picked one fills in. */
+/** Search with a Filters button beside it, the type pills, then what's applied as removable chips. */
 @Composable
-private fun FilterBar(uiState: JournalUiState, filter: JournalFilter, onFilter: (JournalFilter) -> Unit, modifier: Modifier = Modifier) {
+private fun JournalHeader(
+    uiState: JournalUiState,
+    onQuery: ((JournalQuery) -> JournalQuery) -> Unit,
+    onOpenFilters: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
-    // Four equal pills that always fit the width; the picked one shows its icon.
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("journal_filters"),
-    ) {
+    val query = uiState.query
+    val focus = LocalFocusManager.current
+    Column(modifier.testTag("journal_header"), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+            OutlinedTextField(
+                value = query.search,
+                onValueChange = { text -> onQuery { it.copy(search = text.take(60)) } },
+                placeholder = { Text("Search climbs, places, notes", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.onSurfaceVariant) },
+                trailingIcon = if (query.search.isNotEmpty()) {
+                    {
+                        IconButton(
+                            onClick = {
+                                onQuery { it.copy(search = "") }
+                                focus.clearFocus()
+                            },
+                            modifier = Modifier.testTag("journal_search_clear"),
+                        ) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                shape = CircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = colors.surfaceContainer,
+                    focusedContainerColor = colors.surfaceContainer,
+                    unfocusedBorderColor = colors.outlineVariant,
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("journal_search"),
+            )
+            // Filters, with a badge counting what's set in the sheet.
+            Box {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(if (query.activeFilters > 0) colors.primaryContainer else colors.surfaceContainer)
+                        .border(CruxTheme.size.borderHairline, if (query.activeFilters > 0) colors.primary else colors.outlineVariant, CircleShape)
+                        .clickable(onClick = onOpenFilters)
+                        .testTag("journal_open_filters"),
+                ) {
+                    Icon(Icons.Rounded.Tune, contentDescription = "Filters", tint = if (query.activeFilters > 0) colors.onPrimaryContainer else colors.onSurface)
+                }
+                if (query.activeFilters > 0) {
+                    Text(
+                        query.activeFilters.toString(),
+                        style = MonoLabel.copy(fontSize = 10.sp),
+                        color = colors.onPrimary,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .clip(CircleShape)
+                            .background(colors.primary)
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    )
+                }
+            }
+        }
+        TypePills(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        AppliedFilters(query, onQuery)
+    }
+}
+
+/** Four equal pills with live counts. */
+@Composable
+private fun TypePills(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().testTag("journal_filters")) {
         JournalFilter.entries.forEach { option ->
-            val selected = option == filter
+            val selected = option == uiState.query.kind
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
@@ -287,49 +324,142 @@ private fun FilterBar(uiState: JournalUiState, filter: JournalFilter, onFilter: 
                         if (selected) colors.primary else colors.outline,
                         CircleShape,
                     )
-                    .clickable { onFilter(option) }
+                    .clickable { onSelect(option) }
                     .padding(horizontal = 6.dp, vertical = 8.dp)
                     .testTag("journal_filter_${option.name}"),
             ) {
-                val content = if (selected) colors.onPrimaryContainer else colors.onSurface
-                if (selected) Icon(option.icon, contentDescription = null, tint = content, modifier = Modifier.size(14.dp))
-                Text(option.label, style = MaterialTheme.typography.labelMedium, color = content, maxLines = 1)
-                Text(uiState.count(option).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
+                Text(option.label, style = MaterialTheme.typography.labelMedium, color = if (selected) colors.onPrimaryContainer else colors.onSurface, maxLines = 1)
+                Text((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
             }
         }
     }
 }
 
-/** The rail: a line down the left column, with an optional marker drawn at [markerY]. */
-private fun Modifier.rail(color: Color, top: Boolean = true, bottom: Boolean = true): Modifier = drawBehind {
-    val x = RAIL.toPx() / 2
-    val width = 2.dp.toPx()
-    drawLine(color, Offset(x, if (top) 0f else size.height / 2), Offset(x, if (bottom) size.height else size.height / 2), width)
+/** What the sheet has set, each as a chip that removes itself, then Clear all. */
+@Composable
+private fun AppliedFilters(query: JournalQuery, onQuery: ((JournalQuery) -> JournalQuery) -> Unit) {
+    if (query.activeFilters == 0) return
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .testTag("journal_applied"),
+    ) {
+        if (query.period != JournalPeriod.AllTime) AppliedChip(query.period.label) { onQuery { it.copy(period = JournalPeriod.AllTime) } }
+        if (query.result != JournalResult.Any) AppliedChip(query.result.label) { onQuery { it.copy(result = JournalResult.Any) } }
+        query.places.forEach { place -> AppliedChip(place) { onQuery { it.copy(places = it.places - place) } } }
+        query.tags.forEach { tag -> AppliedChip("#$tag") { onQuery { it.copy(tags = it.tags - tag) } } }
+        TextButton(onClick = { onQuery { JournalQuery(kind = it.kind, search = it.search) } }, modifier = Modifier.testTag("journal_clear_filters")) {
+            Text("Clear all", style = MaterialTheme.typography.labelMedium)
+        }
+    }
 }
 
-/** A row on the rail: [marker] sits in the left column, [content] hangs off to the right. */
 @Composable
-private fun RailRow(
-    modifier: Modifier = Modifier,
-    markerTop: Dp = 14.dp,
-    marker: @Composable () -> Unit,
-    content: @Composable () -> Unit,
-) {
+private fun AppliedChip(label: String, onRemove: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
-        modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .rail(colors.outlineVariant),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(colors.surfaceContainerHigh)
+            .clickable(onClick = onRemove)
+            .padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
+            .testTag("applied_$label"),
     ) {
-        Box(Modifier.width(RAIL).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.padding(top = markerTop)) { marker() }
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Icon(Icons.Rounded.Close, contentDescription = "Remove $label", tint = colors.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp).size(14.dp))
+    }
+}
+
+/** When, result, places and tags; everything combines, and the list updates as you pick. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSheet(uiState: JournalUiState, onQuery: ((JournalQuery) -> JournalQuery) -> Unit, onDismiss: () -> Unit) {
+    val query = uiState.query
+    val space = CruxTheme.space
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("journal_filter_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s4)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s2),
+        ) {
+            Text("Filters", style = MaterialTheme.typography.headlineSmall)
+            Eyebrow("When", Modifier.padding(top = space.s2))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                JournalPeriod.entries.forEach { period ->
+                    CruxFilterChip(period.label, query.period == period, { onQuery { it.copy(period = period) } }, Modifier.testTag("period_${period.name}"))
+                }
+            }
+            Eyebrow("Climbs", Modifier.padding(top = space.s2))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                JournalResult.entries.forEach { result ->
+                    CruxFilterChip(result.label, query.result == result, { onQuery { it.copy(result = result) } }, Modifier.testTag("result_${result.name}"))
+                }
+            }
+            if (uiState.places.isNotEmpty()) {
+                Eyebrow("Places", Modifier.padding(top = space.s2))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                    uiState.places.forEach { place ->
+                        val on = place in query.places
+                        CruxFilterChip(place, on, { onQuery { it.copy(places = if (on) it.places - place else it.places + place) } }, Modifier.testTag("place_filter_$place"))
+                    }
+                }
+            }
+            if (uiState.tags.isNotEmpty()) {
+                Eyebrow("Note tags", Modifier.padding(top = space.s2))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                    uiState.tags.forEach { tag ->
+                        val on = tag in query.tags
+                        CruxFilterChip(tag, on, { onQuery { it.copy(tags = if (on) it.tags - tag else it.tags + tag) } }, Modifier.testTag("tag_filter_$tag"))
+                    }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s3)) {
+                TextButton(onClick = { onQuery { JournalQuery(kind = it.kind, search = it.search) } }, enabled = query.activeFilters > 0) { Text("Clear all") }
+                Box(Modifier.weight(1f))
+                val shown = uiState.days.count()
+                CruxButton(
+                    text = if (shown == 1) "Show 1 entry" else "Show $shown entries",
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("journal_apply_filters"),
+                )
+            }
+        }
+    }
+}
+
+/** A row in the timeline: a small dot in the gutter, the entry beside it, on a faint line. */
+@Composable
+private fun TimelineRow(dot: Color, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Box(Modifier.width(GUTTER).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.width(1.dp).fillMaxHeight().background(colors.outlineVariant.copy(alpha = 0.6f)))
+            Box(
+                Modifier
+                    .padding(top = 16.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dot),
+            )
         }
         Box(Modifier.weight(1f).padding(bottom = CruxTheme.space.s3)) { content() }
     }
 }
 
-/** The day as a block on the rail: big date number, month, weekday and what happened. */
+/** The day: a small date tile, the weekday and a one-line tally. */
 @Composable
 private fun DayHeader(day: TimelineDay, first: Boolean) {
     val colors = MaterialTheme.colorScheme
@@ -346,43 +476,39 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .rail(colors.outlineVariant, top = !first)
-            .padding(top = if (first) 0.dp else CruxTheme.space.s2, bottom = CruxTheme.space.s3)
+            .padding(top = if (first) 0.dp else CruxTheme.space.s4, bottom = CruxTheme.space.s2)
             .testTag("journal_day"),
     ) {
-        // The date tile sits on the rail like a tag clipped to a rope.
-        Box(Modifier.width(RAIL), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(GUTTER), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.surfaceContainerHigh)
-                    .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.surfaceContainer)
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
             ) {
-                Text(day.date.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, lineHeight = 24.sp))
-                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 10.sp), color = colors.onSurfaceVariant)
+                Text(day.date.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp))
+                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onSurfaceVariant)
             }
         }
-        Column(Modifier.padding(start = CruxTheme.space.s3)) {
-            Text(day.date.dayLabel(), style = MaterialTheme.typography.titleMedium)
-            Text(summary.uppercase(), style = MonoLabel, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.padding(start = CruxTheme.space.s2)) {
+            Text(day.date.dayLabel(), style = MaterialTheme.typography.titleSmall)
+            Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-/** Climbs at a place: the place on top, then each climb as a strip of route tape. */
+/** Climbs at a place: the place on top, then each climb with its tape colour. */
 @Composable
 private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    RailRow(marker = { Marker(Icons.Rounded.Landscape, colors.primary) }) {
+    TimelineRow(dot = colors.primary) {
         Column {
             Text(
                 listOfNotNull(day.place, day.venue.label).joinToString(" · "),
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.primary,
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
             )
             day.climbs.forEach { climb -> TapeRow(climb, onClick = { onOpen(climb.id) }) }
         }
@@ -390,14 +516,14 @@ private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit) {
 }
 
 /**
- * One climb as a strip of tape: the tape colour (the gym's colour on local scales, else
- * green for a send and grey for a go), the grade, the name, how it went and how hard it felt.
+ * One climb: a short tape mark (the gym's colour on local scales, else green for a send and
+ * grey for a go), the grade, the name, and how it went.
  */
 @Composable
 private fun TapeRow(climb: Climb, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val sent = climb.style.isSend
-    val tape = climb.gradeColour?.let { com.hardtekpt.crux.ui.components.input.argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
+    val tape = climb.gradeColour?.let { argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
@@ -410,55 +536,37 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
     ) {
         Box(
             Modifier
-                .width(6.dp)
-                .height(34.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .width(4.dp)
+                .height(28.dp)
+                .clip(RoundedCornerShape(2.dp))
                 .background(tape),
         )
         Text(
             climb.grade,
-            style = CruxTheme.type.grade.copy(fontSize = 18.sp),
+            style = CruxTheme.type.grade,
             color = if (sent) colors.onSurface else colors.onSurfaceVariant,
-            modifier = Modifier.width(44.dp),
+            modifier = Modifier.width(40.dp),
             maxLines = 1,
         )
         Column(Modifier.weight(1f)) {
             Text(climb.displayName(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    climb.style.label.uppercase(),
-                    style = MonoLabel,
-                    color = if (sent) CruxTheme.colors.success else colors.onSurfaceVariant,
-                )
-                if (!climb.style.singleAttempt) {
-                    Text("× ${climb.attempts}", style = MonoLabel, color = colors.onSurfaceVariant)
-                }
-                climb.effort?.let { EffortTicks(it) }
-            }
-            climb.notes?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+            val outcome = buildList {
+                add(climb.style.label)
+                if (!climb.style.singleAttempt) add("${climb.attempts} ${if (climb.attempts == 1) "go" else "goes"}")
+                climb.effort?.let { add("felt $it/10") }
+                climb.notes?.let { add(it) }
+            }.joinToString(" · ")
+            Text(
+                outcome,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (sent) CruxTheme.colors.success else colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         when {
-            climb.imagePath != null -> ImageThumbnail(climb.imagePath, "Photo", onClick = onClick, size = 40.dp)
-            climb.videoPath != null -> VideoThumbnail(climb.videoPath, "Video", onClick = onClick, size = 40.dp)
-        }
-    }
-}
-
-/** Effort as ten small ticks, the felt ones lit. */
-@Composable
-private fun EffortTicks(effort: Int) {
-    val colors = MaterialTheme.colorScheme
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(start = 4.dp)) {
-        repeat(10) { i ->
-            Box(
-                Modifier
-                    .width(3.dp)
-                    .height((5 + i * 0.6f).dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(if (i < effort) colors.tertiary else colors.outlineVariant),
-            )
+            climb.imagePath != null -> ImageThumbnail(climb.imagePath, "Photo", onClick = onClick, size = 36.dp)
+            climb.videoPath != null -> VideoThumbnail(climb.videoPath, "Video", onClick = onClick, size = 36.dp)
         }
     }
 }
@@ -466,9 +574,9 @@ private fun EffortTicks(effort: Int) {
 @Composable
 private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    RailRow(marker = { Marker(Icons.Rounded.FitnessCenter, colors.tertiary) }) {
+    TimelineRow(dot = colors.tertiary) {
         Column {
-            Text("Training", style = MaterialTheme.typography.labelLarge, color = colors.tertiary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+            Text("Training", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
             entry.results.forEach { result ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -495,45 +603,27 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
     }
 }
 
-/** A note as a torn-off strip: tag, first line, a line of the rest. */
+/** A note: its tag, first line and a line of the rest, on a quiet panel. */
 @Composable
 private fun NoteEntry(note: Note, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    RailRow(marker = { Marker(Icons.AutoMirrored.Rounded.Notes, colors.onSurfaceVariant) }) {
-        Row(
+    TimelineRow(dot = colors.onSurfaceVariant) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(colors.surfaceContainerLow)
                 .clickable(onClick = onClick)
-                .height(IntrinsicSize.Min)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
                 .testTag("journal_note"),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(colors.onSurfaceVariant.copy(alpha = 0.4f)))
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                note.tag?.let { Text(it.uppercase(), style = MonoLabel, color = colors.primary) }
-                Text(note.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (note.body.isNotBlank()) {
-                    Text(note.body, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
+            note.tag?.let { Text(it.uppercase(), style = MonoLabel, color = colors.primary) }
+            Text(note.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (note.body.isNotBlank()) {
+                Text(note.body, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-    }
-}
-
-/** A round marker on the rail, cut out of the line so the line seems to pass behind it. */
-@Composable
-private fun Marker(icon: ImageVector, tint: Color) {
-    val colors = MaterialTheme.colorScheme
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(26.dp)
-            .clip(CircleShape)
-            .background(colors.surface)
-            .border(CruxTheme.size.borderEmphasis, tint, CircleShape),
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
     }
 }
