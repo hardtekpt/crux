@@ -67,8 +67,9 @@ class StarterData @Inject constructor(
  * 2: Block Lab became a gym with a board (6 Oct 2026).
  * 3: places have named sections; Block Lab is "Main gym" plus "Kilter board".
  * 4: the max hangs plan has Repeaters, an interval exercise (7 Oct 2026).
+ * 5: interval exercises keep their rest between repeats.
  */
-const val SAMPLE_DATA_VERSION = 4
+const val SAMPLE_DATA_VERSION = 5
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -145,6 +146,7 @@ class StarterDataSeeder(private val clock: Clock) {
                             seconds = target.seconds,
                             loadKg = target.loadKg,
                             restSeconds = target.restSeconds,
+                            repRestSeconds = target.repRestSeconds,
                         )
                     },
                 )

@@ -854,9 +854,9 @@ private fun SmallArrow(icon: ImageVector, description: String, onClick: (() -> U
     }
 }
 
-/** `5 reps · +10 kg`, `10 s · +17.5 kg`, `6 × 7 s`. */
+/** `5 reps · +10 kg`, `10 s · +17.5 kg`, `6 × 7 s` (no load when there is none). */
 internal fun describeSet(metric: com.hardtekpt.crux.data.model.MetricType, reps: Int?, seconds: Int?, loadKg: Double?, imperial: Boolean): String {
-    val load = loadKg?.takeIf { metric.usesLoad }?.let { com.hardtekpt.crux.data.model.signedLoad(it, imperial) }
+    val load = loadKg?.takeIf { metric.usesLoad && it != 0.0 }?.let { com.hardtekpt.crux.data.model.signedLoad(it, imperial) }
     val work = when {
         metric.usesIntervals -> "${reps ?: 0} × ${formatDuration(seconds ?: 0)}"
         metric.usesTime -> formatDuration(seconds ?: 0)
