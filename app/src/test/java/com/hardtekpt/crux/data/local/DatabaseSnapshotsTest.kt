@@ -1,6 +1,10 @@
 package com.hardtekpt.crux.data.local
 
 import android.database.sqlite.SQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -53,6 +57,29 @@ class DatabaseSnapshotsTest {
         DatabaseSnapshots.snapshot(db, dir, targetVersion = 16)
 
         assertEquals(1_000, first.lastModified())
+    }
+
+    @Test
+    fun `opening through the factory snapshots once, before the upgrade runs`() {
+        val events = mutableListOf<String>()
+        val callback = object : SupportSQLiteOpenHelper.Callback(2) {
+            override fun onCreate(db: SupportSQLiteDatabase) = Unit
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                events += "upgrade"
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        context.getDatabasePath("snapshot-order.db").also { it.parentFile?.mkdirs() }.let { file ->
+            SQLiteDatabase.openOrCreateDatabase(file, null).use { it.version = 1 }
+        }
+        val config = SupportSQLiteOpenHelper.Configuration.builder(context).name("snapshot-order.db").callback(callback).build()
+        val helper = SnapshotBeforeOpen(FrameworkSQLiteOpenHelperFactory()) { events += "snapshot" }.create(config)
+
+        helper.writableDatabase
+        helper.readableDatabase
+        helper.close()
+
+        assertEquals(listOf("snapshot", "upgrade"), events)
     }
 
     @Test

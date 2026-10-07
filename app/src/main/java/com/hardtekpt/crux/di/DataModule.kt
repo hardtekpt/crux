@@ -3,12 +3,12 @@ package com.hardtekpt.crux.di
 import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import com.hardtekpt.crux.BuildConfig
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
@@ -26,6 +26,7 @@ import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.DataMode
 import com.hardtekpt.crux.data.local.DatabaseFactory
 import com.hardtekpt.crux.data.local.DatabaseSnapshots
+import com.hardtekpt.crux.data.local.SnapshotBeforeOpen
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -56,11 +57,12 @@ object DatabaseModule {
 
             // The climber's own data is never wiped: a missing migration fails loudly instead,
             // and the old file is copied aside before any migration runs.
-            DataMode.REAL -> {
-                runCatching { DatabaseSnapshots.beforeMigration(context, CruxDatabase.NAME, CruxDatabase.VERSION) }
-                    .onFailure { Log.w("CruxDatabase", "Couldn't copy the database before migrating", it) }
-                Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.NAME)
-            }
+            DataMode.REAL -> Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.NAME)
+                .openHelperFactory(
+                    SnapshotBeforeOpen(FrameworkSQLiteOpenHelperFactory()) {
+                        DatabaseSnapshots.beforeMigration(context, CruxDatabase.NAME, CruxDatabase.VERSION)
+                    },
+                )
         }
         builder.build()
     }

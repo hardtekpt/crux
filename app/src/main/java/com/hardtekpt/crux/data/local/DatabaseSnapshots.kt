@@ -2,6 +2,9 @@ package com.hardtekpt.crux.data.local
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import java.io.File
 
 /**
@@ -48,5 +51,30 @@ object DatabaseSnapshots {
                 file.delete()
                 SIDE_FILES.forEach { File(file.path + it).delete() }
             }
+    }
+}
+
+/**
+ * Takes the snapshot the first time Room opens the database: on Room's background thread rather
+ * than the main one, and always before Room runs a migration.
+ */
+class SnapshotBeforeOpen(private val delegate: SupportSQLiteOpenHelper.Factory, private val snapshot: () -> Unit) : SupportSQLiteOpenHelper.Factory {
+    override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper = Helper(delegate.create(configuration))
+
+    private inner class Helper(private val helper: SupportSQLiteOpenHelper) : SupportSQLiteOpenHelper by helper {
+        private var snapshotTaken = false
+
+        override val writableDatabase: SupportSQLiteDatabase
+            get() = helper.also { snapshotOnce() }.writableDatabase
+
+        override val readableDatabase: SupportSQLiteDatabase
+            get() = helper.also { snapshotOnce() }.readableDatabase
+
+        private fun snapshotOnce() = synchronized(this) {
+            if (snapshotTaken) return@synchronized
+            snapshotTaken = true
+            // A failed copy never stops the climber's data from opening.
+            runCatching(snapshot).onFailure { Log.w("CruxDatabase", "Couldn't copy the database before migrating", it) }
+        }
     }
 }
