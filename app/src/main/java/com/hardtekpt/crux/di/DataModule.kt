@@ -2,12 +2,14 @@ package com.hardtekpt.crux.di
 
 import android.content.ContentResolver
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import com.hardtekpt.crux.BuildConfig
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.ExerciseRepository
@@ -18,6 +20,7 @@ import com.hardtekpt.crux.data.OfflinePlaceRepository
 import com.hardtekpt.crux.data.OfflineTemplateRepository
 import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.TemplateRepository
+import com.hardtekpt.crux.data.diagnostics.CrashReports
 import com.hardtekpt.crux.data.local.ApplicationScope
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.DataMode
@@ -29,6 +32,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
 import java.time.Clock
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -77,6 +81,16 @@ object AndroidModule {
 
     @Provides
     fun provideContentResolver(@ApplicationContext context: Context): ContentResolver = context.contentResolver
+
+    @Provides
+    @Singleton
+    fun provideCrashReports(@ApplicationContext context: Context, clock: Clock): CrashReports = CrashReports(
+        dir = File(context.filesDir, CrashReports.DIR),
+        clock = clock,
+        about = "App: Crux ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})\n" +
+            "Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
+            "Device: ${Build.MANUFACTURER} ${Build.MODEL}",
+    )
 }
 
 @Module

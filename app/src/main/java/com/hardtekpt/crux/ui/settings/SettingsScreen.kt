@@ -75,9 +75,15 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 }
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel(), backupViewModel: BackupViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+    backupViewModel: BackupViewModel = hiltViewModel(),
+    crashReportsViewModel: CrashReportsViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backupState by backupViewModel.state.collectAsStateWithLifecycle()
+    val crashCount by crashReportsViewModel.count.collectAsStateWithLifecycle()
     SettingsContent(
         uiState = uiState,
         onBack = onBack,
@@ -86,6 +92,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         backup = { BackupCard(backupState, backupViewModel) },
+        diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
     )
 }
 
@@ -99,6 +106,7 @@ fun SettingsContent(
     modifier: Modifier = Modifier,
     onUnits: (UnitSystem) -> Unit = {},
     backup: @Composable () -> Unit = {},
+    diagnostics: @Composable () -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -199,6 +207,9 @@ fun SettingsContent(
                 }
             }
             backup()
+
+            Eyebrow("Diagnostics", Modifier.padding(top = space.s4))
+            diagnostics()
         }
     }
 }
