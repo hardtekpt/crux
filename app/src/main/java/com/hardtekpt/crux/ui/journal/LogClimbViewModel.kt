@@ -64,6 +64,8 @@ data class LogClimbDraft(
     val placeId: Long? = null,
     /** Which part of the place (its main gym, its Moonboard). */
     val sectionId: Long? = null,
+    /** The live session the climb belongs to: the one running when it was logged. */
+    val sessionId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
     val angle: Int? = null,
@@ -103,6 +105,7 @@ class LogClimbViewModel @Inject constructor(
     private val clock: Clock,
     private val preferences: UserPreferencesRepository,
     private val images: ImageFiles,
+    private val sessions: com.hardtekpt.crux.data.SessionRepository,
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
@@ -154,6 +157,7 @@ class LogClimbViewModel @Inject constructor(
                     notes = climb.notes.orEmpty(),
                     placeId = climb.placeId,
                     sectionId = climb.sectionId,
+                    sessionId = climb.sessionId,
                     areaId = climb.areaId,
                     problemId = climb.problemId,
                     angle = climb.angle,
@@ -169,8 +173,17 @@ class LogClimbViewModel @Inject constructor(
             return
         }
         val problem = routeProblemId.takeIf { it != 0L }?.let { placeRepository.getProblem(it) }
-        val placeId = problem?.placeId ?: routePlaceId.takeIf { it != 0L } ?: preferences.lastPlaceId.first()
+        // A climb logged while a session runs joins it, and starts at the session's place.
+        val running = sessions.running()
+        _draft.update { it.copy(sessionId = running?.id) }
+        val placeId = problem?.placeId ?: routePlaceId.takeIf { it != 0L } ?: running?.placeId ?: preferences.lastPlaceId.first()
         placeId?.let { applyPlace(it) }
+        val sessionSection = running?.sectionId?.takeIf { routeSectionId == 0L && running.placeId == placeId }
+        if (sessionSection != null && placeId != null) {
+            placeRepository.getPlace(placeId)?.sections?.firstOrNull { it.id == sessionSection }?.let { section ->
+                _draft.update { it.copy(sectionId = section.id, venue = section.type.venue) }
+            }
+        }
         // Logging from a facility on the place page starts in that facility.
         if (routeSectionId != 0L && placeId != null) {
             placeRepository.getPlace(placeId)?.sections?.firstOrNull { it.id == routeSectionId }?.let { section ->
@@ -412,6 +425,7 @@ class LogClimbViewModel @Inject constructor(
                         ?: draft.venue.takeIf { v -> p.types.any { t -> t.venue == v } } ?: p.type.venue
                 } ?: draft.venue,
                 sectionId = draft.sectionId.takeIf { place != null && place.sections.any { s -> s.id == it } },
+                sessionId = draft.sessionId,
                 date = draft.date,
                 name = draft.name,
                 place = place?.name ?: draft.place,

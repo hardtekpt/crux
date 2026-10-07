@@ -38,6 +38,7 @@ class LogClimbPhotoTest {
             FIXED_CLOCK,
             UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(java.io.File(tmp.root, "prefs.preferences_pb"))),
             files,
+            com.hardtekpt.crux.data.FakeSessionRepository(),
         )
     }
 

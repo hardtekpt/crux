@@ -165,6 +165,32 @@ class MainActivityTest {
     }
 
     @Test
+    fun aSessionWithoutAPlanLogsClimbsAndLandsInTheJournal() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_StartWorkout").performClick()
+        composeRule.waitForTag("start_free")
+        composeRule.onNodeWithTag("start_free").performClick()
+        composeRule.waitForTag("screen_Session")
+
+        // A climb logged from the session belongs to it.
+        composeRule.onNodeWithTag("session_log_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Session dyno")
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Session")
+        composeRule.waitForTag("session_climb")
+
+        composeRule.onNodeWithTag("session_finish").performClick()
+        composeRule.waitForTag("session_save")
+        composeRule.onNodeWithTag("session_save").performScrollTo().performClick()
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("screen_Session").fetchSemanticsNodes().isEmpty() }
+
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_session")
+    }
+
+    @Test
     fun choosingVScaleInSettingsChangesTheClimbForm() {
         composeRule.onNodeWithTag("nav_You").performClick()
         composeRule.onNodeWithTag("open_settings").performClick()

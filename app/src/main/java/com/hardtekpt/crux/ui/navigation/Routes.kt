@@ -65,6 +65,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object NotesRoute
 
+/** A live session, running or just finished. */
+@Serializable data class SessionRoute(val sessionId: Long)
+
 @Serializable data class NoteEditorRoute(val noteId: Long = 0)
 
 @Serializable data class RecordEditorRoute(val exerciseId: Long = 0)

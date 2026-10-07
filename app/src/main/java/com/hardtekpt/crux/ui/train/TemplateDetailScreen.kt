@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,7 +57,7 @@ class TemplateDetailViewModel @Inject constructor(savedStateHandle: SavedStateHa
 
 /** A plan's blocks and targets, with Edit in the app bar. Sessions arrive with the session logger. */
 @Composable
-fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: TemplateDetailViewModel = hiltViewModel()) {
+fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onStart: (Long) -> Unit = {}, viewModel: TemplateDetailViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val template = uiState.template
     val space = CruxTheme.space
@@ -79,6 +80,13 @@ fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: 
             },
         )
         if (template == null) return@Column
+        com.hardtekpt.crux.ui.components.CruxButton(
+            text = "Start session",
+            onClick = { onStart(template.id) },
+            icon = androidx.compose.material.icons.Icons.Rounded.PlayArrow,
+            size = com.hardtekpt.crux.ui.components.CruxButtonSize.Large,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = space.s4, vertical = space.s2).testTag("start_plan_session"),
+        )
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s2),

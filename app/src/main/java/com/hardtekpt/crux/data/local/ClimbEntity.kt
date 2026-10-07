@@ -39,6 +39,8 @@ data class ClimbEntity(
     val gradeColour: Long? = null,
     /** The section of the place it was climbed in, e.g. the place's Moonboard (schema 16). */
     val sectionId: Long? = null,
+    /** The live session it was logged in (schema 17). */
+    val sessionId: Long? = null,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */

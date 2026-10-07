@@ -121,6 +121,7 @@ class JournalViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     recordRepository: RecordRepository,
     noteRepository: NoteRepository,
+    sessionRepository: com.hardtekpt.crux.data.SessionRepository,
     clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -130,9 +131,10 @@ class JournalViewModel @Inject constructor(
         climbRepository.observeClimbs(),
         recordRepository.observeResults(),
         noteRepository.observeNotes(),
+        sessionRepository.observeFinished(),
         query,
-    ) { climbs, results, notes, q ->
-        val all = buildTimeline(climbs, results, notes)
+    ) { climbs, results, notes, sessions, q ->
+        val all = buildTimeline(climbs, results, notes, sessions, clock.zone)
         val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
         val week = all.filter { !it.date.isBefore(monday) }
         JournalUiState(
@@ -221,6 +223,7 @@ fun JournalContent(
                     when (entry) {
                         is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
                         is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session)
                         is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
                     }
                 }
@@ -393,10 +396,12 @@ private fun daySummary(day: TimelineDay): String {
     val sends = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { e -> e.day.climbs.count { it.style.isSend } }
     val results = day.entries.filterIsInstance<TimelineEntry.Training>().sumOf { it.results.size }
     val notes = day.entries.count { it is TimelineEntry.NoteEntry }
+    val sessions = day.entries.count { it is TimelineEntry.SessionEntry }
     return listOfNotNull(
         climbs.takeIf { it > 0 }?.let { "$it ${if (it == 1) "climb" else "climbs"} · $sends sent" },
         results.takeIf { it > 0 }?.let { "$it ${if (it == 1) "result" else "results"}" },
         notes.takeIf { it > 0 }?.let { "$it ${if (it == 1) "note" else "notes"}" },
+        sessions.takeIf { it > 0 }?.let { "$it ${if (it == 1) "session" else "sessions"}" },
     ).joinToString(" · ")
 }
 
@@ -676,6 +681,57 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
         when {
             climb.imagePath != null -> ImageThumbnail(climb.imagePath, "Photo", onClick = onClick, size = 36.dp)
             climb.videoPath != null -> VideoThumbnail(climb.videoPath, "Video", onClick = onClick, size = 36.dp)
+        }
+    }
+}
+
+/** A finished session: its name, how long, what got done and how it felt. */
+@Composable
+private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session) {
+    val colors = MaterialTheme.colorScheme
+    TimelineRow(dot = colors.tertiary) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.surfaceContainerLow)
+                .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .testTag("journal_session"),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(session.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    com.hardtekpt.crux.ui.session.clockLabel(session.durationMillis(session.startedAtMillis)),
+                    style = MonoLabel,
+                    color = colors.onSurfaceVariant,
+                )
+            }
+            Text(
+                listOfNotNull(
+                    "${session.setsDone} of ${session.setsPlanned} sets".takeIf { session.items.isNotEmpty() },
+                    session.climbs.size.takeIf {
+                        it > 0
+                    }?.let { n -> "$n ${if (n == 1) "climb" else "climbs"} · ${session.climbs.count { it.style.isSend }} sent" },
+                    session.effort?.let { "felt $it/10" },
+                ).joinToString(" · ").ifEmpty { "Nothing logged" },
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+            if (session.items.isNotEmpty()) {
+                // A bar per exercise, filled by how much of it got done.
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+                    session.items.forEach { item ->
+                        val done = if (item.target.sets == 0) 0f else (item.done.toFloat() / item.target.sets).coerceAtMost(1f)
+                        Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(colors.surfaceContainerHighest)) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(done).background(colors.tertiary))
+                        }
+                    }
+                }
+            }
+            session.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
     }
 }

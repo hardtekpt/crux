@@ -127,5 +127,8 @@ abstract class RepositoryModule {
     abstract fun bindExerciseRepository(impl: OfflineExerciseRepository): ExerciseRepository
 
     @Binds
+    abstract fun bindSessionRepository(impl: com.hardtekpt.crux.data.OfflineSessionRepository): com.hardtekpt.crux.data.SessionRepository
+
+    @Binds
     abstract fun bindPlaceRepository(impl: OfflinePlaceRepository): PlaceRepository
 }

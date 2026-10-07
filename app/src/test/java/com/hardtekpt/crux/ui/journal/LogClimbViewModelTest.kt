@@ -38,13 +38,14 @@ class LogClimbViewModelTest {
     private val repository = FakeClimbRepository()
     private val places = FakePlaceRepository(repository)
     private val imageFiles = FakeImageFiles()
+    private val sessions = com.hardtekpt.crux.data.FakeSessionRepository()
     private val preferences by lazy {
         UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(java.io.File(tmp.root, "prefs.preferences_pb")))
     }
     private val viewModel by lazy { viewModel() }
 
     private fun viewModel(vararg args: Pair<String, Long>) =
-        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles)
+        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles, sessions)
 
     private suspend fun boardWithProblem(): Pair<Long, Long> {
         val placeId = places.savePlace(
@@ -278,5 +279,19 @@ class LogClimbViewModelTest {
         assertEquals(2, logged.gradeIndex)
         assertEquals("Blue", logged.gradeLabel)
         assertEquals("Blue", repository.climbs.value.single().grade)
+    }
+
+    @Test
+    fun `a climb logged while a session runs joins it, at the session's place`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(name = "Block Lab", location = null, boulderScale = null, routeScale = null, defaultAngle = null, notes = null),
+        )
+        sessions.runningSession = com.hardtekpt.crux.data.RunningSession(id = 7, placeId = placeId, sectionId = null)
+        val vm = viewModel()
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
+        vm.save()
+        val saved = withTimeout(5_000) { repository.climbs.first { it.isNotEmpty() } }.single()
+        assertEquals(7L, saved.sessionId)
+        assertEquals(placeId, saved.placeId)
     }
 }

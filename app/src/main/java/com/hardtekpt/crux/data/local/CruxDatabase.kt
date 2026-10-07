@@ -78,6 +78,9 @@ class PlacesMigration : AutoMigrationSpec {
         TemplateExerciseEntity::class,
         PlaceEntity::class,
         SectionEntity::class,
+        SessionEntity::class,
+        SessionItemEntity::class,
+        SessionSetEntity::class,
         AreaEntity::class,
         ProblemEntity::class,
         ClimbMediaEntity::class,
@@ -100,6 +103,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 13, to = 14),
         AutoMigration(from = 14, to = 15),
         AutoMigration(from = 15, to = 16, spec = SectionsMigration::class),
+        AutoMigration(from = 16, to = 17),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -111,10 +115,11 @@ abstract class CruxDatabase : RoomDatabase() {
     abstract fun bodyMeasurementDao(): BodyMeasurementDao
     abstract fun templateDao(): TemplateDao
     abstract fun exerciseDao(): ExerciseDao
+    abstract fun sessionDao(): SessionDao
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 16
+        const val VERSION = 17
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

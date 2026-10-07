@@ -81,7 +81,7 @@ class FakeClimbRepository : ClimbRepository {
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId,
+        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId, sessionId = sessionId,
     )
 }
 
@@ -249,4 +249,20 @@ class FakeImageFiles : com.hardtekpt.crux.data.images.ImageFiles {
     override fun newCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
     override suspend fun importVideo(uri: android.net.Uri): String = "video_${next++}.mp4"
     override fun newVideoCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
+}
+
+/** No session running unless a test sets one; the rest isn't needed by the view model tests. */
+class FakeSessionRepository(var runningSession: RunningSession? = null) : SessionRepository {
+    override fun observeRunning(): Flow<Session?> = MutableStateFlow(null)
+    override suspend fun running(): RunningSession? = runningSession
+    override fun observeSession(id: Long): Flow<Session?> = MutableStateFlow(null)
+    override fun observeFinished(): Flow<List<Session>> = MutableStateFlow(emptyList())
+    override suspend fun start(templateId: Long?, placeId: Long?, sectionId: Long?): Long = 1
+    override suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?) = Unit
+    override suspend fun skipSet(itemId: Long, setIndex: Int) = Unit
+    override suspend fun undoSet(itemId: Long, setIndex: Int) = Unit
+    override suspend fun addExercise(sessionId: Long, exercise: com.hardtekpt.crux.data.model.Exercise): Long = 1
+    override suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?) = Unit
+    override suspend fun finish(sessionId: Long, effort: Int?, notes: String?) = Unit
+    override suspend fun discard(sessionId: Long) = Unit
 }

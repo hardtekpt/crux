@@ -25,8 +25,8 @@ fun List<Climb>.groupByDayAndPlace(): List<JournalDay> =
     groupBy { Triple(it.date, it.place, it.venue) }.map { (key, climbs) -> JournalDay(key.first, key.second, climbs) }
 
 /**
- * Something that happened on a day. Workout sessions will be another kind once the session
- * logger exists; until then training shows as the results logged on exercises.
+ * Something that happened on a day: climbs at a place, results logged on exercises, a
+ * finished session, or a note.
  */
 sealed interface TimelineEntry {
     val key: String
@@ -44,6 +44,12 @@ sealed interface TimelineEntry {
         override val kind get() = JournalFilter.Training
     }
 
+    /** A finished live session. Its climbs also show with the day's climbs. */
+    data class SessionEntry(val session: com.hardtekpt.crux.data.Session) : TimelineEntry {
+        override val key get() = "session|${session.id}"
+        override val kind get() = JournalFilter.Training
+    }
+
     data class NoteEntry(val note: Note) : TimelineEntry {
         override val key get() = "note|${note.id}"
         override val kind get() = JournalFilter.Notes
@@ -54,6 +60,7 @@ sealed interface TimelineEntry {
         get() = when (this) {
             is Climbs -> day.climbs.size
             is Training -> results.size
+            is SessionEntry -> 1
             is NoteEntry -> 1
         }
 }
@@ -98,8 +105,15 @@ data class JournalQuery(
 }
 
 /** Newest day first; within a day, climbs, then training, then notes. */
-fun buildTimeline(climbs: List<Climb>, results: List<LoggedResult>, notes: List<Note>): List<TimelineDay> {
+fun buildTimeline(
+    climbs: List<Climb>,
+    results: List<LoggedResult>,
+    notes: List<Note>,
+    sessions: List<com.hardtekpt.crux.data.Session> = emptyList(),
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+): List<TimelineDay> {
     val entries = climbs.groupByDayAndPlace().map { it.date to TimelineEntry.Climbs(it) } +
+        sessions.map { it.date(zone) to TimelineEntry.SessionEntry(it) } +
         results.groupBy { it.record.date }.map { (date, list) -> date to TimelineEntry.Training(date, list) } +
         notes.sortedByDescending { it.id }.map { it.created to TimelineEntry.NoteEntry(it) }
     return entries.groupBy({ it.first }, { it.second })
@@ -140,6 +154,11 @@ fun List<TimelineDay>.matching(query: JournalQuery, today: LocalDate): List<Time
                     if (climbsOnly || notesOnly) return@mapNotNull null
                     val kept = entry.results.filter { matches(it.exercise.name, it.record.notes) }
                     if (kept.isEmpty()) null else entry.copy(results = kept)
+                }
+
+                is TimelineEntry.SessionEntry -> {
+                    if (climbsOnly || notesOnly) return@mapNotNull null
+                    if (matches(entry.session.name, entry.session.notes, *entry.session.items.map { it.exercise.name }.toTypedArray())) entry else null
                 }
 
                 is TimelineEntry.NoteEntry -> {

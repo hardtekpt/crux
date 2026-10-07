@@ -198,4 +198,41 @@ class RepositoriesTest {
     private companion object {
         val TODAY: LocalDate = LocalDate.now(FIXED_CLOCK)
     }
+
+    @Test
+    fun `a session runs a plan, logs sets and climbs, and finishes into the journal list`() = runTest {
+        val dbs = databases()
+        StarterDataSeeder(FIXED_CLOCK).seed(real, includeSampleData = false)
+        val templates = OfflineTemplateRepository(dbs)
+        val sessions = OfflineSessionRepository(dbs, templates, FIXED_CLOCK)
+        val climbs = OfflineClimbRepository(dbs, FIXED_CLOCK)
+        val plan = templates.observeTemplates().first().first()
+
+        val id = sessions.start(plan.id, placeId = null, sectionId = null)
+        val running = sessions.observeRunning().first()!!
+        assertEquals(id, running.id)
+        assertEquals(plan.name, running.name)
+        assertEquals(plan.blocks.sumOf { it.items.size }, running.items.size)
+
+        val first = running.items.first()
+        sessions.logSet(first.id, 0, reps = 5, seconds = 10, loadKg = 12.5)
+        sessions.skipSet(first.id, 1)
+        climbs.logClimb(climb(gradeIndex = 12).copy(sessionId = id))
+        val during = sessions.observeSession(id).first()!!
+        assertEquals(1, during.setsDone)
+        assertEquals(1, during.setsSkipped)
+        assertEquals(1, during.climbs.size)
+
+        sessions.finish(id, effort = 8, notes = " Strong day ")
+        assertNull(sessions.running())
+        val finished = sessions.observeFinished().first().single()
+        assertEquals(8, finished.effort)
+        assertEquals("Strong day", finished.notes)
+
+        // A session without a plan starts empty and takes exercises as it goes.
+        val free = sessions.start(null, placeId = null, sectionId = null)
+        assertEquals(OfflineSessionRepository.CLIMBING_SESSION, sessions.observeSession(free).first()!!.name)
+        sessions.discard(free)
+        assertNull(sessions.observeSession(free).first())
+    }
 }

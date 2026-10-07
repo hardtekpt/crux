@@ -8,7 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -71,6 +74,7 @@ import com.hardtekpt.crux.ui.navigation.ProblemEditorRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
 import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
+import com.hardtekpt.crux.ui.navigation.SessionRoute
 import com.hardtekpt.crux.ui.navigation.SettingsRoute
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
@@ -117,8 +121,15 @@ fun CruxApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     var showQuickLog by rememberSaveable { mutableStateOf(false) }
+    var showStartSession by rememberSaveable { mutableStateOf(false) }
+    val sessionsViewModel: com.hardtekpt.crux.ui.session.SessionsViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val runningSession by sessionsViewModel.running.collectAsStateWithLifecycle()
+    val plans by sessionsViewModel.plans.collectAsStateWithLifecycle()
+    val openSession = { id: Long -> navController.navigate(SessionRoute(id)) { launchSingleTop = true } }
+    val startSession = { templateId: Long? -> sessionsViewModel.start(templateId) { openSession(it) } }
 
     val onForm = currentDestination.isAny(
+        SessionRoute::class,
         LogClimbRoute::class,
         LogWeightRoute::class,
         PlanEditorRoute::class,
@@ -176,6 +187,7 @@ fun CruxApp() {
                         TemplateDetailScreen(
                             onBack = navController::popBackStack,
                             onEdit = { navController.navigate(PlanEditorRoute(it)) },
+                            onStart = { startSession(it) },
                         )
                     }
                     page<PlanEditorRoute> { PlanEditorScreen(onDone = navController::popBackStack) }
@@ -289,6 +301,13 @@ fun CruxApp() {
                         )
                     }
                 }
+                page<SessionRoute> {
+                    com.hardtekpt.crux.ui.session.SessionScreen(
+                        onLeave = navController::popBackStack,
+                        onLogClimb = { navController.navigate(LogClimbRoute()) },
+                        onFinished = navController::popBackStack,
+                    )
+                }
                 page<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
                 page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
                 page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }
@@ -317,13 +336,32 @@ fun CruxApp() {
                 .navigationBarsPadding()
                 .padding(bottom = CruxTheme.space.s4),
         ) {
-            FloatingNavBar(
-                selected = selectedTab,
-                onNavigate = { navController.navigateToTab(it) },
-                logOpen = showQuickLog,
-                onLog = { showQuickLog = true },
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                com.hardtekpt.crux.ui.session.RunningSessionBanner(
+                    session = runningSession,
+                    nowMillis = sessionsViewModel::now,
+                    visible = true,
+                    onOpen = { runningSession?.let { openSession(it.id) } },
+                )
+                FloatingNavBar(
+                    selected = selectedTab,
+                    onNavigate = { navController.navigateToTab(it) },
+                    logOpen = showQuickLog,
+                    onLog = { showQuickLog = true },
+                )
+            }
         }
+    }
+
+    if (showStartSession) {
+        com.hardtekpt.crux.ui.session.StartSessionSheet(
+            plans = plans,
+            onStart = { templateId ->
+                showStartSession = false
+                startSession(templateId)
+            },
+            onDismiss = { showStartSession = false },
+        )
     }
 
     if (showQuickLog) {
@@ -335,7 +373,7 @@ fun CruxApp() {
                     QuickLogAction.LogClimb -> navController.navigate(LogClimbRoute())
                     QuickLogAction.LogWeight -> navController.navigate(LogWeightRoute)
                     QuickLogAction.AddNote -> navController.navigate(NoteEditorRoute())
-                    QuickLogAction.StartWorkout -> Unit
+                    QuickLogAction.StartWorkout -> runningSession?.let { openSession(it.id) } ?: run { showStartSession = true }
                 }
             },
         )
