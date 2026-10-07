@@ -66,8 +66,9 @@ class StarterData @Inject constructor(
  * Bump when the sample data changes, so demo databases filled with an older set are refilled.
  * 2: Block Lab became a gym with a board (6 Oct 2026).
  * 3: places have named sections; Block Lab is "Main gym" plus "Kilter board".
+ * 4: the max hangs plan has Repeaters, an interval exercise (7 Oct 2026).
  */
-const val SAMPLE_DATA_VERSION = 3
+const val SAMPLE_DATA_VERSION = 4
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -352,6 +353,7 @@ private val STARTER_TEMPLATES = listOf(
             ),
             "Max hangs" to listOf(
                 "Half-crimp hang" to ExerciseTarget(sets = 6, seconds = 10, loadKg = 5.0, restSeconds = 180),
+                "Repeaters" to ExerciseTarget(sets = 3, reps = 6, seconds = 7, loadKg = 0.0, restSeconds = 180, repRestSeconds = 3),
             ),
             "Limit bouldering" to listOf(
                 "Limit boulders" to ExerciseTarget(sets = 4, reps = 4, restSeconds = 180),

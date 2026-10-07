@@ -172,6 +172,7 @@ fun CruxApp() {
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
                             onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
+                            onStartPlan = { startSession(it) },
                         )
                     }
                 }

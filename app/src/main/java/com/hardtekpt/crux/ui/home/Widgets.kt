@@ -63,6 +63,7 @@ data class WidgetActions(
     val openProgress: () -> Unit = {},
     val openYou: () -> Unit = {},
     val openProblem: (Long) -> Unit = {},
+    val startPlan: (Long) -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -70,7 +71,7 @@ data class WidgetActions(
 fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions: WidgetActions, modifier: Modifier = Modifier) {
     val large = widget.size == WidgetSize.LARGE
     when (widget.type) {
-        WidgetType.TODAYS_PLAN -> TodaysPlanWidget(state, large, actions.openTemplate, modifier)
+        WidgetType.TODAYS_PLAN -> TodaysPlanWidget(state, large, actions.openTemplate, actions.startPlan, modifier)
 
         WidgetType.WEEK_CLIMBS -> StatTile(
             label = "Climbs this week",
@@ -156,7 +157,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
 }
 
 @Composable
-private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, modifier: Modifier) {
+private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, onStart: (Long) -> Unit, modifier: Modifier) {
     val plan = state.todaysPlan
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -199,8 +200,7 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = CruxTheme.space.s3),
         ) {
-            // Disabled until the session logger lands.
-            CruxButton(text = "Start session", onClick = {}, enabled = false, icon = Icons.Rounded.PlayArrow)
+            CruxButton(text = "Start session", onClick = { onStart(plan.id) }, icon = Icons.Rounded.PlayArrow, modifier = Modifier.testTag("widget_start_plan"))
             CruxButton(
                 text = "View plan",
                 onClick = { onOpen(plan.id) },

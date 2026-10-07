@@ -216,7 +216,7 @@ fun JournalContent(
                     InlineEmptyState(
                         icon = Icons.Rounded.Search,
                         text = if (query.kind == JournalFilter.Training && query.activeFilters == 0 && query.search.isBlank()) {
-                            "No training yet. Results you log on exercises show here, and workout sessions will too once the session logger arrives."
+                            "No training yet. Sessions you finish and results you log on exercises show here."
                         } else {
                             "Nothing matches. Try another word or clear a filter."
                         },

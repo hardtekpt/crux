@@ -55,7 +55,7 @@ class TemplateDetailViewModel @Inject constructor(savedStateHandle: SavedStateHa
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TemplateDetailUiState())
 }
 
-/** A plan's blocks and targets, with Edit in the app bar. Sessions arrive with the session logger. */
+/** A plan's blocks and targets, with Edit in the app bar and Start session. */
 @Composable
 fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onStart: (Long) -> Unit = {}, viewModel: TemplateDetailViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -133,23 +133,6 @@ fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onStart: (L
                         modifier = Modifier.testTag("template_exercise"),
                     )
                 }
-            }
-            item {
-                CruxButton(
-                    text = "Start session",
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = space.s6),
-                )
-            }
-            item {
-                Text(
-                    "Sessions arrive with the session logger.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }

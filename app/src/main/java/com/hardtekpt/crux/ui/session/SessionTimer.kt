@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -144,7 +145,7 @@ internal fun SegmentStrip(segments: List<Segment>, modifier: Modifier = Modifier
 /** The big number in a band. */
 @Composable
 internal fun BandNumber(millisLeft: Long, color: Color, modifier: Modifier = Modifier) {
-    Text(clockLabel(secondsLeft(millisLeft) * 1000L), style = BigNumber, color = color, maxLines = 1, modifier = modifier)
+    Text(clockLabel(secondsLeft(millisLeft) * 1000L), style = BigNumber, color = color, maxLines = 1, softWrap = false, modifier = modifier)
 }
 
 /** A count beside the number: `3` over "repeats left". */
@@ -152,7 +153,7 @@ internal fun BandNumber(millisLeft: Long, color: Color, modifier: Modifier = Mod
 internal fun BandCount(value: Int, label: String, modifier: Modifier = Modifier) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Text(value.toString(), style = CountNumber)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
     }
 }
 
@@ -237,8 +238,9 @@ internal fun IntervalBand(run: IntervalRun, nowMillis: Long, onPause: () -> Unit
             } else {
                 accent
             },
-            Modifier.weight(1f).testTag("timer_left"),
+            Modifier.testTag("timer_left"),
         )
+        Spacer(Modifier.weight(1f))
         BandCount(position.repeatsLeft, "repeats left", Modifier.testTag("timer_repeats_left"))
         BandCount(position.cyclesLeft, "cycles left", Modifier.testTag("timer_cycles_left"))
         if (run.paused) {
