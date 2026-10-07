@@ -61,7 +61,8 @@ wrapper alone:
 
 ```sh
 ./gradlew assembleDebug                                 # debug APK
-./gradlew spotlessCheck testDebugUnitTest lintDebug     # what CI checks
+./gradlew spotlessCheck verifyRoborazziDebug lintDebug  # what CI checks (unit + screenshot tests)
+./gradlew recordRoborazziDebug                          # re-record screenshots after a UI change
 ./gradlew spotlessApply                                 # fix formatting
 ./gradlew connectedDebugAndroidTest                     # on an emulator: uninstalls the app first!
 ```
@@ -71,8 +72,9 @@ On Windows, the `crux` script wraps the day-to-day loop:
 | Command | What it does |
 | --- | --- |
 | `.\crux run` | Builds the debug app, boots the `Crux_Pixel_9` emulator if needed, installs and opens the app |
-| `.\crux test` | ktlint, JVM unit tests, Robolectric Compose UI tests and Android Lint (no emulator) |
+| `.\crux test` | ktlint, JVM unit and screenshot tests, Robolectric Compose UI tests and Android Lint (no emulator) |
 | `.\crux format` | Fixes ktlint formatting |
+| `.\crux screenshots` | Re-records the screenshot goldens after an intended UI change |
 | `.\crux device-test` | Instrumented Compose, Hilt and Room tests on the emulator |
 | `.\crux check` | Both test suites |
 | `.\crux emulator` / `.\crux stop` | Boot or shut down the emulator |

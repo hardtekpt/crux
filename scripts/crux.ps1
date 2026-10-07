@@ -4,15 +4,16 @@
 
 .EXAMPLE
   .\crux run            # build, boot the emulator if needed, install and open the app
-  .\crux test           # ktlint, JVM unit tests + Robolectric Compose UI tests, Android Lint (no emulator)
+  .\crux test           # ktlint, JVM unit + screenshot tests, Robolectric Compose UI tests, Android Lint (no emulator)
   .\crux format         # fix ktlint formatting in place
+  .\crux screenshots    # re-record screenshot goldens after an intended UI change
   .\crux device-test    # instrumented Compose/Room tests on the emulator
   .\crux check          # test + device-test
   .\crux run -Device <phone-ip>:<port>   # same, on a phone over wireless debugging
 #>
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('run', 'build', 'test', 'format', 'device-test', 'check', 'emulator', 'stop', 'avd', 'help')]
+    [ValidateSet('run', 'build', 'test', 'format', 'screenshots', 'device-test', 'check', 'emulator', 'stop', 'avd', 'help')]
     [string]$Command = 'help',
     # Show the emulator window (default) or run it headless, e.g. for test-only runs.
     [switch]$Headless,
@@ -101,8 +102,10 @@ function Start-CruxEmulator {
 switch ($Command) {
     'build' { Invoke-Gradle @('assembleDebug') }
     # Same checks as CI, so a green local run means a green push.
-    'test' { Invoke-Gradle @('spotlessCheck', 'testDebugUnitTest', 'lintDebug') }
+    'test' { Invoke-Gradle @('spotlessCheck', 'verifyRoborazziDebug', 'lintDebug') }
     'format' { Invoke-Gradle @('spotlessApply') }
+    # After an intended UI change: re-record the screenshot goldens, then review and commit them.
+    'screenshots' { Invoke-Gradle @('recordRoborazziDebug') }
     'avd' { New-CruxAvd; Write-Host "Emulator '$AvdName' is ready to boot." }
     'emulator' { Start-CruxEmulator | Out-Null }
     'stop' {
@@ -115,7 +118,7 @@ switch ($Command) {
         Invoke-Gradle @('connectedDebugAndroidTest')
     }
     'check' {
-        Invoke-Gradle @('spotlessCheck', 'testDebugUnitTest', 'lintDebug')
+        Invoke-Gradle @('spotlessCheck', 'verifyRoborazziDebug', 'lintDebug')
         $env:ANDROID_SERIAL = Start-CruxEmulator
         Invoke-Gradle @('connectedDebugAndroidTest')
     }

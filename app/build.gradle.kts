@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.room)
     alias(libs.plugins.kover)
     alias(libs.plugins.aboutlibraries)
+    alias(libs.plugins.roborazzi)
 }
 
 // Version lives in version.properties; versionCode follows from it so it always increases.
@@ -74,6 +75,8 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Robolectric's native graphics (screenshot tests) need more than the default 512 MB.
+        unitTests.all { it.maxHeapSize = "2g" }
         animationsDisabled = true
     }
 
@@ -142,6 +145,10 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // Screenshot tests: goldens in src/test/screenshots, checked by verifyRoborazziDebug.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     // Instrumented tests (run on the emulator)
     androidTestImplementation(libs.androidx.test.runner)

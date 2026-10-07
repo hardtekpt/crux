@@ -12,8 +12,9 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
   `main` on your own initiative.
 
 ## Checks
-- `.\crux.cmd test` runs what CI runs: ktlint (Spotless), unit tests and Android Lint. Fix formatting
-  with `.\crux.cmd format`. New lint findings fail the build; `app/lint-baseline.xml` holds the
+- `.\crux.cmd test` runs what CI runs: ktlint (Spotless), unit and screenshot tests and Android Lint.
+  Fix formatting with `.\crux.cmd format`. After an intended UI change, `.\crux.cmd screenshots`
+  re-records the goldens in `app/src/test/screenshots/`; look at them before committing. New lint findings fail the build; `app/lint-baseline.xml` holds the
   old ones, so don't add to it to make a build pass.
 - Device tests run in CI on PRs into `main`, before every release, and on demand: push any commit to
   a `ci/` branch (`git push origin HEAD:ci/device-tests`, delete it afterwards).

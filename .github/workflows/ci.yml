@@ -1,4 +1,4 @@
-# Pushes to dev (and PRs into main) check formatting, run the unit tests and Android Lint,
+# Pushes to dev (and PRs into main) check formatting, run the unit and screenshot tests and Android Lint,
 # and make sure a release build still compiles. A newer push to the same branch cancels this run.
 name: CI
 
@@ -26,7 +26,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Format, test, lint
-        run: ./gradlew spotlessCheck testDebugUnitTest lintDebug koverXmlReportDebug koverLogDebug
+        run: ./gradlew spotlessCheck verifyRoborazziDebug lintDebug koverXmlReportDebug koverLogDebug
 
       - name: Build release APK (debug-signed)
         run: ./gradlew assembleRelease
@@ -46,6 +46,7 @@ jobs:
           name: reports
           path: |
             app/build/reports/tests/
+            app/build/outputs/roborazzi/
             app/build/reports/lint-results-*.html
             build/reports/problems/
           if-no-files-found: ignore

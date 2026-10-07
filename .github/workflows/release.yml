@@ -79,7 +79,7 @@ jobs:
           echo "CRUX_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       - name: Format, test, lint
-        run: ./gradlew spotlessCheck testDebugUnitTest lintDebug
+        run: ./gradlew spotlessCheck verifyRoborazziDebug lintDebug
 
       - name: Build release APK
         env:

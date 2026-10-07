@@ -5,7 +5,7 @@
 ## Checklist
 
 - [ ] Targets `dev`
-- [ ] `./gradlew spotlessCheck testDebugUnitTest lintDebug` passes
+- [ ] `./gradlew spotlessCheck verifyRoborazziDebug lintDebug` passes
 - [ ] Tests added or updated for changed behaviour
 - [ ] Schema changes follow [docs/DATABASE.md](../docs/DATABASE.md) (or there are none)
 - [ ] Screenshots for visible UI changes

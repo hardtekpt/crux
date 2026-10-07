@@ -81,7 +81,7 @@ a newer `version` is refused with a clear message. Older files must keep importi
 
 | Where | What | Runs |
 | --- | --- | --- |
-| `app/src/test` | ViewModels with fake repositories, repositories and backups on in-memory Room (Robolectric), Compose components (Robolectric) | Every push (`./gradlew testDebugUnitTest`) |
+| `app/src/test` | ViewModels with fake repositories, repositories and backups on in-memory Room (Robolectric), Compose components (Robolectric), and screenshots of the main screens with the demo data in both themes (Roborazzi, goldens in `app/src/test/screenshots`) | Every push (`./gradlew verifyRoborazziDebug`) |
 | `app/src/androidTest` | Room migrations from every old schema, DAOs, full-app Compose flows with Hilt | PRs into `main`, before releases, on demand |
 
 Coroutines in tests run on `MainDispatcherRule`'s test dispatcher, and test DataStores come from
