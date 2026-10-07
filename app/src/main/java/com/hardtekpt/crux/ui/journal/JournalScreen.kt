@@ -710,7 +710,7 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClim
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(session.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    com.hardtekpt.crux.ui.session.clockLabel(session.durationMillis(session.startedAtMillis)),
+                    com.hardtekpt.crux.ui.session.durationLabel(session.durationMillis(session.startedAtMillis)),
                     style = MonoLabel,
                     color = colors.onSurfaceVariant,
                 )

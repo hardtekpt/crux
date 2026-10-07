@@ -241,6 +241,12 @@ class SessionViewModel @Inject constructor(
 
 private val MonoLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
 
+/** "45 min" or "1 h 02 min", for a finished session. */
+internal fun durationLabel(millis: Long): String {
+    val minutes = (millis / 60_000).coerceAtLeast(1)
+    return if (minutes < 60) "$minutes min" else "%d h %02d min".format(minutes / 60, minutes % 60)
+}
+
 /** "24:16" or "1:12:40". */
 internal fun clockLabel(millis: Long): String {
     val total = (millis / 1000).coerceAtLeast(0)
