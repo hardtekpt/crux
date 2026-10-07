@@ -5,9 +5,6 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.VibrationEffect
 import android.os.Vibrator
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -105,17 +104,21 @@ internal fun secondsLeft(millis: Long): Int = ((millis.coerceAtLeast(0) + 999) /
 /**
  * The band under the title while something counts down: [accent] fills it and drains from the
  * right as [fraction] (left of the whole) runs out; [segments] run along the bottom edge.
+ * [fraction] is read only while drawing, so the drain moves without recomposing the screen.
  */
 @Composable
-internal fun TimerBand(accent: Color, fraction: Float, segments: List<Segment>, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+internal fun TimerBand(accent: Color, fraction: () -> Float, segments: List<Segment>, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val shown by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(250, easing = LinearEasing), label = "band")
-    Box(modifier.fillMaxWidth().height(96.dp).background(colors.surfaceContainerLow)) {
-        if (shown > 0f) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(accent.copy(alpha = 0.2f))) {
-                Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(3.dp).background(accent))
+    Box(
+        modifier.fillMaxWidth().height(96.dp).background(colors.surfaceContainerLow).drawBehind {
+            val filled = size.width * fraction().coerceIn(0f, 1f)
+            if (filled > 0f) {
+                drawRect(accent.copy(alpha = 0.2f), size = Size(filled, size.height))
+                val edge = 3.dp.toPx().coerceAtMost(filled)
+                drawRect(accent, topLeft = Offset(filled - edge, 0f), size = Size(edge, size.height))
             }
-        }
+        },
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -195,12 +198,15 @@ internal fun BandPill(text: String, onClick: () -> Unit, modifier: Modifier = Mo
     )
 }
 
-/** The rest between sets, counting down: the number, what's next, +30 s and Skip. */
+/**
+ * The rest between sets, counting down: the number, what's next, +30 s and Skip. The number
+ * follows [nowMillis]; the drain follows [drainNowMillis], which moves smoothly.
+ */
 @Composable
-internal fun RestBand(rest: Rest, nowMillis: Long, next: String, segments: List<Segment>, onAdd: () -> Unit, onSkip: () -> Unit) {
+internal fun RestBand(rest: Rest, nowMillis: Long, drainNowMillis: () -> Long, next: String, segments: List<Segment>, onAdd: () -> Unit, onSkip: () -> Unit) {
     val accent = TimerColors.setRest
     val left = rest.endsAtMillis - nowMillis
-    TimerBand(accent, left / (rest.totalSeconds * 1000f), segments, Modifier.testTag("session_rest")) {
+    TimerBand(accent, { (rest.endsAtMillis - drainNowMillis()) / (rest.totalSeconds * 1000f) }, segments, Modifier.testTag("session_rest")) {
         BandNumber(left, accent, Modifier.testTag("session_rest_left"))
         Column(Modifier.weight(1f)) {
             Text("Rest", style = MaterialTheme.typography.titleSmall)
@@ -215,10 +221,10 @@ internal fun RestBand(rest: Rest, nowMillis: Long, next: String, segments: List<
 
 /**
  * The interval timer: the phase's number in its colour, repeats and cycles left, and pause.
- * Paused, it offers play and stop.
+ * Paused, it offers play and stop. Like [RestBand], the drain follows [drainNowMillis].
  */
 @Composable
-internal fun IntervalBand(run: IntervalRun, nowMillis: Long, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit) {
+internal fun IntervalBand(run: IntervalRun, nowMillis: Long, drainNowMillis: () -> Long, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit) {
     val position = run.position(nowMillis)
     val accent = TimerColors.of(position.phase.kind)
     // Along the bottom, one piece per cycle and per rest between cycles, filled as they pass.
@@ -248,7 +254,7 @@ internal fun IntervalBand(run: IntervalRun, nowMillis: Long, onPause: () -> Unit
             }
     }
     // The fill drains over the whole cycle, in the colour of the phase it's in.
-    TimerBand(accent, run.stretch(nowMillis).fractionLeft, segments, Modifier.testTag("timer_band")) {
+    TimerBand(accent, { run.stretch(drainNowMillis()).fractionLeft }, segments, Modifier.testTag("timer_band")) {
         BandNumber(
             position.leftMillis,
             if (run.paused) {

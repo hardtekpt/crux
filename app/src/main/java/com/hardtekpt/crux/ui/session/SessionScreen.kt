@@ -176,6 +176,16 @@ class SessionViewModel @Inject constructor(
 
     fun now(): Long = clock.millis()
 
+    /**
+     * What the screen shows of the time at [nowMillis], in whole seconds: the session's clock, the
+     * rest and the timer. The screen moves its clock only when this changes, not on every tick.
+     */
+    fun shownTime(nowMillis: Long): List<Any?> = listOf(
+        session.value?.durationMillis(nowMillis)?.div(1000),
+        _rest.value?.let { secondsLeft(it.endsAtMillis - nowMillis) },
+        _timer.value?.run?.position(nowMillis)?.let { it.index to secondsLeft(it.leftMillis) },
+    )
+
     /** The item shown: the picked one, else the first with sets left, else the last. */
     fun shownItem(session: Session): SessionItem? = session.items.firstOrNull { it.id == _currentItem.value }
         ?: session.items.firstOrNull { !it.finished }
@@ -373,14 +383,21 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
     viewModel.currentItem.collectAsStateWithLifecycle()
+    // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
+    // once a second; `drainNow` moves every tick but is read only where the bands draw their drain.
     var now by remember { mutableLongStateOf(viewModel.now()) }
+    var drainNow by remember { mutableLongStateOf(now) }
     LaunchedEffect(Unit) {
         while (true) {
-            now = viewModel.now()
+            val tick = viewModel.now()
             viewModel.tickTimer()
+            if (viewModel.shownTime(tick) != viewModel.shownTime(now)) now = tick
+            drainNow = tick
             delay(100)
         }
     }
+    // A rest or timer that starts, pauses or resumes counts from this moment.
+    LaunchedEffect(rest, timer) { now = viewModel.now() }
     var finishing by rememberSaveable { mutableStateOf(false) }
     var picking by rememberSaveable { mutableStateOf(false) }
     var settingUpTimer by rememberSaveable { mutableStateOf(false) }
@@ -480,6 +497,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
             runningTimer != null -> IntervalBand(
                 run = runningTimer.run,
                 nowMillis = now,
+                drainNowMillis = { drainNow },
                 onPause = viewModel::pauseTimer,
                 onResume = viewModel::resumeTimer,
                 onStop = viewModel::stopTimer,
@@ -488,6 +506,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
             runningRest != null -> RestBand(
                 rest = runningRest,
                 nowMillis = now,
+                drainNowMillis = { drainNow },
                 next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
                 segments = emptyList(),
                 onAdd = { viewModel.addRest(30) },
