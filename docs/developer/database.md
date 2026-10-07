@@ -6,7 +6,7 @@ because people update the app over months of climbing history.
 ## Checklist for a schema change
 
 1. **Change the entities** and bump `CruxDatabase.VERSION`
-   ([CruxDatabase.kt](../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt)).
+   ([CruxDatabase.kt](../../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt)).
 2. **Add an `AutoMigration(from = N, to = N + 1)`** to the `@Database` list.
    - Use a spec class when Room can't infer the change: renamed or deleted columns and tables
      need `@RenameColumn`, `@DeleteColumn` and so on.

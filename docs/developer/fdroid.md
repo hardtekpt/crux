@@ -18,7 +18,7 @@ F-Droid and GitHub installs without uninstalling or losing data.
 
 ## Before submitting
 
-1. The repo must be public.
+1. The repo is public (done).
 2. Make a release that includes the changes above. v0.1.0 doesn't have them. Use that release's
    `versionName`, `versionCode` and tag below.
 3. Build the recipe locally with fdroidserver (Docker), from a checkout of
@@ -73,4 +73,4 @@ CurrentVersionCode: XYYZZ
 ## Anti-features
 
 None are expected. Map tiles come from OpenStreetMap, a free network service, and address search
-uses the phone's own geocoder. If reviewers ask, [PRIVACY.md](../PRIVACY.md) describes both.
+uses the phone's own geocoder. If reviewers ask, [PRIVACY.md](../../PRIVACY.md) describes both.

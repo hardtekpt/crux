@@ -14,15 +14,15 @@ time.
 
 ## Working on the code
 
-Setup and commands are in the [README](README.md#building), and the big picture is in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Setup and commands are in [Development setup](docs/developer/setup.md), and the big picture is in
+[docs/developer/architecture.md](docs/developer/architecture.md).
 
 1. Branch from `dev`, and send your pull request into `dev`. `main` only moves on releases.
 2. Before pushing, run `./gradlew spotlessCheck verifyRoborazziDebug lintDebug` (or `.\crux test` on
    Windows). That's what CI runs. `./gradlew spotlessApply` fixes formatting.
    If you changed how a screen looks on purpose, re-record the screenshots with
    `./gradlew recordRoborazziDebug` and include the updated images from `app/src/test/screenshots/`.
-3. If you change the database schema, follow [docs/DATABASE.md](docs/DATABASE.md). The climber's
+3. If you change the database schema, follow [docs/developer/database.md](docs/developer/database.md). The climber's
    data must always migrate; it's never wiped.
 4. Add or update tests for behaviour you change. ViewModels and repositories have JVM tests next
    to them under `app/src/test`.

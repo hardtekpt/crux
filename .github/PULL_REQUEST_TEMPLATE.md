@@ -7,5 +7,5 @@
 - [ ] Targets `dev`
 - [ ] `./gradlew spotlessCheck verifyRoborazziDebug lintDebug` passes
 - [ ] Tests added or updated for changed behaviour
-- [ ] Schema changes follow [docs/DATABASE.md](../docs/DATABASE.md) (or there are none)
+- [ ] Schema changes follow [docs/developer/database.md](../docs/developer/database.md) (or there are none)
 - [ ] Screenshots for visible UI changes

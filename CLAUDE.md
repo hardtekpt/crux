@@ -19,6 +19,18 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
 - Device tests run in CI on PRs into `main`, before every release, and on demand: push any commit to
   a `ci/` branch (`git push origin HEAD:ci/device-tests`, delete it afterwards).
 
+## Documentation
+- Keep the docs in step with the code, in the same commit as the change:
+  - **User guide** in `docs/user/` for anything a climber can see or do (new screens, options,
+    changed behaviour).
+  - **Developer guide** in `docs/developer/` for architecture, data model (bump the schema
+    number in `data-model.md`), backup format, tests, CI or release changes.
+  - **CHANGELOG.md** under *Unreleased*, written for climbers.
+  - The README's feature list and *Unreleased* summary when a notable feature lands.
+- Screenshots in the README and docs come from the screenshot tests. Re-record them
+  (`.\crux.cmd screenshots`) rather than adding hand-made images. A new main screen gets a test
+  in `ScreenshotTest`.
+
 ## Versioning
 - The app version lives in [version.properties](version.properties) (`VERSION_NAME=major.minor.patch`).
   `versionCode` is derived from it in [app/build.gradle.kts](app/build.gradle.kts)
@@ -32,8 +44,9 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
 1. On `dev`: make sure the work is committed and `.\crux.cmd test` passes.
 2. Bump `VERSION_NAME` in `version.properties`, add the release notes as
    `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (what changed for the climber,
-   500 characters at most; the release workflow fails without it), and commit on `dev`:
-   `Bump version to X.Y.Z`.
+   500 characters at most; the release workflow fails without it), move CHANGELOG.md's
+   *Unreleased* section under the new version and date (and update its compare links), and
+   commit on `dev`: `Bump version to X.Y.Z`.
 3. Push `dev`, then merge into `main` and push:
    `git switch main; git pull; git merge --no-ff dev -m "Release vX.Y.Z"; git tag -a vX.Y.Z -m "Crux vX.Y.Z"; git push --atomic origin main vX.Y.Z; git switch dev`
 4. The **Release** workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) runs the
