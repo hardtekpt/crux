@@ -1,0 +1,1 @@
+First release: training plans and exercise library, climbing journal with places, walls and problems, progress charts, personal records, body measurements, notes, an editable home dashboard, backups and demo mode.

@@ -2,6 +2,11 @@ package com.hardtekpt.crux.data
 
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Exercise
+import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
+import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
@@ -9,19 +14,14 @@ import com.hardtekpt.crux.data.model.Problem
 import com.hardtekpt.crux.data.model.ProblemStats
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Project
-import com.hardtekpt.crux.data.model.Exercise
-import com.hardtekpt.crux.data.model.Measurement
-import com.hardtekpt.crux.data.model.MeasurementType
-import com.hardtekpt.crux.data.model.NewClimb
-import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.WorkoutTemplate
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.LocalDate
-import java.time.ZoneOffset
 
 /** Monday 5 October 2026, noon UTC. */
 val FIXED_CLOCK: Clock = Clock.fixed(
@@ -35,8 +35,7 @@ class FakeClimbRepository : ClimbRepository {
 
     override fun observeClimbs(): Flow<List<Climb>> = climbs.map { list -> list.sortedByDescending { it.date } }
     override fun observeRecentClimbs(limit: Int): Flow<List<Climb>> = observeClimbs().map { it.take(limit) }
-    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> =
-        climbs.map { list -> list.filter { !it.date.isBefore(from) } }
+    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> = climbs.map { list -> list.filter { !it.date.isBefore(from) } }
     override fun observeClimbCount(): Flow<Int> = climbs.map { it.size }
 
     override fun observePersonalBests(): Flow<List<PersonalBest>> = climbs.map { list ->
@@ -76,15 +75,13 @@ class FakeClimbRepository : ClimbRepository {
         climbs.value = climbs.value.filterNot { it.id == id }
     }
 
-    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> =
-        observeClimbs().map { list -> list.filter { it.problemId == problemId } }
+    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> = observeClimbs().map { list -> list.filter { it.problemId == problemId } }
 
-    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> =
-        observeClimbs().map { list -> list.filter { it.placeId == placeId } }
+    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> = observeClimbs().map { list -> list.filter { it.placeId == placeId } }
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour,
+        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId, sessionId = sessionId,
     )
 }
 
@@ -137,7 +134,22 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
 
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
-        val place = Place(id, input.name, input.type, input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale)
+        val old = places.value.find { it.id == id }?.sections.orEmpty()
+        val sections = input.sections.map { s ->
+            val sectionId = s.id.takeIf { sid -> old.any { it.id == sid } } ?: nextId++
+            com.hardtekpt.crux.data.model.Section(sectionId, id, s.type, s.name.ifBlank { s.type.label }, s.boulderScale, s.routeScale, s.localScale)
+        }
+        val kinds = sections.map { it.type }.distinct()
+        val place = Place(
+            id,
+            input.name,
+            kinds.first(),
+            input.location,
+            input.defaultAngle,
+            input.notes,
+            types = kinds,
+            sections = sections,
+        )
         places.value = places.value.filterNot { it.id == id } + place
         return id
     }
@@ -148,9 +160,10 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.filterNot { it.placeId == id }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long?): Long {
         val id = areaId.takeIf { it != 0L } ?: nextId++
-        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath)
+        val section = sectionId ?: places.value.find { it.id == placeId }?.sections?.firstOrNull()?.id
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath, sectionId = section)
         return id
     }
 
@@ -242,4 +255,26 @@ class FakeImageFiles : com.hardtekpt.crux.data.images.ImageFiles {
     override fun newCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
     override suspend fun importVideo(uri: android.net.Uri): String = "video_${next++}.mp4"
     override fun newVideoCaptureUri(): android.net.Uri = throw UnsupportedOperationException()
+}
+
+/** No session running unless a test sets one; the rest isn't needed by the view model tests. */
+class FakeSessionRepository(var runningSession: RunningSession? = null) : SessionRepository {
+    override fun observeRunning(): Flow<Session?> = MutableStateFlow(null)
+    override suspend fun running(): RunningSession? = runningSession
+    val session = MutableStateFlow<Session?>(null)
+
+    /** Sets logged, as (item id, set). */
+    val loggedSets = mutableListOf<Pair<Long, SessionSet>>()
+    override fun observeSession(id: Long): Flow<Session?> = session
+    override fun observeFinished(): Flow<List<Session>> = MutableStateFlow(emptyList())
+    override suspend fun start(templateId: Long?, placeId: Long?, sectionId: Long?): Long = 1
+    override suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?) {
+        loggedSets += itemId to SessionSet(setIndex, reps, seconds, loadKg, skipped = false)
+    }
+    override suspend fun skipSet(itemId: Long, setIndex: Int) = Unit
+    override suspend fun undoSet(itemId: Long, setIndex: Int) = Unit
+    override suspend fun addExercise(sessionId: Long, exercise: com.hardtekpt.crux.data.model.Exercise): Long = 1
+    override suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?) = Unit
+    override suspend fun finish(sessionId: Long, effort: Int?, notes: String?) = Unit
+    override suspend fun discard(sessionId: Long) = Unit
 }

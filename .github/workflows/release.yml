@@ -1,4 +1,5 @@
-# Every push to main builds a signed release APK and publishes it as a GitHub release.
+# Every push to main runs the device tests, builds a signed release APK, checks its signing key
+# and publishes it as a GitHub release (APK, its SHA-256 and the R8 mapping).
 name: Release
 
 on:
@@ -13,8 +14,17 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  # SHA-256 of the release signing certificate. Phones refuse an update signed with any other
+  # key, so a release that doesn't match is never published. (Public: any copy of the APK shows it.)
+  CRUX_CERT_SHA256: a28e87817c000b9f3c8dd2429803605e2d78f76eaf9c7c6356676bfe2b3ccc36
+
 jobs:
+  device-tests:
+    uses: ./.github/workflows/device-tests.yml
+
   release:
+    needs: device-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -45,6 +55,18 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
+      # The changelog for this versionCode is the release notes here and on F-Droid.
+      - name: Release notes
+        id: notes
+        run: |
+          IFS=. read -r major minor patch <<< "${{ steps.version.outputs.name }}"
+          file="fastlane/metadata/android/en-US/changelogs/$((major * 10000 + minor * 100 + patch)).txt"
+          if [ ! -f "$file" ]; then
+            echo "::error::$file is missing. Add what changed in this release (500 characters at most); see CLAUDE.md."
+            exit 1
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
       - name: Decode signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.CRUX_KEYSTORE_BASE64 }}
@@ -56,8 +78,8 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "CRUX_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
-      - name: Test
-        run: ./gradlew testDebugUnitTest
+      - name: Format, test, lint
+        run: ./gradlew spotlessCheck verifyRoborazziDebug lintDebug
 
       - name: Build release APK
         env:
@@ -67,11 +89,25 @@ jobs:
         run: |
           ./gradlew assembleRelease
           cp app/build/outputs/apk/release/app-release.apk "crux-${{ steps.version.outputs.tag }}.apk"
+          # R8 mapping, to read stack traces from this release.
+          cp app/build/outputs/mapping/release/mapping.txt "crux-${{ steps.version.outputs.tag }}-mapping.txt"
+
+      - name: Verify signature
+        run: |
+          apk="crux-${{ steps.version.outputs.tag }}.apk"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          if [ "$actual" != "$CRUX_CERT_SHA256" ]; then
+            echo "::error::$apk is signed with $actual, expected $CRUX_CERT_SHA256."
+            exit 1
+          fi
+          sha256sum "$apk" > "$apk.sha256"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=(--title "Crux ${{ steps.version.outputs.tag }}" --target "$GITHUB_SHA" --generate-notes)
+          flags=(--title "Crux ${{ steps.version.outputs.tag }}" --target "$GITHUB_SHA" --notes-file "${{ steps.notes.outputs.file }}" --generate-notes)
           if [ "${{ steps.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); fi
-          gh release create "${{ steps.version.outputs.tag }}" "crux-${{ steps.version.outputs.tag }}.apk" "${flags[@]}"
+          tag="${{ steps.version.outputs.tag }}"
+          gh release create "$tag" "crux-$tag.apk" "crux-$tag.apk.sha256" "crux-$tag-mapping.txt" "${flags[@]}"

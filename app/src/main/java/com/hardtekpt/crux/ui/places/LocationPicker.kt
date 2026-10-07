@@ -1,16 +1,5 @@
 package com.hardtekpt.crux.ui.places
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -23,7 +12,10 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,19 +27,25 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -58,10 +56,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -77,6 +77,7 @@ import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -85,7 +86,6 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import kotlin.coroutines.resume
 
 /** Opens the point in the phone's maps app (Google Maps or whichever handles geo: links). */
 fun openInMaps(context: Context, location: MapLocation, label: String) {
@@ -99,12 +99,7 @@ fun openInMaps(context: Context, location: MapLocation, label: String) {
  * or jump to where you are. The map is OpenStreetMap; search uses the phone's own geocoder.
  */
 @Composable
-fun LocationPickerDialog(
-    initial: MapLocation?,
-    placeName: String,
-    onPick: (MapLocation) -> Unit,
-    onDismiss: () -> Unit,
-) {
+fun LocationPickerDialog(initial: MapLocation?, placeName: String, onPick: (MapLocation) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -161,7 +156,9 @@ fun LocationPickerDialog(
                 busy = false
                 when {
                     found == null -> message = "Search needs the internet and the phone's location service. You can still move the map by hand."
+
                     found.isEmpty() -> message = "Nothing found for \"$text\"."
+
                     found.size == 1 -> {
                         moveTo(found[0].latitude, found[0].longitude)
                         results = emptyList()
@@ -254,7 +251,12 @@ fun LocationPickerDialog(
                     HorizontalDivider(color = colors.outlineVariant)
                     Column(Modifier.padding(vertical = space.s1)) {
                         if (busy) {
-                            Text("Searching…", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(space.s4))
+                            Text(
+                                "Searching…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.onSurfaceVariant,
+                                modifier = Modifier.padding(space.s4),
+                            )
                         }
                         message?.let {
                             Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(space.s4))
@@ -342,10 +344,14 @@ private suspend fun geocode(context: Context, text: String): List<Address>? {
         runCatching {
             if (Build.VERSION.SDK_INT >= 33) {
                 suspendCancellableCoroutine<List<Address>?> { cont ->
-                    geocoder.getFromLocationName(text, 5, object : Geocoder.GeocodeListener {
-                        override fun onGeocode(addresses: MutableList<Address>) = cont.resume(addresses.toList())
-                        override fun onError(errorMessage: String?) = cont.resume(null)
-                    })
+                    geocoder.getFromLocationName(
+                        text,
+                        5,
+                        object : Geocoder.GeocodeListener {
+                            override fun onGeocode(addresses: MutableList<Address>) = cont.resume(addresses.toList())
+                            override fun onError(errorMessage: String?) = cont.resume(null)
+                        },
+                    )
                 }
             } else {
                 geocoder.getFromLocationName(text, 5).orEmpty()
@@ -362,10 +368,15 @@ private suspend fun reverseGeocode(context: Context, lat: Double, lng: Double): 
         runCatching {
             if (Build.VERSION.SDK_INT >= 33) {
                 suspendCancellableCoroutine { cont ->
-                    geocoder.getFromLocation(lat, lng, 1, object : Geocoder.GeocodeListener {
-                        override fun onGeocode(addresses: MutableList<Address>) = cont.resume(addresses.firstOrNull())
-                        override fun onError(errorMessage: String?) = cont.resume(null)
-                    })
+                    geocoder.getFromLocation(
+                        lat,
+                        lng,
+                        1,
+                        object : Geocoder.GeocodeListener {
+                            override fun onGeocode(addresses: MutableList<Address>) = cont.resume(addresses.firstOrNull())
+                            override fun onError(errorMessage: String?) = cont.resume(null)
+                        },
+                    )
                 }
             } else {
                 geocoder.getFromLocation(lat, lng, 1)?.firstOrNull()

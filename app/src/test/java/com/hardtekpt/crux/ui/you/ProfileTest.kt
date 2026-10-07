@@ -3,9 +3,9 @@ package com.hardtekpt.crux.ui.you
 import com.hardtekpt.crux.data.ExerciseRecord
 import com.hardtekpt.crux.data.best
 import com.hardtekpt.crux.data.model.MetricType
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalDate
 
 /** The numbers behind the profile: weekly streaks and which result is a PR. */
 class ProfileTest {

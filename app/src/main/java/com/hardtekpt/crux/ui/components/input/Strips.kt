@@ -127,7 +127,17 @@ fun GradeStrip(
                             colour?.let { TapeSwatch(it, 14.dp) }
                             Text(
                                 grade,
-                                style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = if (grade.length > 5) 11.sp else 15.sp),
+                                style = TextStyle(
+                                    fontFamily = JetBrainsMono,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = if (grade.length >
+                                        5
+                                    ) {
+                                        11.sp
+                                    } else {
+                                        15.sp
+                                    },
+                                ),
                                 color = colors.onSurfaceVariant,
                                 maxLines = 1,
                             )
@@ -144,14 +154,7 @@ fun GradeStrip(
  * button reaches older days; an older pick shows next to it.
  */
 @Composable
-fun DayStrip(
-    selected: LocalDate,
-    today: LocalDate,
-    onSelect: (LocalDate) -> Unit,
-    onOpenCalendar: () -> Unit,
-    modifier: Modifier = Modifier,
-    days: Int = 14,
-) {
+fun DayStrip(selected: LocalDate, today: LocalDate, onSelect: (LocalDate) -> Unit, onOpenCalendar: () -> Unit, modifier: Modifier = Modifier, days: Int = 14) {
     val recent = remember(today, days) { (0 until days).map { today.minusDays(it.toLong()) } }
     val older = selected.takeIf { it !in recent && !it.isAfter(today) }
     // Reversed so today sits at the right edge and the strip opens there.

@@ -8,12 +8,61 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Schema 4 → 5 adds rest between repeats; 5 → 6 turns typed place names into saved places. */
+/**
+ * Every exported schema migrates to the current one, and data typed at the oldest schema
+ * survives the whole way. Step tests below cover the migrations that move data.
+ */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
 
     @get:Rule
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), CruxDatabase::class.java)
+
+    @Test
+    fun everyOldSchemaMigratesToTheLatest() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        for (version in FIRST_MIGRATABLE_VERSION until CruxDatabase.VERSION) {
+            val name = "migration-from-$version.db"
+            context.deleteDatabase(name)
+            helper.createDatabase(name, version).close()
+            helper.runMigrationsAndValidate(name, CruxDatabase.VERSION, true).close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun dataFromTheOldestSchemaSurvivesToTheLatest() {
+        helper.createDatabase(DB, FIRST_MIGRATABLE_VERSION).apply {
+            execSQL("INSERT INTO exercises (id, name, category, metric, notes, createdAtMillis) VALUES (1, 'Hang', 'FINGERS', 'WEIGHTED_TIME', NULL, 0)")
+            execSQL("INSERT INTO body_measurements (id, type, value, dateEpochDay, createdAtMillis) VALUES (1, 'WEIGHT', 68.5, 20000, 0)")
+            execSQL(
+                "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) " +
+                    "VALUES (1, 'ROUTE', 'FRENCH', 14, 'ONSIGHT', 1, 'CRAG', 20002, 0, 'Classic', 'Arco', 'Polished')",
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB, CruxDatabase.VERSION, true)
+        db.query(
+            "SELECT c.gradeIndex, c.name, c.notes, p.name, s.type FROM climbs c " +
+                "JOIN places p ON p.id = c.placeId JOIN sections s ON s.id = c.sectionId WHERE c.id = 1",
+        ).use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals(14, cursor.getInt(0))
+            assertEquals("Classic", cursor.getString(1))
+            assertEquals("Polished", cursor.getString(2))
+            assertEquals("Arco", cursor.getString(3))
+            assertEquals("CRAG", cursor.getString(4))
+        }
+        db.query("SELECT value FROM body_measurements WHERE id = 1").use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals(68.5, cursor.getDouble(0), 0.0)
+        }
+        db.query("SELECT name FROM exercises WHERE id = 1").use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals("Hang", cursor.getString(0))
+        }
+    }
 
     @Test
     fun migrate4To5KeepsPlanExercises() {
@@ -40,7 +89,8 @@ class MigrationTest {
     @Test
     fun migrate5To6TurnsTypedPlacesIntoSavedPlaces() {
         helper.createDatabase(DB, 5).apply {
-            val insert = "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) VALUES "
+            val insert = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) VALUES "
             execSQL(insert + "(1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0, NULL, 'Block Lab', NULL)")
             execSQL(insert + "(2, 'BOULDER', 'FONT', 11, 'REDPOINT', 3, 'GYM', 20001, 0, NULL, ' block lab ', NULL)")
             execSQL(insert + "(3, 'ROUTE', 'FRENCH', 14, 'ONSIGHT', 1, 'CRAG', 20002, 0, NULL, 'Arco', NULL)")
@@ -81,7 +131,88 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate15To16GivesEachKindASectionAndLinksAreasAndClimbs() {
+        helper.createDatabase(DB, 15).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Block Lab', 'GYM', 0, 0, 'BOARD')")
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (2, 'Arco', 'CRAG', 0, 0, '')")
+            execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (1, 1, 'Cave', 0, NULL)")
+            execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (2, 1, 'Kilter', 1, 'BOARD')")
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, placeId, areaId) VALUES "
+            execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'BOARD', 20000, 0, 1, NULL)")
+            execSQL(climb + "(2, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0, 1, 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 16, true)
+        val sections = db.query("SELECT id, placeId, type, name FROM sections ORDER BY placeId, position").use { c ->
+            buildList { while (c.moveToNext()) add(listOf(c.getLong(0), c.getLong(1), c.getString(2), c.getString(3))) }
+        }
+        assertEquals(listOf(listOf(1L, "GYM", "Gym"), listOf(1L, "BOARD", "Board"), listOf(2L, "CRAG", "Crag")), sections.map { it.drop(1) })
+        val gym = sections[0][0]
+        val board = sections[1][0]
+        db.query("SELECT sectionId FROM areas ORDER BY id").use { c ->
+            c.moveToNext()
+            assertEquals(gym, c.getLong(0))
+            c.moveToNext()
+            assertEquals(board, c.getLong(0))
+        }
+        db.query("SELECT sectionId FROM climbs ORDER BY id").use { c ->
+            c.moveToNext()
+            assertEquals(board, c.getLong(0))
+            c.moveToNext()
+            assertEquals(gym, c.getLong(0))
+        }
+    }
+
+    @Test
+    fun migrate18To19KeepsAnExercisesIntervalTimerAsItsDefaults() {
+        helper.createDatabase(DB, 18).apply {
+            execSQL(
+                "INSERT INTO exercises (id, name, category, metric, createdAtMillis, intervalPrepSeconds, intervalWorkSeconds, " +
+                    "intervalRestSeconds, intervalRepeats, intervalCycles, intervalCycleRestSeconds) " +
+                    "VALUES (1, 'Repeaters', 'FINGERS', 'INTERVALS', 0, 5, 7, 3, 6, 3, 180)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 19, true)
+        db.query(
+            "SELECT prepSeconds, defaultSeconds, defaultRepRestSeconds, defaultReps, defaultSets, defaultRestSeconds, defaultLoadKg FROM exercises",
+        ).use { c ->
+            c.moveToFirst()
+            assertEquals(listOf(5, 7, 3, 6, 3, 180), (0..5).map { c.getInt(it) })
+            assertEquals(true, c.isNull(6))
+        }
+    }
+
+    @Test
+    fun migrate19To20GivesEachSectionItsPlacesGrades() {
+        helper.createDatabase(DB, 19).apply {
+            execSQL(
+                "INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes, boulderScale, routeScale, localScale) " +
+                    "VALUES (1, 'Block Lab', 'GYM', 0, 0, 'BOARD', 'V_SCALE', 'YDS', NULL)",
+            )
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Main gym', 0)")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (2, 1, 'BOARD', 'Kilter', 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 20, true)
+        db.query("SELECT boulderScale, routeScale FROM sections ORDER BY id").use { c ->
+            while (c.moveToNext()) {
+                assertEquals("V_SCALE", c.getString(0))
+                assertEquals("YDS", c.getString(1))
+            }
+        }
+        db.query("SELECT boulderScale FROM places").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
+
+        /** Auto-migrations start at schema 4. */
+        const val FIRST_MIGRATABLE_VERSION = 4
     }
 }

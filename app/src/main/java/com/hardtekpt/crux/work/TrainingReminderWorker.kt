@@ -12,9 +12,6 @@ import dagger.assisted.AssistedInject
  * the workouts feature; for now it only proves the Hilt + WorkManager wiring.
  */
 @HiltWorker
-class TrainingReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
-) : CoroutineWorker(context, params) {
+class TrainingReminderWorker @AssistedInject constructor(@Assisted context: Context, @Assisted params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = Result.success()
 }

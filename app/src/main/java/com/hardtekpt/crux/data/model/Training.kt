@@ -42,7 +42,43 @@ data class Exercise(
     val category: ExerciseCategory,
     val metric: MetricType,
     val notes: String?,
-)
+    /** What plans and sessions start it at; null uses the metric's defaults. */
+    val defaults: ExerciseTarget? = null,
+    /** Interval exercises: the timer's preparation; null is 10 s. */
+    val prepSeconds: Int? = null,
+) {
+    /** Interval exercises: the timer its defaults make. */
+    val intervals: IntervalSettings?
+        get() = if (!metric.usesIntervals) null else (defaults ?: ExerciseTarget.defaultFor(metric)).toIntervals(prepSeconds ?: 10)
+}
+
+/**
+ * An interval exercise's own timer: preparation, work and rest per repeat, repeats per cycle,
+ * cycles and the rest between them. Plans start from it and the session timer runs it.
+ */
+data class IntervalSettings(
+    val prepSeconds: Int = 10,
+    val workSeconds: Int = 20,
+    val restSeconds: Int = 10,
+    val repeats: Int = 8,
+    val cycles: Int = 1,
+    val cycleRestSeconds: Int = 60,
+) {
+    /** The plan target these settings make, in the target's interval reading. */
+    fun toTarget(loadKg: Double = 0.0) = ExerciseTarget(
+        sets = cycles,
+        reps = repeats,
+        seconds = workSeconds,
+        loadKg = loadKg,
+        restSeconds = cycleRestSeconds,
+        repRestSeconds = restSeconds,
+    )
+
+    companion object {
+        /** The default for an interval metric, from its default target, with 10 s to prepare. */
+        fun defaultFor(metric: MetricType): IntervalSettings = ExerciseTarget.defaultFor(metric).toIntervals()
+    }
+}
 
 /**
  * What a plan asks for one exercise. Fields the metric does not use are ignored.
@@ -60,8 +96,8 @@ data class ExerciseTarget(
     val restSeconds: Int = 120,
     val repRestSeconds: Int = 0,
 ) {
-    /** `5 × 5 · +10 kg`, `6 × 10 s · +5 kg`, `3 × 12`, `3 × 6 × 7 s on / 3 s off · +5 kg`. */
-    fun prescription(metric: MetricType): String = buildString {
+    /** `5 × 5 · +10 kg` (or `+22 lb`), `6 × 10 s · +5 kg`, `3 × 12`, `3 × 6 × 7 s on / 3 s off · +5 kg`. */
+    fun prescription(metric: MetricType, imperial: Boolean = false): String = buildString {
         append("$sets × ")
         when {
             metric.usesIntervals -> append("$reps × ${formatDuration(seconds)} on / ${formatDuration(repRestSeconds)} off")
@@ -70,11 +106,12 @@ data class ExerciseTarget(
         }
         if (metric.usesLoad && loadKg != 0.0) {
             append(" · ")
-            append(if (loadKg > 0) "+" else "−")
-            append(formatKg(kotlin.math.abs(loadKg)))
-            append(" kg")
+            append(signedLoad(loadKg, imperial))
         }
     }
+
+    /** The interval timer this target makes, in the interval reading of its fields. */
+    fun toIntervals(prepSeconds: Int = 10) = IntervalSettings(prepSeconds, seconds, repRestSeconds, reps, sets, restSeconds)
 
     fun restLabel(): String? = if (restSeconds <= 0) null else formatDuration(restSeconds)
 
@@ -91,13 +128,21 @@ data class ExerciseTarget(
     companion object {
         private const val SECONDS_PER_REP = 4
 
+        /** What a plan or session starts an exercise at: its own interval timer, if it has one. */
+        fun defaultFor(exercise: Exercise): ExerciseTarget = exercise.defaults ?: defaultFor(exercise.metric)
+
         fun defaultFor(metric: MetricType) = when (metric) {
             MetricType.REPS -> ExerciseTarget(sets = 3, reps = 10, restSeconds = 90)
+
             MetricType.WEIGHTED_REPS -> ExerciseTarget(sets = 5, reps = 5, loadKg = 10.0, restSeconds = 180)
+
             MetricType.TIME -> ExerciseTarget(sets = 3, seconds = 30, restSeconds = 60)
+
             MetricType.WEIGHTED_TIME -> ExerciseTarget(sets = 6, seconds = 10, loadKg = 5.0, restSeconds = 180)
+
             // Classic Tabata: 8 × 20 s on / 10 s off.
             MetricType.INTERVALS -> ExerciseTarget(sets = 1, reps = 8, seconds = 20, repRestSeconds = 10, restSeconds = 120)
+
             // Hangboard repeaters: 6 × 7 s on / 3 s off, three cycles.
             MetricType.WEIGHTED_INTERVALS ->
                 ExerciseTarget(sets = 3, reps = 6, seconds = 7, repRestSeconds = 3, restSeconds = 180)
@@ -112,30 +157,44 @@ fun formatDuration(seconds: Int): String = when {
     else -> "${seconds / 60} min ${seconds % 60} s"
 }
 
+private const val LB_PER_KG = 2.2046226218
+
+/** Added load in the display unit: kilograms, or pounds to the nearest half pound. */
+fun loadValue(kg: Double, imperial: Boolean): Double = if (imperial) (kg * LB_PER_KG * 2).roundToInt() / 2.0 else kg
+
+/** Pounds back to the kilograms everything is stored in. */
+fun poundsToKg(lb: Double): Double = lb / LB_PER_KG
+
+fun loadUnit(imperial: Boolean): String = if (imperial) "lb" else "kg"
+
+/** `10`, `7.5` or `22` (lb): the number only, without sign or unit. */
+fun formatLoad(kg: Double, imperial: Boolean): String = formatKg(kotlin.math.abs(loadValue(kg, imperial)))
+
+/** `+10 kg`, `−5 kg`, `+22 lb`, `0 kg`. Minus is assisted. */
+fun signedLoad(kg: Double, imperial: Boolean): String {
+    val sign = if (kg > 0) {
+        "+"
+    } else if (kg < 0) {
+        "−"
+    } else {
+        ""
+    }
+    return sign + formatLoad(kg, imperial) + " " + loadUnit(imperial)
+}
+
 /** `10`, `7.5`, `1.25`: up to two decimals, so the small plates show, and no trailing zeros. */
 fun formatKg(kg: Double): String =
     if (kg == kg.roundToInt().toDouble()) kg.roundToInt().toString() else String.format(Locale.UK, "%.2f", kg).trimEnd('0').trimEnd('.')
 
 /** One exercise placed in a plan, with its targets. */
-data class PlanItem(
-    val exercise: Exercise,
-    val target: ExerciseTarget,
-) {
-    val prescription: String get() = target.prescription(exercise.metric)
+data class PlanItem(val exercise: Exercise, val target: ExerciseTarget) {
+    fun prescription(imperial: Boolean = false): String = target.prescription(exercise.metric, imperial)
 }
 
-data class PlanBlock(
-    val name: String,
-    val items: List<PlanItem>,
-)
+data class PlanBlock(val name: String, val items: List<PlanItem>)
 
 /** A session plan: named blocks of exercises from the library. */
-data class WorkoutTemplate(
-    val id: Long,
-    val name: String,
-    val description: String,
-    val blocks: List<PlanBlock>,
-) {
+data class WorkoutTemplate(val id: Long, val name: String, val description: String, val blocks: List<PlanBlock>) {
     val exerciseCount: Int get() = blocks.sumOf { it.items.size }
 
     /** Work and rest, plus a short changeover between exercises, rounded up to 5 min. */

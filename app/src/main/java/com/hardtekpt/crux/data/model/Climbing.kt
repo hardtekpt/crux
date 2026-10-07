@@ -2,7 +2,8 @@ package com.hardtekpt.crux.data.model
 
 enum class Discipline(val label: String) {
     BOULDER("Boulder"),
-    ROUTE("Route");
+    ROUTE("Route"),
+    ;
 
     /** The scales a climber can pick for this discipline in Settings; the first is the default. */
     val scales: List<GradeScale>
@@ -19,12 +20,7 @@ enum class Discipline(val label: String) {
  * A grade scale is an ordered list, so a grade is stored as its scale plus an index:
  * it sorts and compares as a number and prints exactly as the climber picked it.
  */
-enum class GradeScale(
-    val label: String,
-    val discipline: Discipline,
-    val grades: List<String>,
-    val defaultIndex: Int,
-) {
+enum class GradeScale(val label: String, val discipline: Discipline, val grades: List<String>, val defaultIndex: Int) {
     FONT(
         label = "Font",
         discipline = Discipline.BOULDER,
@@ -90,12 +86,14 @@ enum class AscentStyle(val label: String, val isSend: Boolean, val singleAttempt
     FLASH("Flash", isSend = true, singleAttempt = true),
     ONSIGHT("Onsight", isSend = true, singleAttempt = true),
     REDPOINT("Redpoint", isSend = true, singleAttempt = false),
-    ATTEMPT("Attempt", isSend = false, singleAttempt = false);
+    ATTEMPT("Attempt", isSend = false, singleAttempt = false),
+    ;
 
     companion object {
         fun forDiscipline(discipline: Discipline): List<AscentStyle> = when (discipline) {
             // Onsight is a route idea; boulders are flashed or sent.
             Discipline.BOULDER -> listOf(FLASH, REDPOINT, ATTEMPT)
+
             Discipline.ROUTE -> listOf(ONSIGHT, FLASH, REDPOINT, ATTEMPT)
         }
     }
@@ -105,17 +103,13 @@ enum class AscentStyle(val label: String, val isSend: Boolean, val singleAttempt
  * Body stats a climber tracks. Stored by name, so adding a type needs no database change.
  * [range] is what the entry form accepts.
  */
-enum class MeasurementType(
-    val label: String,
-    val unit: String,
-    val range: ClosedFloatingPointRange<Double>,
-    val description: String,
-) {
+enum class MeasurementType(val label: String, val unit: String, val range: ClosedFloatingPointRange<Double>, val description: String) {
     WEIGHT("Weight", "kg", 20.0..300.0, "Bodyweight"),
     HEIGHT("Height", "cm", 100.0..250.0, "Standing height, barefoot"),
     WINGSPAN("Wingspan", "cm", 100.0..260.0, "Fingertip to fingertip, arms straight out"),
     STANDING_REACH("Standing reach", "cm", 150.0..320.0, "Highest point you touch flat-footed, one arm up"),
     BODY_FAT("Body fat", "%", 3.0..60.0, "From a scale or calipers"),
+
     // Circumferences, measured relaxed with a soft tape. Limbs have a left and a right;
     // the plain names were stored before sides existed and stay as the left side.
     FOREARM("Left forearm", "cm", 15.0..60.0, "Widest point, arm relaxed"),

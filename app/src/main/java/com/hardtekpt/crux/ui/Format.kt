@@ -29,8 +29,7 @@ fun LocalDate.relativeLabel(today: LocalDate): String = when (ChronoUnit.DAYS.be
 /** One decimal, no trailing `.0` noise kept: 72.4, 73.0. */
 fun Double.oneDecimal(): String = String.format(Locale.UK, "%.1f", this)
 
-fun Double.wholeOrOneDecimal(): String =
-    if (this == this.roundToInt().toDouble()) roundToInt().toString() else oneDecimal()
+fun Double.wholeOrOneDecimal(): String = if (this == this.roundToInt().toDouble()) roundToInt().toString() else oneDecimal()
 
 /** Signed change with a real minus sign: +0.4, −1.2. */
 fun Double.signedOneDecimal(): String {

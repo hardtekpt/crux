@@ -41,14 +41,12 @@ private fun nudge(fullSize: Int) = (fullSize * 0.04f).toInt()
 private fun <T> enterSpec() = tween<T>(IN_MS, easing = Decelerate)
 private fun <T> exitSpec() = tween<T>(OUT_MS, easing = Accelerate)
 
-private fun NavDestination.tabIndex(): Int? =
-    TopLevelDestination.entries.firstOrNull { tab -> hierarchy.any { it.hasRoute(tab.graph::class) } }?.ordinal
+private fun NavDestination.tabIndex(): Int? = TopLevelDestination.entries.firstOrNull { tab -> hierarchy.any { it.hasRoute(tab.graph::class) } }?.ordinal
 
-private fun NavDestination.isForm(): Boolean =
-    hasRoute(LogClimbRoute::class) || hasRoute(LogWeightRoute::class) ||
-        hasRoute(PlanEditorRoute::class) || hasRoute(ExerciseEditorRoute::class) ||
-        hasRoute(PlaceEditorRoute::class) || hasRoute(ProblemEditorRoute::class) ||
-        hasRoute(NoteEditorRoute::class) || hasRoute(RecordEditorRoute::class)
+private fun NavDestination.isForm(): Boolean = hasRoute(LogClimbRoute::class) || hasRoute(LogWeightRoute::class) ||
+    hasRoute(PlanEditorRoute::class) || hasRoute(ExerciseEditorRoute::class) ||
+    hasRoute(PlaceEditorRoute::class) || hasRoute(ProblemEditorRoute::class) ||
+    hasRoute(NoteEditorRoute::class) || hasRoute(RecordEditorRoute::class)
 
 private enum class Move { TabSwitch, FormOpen, FormClose, Push }
 

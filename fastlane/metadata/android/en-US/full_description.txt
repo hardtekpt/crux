@@ -1,0 +1,34 @@
+<p>Crux is a training planner and climbing journal for boulderers and route climbers. Everything stays on your phone: no account, no ads, no tracking.</p>
+
+<p><b>Train</b></p>
+<ul>
+<li>Build your own exercise library and session plans, including Tabata and interval timing.</li>
+<li>Log personal records per exercise: heaviest load, most reps or longest hang.</li>
+</ul>
+
+<p><b>Journal</b></p>
+<ul>
+<li>One timeline of climbs, training results and notes.</li>
+<li>Log a climb in seconds: place, wall and problem, grade, style, effort, and a photo or video.</li>
+<li>Font, V, French and YDS grades, or the gym's own colour tapes. Grades are never converted.</li>
+</ul>
+
+<p><b>Places</b></p>
+<ul>
+<li>Gyms, crags and boards with their walls and problems, on an OpenStreetMap map.</li>
+<li>Projects are found for you: problems you've tried but not sent yet.</li>
+</ul>
+
+<p><b>Progress and you</b></p>
+<ul>
+<li>Hardest sends per grade scale, charts over time, and a consistency grid.</li>
+<li>Weight, body stats and circumferences, in metric or imperial.</li>
+<li>A home dashboard you arrange yourself.</li>
+</ul>
+
+<p><b>Your data</b></p>
+<ul>
+<li>Export and import backups as JSON files, photos included.</li>
+<li>Demo mode lets you explore with sample data, kept apart from your own.</li>
+<li>The network is used only for map tiles and address search, when you use them.</li>
+</ul>

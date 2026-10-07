@@ -7,8 +7,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,27 +41,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import com.hardtekpt.crux.ui.components.input.rememberTicker
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.input.rememberTicker
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Filter chip: outline hairline at rest; selected takes `primary-container` with a check. */
 @Composable
@@ -104,13 +104,7 @@ fun CruxFilterChip(
 
 /** Two to four views of the same thing; exactly one is selected. */
 @Composable
-fun <T> CruxSegmentedButtons(
-    options: List<T>,
-    selected: T,
-    label: (T) -> String,
-    onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun <T> CruxSegmentedButtons(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth().height(CruxTheme.size.controlHeight)) {
         options.forEachIndexed { index, option ->
@@ -264,7 +258,10 @@ fun CruxValueStepper(
                     val stepPx = SCRUB_STEP.toPx()
                     var travelled = 0f
                     detectHorizontalDragGestures(
-                        onDragStart = { scrubbing = true; travelled = 0f },
+                        onDragStart = {
+                            scrubbing = true
+                            travelled = 0f
+                        },
                         onDragEnd = { scrubbing = false },
                         onDragCancel = { scrubbing = false },
                     ) { change, dx ->
@@ -309,13 +306,7 @@ private val SCRUB_STEP = 16.dp
  * steps have gone by. Stops at a bound because the button disables.
  */
 @Composable
-private fun RepeatButton(
-    icon: ImageVector,
-    description: String,
-    enabled: Boolean,
-    onStep: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun RepeatButton(icon: ImageVector, description: String, enabled: Boolean, onStep: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val tick = rememberTicker()
     val step by rememberUpdatedState(onStep)

@@ -52,12 +52,7 @@ fun effortWord(value: Int): String = when (value) {
  * it starts empty and Clear empties it again.
  */
 @Composable
-fun EffortScale(
-    value: Int?,
-    onValueChange: (Int?) -> Unit,
-    modifier: Modifier = Modifier,
-    title: String = "How hard it felt",
-) {
+fun EffortScale(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier = Modifier, title: String = "How hard it felt") {
     val colors = MaterialTheme.colorScheme
     val tick = rememberTicker()
     val current by rememberUpdatedState(value)

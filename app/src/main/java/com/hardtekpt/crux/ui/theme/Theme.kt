@@ -14,10 +14,7 @@ private val LocalCruxType = staticCompositionLocalOf { CruxType() }
  * palette is the brand. Dark is the app default; callers pass the resolved mode.
  */
 @Composable
-fun CruxTheme(
-    darkTheme: Boolean = true,
-    content: @Composable () -> Unit,
-) {
+fun CruxTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalCruxColors provides if (darkTheme) CruxDarkExtendedColors else CruxLightExtendedColors,
         LocalCruxType provides CruxType(),
@@ -34,9 +31,11 @@ fun CruxTheme(
 /** Entry point for the tokens Material 3 has no slot for. */
 object CruxTheme {
     val colors: CruxColors
-        @Composable @ReadOnlyComposable get() = LocalCruxColors.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCruxColors.current
     val type: CruxType
-        @Composable @ReadOnlyComposable get() = LocalCruxType.current
+        @Composable @ReadOnlyComposable
+        get() = LocalCruxType.current
     val space = CruxSpace
     val size = CruxSize
     val shape = CruxShape

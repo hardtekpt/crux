@@ -1,13 +1,12 @@
 package com.hardtekpt.crux
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -18,28 +17,32 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import com.hardtekpt.crux.data.seed.StarterData
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import javax.inject.Inject
 
 /** End-to-end Compose tests on a device: real Activity, Hilt graph and Room (in memory). */
 @HiltAndroidTest
 class MainActivityTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
-    @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Inject lateinit var starterData: StarterData
 
@@ -139,7 +142,7 @@ class MainActivityTest {
             runCatching { composeRule.onNodeWithTag("you_forearm_right", useUnmergedTree = true).assertTextEquals("31 cm") }.isSuccess
         }
         composeRule.onNodeWithTag("you_forearm", useUnmergedTree = true).assertTextEquals("29 cm")
-        composeRule.onNodeWithTag("diff_Forearm").assertTextEquals("R +2 cm")
+        composeRule.onNodeWithTag("diff_Forearm", useUnmergedTree = true).assertTextEquals("R +2 cm")
     }
 
     @Test
@@ -159,6 +162,61 @@ class MainActivityTest {
         composeRule.onNodeWithTag("segment_Boulders").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("result_V"))
         composeRule.onNodeWithTag("value_V", useUnmergedTree = true).assertTextEquals("V5")
+    }
+
+    @Test
+    fun aSessionWithoutAPlanLogsClimbsAndLandsInTheJournal() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_StartWorkout").performClick()
+        composeRule.waitForTag("start_free")
+        composeRule.onNodeWithTag("start_free").performClick()
+        composeRule.waitForTag("screen_Session")
+
+        // A climb logged from the session belongs to it.
+        composeRule.onNodeWithTag("session_log_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Session dyno")
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Session")
+        composeRule.waitForTag("session_climb")
+
+        // An interval exercise added on the spot: a cycle logged by hand, then changed.
+        composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()
+        composeRule.waitForTag("pick_Repeaters")
+        composeRule.onNodeWithTag("pick_Repeaters").performScrollTo().performClick()
+        composeRule.waitForTag("session_log_cycle")
+        composeRule.onNodeWithTag("session_log_cycle").performScrollTo().performClick()
+        composeRule.onNodeWithTag("session_rest_skip").performClick()
+        composeRule.onNodeWithTag("session_set_0").performScrollTo().performClick()
+        composeRule.waitForTag("set_edit")
+        composeRule.onNodeWithTag("edit_reps_minus").performClick()
+        composeRule.onNodeWithTag("set_edit_save").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("set_edit").fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithTag("session_set_0").assertTextContains("5 × 7 s", substring = true)
+
+        // A timer of its own opens the band at the top; paused, it can be stopped.
+        composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
+        composeRule.waitForTag("timer_start")
+        composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
+        composeRule.waitForTag("timer_band")
+        composeRule.onNodeWithTag("timer_pause").performClick()
+        composeRule.waitForTag("timer_stop")
+        composeRule.onNodeWithTag("timer_stop").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("timer_band").fetchSemanticsNodes().isEmpty() }
+
+        composeRule.onNodeWithTag("session_finish").performClick()
+        composeRule.waitForTag("session_save")
+        composeRule.onNodeWithTag("session_save").performScrollTo().performClick()
+        composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("screen_Session").fetchSemanticsNodes().isEmpty() }
+
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_session")
+
+        // Tapping the card (not one of its climbs) opens it.
+        composeRule.onNodeWithTag("journal_session").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.waitForTag("screen_SessionSummary")
+        composeRule.waitForTag("session_summary_climb")
     }
 
     @Test
@@ -223,7 +281,10 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_plan").performClick()
 
         composeRule.waitForTag("screen_Train")
-        composeRule.onNodeWithTag("train_list").performScrollToNode(hasText("Power day"))
+        // The plan reaches the list once Room has saved it, which can trail the navigation.
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching { composeRule.onNodeWithTag("train_list").performScrollToNode(hasText("Power day")) }.isSuccess
+        }
         composeRule.onNode(hasText("Power day")).performClick()
         composeRule.waitForTag("template_exercise")
         composeRule.onNode(hasText("Campus ladders")).assertIsDisplayed()
@@ -369,7 +430,13 @@ class MainActivityTest {
         composeRule.waitForTag("exercise_row")
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("screen_Train").performTouchInput {
-            swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.08f))
+            swipe(
+                start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f),
+                end = androidx.compose.ui.geometry.Offset(
+                    width * 0.85f,
+                    height * 0.08f,
+                ),
+            )
         }
         composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("exercise_row").fetchSemanticsNodes().isEmpty() }
         // The main tab itself didn't change.
@@ -437,8 +504,7 @@ class MainActivityTest {
     }
 }
 
-private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction =
-    onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)))
+private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction = onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)))
 
 private fun ComposeTestRule.waitForTag(tag: String) {
     waitUntil(timeoutMillis = 10_000) { onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }

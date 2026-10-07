@@ -1,10 +1,6 @@
 package com.hardtekpt.crux.ui.you
 
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.rounded.Sell
-import com.hardtekpt.crux.ui.components.CruxFilterChip
-import kotlinx.coroutines.flow.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,18 +11,20 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,9 +61,11 @@ import com.hardtekpt.crux.data.NoteRepository
 import com.hardtekpt.crux.data.RecordRepository
 import com.hardtekpt.crux.data.best
 import com.hardtekpt.crux.data.model.Exercise
+import com.hardtekpt.crux.data.model.formatKg
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
@@ -82,19 +82,19 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
-import com.hardtekpt.crux.data.model.formatKg
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Clock
-import java.time.LocalDate
-import javax.inject.Inject
 
 // ---- Notes ---------------------------------------------------------------------------
 
@@ -132,7 +132,15 @@ fun NotesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, onNew: () -> Unit, v
                 item(key = "tag_filters") {
                     Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                         tags.forEach { t ->
-                            CruxFilterChip(label = t, selected = tag == t, onClick = { tag = if (tag == t) null else t }, modifier = Modifier.testTag("note_filter_$t"))
+                            CruxFilterChip(label = t, selected = tag == t, onClick = {
+                                tag = if (tag ==
+                                    t
+                                ) {
+                                    null
+                                } else {
+                                    t
+                                }
+                            }, modifier = Modifier.testTag("note_filter_$t"))
                         }
                     }
                 }
@@ -154,10 +162,7 @@ data class NoteDraft(
 }
 
 @HiltViewModel
-class NoteEditorViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val repository: NoteRepository,
-) : ViewModel() {
+class NoteEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: NoteRepository) : ViewModel() {
     private val noteId: Long = savedStateHandle.get<Long>("noteId") ?: 0L
     private val _draft = MutableStateFlow(NoteDraft(id = noteId))
     val draft: StateFlow<NoteDraft> = _draft.asStateFlow()
@@ -323,7 +328,9 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
             containerColor = colors.surfaceContainerHigh,
             shape = MaterialTheme.shapes.extraLarge,
             title = { Text("Delete this note?", style = MaterialTheme.typography.headlineSmall) },
-            confirmButton = { TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) { Text("Delete", color = colors.error) } },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) { Text("Delete", color = colors.error) }
+            },
             dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Keep") } },
         )
     }
@@ -421,18 +428,39 @@ fun RecordEditorScreen(onDone: () -> Unit, viewModel: RecordEditorViewModel = hi
                 if (m.usesLoad) {
                     InputRow(
                         "Added load",
-                        (if (draft.loadKg > 0) "+" else if (draft.loadKg < 0) "−" else "") + formatKg(kotlin.math.abs(draft.loadKg)),
-                        open == "load", { toggle("load") }, unit = "kg", testTag = "record_load",
+                        (
+                            if (draft.loadKg > 0) {
+                                "+"
+                            } else if (draft.loadKg < 0) {
+                                "−"
+                            } else {
+                                ""
+                            }
+                            ) +
+                            com.hardtekpt.crux.data.model.formatLoad(
+                                draft.loadKg,
+                                com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                            ),
+                        open == "load",
+                        { toggle("load") },
+                        unit = com.hardtekpt.crux.data.model.loadUnit(
+                            com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                        ),
+                        testTag = "record_load",
                     ) { LoadWheel(draft.loadKg, { v -> viewModel.update { it.copy(loadKg = v) } }) }
                 }
                 if (m.usesReps || m.usesIntervals) {
-                    InputRow(if (m.usesIntervals) "Repeats" else "Reps", draft.reps.toString(), open == "reps", { toggle("reps") }, unit = "reps", testTag = "record_reps") {
+                    InputRow(if (m.usesIntervals) "Repeats" else "Reps", draft.reps.toString(), open == "reps", {
+                        toggle("reps")
+                    }, unit = "reps", testTag = "record_reps") {
                         NumberWheel(draft.reps, { v -> viewModel.update { it.copy(reps = v) } }, 1..100, "reps", "Reps")
                     }
                 }
                 if (m.usesTime) {
                     InputRow("Time", formatDuration(draft.seconds), open == "time", { toggle("time") }, mono = true, testTag = "record_time") {
-                        DurationWheel(draft.seconds, { v -> viewModel.update { it.copy(seconds = v) } }, "Time", maxMinutes = 30, minSeconds = 1, presets = listOf(7, 10, 15, 30, 60, 120))
+                        DurationWheel(draft.seconds, { v ->
+                            viewModel.update { it.copy(seconds = v) }
+                        }, "Time", maxMinutes = 30, minSeconds = 1, presets = listOf(7, 10, 15, 30, 60, 120))
                     }
                 }
             }
@@ -465,11 +493,8 @@ fun RecordEditorScreen(onDone: () -> Unit, viewModel: RecordEditorViewModel = hi
 }
 
 @HiltViewModel
-class ExerciseRecordsViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    exercises: ExerciseRepository,
-    private val records: RecordRepository,
-) : ViewModel() {
+class ExerciseRecordsViewModel @Inject constructor(savedStateHandle: SavedStateHandle, exercises: ExerciseRepository, private val records: RecordRepository) :
+    ViewModel() {
     val exerciseId: Long = savedStateHandle.get<Long>("exerciseId") ?: 0L
     val state: StateFlow<Pair<Exercise?, List<ExerciseRecord>>> =
         combine(exercises.observeExercises(), records.observeRecords(exerciseId)) { list, mine -> list.firstOrNull { it.id == exerciseId } to mine }
@@ -501,7 +526,7 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                     Column(Modifier.weight(1f)) {
                         Text("PERSONAL RECORD", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                         Text(
-                            pr?.describe(ex.metric) ?: "–",
+                            pr?.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL) ?: "–",
                             style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp),
                             modifier = Modifier.testTag("exercise_pr"),
                         )
@@ -510,12 +535,14 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                 }
             }
             item {
-                CruxButton("Log a result", { onAdd(ex.id) }, icon = Icons.Rounded.Add, variant = CruxButtonVariant.Tonal, modifier = Modifier.testTag("add_record"))
+                CruxButton("Log a result", {
+                    onAdd(ex.id)
+                }, icon = Icons.Rounded.Add, variant = CruxButtonVariant.Tonal, modifier = Modifier.testTag("add_record"))
             }
             item { Eyebrow("All results · ${results.size}", Modifier.padding(top = space.s3)) }
             items(results, key = { it.id }) { record ->
                 CruxListRow(
-                    title = record.describe(ex.metric),
+                    title = record.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                     supporting = listOfNotNull(record.date.dayLabel(), record.notes, "PR".takeIf { record.id == pr?.id }).joinToString(" · "),
                     trailing = {
                         IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }

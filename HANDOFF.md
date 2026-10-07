@@ -27,7 +27,7 @@ tests first and the install only after they finish (tests uninstall the app from
 ## Stack
 Kotlin 2.4, AGP 9.4 (built-in Kotlin), Compose (BOM 2026.09), Material 3, Navigation Compose
 (type-safe, nested graph per tab), Hilt, Room 2.8 with exported schemas and auto-migrations
-(now **schema 13**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
+(now **schema 16**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
 Two databases: the climber's own and a demo one (Settings → Demo mode).
 
 ## What's done (latest first)
@@ -63,6 +63,12 @@ Two databases: the climber's own and a demo one (Settings → Demo mode).
   between in-page tabs (Journal Climbs/Places, Train Plans/Exercises — not between main tabs).
 
 ## Key decisions
+- **The climber's database is never wiped.** Only the demo DB keeps the destructive-migration
+  fallback. Before a migration, the real DB is copied to `files/db-backups/crux-user-v<old>.db`
+  (newest 3 kept). Every schema bump needs an auto-migration, its exported JSON (checked by
+  `SchemaExportTest`) and passing `MigrationTest` (which migrates every old schema to the latest).
+- Android Auto Backup carries the real DB and preferences only (`res/xml/data_extraction_rules.xml`);
+  photos/videos go in phone-to-phone transfer and Crux's own export, the demo DB is left out.
 - Grades are stored as scale + index (+ label for local scales) and never converted.
 - Places: one local scale per place; climbs copy a problem's grade but stay editable.
 - Projects are derived (no flag): a non-retired problem with goes and no send.

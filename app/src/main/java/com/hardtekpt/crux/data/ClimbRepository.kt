@@ -1,21 +1,21 @@
 package com.hardtekpt.crux.data
 
-import com.hardtekpt.crux.data.local.CruxDatabases
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.ClimbMediaEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.MediaKind
-import kotlinx.coroutines.flow.combine
 import com.hardtekpt.crux.data.local.PersonalBestRow
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.NewClimb
 import com.hardtekpt.crux.data.model.PersonalBest
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 interface ClimbRepository {
     fun observeClimbs(): Flow<List<Climb>>
@@ -25,19 +25,18 @@ interface ClimbRepository {
     fun observePersonalBests(): Flow<List<PersonalBest>>
     suspend fun logClimb(climb: NewClimb): Long
     suspend fun getClimb(id: Long): Climb?
+
     /** Replaces a logged climb's details, keeping when it was first logged. */
     suspend fun updateClimb(id: Long, climb: NewClimb)
     suspend fun deleteClimb(id: Long)
     fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>>
     fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>>
+
     /** Attaches a photo or video to a climb, replacing any of that kind; null removes it. Returns the old file name. */
     suspend fun setClimbMedia(climbId: Long, kind: MediaKind, path: String?): String?
 }
 
-class OfflineClimbRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-    private val clock: Clock,
-) : ClimbRepository {
+class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : ClimbRepository {
     /** Climbs from a query, each with its photo and video if it has them. */
     private fun withMedia(query: (CruxDatabase) -> Flow<List<ClimbEntity>>): Flow<List<Climb>> = dbs.observe { db ->
         combine(query(db), db.climbMediaDao().observeAll()) { climbs, media ->
@@ -107,6 +106,8 @@ private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
     notes = notes?.trim()?.takeIf { it.isNotEmpty() },
     placeId = placeId,
     areaId = areaId,
+    sectionId = sectionId,
+    sessionId = sessionId,
     problemId = problemId,
     angle = angle,
     effort = effort,
@@ -128,6 +129,8 @@ internal fun ClimbEntity.toModel() = Climb(
     notes = notes,
     placeId = placeId,
     areaId = areaId,
+    sectionId = sectionId,
+    sessionId = sessionId,
     problemId = problemId,
     angle = angle,
     effort = effort,

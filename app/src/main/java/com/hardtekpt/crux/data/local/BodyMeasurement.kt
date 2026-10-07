@@ -23,11 +23,11 @@ data class BodyMeasurementEntity(
 interface BodyMeasurementDao {
     @Query(
         "SELECT * FROM body_measurements WHERE type = :type " +
-            "ORDER BY dateEpochDay DESC, createdAtMillis DESC",
+            "ORDER BY dateEpochDay DESC, createdAtMillis DESC, id DESC",
     )
     fun observe(type: MeasurementType): Flow<List<BodyMeasurementEntity>>
 
-    @Query("SELECT * FROM body_measurements ORDER BY dateEpochDay DESC, createdAtMillis DESC")
+    @Query("SELECT * FROM body_measurements ORDER BY dateEpochDay DESC, createdAtMillis DESC, id DESC")
     fun observeAll(): Flow<List<BodyMeasurementEntity>>
 
     @Query("SELECT COUNT(*) FROM body_measurements")

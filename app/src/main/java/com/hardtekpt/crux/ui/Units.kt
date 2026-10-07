@@ -15,8 +15,27 @@ import kotlin.math.roundToInt
  * and what the inputs step in.
  */
 
+/**
+ * The clock screens read "today" from: the system clock in the app, a fixed one in screenshot
+ * tests so their goldens don't change from day to day.
+ */
+val LocalClock = staticCompositionLocalOf<java.time.Clock> { java.time.Clock.systemDefaultZone() }
+
 /** The climber's unit system, provided at the app root. */
 val LocalUnits = staticCompositionLocalOf { UnitSystem.METRIC }
+
+/** The climber's grade scales, provided at the app root, for "my settings" labels. */
+val LocalGradeScales = staticCompositionLocalOf { com.hardtekpt.crux.data.prefs.GradeScales() }
+
+/**
+ * The grades a part of a place uses, in words: "Font · French", "V scale" for a board,
+ * "Local grades". Where it follows the climber's settings, those settings' scales.
+ */
+fun com.hardtekpt.crux.data.model.Section.gradesLabel(settings: com.hardtekpt.crux.data.prefs.GradeScales): String =
+    disciplines.map { scaleFor(it) ?: settings.forDiscipline(it) }
+        .map { if (it.isLocal) "Local grades" else it.label }
+        .distinct()
+        .joinToString(" · ")
 
 const val LB_PER_KG = 2.2046226218
 const val CM_PER_INCH = 2.54
@@ -31,6 +50,8 @@ data class Shown(val value: String, val unit: String?) {
 }
 
 fun UnitSystem.weightUnit(): String = if (this == UnitSystem.IMPERIAL) "lb" else "kg"
+
+val UnitSystem.isImperial: Boolean get() = this == UnitSystem.IMPERIAL
 
 /** Kilograms in the display unit, as a number (for charts and differences). */
 fun UnitSystem.weightValue(kg: Double): Double = if (this == UnitSystem.IMPERIAL) kg * LB_PER_KG else kg
@@ -114,6 +135,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "lb",
         )
+
         type == MeasurementType.WEIGHT -> MeasureInput(
             scale = RulerScale(30.0, 200.0, 0.1, midEvery = 5, majorEvery = 10, labelEvery = 10),
             unit = "kg",
@@ -123,6 +145,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "kg",
         )
+
         type.isCircumference && imperial -> MeasureInput(
             scale = RulerScale(
                 min = floor(type.range.start / CM_PER_INCH),
@@ -140,6 +163,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "in",
         )
+
         type.isCircumference -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 2, majorEvery = 10, labelEvery = 10, spacing = 10.dp),
             unit = "cm",
@@ -149,6 +173,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "cm",
         )
+
         type.isLength && imperial -> MeasureInput(
             scale = RulerScale(
                 min = floor(type.range.start / CM_PER_INCH),
@@ -167,6 +192,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = ::parseFeetInches,
             typeUnit = "feet and inches, like 5'10",
         )
+
         type.isLength -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 10, majorEvery = 20, labelEvery = 20),
             unit = "cm",
@@ -176,6 +202,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "cm",
         )
+
         else -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 2, majorEvery = 10, labelEvery = 10, spacing = 10.dp),
             unit = type.unit,

@@ -28,8 +28,7 @@ object TestDatabaseModule {
 
     @Provides
     @Singleton
-    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create {
-            context.preferencesDataStoreFile("test_prefs_${UUID.randomUUID()}")
-        }
+    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> = PreferenceDataStoreFactory.create {
+        context.preferencesDataStoreFile("test_prefs_${UUID.randomUUID()}")
+    }
 }

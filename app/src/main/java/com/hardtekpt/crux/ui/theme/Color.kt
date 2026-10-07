@@ -37,8 +37,12 @@ private object Light {
     val dangerContainer = Color(0xFFFFDAD5)
     val onDangerContainer = Color(0xFF410E0B)
     val tape = listOf(
-        Color(0xFFFFD9D4), Color(0xFFFFE2B8), Color(0xFFF0E9A8),
-        Color(0xFFC6EFCF), Color(0xFFCDE3FB), Color(0xFFE3DAF9),
+        Color(0xFFFFD9D4),
+        Color(0xFFFFE2B8),
+        Color(0xFFF0E9A8),
+        Color(0xFFC6EFCF),
+        Color(0xFFCDE3FB),
+        Color(0xFFE3DAF9),
     )
 }
 
@@ -71,8 +75,12 @@ private object Dark {
     val dangerContainer = Color(0xFF93000A)
     val onDangerContainer = Color(0xFFFFDAD6)
     val tape = listOf(
-        Color(0xFF5A2420), Color(0xFF553615), Color(0xFF4B4414),
-        Color(0xFF1E4A2C), Color(0xFF1E3A5C), Color(0xFF3A2F5E),
+        Color(0xFF5A2420),
+        Color(0xFF553615),
+        Color(0xFF4B4414),
+        Color(0xFF1E4A2C),
+        Color(0xFF1E3A5C),
+        Color(0xFF3A2F5E),
     )
 }
 

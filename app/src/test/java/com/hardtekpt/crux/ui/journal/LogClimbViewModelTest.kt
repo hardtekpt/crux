@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.ui.journal
 
+import androidx.lifecycle.SavedStateHandle
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
 import com.hardtekpt.crux.data.FakeClimbRepository
@@ -7,16 +8,16 @@ import com.hardtekpt.crux.data.FakeImageFiles
 import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.ProblemInput
-import com.hardtekpt.crux.data.model.NewClimb
-import com.hardtekpt.crux.data.model.LocalScale
-import com.hardtekpt.crux.data.model.PlaceType
-import androidx.lifecycle.SavedStateHandle
+import com.hardtekpt.crux.data.SectionInput
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -25,9 +26,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
-import org.junit.rules.TemporaryFolder
 import org.junit.Test
-import java.time.LocalDate
+import org.junit.rules.TemporaryFolder
 
 class LogClimbViewModelTest {
 
@@ -38,22 +38,76 @@ class LogClimbViewModelTest {
     private val repository = FakeClimbRepository()
     private val places = FakePlaceRepository(repository)
     private val imageFiles = FakeImageFiles()
+    private val sessions = com.hardtekpt.crux.data.FakeSessionRepository()
     private val preferences by lazy {
-        UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") })
+        UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(java.io.File(tmp.root, "prefs.preferences_pb")))
     }
     private val viewModel by lazy { viewModel() }
 
     private fun viewModel(vararg args: Pair<String, Long>) =
-        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles)
+        LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles, sessions)
 
     private suspend fun boardWithProblem(): Pair<Long, Long> {
         val placeId = places.savePlace(
-            PlaceInput(name = "Moon board", type = PlaceType.BOARD, location = null, boulderScale = GradeScale.V_SCALE, routeScale = null, defaultAngle = 40, notes = null),
+            PlaceInput(
+                name = "Moon board",
+                types = listOf(PlaceType.BOARD),
+                location = null,
+                defaultAngle = 40,
+                notes = null,
+                sections = listOf(SectionInput(type = PlaceType.BOARD, name = "Moon board", boulderScale = GradeScale.V_SCALE)),
+            ),
         )
         val problemId = places.saveProblem(
-            ProblemInput(placeId = placeId, areaId = null, name = "Hard moves", discipline = Discipline.BOULDER, gradeScale = GradeScale.V_SCALE, gradeIndex = 6, tape = null, notes = null),
+            ProblemInput(
+                placeId = placeId,
+                areaId = null,
+                name = "Hard moves",
+                discipline = Discipline.BOULDER,
+                gradeScale = GradeScale.V_SCALE,
+                gradeIndex = 6,
+                tape = null,
+                notes = null,
+            ),
         )
         return placeId to problemId
+    }
+
+    @Test
+    fun `at a gym with two boards, the section or wall picked says where the climb was`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Block Lab",
+                location = null,
+                defaultAngle = 40,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Main gym"),
+                    SectionInput(type = PlaceType.BOARD, name = "Spray wall"),
+                    SectionInput(type = PlaceType.BOARD, name = "Moonboard"),
+                ),
+            ),
+        )
+        val (gym, spray, moon) = places.getPlace(placeId)!!.sections.map { it.id }
+        val cave = places.saveArea(placeId, 0, "Cave", null, null, gym)
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, moon)
+        viewModel.selectPlace(placeId)
+        withTimeout(5_000) { viewModel.placeDetail.first { it?.areas?.size == 2 } }
+        assertEquals(gym, viewModel.draft.value.sectionId)
+        assertEquals(Venue.GYM, viewModel.draft.value.venue)
+
+        // A wall picks its section; picking another section drops a wall that isn't in it.
+        viewModel.selectArea(benchmarks)
+        assertEquals(moon, viewModel.draft.value.sectionId)
+        assertEquals(Venue.BOARD, viewModel.draft.value.venue)
+        viewModel.selectSection(spray)
+        assertEquals(null, viewModel.draft.value.areaId)
+        viewModel.save()
+        val saved = withTimeout(5_000) { repository.climbs.first { it.isNotEmpty() } }.single()
+        assertEquals(Venue.BOARD, saved.venue)
+        assertEquals(spray, saved.sectionId)
+        assertEquals(null, saved.areaId)
+        assertTrue(cave > 0)
     }
 
     @Test
@@ -167,7 +221,13 @@ class LogClimbViewModelTest {
     @Test
     fun `editing a climb keeps its id and delete removes it`() = runBlocking {
         val id = repository.logClimb(
-            NewClimb(Discipline.ROUTE, GradeScale.FRENCH, 14, AscentStyle.REDPOINT, 3, Venue.CRAG, LocalDate.now(FIXED_CLOCK).minusDays(2), "Pilastro", "Arco", null),
+            NewClimb(
+                Discipline.ROUTE, GradeScale.FRENCH, 14, AscentStyle.REDPOINT, 3, Venue.CRAG,
+                LocalDate.now(
+                    FIXED_CLOCK,
+                ).minusDays(2),
+                "Pilastro", "Arco", null,
+            ),
         )
         val vm = viewModel("climbId" to id)
         val draft = withTimeout(5_000) { vm.draft.first { it.name == "Pilastro" } }
@@ -190,12 +250,39 @@ class LogClimbViewModelTest {
     }
 
     @Test
+    fun `each part of a place grades in its own scale`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Block Lab",
+                location = null,
+                defaultAngle = 40,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Main gym", boulderScale = GradeScale.FONT),
+                    SectionInput(type = PlaceType.BOARD, name = "Kilter", boulderScale = GradeScale.V_SCALE),
+                ),
+            ),
+        )
+        val kilter = places.getPlace(placeId)!!.sections[1].id
+        val vm = viewModel("placeId" to placeId)
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId && it.gradeScale == GradeScale.FONT } }
+        withTimeout(5_000) { vm.placeDetail.first { it?.place?.id == placeId } }
+        vm.selectSection(kilter)
+        assertEquals(GradeScale.V_SCALE, vm.draft.value.gradeScale)
+    }
+
+    @Test
     fun `a place with local colour grades logs the colour, not a converted grade`() = runBlocking {
         val placeId = places.savePlace(
             PlaceInput(
-                name = "Tape Gym", type = PlaceType.GYM, location = null,
-                boulderScale = GradeScale.LOCAL_BOULDER, routeScale = null, defaultAngle = null, notes = null,
-                localScale = LocalScale.DEFAULT_COLOURS,
+                name = "Tape Gym",
+                types = listOf(PlaceType.GYM),
+                location = null,
+                defaultAngle = null,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Gym", boulderScale = GradeScale.LOCAL_BOULDER, localScale = LocalScale.DEFAULT_COLOURS),
+                ),
             ),
         )
         val vm = viewModel("placeId" to placeId)
@@ -213,4 +300,17 @@ class LogClimbViewModelTest {
         assertEquals("Blue", repository.climbs.value.single().grade)
     }
 
+    @Test
+    fun `a climb logged while a session runs joins it, at the session's place`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(name = "Block Lab", location = null, defaultAngle = null, notes = null),
+        )
+        sessions.runningSession = com.hardtekpt.crux.data.RunningSession(id = 7, placeId = placeId, sectionId = null)
+        val vm = viewModel()
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
+        vm.save()
+        val saved = withTimeout(5_000) { repository.climbs.first { it.isNotEmpty() } }.single()
+        assertEquals(7L, saved.sessionId)
+        assertEquals(placeId, saved.placeId)
+    }
 }

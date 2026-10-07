@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,17 +87,17 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.you.describe
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import java.time.format.TextStyle as DateTextStyle
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import java.time.Clock
-import java.time.LocalDate
-import java.time.format.TextStyle as DateTextStyle
-import java.util.Locale
-import javax.inject.Inject
 
 data class JournalUiState(
     val isLoading: Boolean = true,
@@ -121,6 +122,7 @@ class JournalViewModel @Inject constructor(
     climbRepository: ClimbRepository,
     recordRepository: RecordRepository,
     noteRepository: NoteRepository,
+    sessionRepository: com.hardtekpt.crux.data.SessionRepository,
     clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -130,15 +132,16 @@ class JournalViewModel @Inject constructor(
         climbRepository.observeClimbs(),
         recordRepository.observeResults(),
         noteRepository.observeNotes(),
+        sessionRepository.observeFinished(),
         query,
-    ) { climbs, results, notes, q ->
-        val all = buildTimeline(climbs, results, notes)
+    ) { climbs, results, notes, sessions, q ->
+        val all = buildTimeline(climbs, results, notes, sessions, clock.zone)
         val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
         val week = all.filter { !it.date.isBefore(monday) }
         JournalUiState(
             today = today,
             weekDays = week.size,
-            weekClimbs = week.sumOf { day -> day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size } },
+            weekClimbs = week.sumOf { day -> day.climbs().size },
             isLoading = false,
             all = all,
             days = all.matching(q, today),
@@ -157,13 +160,11 @@ data class JournalActions(
     val openClimb: (Long) -> Unit = {},
     val openNote: (Long) -> Unit = {},
     val openRecords: (Long) -> Unit = {},
+    val openSession: (Long) -> Unit = {},
 )
 
 @Composable
-fun JournalScreen(
-    actions: JournalActions,
-    viewModel: JournalViewModel = hiltViewModel(),
-) {
+fun JournalScreen(actions: JournalActions, viewModel: JournalViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions)
 }
@@ -215,7 +216,7 @@ fun JournalContent(
                     InlineEmptyState(
                         icon = Icons.Rounded.Search,
                         text = if (query.kind == JournalFilter.Training && query.activeFilters == 0 && query.search.isBlank()) {
-                            "No training yet. Results you log on exercises show here, and workout sessions will too once the session logger arrives."
+                            "No training yet. Sessions you finish and results you log on exercises show here."
                         } else {
                             "Nothing matches. Try another word or clear a filter."
                         },
@@ -228,6 +229,7 @@ fun JournalContent(
                     when (entry) {
                         is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
                         is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
                         is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
                     }
                 }
@@ -245,12 +247,7 @@ fun JournalContent(
  * type pills, and any applied filters.
  */
 @Composable
-private fun JournalHeader(
-    uiState: JournalUiState,
-    todayDay: TimelineDay?,
-    onQuery: ((JournalQuery) -> JournalQuery) -> Unit,
-    onOpenFilters: () -> Unit,
-) {
+private fun JournalHeader(uiState: JournalUiState, todayDay: TimelineDay?, onQuery: ((JournalQuery) -> JournalQuery) -> Unit, onOpenFilters: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val space = CruxTheme.space
     val query = uiState.query
@@ -277,8 +274,16 @@ private fun JournalHeader(
                         .padding(horizontal = 7.dp, vertical = 4.dp)
                         .testTag("journal_today"),
                 ) {
-                    Text(today.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp), color = colors.onPrimaryContainer)
-                    Text(today.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onPrimaryContainer)
+                    Text(
+                        today.dayOfMonth.toString(),
+                        style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp),
+                        color = colors.onPrimaryContainer,
+                    )
+                    Text(
+                        today.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(),
+                        style = MonoLabel.copy(fontSize = 9.sp),
+                        color = colors.onPrimaryContainer,
+                    )
                 }
             }
             Column(Modifier.padding(start = space.s2, end = space.s4).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -350,7 +355,17 @@ private fun JournalHeader(
                         .clickable(onClick = onOpenFilters)
                         .testTag("journal_open_filters"),
                 ) {
-                    Icon(Icons.Rounded.Tune, contentDescription = "Filters", tint = if (query.activeFilters > 0) colors.onPrimaryContainer else colors.onSurface)
+                    Icon(
+                        Icons.Rounded.Tune,
+                        contentDescription = "Filters",
+                        tint = if (query.activeFilters >
+                            0
+                        ) {
+                            colors.onPrimaryContainer
+                        } else {
+                            colors.onSurface
+                        },
+                    )
                 }
                 if (query.activeFilters > 0) {
                     Text(
@@ -381,16 +396,23 @@ private fun RailLink(modifier: Modifier = Modifier) {
     }
 }
 
-/** A day's tally: climbs and sends, results, notes. */
+/** Every climb on a day, including those inside its sessions. */
+private fun TimelineDay.climbs(): List<Climb> = entries.filterIsInstance<TimelineEntry.Climbs>().flatMap { it.day.climbs } +
+    entries.filterIsInstance<TimelineEntry.SessionEntry>().flatMap { it.session.climbs }
+
+/** A day's tally: climbs and sends, results, notes, sessions. */
 private fun daySummary(day: TimelineDay): String {
-    val climbs = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size }
-    val sends = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { e -> e.day.climbs.count { it.style.isSend } }
+    val dayClimbs = day.climbs()
+    val climbs = dayClimbs.size
+    val sends = dayClimbs.count { it.style.isSend }
     val results = day.entries.filterIsInstance<TimelineEntry.Training>().sumOf { it.results.size }
     val notes = day.entries.count { it is TimelineEntry.NoteEntry }
+    val sessions = day.entries.count { it is TimelineEntry.SessionEntry }
     return listOfNotNull(
         climbs.takeIf { it > 0 }?.let { "$it ${if (it == 1) "climb" else "climbs"} · $sends sent" },
         results.takeIf { it > 0 }?.let { "$it ${if (it == 1) "result" else "results"}" },
         notes.takeIf { it > 0 }?.let { "$it ${if (it == 1) "note" else "notes"}" },
+        sessions.takeIf { it > 0 }?.let { "$it ${if (it == 1) "session" else "sessions"}" },
     ).joinToString(" · ")
 }
 
@@ -417,7 +439,12 @@ private fun TypePills(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit
                     .padding(horizontal = 6.dp, vertical = 10.dp)
                     .testTag("journal_filter_${option.name}"),
             ) {
-                Text(option.label, style = MaterialTheme.typography.labelMedium, color = if (selected) colors.onPrimaryContainer else colors.onSurface, maxLines = 1)
+                Text(
+                    option.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) colors.onPrimaryContainer else colors.onSurface,
+                    maxLines = 1,
+                )
                 Text((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
             }
         }
@@ -509,7 +536,9 @@ private fun FilterSheet(uiState: JournalUiState, onQuery: ((JournalQuery) -> Jou
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     uiState.places.forEach { place ->
                         val on = place in query.places
-                        CruxFilterChip(place, on, { onQuery { it.copy(places = if (on) it.places - place else it.places + place) } }, Modifier.testTag("place_filter_$place"))
+                        CruxFilterChip(place, on, {
+                            onQuery { it.copy(places = if (on) it.places - place else it.places + place) }
+                        }, Modifier.testTag("place_filter_$place"))
                     }
                 }
             }
@@ -576,8 +605,15 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
                     .background(colors.surfaceContainer)
                     .padding(horizontal = 6.dp, vertical = 3.dp),
             ) {
-                Text(day.date.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp))
-                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onSurfaceVariant)
+                Text(
+                    day.date.dayOfMonth.toString(),
+                    style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp),
+                )
+                Text(
+                    day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(),
+                    style = MonoLabel.copy(fontSize = 9.sp),
+                    color = colors.onSurfaceVariant,
+                )
             }
         }
         Column(Modifier.padding(start = CruxTheme.space.s2, top = CruxTheme.space.s4, bottom = CruxTheme.space.s2)) {
@@ -660,12 +696,74 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
     }
 }
 
+/** A finished session: its name, how long, what got done and how it felt. */
+@Composable
+private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClimb: (Long) -> Unit, onOpen: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    TimelineRow(dot = colors.tertiary) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.surfaceContainerLow)
+                .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(12.dp))
+                .clickable(onClick = onOpen)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .testTag("journal_session"),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(session.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    com.hardtekpt.crux.ui.session.durationLabel(session.durationMillis(session.startedAtMillis)),
+                    style = MonoLabel,
+                    color = colors.onSurfaceVariant,
+                )
+            }
+            Text(
+                listOfNotNull(
+                    "${session.setsDone} of ${session.setsPlanned} sets".takeIf { session.items.isNotEmpty() },
+                    session.climbs.size.takeIf {
+                        it > 0
+                    }?.let { n -> "$n ${if (n == 1) "climb" else "climbs"} · ${session.climbs.count { it.style.isSend }} sent" },
+                    session.effort?.let { "felt $it/10" },
+                ).joinToString(" · ").ifEmpty { "Nothing logged" },
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+            if (session.items.isNotEmpty()) {
+                // A bar per exercise, filled by how much of it got done.
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+                    session.items.forEach { item ->
+                        val done = if (item.target.sets == 0) 0f else (item.done.toFloat() / item.target.sets).coerceAtMost(1f)
+                        Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(colors.surfaceContainerHighest)) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(done).background(colors.tertiary))
+                        }
+                    }
+                }
+            }
+            session.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            // The climbs logged during it, inside the session.
+            if (session.climbs.isNotEmpty()) {
+                HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f), modifier = Modifier.padding(vertical = 2.dp))
+                session.climbs.sortedBy { it.id }.forEach { climb -> TapeRow(climb, onClick = { onOpenClimb(climb.id) }) }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.tertiary) {
         Column {
-            Text("Training", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+            Text(
+                "Training",
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+            )
             entry.results.forEach { result ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -677,12 +775,21 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
                         .padding(vertical = 6.dp)
                         .testTag("journal_training"),
                 ) {
-                    Text(result.exercise.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        result.exercise.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (result.isBest) {
                         Icon(Icons.Rounded.EmojiEvents, contentDescription = "Personal record", tint = colors.secondary, modifier = Modifier.size(16.dp))
                     }
                     Text(
-                        result.record.describe(result.exercise.metric),
+                        result.record.describe(
+                            result.exercise.metric,
+                            com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                        ),
                         style = CruxTheme.type.gradeSmall,
                         color = if (result.isBest) colors.secondary else colors.onSurface,
                     )

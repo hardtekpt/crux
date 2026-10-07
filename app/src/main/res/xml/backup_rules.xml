@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9–11 backup: same as the cloud-backup part of data_extraction_rules.xml. -->
+<full-backup-content>
+    <include domain="database" path="crux-user.db" />
+    <include domain="database" path="crux-user.db-wal" />
+    <include domain="file" path="datastore/" />
+</full-backup-content>

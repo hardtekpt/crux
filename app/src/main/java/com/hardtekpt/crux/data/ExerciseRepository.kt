@@ -4,11 +4,12 @@ import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.MetricType
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Clock
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** What the exercise form edits. `id == 0` creates a new exercise. */
 data class ExerciseInput(
@@ -17,23 +18,24 @@ data class ExerciseInput(
     val category: ExerciseCategory,
     val metric: MetricType,
     val notes: String?,
+    /** What plans and sessions start it at; null keeps the metric's defaults. */
+    val defaults: ExerciseTarget? = null,
+    /** Interval metrics only: the timer's preparation. */
+    val prepSeconds: Int? = null,
 )
 
 interface ExerciseRepository {
     fun observeExercises(): Flow<List<Exercise>>
     suspend fun getExercise(id: Long): Exercise?
     suspend fun saveExercise(input: ExerciseInput): Long
+
     /** Plans that use the exercise; deleting it removes it from them. */
     suspend fun planCount(id: Long): Int
     suspend fun deleteExercise(id: Long)
 }
 
-class OfflineExerciseRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-    private val clock: Clock,
-) : ExerciseRepository {
-    override fun observeExercises(): Flow<List<Exercise>> =
-        dbs.observe { it.exerciseDao().observeAll() }.map { rows -> rows.map(ExerciseEntity::toModel) }
+class OfflineExerciseRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : ExerciseRepository {
+    override fun observeExercises(): Flow<List<Exercise>> = dbs.observe { it.exerciseDao().observeAll() }.map { rows -> rows.map(ExerciseEntity::toModel) }
 
     override suspend fun getExercise(id: Long): Exercise? = dbs.current().exerciseDao().get(id)?.toModel()
 
@@ -42,8 +44,9 @@ class OfflineExerciseRepository @Inject constructor(
         val notes = input.notes?.trim()?.takeIf { it.isNotEmpty() }
         val dao = dbs.current().exerciseDao()
         val existing = if (input.id != 0L) dao.get(input.id) else null
+        val prep = input.prepSeconds?.takeIf { input.metric.usesIntervals }
         return if (existing != null) {
-            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes))
+            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes).withDefaults(input.defaults, prep))
             existing.id
         } else {
             dao.insert(
@@ -53,7 +56,7 @@ class OfflineExerciseRepository @Inject constructor(
                     metric = input.metric,
                     notes = notes,
                     createdAtMillis = clock.millis(),
-                ),
+                ).withDefaults(input.defaults, prep),
             )
         }
     }
@@ -69,4 +72,6 @@ internal fun ExerciseEntity.toModel() = Exercise(
     category = category,
     metric = metric,
     notes = notes,
+    defaults = defaults,
+    prepSeconds = prepSeconds,
 )

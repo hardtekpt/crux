@@ -10,27 +10,24 @@ import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.PlanBlock
 import com.hardtekpt.crux.data.model.PlanItem
 import com.hardtekpt.crux.data.model.WorkoutTemplate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 interface TemplateRepository {
     fun observeTemplates(): Flow<List<WorkoutTemplate>>
     fun observeTemplate(id: Long): Flow<WorkoutTemplate?>
     suspend fun getTemplate(id: Long): WorkoutTemplate?
+
     /** Creates the plan when `id == 0`, otherwise replaces its contents. Returns its id. */
     suspend fun saveTemplate(template: WorkoutTemplate): Long
     suspend fun deleteTemplate(id: Long)
 }
 
-class OfflineTemplateRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-) : TemplateRepository {
-    override fun observeTemplates(): Flow<List<WorkoutTemplate>> =
-        dbs.observe { it.templateDao().observeAll() }.map { it.map(TemplateWithBlocks::toModel) }
+class OfflineTemplateRepository @Inject constructor(private val dbs: CruxDatabases) : TemplateRepository {
+    override fun observeTemplates(): Flow<List<WorkoutTemplate>> = dbs.observe { it.templateDao().observeAll() }.map { it.map(TemplateWithBlocks::toModel) }
 
-    override fun observeTemplate(id: Long): Flow<WorkoutTemplate?> =
-        dbs.observe { it.templateDao().observe(id) }.map { it?.toModel() }
+    override fun observeTemplate(id: Long): Flow<WorkoutTemplate?> = dbs.observe { it.templateDao().observe(id) }.map { it?.toModel() }
 
     override suspend fun getTemplate(id: Long): WorkoutTemplate? = dbs.current().templateDao().get(id)?.toModel()
 

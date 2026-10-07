@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.data
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -7,19 +8,18 @@ import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.DatabaseFactory
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import kotlinx.coroutines.test.TestScope
-import org.junit.Rule
-import org.junit.rules.TemporaryFolder
-import java.io.File
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
+import java.io.File
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 

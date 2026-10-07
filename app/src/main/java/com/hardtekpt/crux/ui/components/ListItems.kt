@@ -26,12 +26,7 @@ enum class GradeState { Attempted, Sent, PersonalBest }
 
 /** A grade, printed exactly as picked, in the mono `grade` style. Colour only says attempted/sent/best. */
 @Composable
-fun GradeBadge(
-    grade: String,
-    state: GradeState,
-    modifier: Modifier = Modifier,
-    small: Boolean = false,
-) {
+fun GradeBadge(grade: String, state: GradeState, modifier: Modifier = Modifier, small: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     val (container, content) = when (state) {
         GradeState.Attempted -> colors.surfaceContainerHighest to colors.onSurface

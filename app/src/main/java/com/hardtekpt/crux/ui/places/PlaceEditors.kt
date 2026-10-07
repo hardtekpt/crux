@@ -1,59 +1,27 @@
 package com.hardtekpt.crux.ui.places
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import com.hardtekpt.crux.ui.components.CruxCardFill
-import com.hardtekpt.crux.ui.components.CruxListRow
-import com.hardtekpt.crux.data.model.GradeSystem
-import com.hardtekpt.crux.data.model.LocalGrade
-import com.hardtekpt.crux.data.model.LocalKind
-import com.hardtekpt.crux.data.model.LocalScale
-import com.hardtekpt.crux.data.model.MapLocation
-import androidx.compose.material.icons.rounded.Map
-import androidx.compose.runtime.saveable.rememberSaveable
-import com.hardtekpt.crux.ui.components.CruxCard
-import com.hardtekpt.crux.ui.components.input.TapeSwatch
-import com.hardtekpt.crux.ui.components.input.argb
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.hardtekpt.crux.ui.components.CruxButtonVariant
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,19 +29,40 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -84,24 +73,37 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.ProblemInput
+import com.hardtekpt.crux.data.SectionInput
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.GradeSystem
+import com.hardtekpt.crux.data.model.LocalGrade
+import com.hardtekpt.crux.data.model.LocalKind
+import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.data.model.MapLocation
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
+import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxFilterChip
+import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
-import com.hardtekpt.crux.ui.components.input.GradeStrip
-import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.input.GradeStrip
+import com.hardtekpt.crux.ui.components.input.TapeSwatch
+import com.hardtekpt.crux.ui.components.input.argb
+import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -111,25 +113,62 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 private const val MAX_NAME = 40
 
 // ---- Place editor --------------------------------------------------------------------
 
+/** One part of the place: its kind as chips, a name, and a remove button when there are others. */
+@Composable
+private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean, onChange: ((SectionDraft) -> SectionDraft) -> Unit, onRemove: () -> Unit) {
+    val space = CruxTheme.space
+    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.weight(1f)) {
+                PlaceType.entries.forEach { t ->
+                    CruxFilterChip(
+                        label = t.label,
+                        selected = section.type == t,
+                        onClick = { onChange { it.copy(type = t) } },
+                        modifier = Modifier.testTag("section_${index}_${t.name}"),
+                    )
+                }
+            }
+            if (removable) {
+                IconButton(onClick = onRemove, modifier = Modifier.testTag("remove_section_$index")) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Remove this part")
+                }
+            }
+        }
+        CruxTextField(
+            label = "",
+            value = section.name,
+            onValueChange = { v -> onChange { it.copy(name = v.take(40)) } },
+            placeholder = when (section.type) {
+                PlaceType.GYM -> "Main gym"
+                PlaceType.CRAG -> "Main crag"
+                PlaceType.BOARD -> "Moonboard"
+            },
+            helper = "Name, optional: \"${section.type.label}\" if left blank",
+            modifier = Modifier.testTag("section_name_$index"),
+        )
+        // The grades climbs here use; boards hold boulders only.
+        val tag = if (index == 0) "" else "_$index"
+        ScaleChoice("Boulder grades", Discipline.BOULDER, section.boulderScale, tag) { scale -> onChange { it.copy(boulderScale = scale) } }
+        if (section.type != PlaceType.BOARD) {
+            ScaleChoice("Route grades", Discipline.ROUTE, section.routeScale, tag) { scale -> onChange { it.copy(routeScale = scale) } }
+        }
+    }
+}
+
 data class PlaceDraft(
     val id: Long = 0,
     val name: String = "",
-    val type: PlaceType = PlaceType.GYM,
+    /** The named parts of the place, in order: a kind and a name each. At least one. */
+    val sections: List<SectionDraft> = listOf(SectionDraft(type = PlaceType.GYM)),
     val location: String = "",
-    /** Null = use my settings. */
-    val boulderScale: GradeScale? = null,
-    val routeScale: GradeScale? = null,
     val defaultAngle: Int = 40,
     val notes: String = "",
-    /** The place's own grades; kept while editing even if no discipline uses them. */
-    val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
-    val localError: String? = null,
     val favourite: Boolean = false,
     val mapLocation: MapLocation? = null,
     val nameError: String? = null,
@@ -138,14 +177,39 @@ data class PlaceDraft(
     val doneId: Long? = null,
 ) {
     val isNew: Boolean get() = id == 0L
+    val types: List<PlaceType> get() = sections.map { it.type }.distinct()
+    val type: PlaceType get() = types.first()
+    val hasBoard: Boolean get() = PlaceType.BOARD in types
+
+    /** Only a board: no routes, and "where it is" rather than a city. */
+    val onlyBoard: Boolean get() = types == listOf(PlaceType.BOARD)
+
+    fun addSection(type: PlaceType) = copy(sections = sections + SectionDraft(type = type, key = (sections.maxOfOrNull { it.key } ?: 0) + 1))
+    fun updateSection(key: Int, change: (SectionDraft) -> SectionDraft) = copy(sections = sections.map { if (it.key == key) change(it) else it })
+
+    /** The last section can't be removed. */
+    fun removeSection(key: Int) = if (sections.size > 1) copy(sections = sections.filterNot { it.key == key }) else this
+}
+
+/** One section in the place form. [key] tells rows apart before they have an id. */
+data class SectionDraft(
+    val id: Long = 0,
+    val type: PlaceType,
+    val name: String = "",
+    val key: Int = 0,
+    /** Null = use my settings. */
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    /** This part's own grades; kept while editing even if no discipline uses them. */
+    val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
+    val localError: String? = null,
+) {
+    /** Boards hold boulders only. */
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
 }
 
 @HiltViewModel
-class PlaceEditorViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val repository: PlaceRepository,
-) : ViewModel() {
+class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: PlaceRepository) : ViewModel() {
     private val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val _draft = MutableStateFlow(PlaceDraft(id = placeId))
     val draft: StateFlow<PlaceDraft> = _draft.asStateFlow()
@@ -156,10 +220,22 @@ class PlaceEditorViewModel @Inject constructor(
                 repository.getPlace(placeId)?.let { p ->
                     _draft.update {
                         it.copy(
-                            name = p.name, type = p.type, location = p.location.orEmpty(),
-                            boulderScale = p.boulderScale, routeScale = p.routeScale,
-                            defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
-                            localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
+                            name = p.name,
+                            sections = p.sections.ifEmpty { p.types.map { t -> com.hardtekpt.crux.data.model.Section(0, p.id, t, t.label) } }
+                                .mapIndexed { index, section ->
+                                    SectionDraft(
+                                        id = section.id,
+                                        type = section.type,
+                                        name = section.name,
+                                        key = index,
+                                        boulderScale = section.boulderScale,
+                                        routeScale = section.routeScale,
+                                        localScale = section.localScale ?: LocalScale.DEFAULT_COLOURS,
+                                    )
+                                },
+                            location = p.location.orEmpty(),
+                            defaultAngle = p.defaultAngle ?: 40,
+                            notes = p.notes.orEmpty(),
                             favourite = p.favourite,
                             mapLocation = p.mapLocation,
                         )
@@ -169,7 +245,9 @@ class PlaceEditorViewModel @Inject constructor(
         }
     }
 
-    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { change(it).copy(nameError = null, localError = null) }
+    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { d ->
+        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null) }) }
+    }
 
     fun save() {
         val d = _draft.value
@@ -178,16 +256,20 @@ class PlaceEditorViewModel @Inject constructor(
             d.name.trim().length > MAX_NAME -> "Keep the name under $MAX_NAME characters"
             else -> null
         }
-        val local = d.localScale.copy(grades = d.localScale.grades.map { it.copy(name = it.name.trim()) })
-        val localError = when {
-            !d.usesLocal -> null
-            local.grades.size < 2 -> "A local scale needs at least two grades"
-            local.grades.any { it.name.isBlank() } -> "Name every grade"
-            local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
-            else -> null
+        // Each part with local grades needs a usable list.
+        val sections = d.sections.map { section ->
+            val local = section.localScale.copy(grades = section.localScale.grades.map { it.copy(name = it.name.trim()) })
+            val localError = when {
+                !section.usesLocal -> null
+                local.grades.size < 2 -> "A local scale needs at least two grades"
+                local.grades.any { it.name.isBlank() } -> "Name every grade"
+                local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
+                else -> null
+            }
+            section.copy(localScale = local, localError = localError)
         }
-        if (error != null || localError != null) {
-            _draft.update { it.copy(nameError = error, localError = localError) }
+        if (error != null || sections.any { it.localError != null }) {
+            _draft.update { it.copy(nameError = error, sections = sections) }
             return
         }
         viewModelScope.launch {
@@ -195,13 +277,19 @@ class PlaceEditorViewModel @Inject constructor(
                 PlaceInput(
                     id = d.id,
                     name = d.name,
-                    type = d.type,
+                    sections = sections.map {
+                        SectionInput(
+                            id = it.id,
+                            type = it.type,
+                            name = it.name,
+                            boulderScale = it.boulderScale,
+                            routeScale = it.routeScale,
+                            localScale = it.localScale.takeIf { _ -> it.usesLocal },
+                        )
+                    },
                     location = d.location,
-                    boulderScale = d.boulderScale,
-                    routeScale = d.routeScale,
-                    defaultAngle = d.defaultAngle.takeIf { d.type == PlaceType.BOARD },
+                    defaultAngle = d.defaultAngle.takeIf { d.hasBoard },
                     notes = d.notes,
-                    localScale = local.takeIf { d.usesLocal },
                     favourite = d.favourite,
                     mapLocation = d.mapLocation,
                 ),
@@ -224,11 +312,7 @@ class PlaceEditorViewModel @Inject constructor(
  * Create or edit a gym, crag or board. [onSaved] gets the place id, or 0 when it was deleted.
  */
 @Composable
-fun PlaceEditorScreen(
-    onBack: () -> Unit,
-    onSaved: (Long) -> Unit,
-    viewModel: PlaceEditorViewModel = hiltViewModel(),
-) {
+fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: PlaceEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     LaunchedEffect(draft.doneId) { draft.doneId?.let(onSaved) }
     val space = CruxTheme.space
@@ -264,8 +348,7 @@ fun PlaceEditorScreen(
                 .padding(top = space.s2, bottom = space.s6),
             verticalArrangement = Arrangement.spacedBy(space.s6),
         ) {
-            FormSection("What it is") {
-                CruxSegmentedButtons(PlaceType.entries, draft.type, { it.label }, { t -> viewModel.update { it.copy(type = t) } })
+            FormSection("Place") {
                 CruxTextField(
                     label = "Name",
                     value = draft.name,
@@ -278,7 +361,43 @@ fun PlaceEditorScreen(
                     error = draft.nameError,
                     modifier = Modifier.testTag("field_place_name"),
                 )
-                if (draft.type == PlaceType.BOARD) {
+            }
+
+            FormSection("What's here", "Each part of the place, like a main gym, a spray wall and a Moonboard, and the grades it uses") {
+                draft.sections.forEachIndexed { index, section ->
+                    val change = { change: (SectionDraft) -> SectionDraft -> viewModel.update { it.updateSection(section.key, change) } }
+                    SectionEditor(
+                        section = section,
+                        index = index,
+                        removable = draft.sections.size > 1,
+                        onChange = change,
+                        onRemove = { viewModel.update { it.removeSection(section.key) } },
+                    )
+                    if (section.usesLocal) {
+                        LocalScaleEditor(
+                            scale = section.localScale,
+                            error = section.localError,
+                            onChange = { scale -> change { it.copy(localScale = scale) } },
+                        )
+                    }
+                }
+                // Add another part, starting from a kind.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.testTag("add_section"),
+                ) {
+                    Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PlaceType.entries.forEach { t ->
+                        CruxFilterChip(
+                            label = "+ ${t.label}",
+                            selected = false,
+                            onClick = { viewModel.update { it.addSection(t) } },
+                            modifier = Modifier.testTag("add_section_${t.name}"),
+                        )
+                    }
+                }
+                if (draft.hasBoard) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
                             Text("Usual angle", style = MaterialTheme.typography.titleMedium)
@@ -291,33 +410,16 @@ fun PlaceEditorScreen(
 
             FormSection("Where · optional") {
                 CruxTextField(
-                    label = if (draft.type == PlaceType.BOARD) "Where it is" else "City or area",
+                    label = if (draft.onlyBoard) "Where it is" else "City or area",
                     value = draft.location,
                     onValueChange = { v -> viewModel.update { it.copy(location = v.take(MAX_NAME)) } },
-                    placeholder = if (draft.type == PlaceType.BOARD) "Home" else "Lisbon",
+                    placeholder = if (draft.onlyBoard) "Home" else "Lisbon",
                 )
                 MapLocationField(
                     location = draft.mapLocation,
                     placeName = draft.name,
                     onChange = { loc -> viewModel.update { it.copy(mapLocation = loc) } },
                 )
-            }
-
-            FormSection("Grades", "Used for climbs logged here") {
-                CruxCard(fill = CruxCardFill.Low) {
-                    ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
-                    if (draft.type != PlaceType.BOARD) {
-                        HorizontalDivider(Modifier.padding(vertical = space.s1), color = MaterialTheme.colorScheme.outlineVariant)
-                        ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
-                    }
-                }
-                if (draft.usesLocal) {
-                    LocalScaleEditor(
-                        scale = draft.localScale,
-                        error = draft.localError,
-                        onChange = { scale -> viewModel.update { it.copy(localScale = scale) } },
-                    )
-                }
             }
 
             FormSection("Notes · optional") {
@@ -416,9 +518,13 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
                 )
                 Row {
                     CruxButton("Change", { picking = true }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
-                    CruxButton("Open in Maps", { openInMaps(context, location, placeName.ifBlank { "Place" }) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    CruxButton("Open in Maps", {
+                        openInMaps(context, location, placeName.ifBlank { "Place" })
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                     Box(Modifier.weight(1f))
-                    CruxButton("Remove", { onChange(null) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
+                    CruxButton("Remove", {
+                        onChange(null)
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
                 }
             }
         }
@@ -441,7 +547,7 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
  * choices. Keeps the section to two quiet lines instead of rows of chips.
  */
 @Composable
-private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, onSelect: (GradeScale?) -> Unit) {
+private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, tagSuffix: String = "", onSelect: (GradeScale?) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val options: List<Pair<GradeScale?, String>> =
         listOf<Pair<GradeScale?, String>>(null to "My settings") +
@@ -457,7 +563,7 @@ private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeSc
                 .clip(MaterialTheme.shapes.small)
                 .clickable(onClickLabel = "Change $label grades") { open = true }
                 .padding(vertical = CruxTheme.space.s1)
-                .testTag("scale_${discipline.name}"),
+                .testTag("scale_${discipline.name}$tagSuffix"),
         ) {
             Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Text(current, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
@@ -465,19 +571,19 @@ private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeSc
         }
         // Anchored at the right, under the current choice.
         Box(Modifier.align(Alignment.BottomEnd)) {
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEach { (scale, name) ->
-                DropdownMenuItem(
-                    text = { Text(name) },
-                    trailingIcon = if (scale == selected) ({ Icon(Icons.Rounded.Check, contentDescription = null) }) else null,
-                    onClick = {
-                        onSelect(scale)
-                        open = false
-                    },
-                    modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}" else "scale_option_${name}"),
-                )
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                options.forEach { (scale, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        trailingIcon = if (scale == selected) ({ Icon(Icons.Rounded.Check, contentDescription = null) }) else null,
+                        onClick = {
+                            onSelect(scale)
+                            open = false
+                        },
+                        modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}$tagSuffix" else "scale_option_$name"),
+                    )
+                }
             }
-        }
         }
     }
 }
@@ -528,6 +634,7 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                     )
                 }
             }
+
             LocalKind.COLOURS -> {
                 Column(verticalArrangement = Arrangement.spacedBy(space.s1)) {
                     scale.grades.forEachIndexed { index, grade ->
@@ -537,7 +644,9 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                             isFirst = index == 0,
                             isLast = index == scale.grades.lastIndex,
                             canRemove = scale.grades.size > 2,
-                            onRename = { name -> onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = grade.copy(name = name.take(16)) })) },
+                            onRename = { name ->
+                                onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = grade.copy(name = name.take(16)) }))
+                            },
                             onPickColour = { pickingColourFor = index },
                             onMove = { by ->
                                 val list = scale.grades.toMutableList()
@@ -637,9 +746,18 @@ private fun LocalColourRow(
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${grade.name} options") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("Move easier") }, enabled = !isFirst, onClick = { menu = false; onMove(-1) })
-                DropdownMenuItem(text = { Text("Move harder") }, enabled = !isLast, onClick = { menu = false; onMove(1) })
-                DropdownMenuItem(text = { Text("Remove") }, enabled = canRemove, onClick = { menu = false; onRemove() })
+                DropdownMenuItem(text = { Text("Move easier") }, enabled = !isFirst, onClick = {
+                    menu = false
+                    onMove(-1)
+                })
+                DropdownMenuItem(text = { Text("Move harder") }, enabled = !isLast, onClick = {
+                    menu = false
+                    onMove(1)
+                })
+                DropdownMenuItem(text = { Text("Remove") }, enabled = canRemove, onClick = {
+                    menu = false
+                    onRemove()
+                })
             }
         }
     }
@@ -720,15 +838,15 @@ class ProblemEditorViewModel @Inject constructor(
 
     val areas: StateFlow<List<Area>> = repository.observePlaceDetail(placeId).map { it?.areas.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val placeType: StateFlow<PlaceType?> = repository.observePlaceDetail(placeId).map { it?.place?.type }
+    val place: StateFlow<com.hardtekpt.crux.data.model.Place?> = repository.observePlaceDetail(placeId).map { it?.place }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
         viewModelScope.launch {
             settings = preferences.gradeScales.first()
-            val local = repository.getPlace(placeId)?.localScale
-            _draft.update { it.copy(local = local) }
             val problem = problemId.takeIf { it != 0L }?.let { repository.getProblem(it) }
+            val local = sectionOf(problem?.areaId)?.localScale
+            _draft.update { it.copy(local = local) }
             if (problem != null) {
                 _draft.update {
                     it.copy(
@@ -744,9 +862,15 @@ class ProblemEditorViewModel @Inject constructor(
         }
     }
 
-    /** The place's scale for a discipline, else the climber's setting. */
+    /** The part of the place a wall is in (the first part without a wall). */
+    private suspend fun sectionOf(areaId: Long?): com.hardtekpt.crux.data.model.Section? {
+        val detail = repository.observePlaceDetail(placeId).first() ?: return null
+        return detail.place.sectionOf(detail.areas.firstOrNull { it.id == areaId })
+    }
+
+    /** That part's scale for a discipline, else the climber's setting. */
     private suspend fun scaleFor(discipline: Discipline): GradeScale =
-        repository.getPlace(placeId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
+        sectionOf(_draft.value.areaId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
 
     fun setDiscipline(discipline: Discipline) {
         viewModelScope.launch {
@@ -755,7 +879,26 @@ class ProblemEditorViewModel @Inject constructor(
         }
     }
 
-    fun update(change: (ProblemDraft) -> ProblemDraft) = _draft.update { change(it).copy(nameError = null) }
+    fun update(change: (ProblemDraft) -> ProblemDraft) {
+        val before = _draft.value.areaId
+        _draft.update { change(it).copy(nameError = null) }
+        // A wall in another part of the place can grade differently.
+        if (_draft.value.areaId != before && _draft.value.id == 0L) {
+            viewModelScope.launch {
+                val scale = scaleFor(_draft.value.discipline)
+                val local = sectionOf(_draft.value.areaId)?.localScale
+                _draft.update { d ->
+                    if (d.gradeScale == scale &&
+                        d.local == local
+                    ) {
+                        d
+                    } else {
+                        d.copy(gradeScale = scale, local = local).let { it.copy(gradeIndex = it.system.defaultIndex) }
+                    }
+                }
+            }
+        }
+    }
 
     fun save() {
         val d = _draft.value
@@ -793,13 +936,10 @@ class ProblemEditorViewModel @Inject constructor(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ProblemEditorScreen(
-    onDone: (deleted: Boolean) -> Unit,
-    viewModel: ProblemEditorViewModel = hiltViewModel(),
-) {
+fun ProblemEditorScreen(onDone: (deleted: Boolean) -> Unit, viewModel: ProblemEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val areas by viewModel.areas.collectAsStateWithLifecycle()
-    val type by viewModel.placeType.collectAsStateWithLifecycle()
+    val place by viewModel.place.collectAsStateWithLifecycle()
     LaunchedEffect(draft.done) { if (draft.done) onDone(draft.deleted) }
     val space = CruxTheme.space
     val noun = if (draft.discipline == Discipline.ROUTE) "route" else "problem"
@@ -823,7 +963,7 @@ fun ProblemEditorScreen(
                 .padding(horizontal = space.s4),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            if (type != PlaceType.BOARD) {
+            if (place?.types != listOf(PlaceType.BOARD)) {
                 CruxSegmentedButtons(Discipline.entries, draft.discipline, { it.label }, viewModel::setDiscipline)
             }
             CruxTextField(
@@ -844,7 +984,7 @@ fun ProblemEditorScreen(
                 modifier = Modifier.bleed(space.s4),
             )
             if (areas.isNotEmpty()) {
-                Eyebrow(type?.areaLabel ?: "Wall")
+                Eyebrow(place?.let { if (it.hasSeveralTypes) "Area" else it.type.areaLabel } ?: "Wall")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     CruxFilterChip("None", draft.areaId == null, { viewModel.update { it.copy(areaId = null) } })
                     areas.forEach { area ->

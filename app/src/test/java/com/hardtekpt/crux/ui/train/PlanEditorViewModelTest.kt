@@ -35,8 +35,7 @@ class PlanEditorViewModelTest {
     private val hang = Exercise(1, "Half-crimp hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, null)
     private val pullUps = Exercise(2, "Pull-ups", ExerciseCategory.PULLING, MetricType.REPS, null)
 
-    private fun viewModel(templateId: Long = 0) =
-        PlanEditorViewModel(SavedStateHandle(mapOf("templateId" to templateId)), templates, exercises)
+    private fun viewModel(templateId: Long = 0) = PlanEditorViewModel(SavedStateHandle(mapOf("templateId" to templateId)), templates, exercises)
 
     @Test
     fun `a new plan needs a name and an exercise`() {
@@ -63,8 +62,10 @@ class PlanEditorViewModelTest {
     @Test
     fun `items move within a block and targets update`() {
         val vm = viewModel()
-        vm.openPicker(0); vm.addExercise(hang)
-        vm.openPicker(0); vm.addExercise(pullUps)
+        vm.openPicker(0)
+        vm.addExercise(hang)
+        vm.openPicker(0)
+        vm.addExercise(pullUps)
         vm.moveItem(ItemRef(0, 1), -1)
         vm.editItem(ItemRef(0, 0))
         vm.updateTarget(ExerciseTarget(sets = 4, reps = 6))
@@ -78,7 +79,8 @@ class PlanEditorViewModelTest {
     fun `saving drops empty blocks and stores the plan`() = runTest {
         val vm = viewModel()
         vm.setName("  Finger day ")
-        vm.openPicker(0); vm.addExercise(hang)
+        vm.openPicker(0)
+        vm.addExercise(hang)
         vm.addBlock()
         vm.save()
 

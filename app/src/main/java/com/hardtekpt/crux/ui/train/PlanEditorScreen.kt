@@ -1,7 +1,5 @@
 package com.hardtekpt.crux.ui.train
 
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -38,8 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseTarget
@@ -64,10 +64,7 @@ import com.hardtekpt.crux.ui.components.input.formatDuration
 import com.hardtekpt.crux.ui.theme.CruxTheme
 
 @Composable
-fun PlanEditorScreen(
-    onDone: () -> Unit,
-    viewModel: PlanEditorViewModel = hiltViewModel(),
-) {
+fun PlanEditorScreen(onDone: () -> Unit, viewModel: PlanEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     LaunchedEffect(draft.done) { if (draft.done) onDone() }
@@ -215,7 +212,15 @@ private fun BlockCard(
             block.items.forEachIndexed { itemIndex, item ->
                 CruxListRow(
                     title = item.exercise.name,
-                    supporting = listOfNotNull(item.target.prescription(item.exercise.metric), item.target.restLabel()?.let { "rest $it" })
+                    supporting = listOfNotNull(
+                        item.target.prescription(
+                            item.exercise.metric,
+                            com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                        ),
+                        item.target.restLabel()?.let {
+                            "rest $it"
+                        },
+                    )
                         .joinToString(" · "),
                     onClick = { onEditItem(itemIndex) },
                     trailing = {
@@ -242,23 +247,14 @@ private fun BlockCard(
 }
 
 @Composable
-private fun SmallIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    description: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
+private fun SmallIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(CruxTheme.size.touchTarget)) {
         Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
     }
 }
 
 @Composable
-private fun ExercisePickerSheet(
-    library: List<Exercise>,
-    onPick: (Exercise) -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun ExercisePickerSheet(library: List<Exercise>, onPick: (Exercise) -> Unit, onDismiss: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val matches = library.filter { it.name.contains(query.trim(), ignoreCase = true) }
     ModalBottomSheet(
@@ -307,12 +303,7 @@ private fun ExercisePickerSheet(
 
 /** Targets for one exercise; only the fields its metric uses are shown. */
 @Composable
-private fun TargetSheet(
-    exercise: Exercise,
-    target: ExerciseTarget,
-    onChange: (ExerciseTarget) -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit, onDismiss: () -> Unit) {
     val metric = exercise.metric
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -331,7 +322,7 @@ private fun TargetSheet(
         ) {
             Text(exercise.name, style = MaterialTheme.typography.headlineSmall)
             Text(
-                target.prescription(metric),
+                target.prescription(metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                 style = CruxTheme.type.code,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -372,8 +363,12 @@ private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange
         if (metric.usesTime) {
             InputRow("Time per set", formatDuration(target.seconds), open == "seconds", { toggle("seconds") }, mono = true, testTag = "seconds") {
                 DurationWheel(
-                    target.seconds, { onChange(target.copy(seconds = it)) }, "Time per set",
-                    maxMinutes = 10, minSeconds = 1, presets = listOf(5, 7, 10, 20, 30, 60),
+                    target.seconds,
+                    { onChange(target.copy(seconds = it)) },
+                    "Time per set",
+                    maxMinutes = 10,
+                    minSeconds = 1,
+                    presets = listOf(5, 7, 10, 20, 30, 60),
                 )
             }
         }
@@ -382,8 +377,12 @@ private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange
         }
         InputRow("Rest between sets", formatDuration(target.restSeconds), open == "rest", { toggle("rest") }, mono = true, testTag = "rest") {
             DurationWheel(
-                target.restSeconds, { onChange(target.copy(restSeconds = it)) }, "Rest between sets",
-                maxMinutes = 15, secondStep = 5, presets = listOf(60, 90, 120, 180, 240, 300),
+                target.restSeconds,
+                { onChange(target.copy(restSeconds = it)) },
+                "Rest between sets",
+                maxMinutes = 15,
+                secondStep = 5,
+                presets = listOf(60, 90, 120, 180, 240, 300),
             )
         }
     }
@@ -397,14 +396,21 @@ private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange:
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         InputRow("Work", formatDuration(target.seconds), open == "work", { toggle("work") }, mono = true, testTag = "work") {
             DurationWheel(
-                target.seconds, { onChange(target.copy(seconds = it)) }, "Work",
-                maxMinutes = 10, minSeconds = 1, presets = listOf(5, 7, 10, 15, 20, 30),
+                target.seconds,
+                { onChange(target.copy(seconds = it)) },
+                "Work",
+                maxMinutes = 10,
+                minSeconds = 1,
+                presets = listOf(5, 7, 10, 15, 20, 30),
             )
         }
         InputRow("Rest", formatDuration(target.repRestSeconds), open == "rep_rest", { toggle("rep_rest") }, mono = true, testTag = "rep_rest") {
             DurationWheel(
-                target.repRestSeconds, { onChange(target.copy(repRestSeconds = it)) }, "Rest",
-                maxMinutes = 10, presets = listOf(3, 5, 10, 30, 60, 90),
+                target.repRestSeconds,
+                { onChange(target.copy(repRestSeconds = it)) },
+                "Rest",
+                maxMinutes = 10,
+                presets = listOf(3, 5, 10, 30, 60, 90),
             )
         }
         InputRow("Repeats", target.reps.toString(), open == "repeats", { toggle("repeats") }, unit = "reps", testTag = "repeats") {
@@ -416,10 +422,16 @@ private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange:
         if (usesLoad) {
             LoadRow(target, open == "load", { toggle("load") }, onChange)
         }
-        InputRow("Rest between cycles", formatDuration(target.restSeconds), open == "cycle_rest", { toggle("cycle_rest") }, mono = true, testTag = "cycle_rest") {
+        InputRow("Rest between cycles", formatDuration(target.restSeconds), open == "cycle_rest", {
+            toggle("cycle_rest")
+        }, mono = true, testTag = "cycle_rest") {
             DurationWheel(
-                target.restSeconds, { onChange(target.copy(restSeconds = it)) }, "Rest between cycles",
-                maxMinutes = 15, secondStep = 5, presets = listOf(60, 90, 120, 180, 240, 300),
+                target.restSeconds,
+                { onChange(target.copy(restSeconds = it)) },
+                "Rest between cycles",
+                maxMinutes = 15,
+                secondStep = 5,
+                presets = listOf(60, 90, 120, 180, 240, 300),
             )
         }
     }
@@ -428,12 +440,21 @@ private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange:
 @Composable
 private fun LoadRow(target: ExerciseTarget, open: Boolean, onToggle: () -> Unit, onChange: (ExerciseTarget) -> Unit) {
     val load = target.loadKg
+    val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
     InputRow(
         "Added load",
-        (if (load > 0) "+" else if (load < 0) "−" else "") + formatKg(kotlin.math.abs(load)),
+        (
+            if (load > 0) {
+                "+"
+            } else if (load < 0) {
+                "−"
+            } else {
+                ""
+            }
+            ) + com.hardtekpt.crux.data.model.formatLoad(load, imperial),
         open,
         onToggle,
-        unit = "kg",
+        unit = com.hardtekpt.crux.data.model.loadUnit(imperial),
         testTag = "load",
     ) {
         LoadWheel(load, { onChange(target.copy(loadKg = it)) }, minKg = MIN_LOAD, maxKg = MAX_LOAD)

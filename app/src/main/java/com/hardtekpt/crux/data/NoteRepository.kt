@@ -8,13 +8,13 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Update
 import com.hardtekpt.crux.data.local.CruxDatabases
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** A free note: how training feels, an injury to watch, beta to remember (schema 13; tag 14). */
 @Entity(tableName = "notes", indices = [Index("createdAtMillis")])
@@ -50,13 +50,7 @@ interface NoteDao {
     suspend fun delete(id: Long)
 }
 
-data class Note(
-    val id: Long,
-    val text: String,
-    val created: LocalDate,
-    val pinned: Boolean,
-    val tag: String? = null,
-) {
+data class Note(val id: Long, val text: String, val created: LocalDate, val pinned: Boolean, val tag: String? = null) {
     /** The first line, for lists; the rest is the body. */
     val title: String get() = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
     val body: String get() = text.trim().removePrefix(title).trim()
@@ -66,15 +60,13 @@ interface NoteRepository {
     /** Pinned first, then newest first. */
     fun observeNotes(): Flow<List<Note>>
     suspend fun getNote(id: Long): Note?
+
     /** Creates when [id] is 0; returns the note's id. */
     suspend fun saveNote(id: Long, text: String, pinned: Boolean, tag: String? = null): Long
     suspend fun deleteNote(id: Long)
 }
 
-class OfflineNoteRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-    private val clock: Clock,
-) : NoteRepository {
+class OfflineNoteRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : NoteRepository {
     override fun observeNotes(): Flow<List<Note>> = dbs.observe { it.noteDao().observeAll() }.map { list -> list.map { it.toModel() } }
 
     override suspend fun getNote(id: Long): Note? = dbs.current().noteDao().get(id)?.toModel()

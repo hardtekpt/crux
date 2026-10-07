@@ -35,6 +35,9 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,9 +45,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Clock
-import java.time.LocalDate
-import javax.inject.Inject
 
 data class BackupUiState(
     val exportSections: Set<BackupSection> = BackupSection.entries.filter { it.available }.toSet(),
@@ -57,11 +57,8 @@ data class BackupUiState(
 )
 
 @HiltViewModel
-class BackupViewModel @Inject constructor(
-    private val backup: BackupRepository,
-    private val contentResolver: ContentResolver,
-    private val clock: Clock,
-) : ViewModel() {
+class BackupViewModel @Inject constructor(private val backup: BackupRepository, private val contentResolver: ContentResolver, private val clock: Clock) :
+    ViewModel() {
     private val _state = MutableStateFlow(BackupUiState())
     val state: StateFlow<BackupUiState> = _state.asStateFlow()
 
@@ -229,14 +226,7 @@ fun BackupCard(state: BackupUiState, viewModel: BackupViewModel) {
 }
 
 @Composable
-private fun SectionToggle(
-    section: BackupSection,
-    checked: Boolean,
-    count: Int?,
-    onToggle: () -> Unit,
-    tag: String,
-    enabled: Boolean = section.available,
-) {
+private fun SectionToggle(section: BackupSection, checked: Boolean, count: Int?, onToggle: () -> Unit, tag: String, enabled: Boolean = section.available) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Column(Modifier.weight(1f)) {
             Text(

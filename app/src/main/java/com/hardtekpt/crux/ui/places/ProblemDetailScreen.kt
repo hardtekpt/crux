@@ -20,12 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.dp
-import com.hardtekpt.crux.ui.components.ImageThumbnail
-import com.hardtekpt.crux.ui.components.ImageViewer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -43,6 +41,8 @@ import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import com.hardtekpt.crux.ui.components.ImageViewer
 import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.gradeState
@@ -52,6 +52,7 @@ import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -59,15 +60,10 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class ProblemDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    places: PlaceRepository,
-    climbs: ClimbRepository,
-) : ViewModel() {
+class ProblemDetailViewModel @Inject constructor(savedStateHandle: SavedStateHandle, places: PlaceRepository, climbs: ClimbRepository) : ViewModel() {
     val problemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
 
     val problem: StateFlow<ProblemWithStats?> = places.observeProblem(problemId)

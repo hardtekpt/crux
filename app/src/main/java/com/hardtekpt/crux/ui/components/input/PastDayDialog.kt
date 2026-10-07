@@ -16,18 +16,12 @@ import java.time.ZoneOffset
 /** A calendar for days older than the [DayStrip] shows. Future days can't be picked. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PastDayDialog(
-    initial: LocalDate,
-    today: LocalDate,
-    onPick: (LocalDate) -> Unit,
-    onDismiss: () -> Unit,
-) {
+fun PastDayDialog(initial: LocalDate, today: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
     val state = rememberDatePickerState(
         initialSelectedDateMillis = initial.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
         selectableDates = remember(today) {
             object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long) =
-                    utcTimeMillis <= today.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= today.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
             }
         },
     )

@@ -11,12 +11,12 @@ import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.MetricType
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 /**
  * A result on an exercise, logged by hand until the session logger records them (schema 13).
@@ -53,15 +53,7 @@ interface ExerciseRecordDao {
     suspend fun delete(id: Long)
 }
 
-data class ExerciseRecord(
-    val id: Long,
-    val exerciseId: Long,
-    val date: LocalDate,
-    val reps: Int?,
-    val seconds: Int?,
-    val loadKg: Double?,
-    val notes: String?,
-)
+data class ExerciseRecord(val id: Long, val exerciseId: Long, val date: LocalDate, val reps: Int?, val seconds: Int?, val loadKg: Double?, val notes: String?)
 
 /** One logged result with its exercise, and whether it is that exercise's PR. */
 data class LoggedResult(val exercise: Exercise, val record: ExerciseRecord, val isBest: Boolean)
@@ -79,28 +71,26 @@ fun MetricType.score(record: ExerciseRecord): List<Double> = when {
     else -> listOf((record.reps ?: 0).toDouble())
 }
 
-fun MetricType.best(records: List<ExerciseRecord>): ExerciseRecord? =
-    records.maxWithOrNull { a, b ->
-        val sa = score(a)
-        val sb = score(b)
-        sa.indices.map { sa[it].compareTo(sb[it]) }.firstOrNull { it != 0 } ?: b.date.compareTo(a.date)
-    }
+fun MetricType.best(records: List<ExerciseRecord>): ExerciseRecord? = records.maxWithOrNull { a, b ->
+    val sa = score(a)
+    val sb = score(b)
+    sa.indices.map { sa[it].compareTo(sb[it]) }.firstOrNull { it != 0 } ?: b.date.compareTo(a.date)
+}
 
 interface RecordRepository {
     /** Every exercise that has a result, with its best; most recently set PRs first. */
     fun observeBests(): Flow<List<ExerciseBest>>
+
     /** Every result, newest first, for the journal. */
     fun observeResults(): Flow<List<LoggedResult>>
+
     /** One exercise's results, newest first. */
     fun observeRecords(exerciseId: Long): Flow<List<ExerciseRecord>>
     suspend fun addRecord(exerciseId: Long, date: LocalDate, reps: Int?, seconds: Int?, loadKg: Double?, notes: String?): Long
     suspend fun deleteRecord(id: Long)
 }
 
-class OfflineRecordRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-    private val clock: Clock,
-) : RecordRepository {
+class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : RecordRepository {
     override fun observeBests(): Flow<List<ExerciseBest>> = dbs.observe { db ->
         combine(db.exerciseDao().observeAll(), db.exerciseRecordDao().observeAll()) { exercises, records ->
             val byExercise = records.map { it.toModel() }.groupBy { it.exerciseId }

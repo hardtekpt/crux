@@ -14,7 +14,10 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.PlaceType
 import kotlinx.coroutines.flow.Flow
 
-/** A gym, crag or board the climber logs at. */
+/**
+ * A physical place the climber logs at. It can hold several kinds of climbing (a gym with a
+ * board, a crag with a bouldering area): [type] is the main one, [extraTypes] the others.
+ */
 @Entity(tableName = "places", indices = [Index("name")])
 data class PlaceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -22,7 +25,7 @@ data class PlaceEntity(
     val type: PlaceType,
     /** City, region or "home" — whatever helps tell places apart. */
     val location: String? = null,
-    /** The scales this place grades in; null means use the climber's settings. */
+    /** Before schema 20 a place graded as a whole; now each section does, and these stay empty. */
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
     /** Boards: the angle the board is usually set to. */
@@ -37,6 +40,34 @@ data class PlaceEntity(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val address: String? = null,
+    /** Other kinds of climbing here besides [type], comma-separated names (schema 15). */
+    @ColumnInfo(defaultValue = "") val extraTypes: String = "",
+) {
+    companion object
+}
+
+/**
+ * One part of a place, with its own kind and name: "Main gym", "Spray wall", "Moonboard".
+ * A place has one or more; kinds can repeat (two boards). Schema 16.
+ */
+@Entity(
+    tableName = "sections",
+    foreignKeys = [
+        ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("placeId")],
+)
+data class SectionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val placeId: Long,
+    val type: PlaceType,
+    val name: String,
+    val position: Int = 0,
+    /** The scales climbs here are graded in; null uses the climber's settings (schema 20). */
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    /** This section's own grades as JSON ([com.hardtekpt.crux.data.model.LocalScale]). */
+    val localScale: String? = null,
 )
 
 /** A wall or sector inside a place; for a board, a named angle or set. */
@@ -44,8 +75,9 @@ data class PlaceEntity(
     tableName = "areas",
     foreignKeys = [
         ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = SectionEntity::class, parentColumns = ["id"], childColumns = ["sectionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("placeId")],
+    indices = [Index("placeId"), Index("sectionId")],
 )
 data class AreaEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -57,6 +89,10 @@ data class AreaEntity(
     val position: Int = 0,
     /** File name of an attached photo or map in app storage (schema 8). */
     val imagePath: String? = null,
+    /** Schema 15's kind for the area; replaced by [sectionId] in schema 16 and no longer used. */
+    val type: PlaceType? = null,
+    /** The section the area is in (schema 16); null means the place's first section. */
+    val sectionId: Long? = null,
 )
 
 /** A problem or route at a place, optionally on one of its areas. */
@@ -99,11 +135,7 @@ data class ProblemStatsRow(
 )
 
 /** Activity at a place, for the places list. */
-data class PlaceActivityRow(
-    val placeId: Long,
-    val climbs: Int,
-    val lastEpochDay: Long?,
-)
+data class PlaceActivityRow(val placeId: Long, val climbs: Int, val lastEpochDay: Long?)
 
 @Dao
 interface PlaceDao {
@@ -139,6 +171,30 @@ interface PlaceDao {
 
     @Query("DELETE FROM places WHERE id = :id")
     suspend fun deletePlace(id: Long)
+
+    @Query("SELECT * FROM sections WHERE placeId = :placeId ORDER BY position, id")
+    fun observeSections(placeId: Long): Flow<List<SectionEntity>>
+
+    @Query("SELECT * FROM sections WHERE placeId = :placeId ORDER BY position, id")
+    suspend fun getSections(placeId: Long): List<SectionEntity>
+
+    @Query("SELECT * FROM sections ORDER BY placeId, position, id")
+    fun observeAllSections(): Flow<List<SectionEntity>>
+
+    @Query("SELECT * FROM sections ORDER BY placeId, position, id")
+    suspend fun getAllSections(): List<SectionEntity>
+
+    @Insert
+    suspend fun insertSection(section: SectionEntity): Long
+
+    @Update
+    suspend fun updateSection(section: SectionEntity)
+
+    @Query("DELETE FROM sections WHERE id = :id")
+    suspend fun deleteSection(id: Long)
+
+    @Query("UPDATE climbs SET sectionId = NULL WHERE sectionId = :id")
+    suspend fun unlinkClimbsFromSection(id: Long)
 
     @Query("SELECT * FROM areas WHERE placeId = :placeId ORDER BY position, name COLLATE NOCASE")
     fun observeAreas(placeId: Long): Flow<List<AreaEntity>>

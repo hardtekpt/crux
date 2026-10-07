@@ -5,22 +5,22 @@ import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.PersonalBest
-import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
-import com.hardtekpt.crux.ui.journal.count
-import com.hardtekpt.crux.ui.journal.matching
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.ui.journal.count
+import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
+import com.hardtekpt.crux.ui.journal.matching
 import com.hardtekpt.crux.ui.progress.ProgressUiState
 import com.hardtekpt.crux.ui.progress.toDisciplineBests
-import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.you.apeIndex
 import com.hardtekpt.crux.ui.you.parseMeasurement
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class DerivedDataTest {
 
@@ -109,6 +109,27 @@ class DerivedDataTest {
     }
 
     @Test
+    fun `climbs from a finished session sit inside it, not on their own`() {
+        val inSession = climb(1, today, "Arco").copy(sessionId = 9)
+        val loose = climb(2, today, "Arco")
+        val session = com.hardtekpt.crux.data.Session(
+            id = 9, name = "Climbing session", templateId = null, placeId = null, sectionId = null,
+            startedAtMillis = today.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(), endedAtMillis = null,
+            running = false, effort = null, notes = null, items = emptyList(), climbs = listOf(inSession),
+        )
+        val day = com.hardtekpt.crux.ui.journal.buildTimeline(
+            listOf(inSession, loose),
+            emptyList(),
+            emptyList(),
+            listOf(session),
+            java.time.ZoneOffset.UTC,
+        ).single()
+        val loneClimbs = day.entries.filterIsInstance<com.hardtekpt.crux.ui.journal.TimelineEntry.Climbs>().flatMap { it.day.climbs }
+        assertEquals(listOf(2L), loneClimbs.map { it.id })
+        assertEquals(1, day.entries.count { it is com.hardtekpt.crux.ui.journal.TimelineEntry.SessionEntry })
+    }
+
+    @Test
     fun `hardest send per discipline ignores style`() {
         val bests = listOf(
             best(Discipline.BOULDER, AscentStyle.FLASH, 9),
@@ -163,10 +184,6 @@ class DerivedDataTest {
         id, Discipline.BOULDER, GradeScale.FONT, 5, AscentStyle.FLASH, 1, Venue.GYM, date, null, place, null,
     )
 
-    private fun best(
-        discipline: Discipline,
-        style: AscentStyle,
-        index: Int,
-        scale: GradeScale = discipline.defaultScale,
-    ) = PersonalBest(discipline, style, scale, index, null, null, today)
+    private fun best(discipline: Discipline, style: AscentStyle, index: Int, scale: GradeScale = discipline.defaultScale) =
+        PersonalBest(discipline, style, scale, index, null, null, today)
 }

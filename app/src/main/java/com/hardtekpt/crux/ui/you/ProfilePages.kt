@@ -5,13 +5,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -41,6 +44,8 @@ import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -48,6 +53,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.lengthDifference
 import com.hardtekpt.crux.ui.measurement
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.places.PlacesViewModel
 import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.shortLabel
@@ -55,6 +61,8 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.weightChange
+import com.hardtekpt.crux.ui.weightUnit
+import com.hardtekpt.crux.ui.weightValue
 
 private val TapeLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
 
@@ -81,20 +89,49 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s6 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            item(key = "body_label") { Eyebrow("Body · tap to update") }
-            item(key = "body") { BodyStatGrid(uiState, onEdit = { editing = it }) }
-            if (uiState.weights.isEmpty()) {
-                item(key = "weight_empty") {
-                    CruxButton("Log your first weigh-in", onLogWeight, variant = CruxButtonVariant.Tonal, icon = Icons.Rounded.Add)
+            // Weight first: it changes most.
+            item(key = "weight_card") { WeightCard(uiState, onLogWeight) }
+            // Proportions: height and wingspan drawn on the figure, the ape index in the header.
+            item(key = "proportions") {
+                val ape = uiState.apeIndex
+                CruxCard(fill = CruxCardFill.Default, modifier = Modifier.testTag("proportions_card")) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Eyebrow("Your body · tap to update", Modifier.weight(1f))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .border(CruxTheme.size.borderHairline, MaterialTheme.colorScheme.outline, CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        ) {
+                            Text("APE INDEX", style = TapeLabel.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                ape?.differenceCm?.let { units.lengthDifference(it).toString() } ?: "–",
+                                style = TapeLabel.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.testTag("you_ape_index"),
+                            )
+                        }
+                    }
+                    ProportionsFigure(
+                        height = uiState.latest[MeasurementType.HEIGHT]?.value,
+                        wingspan = uiState.latest[MeasurementType.WINGSPAN]?.value,
+                        reach = uiState.latest[MeasurementType.STANDING_REACH]?.value,
+                        weightKg = uiState.summary?.latest?.value,
+                        bodyFat = uiState.latest[MeasurementType.BODY_FAT]?.value,
+                        onEdit = { editing = it },
+                        onLogWeight = onLogWeight,
+                        modifier = Modifier.padding(top = space.s2),
+                    )
                 }
-            } else {
-                item(key = "weight_chart") { WeightTrendCard(uiState.weights) }
             }
             if (uiState.weights.size > 3) {
                 item(key = "weight_history_label") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Eyebrow("Weigh-ins", Modifier.weight(1f))
-                        CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", { allWeights = !allWeights }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                        CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", {
+                            allWeights = !allWeights
+                        }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                     }
                 }
             }
@@ -123,6 +160,71 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
     }
 }
 
+/** Weight on top of the Measurements page: the latest value, how it moved, and the chart. */
+@Composable
+private fun WeightCard(uiState: YouUiState, onLogWeight: () -> Unit) {
+    val units = LocalUnits.current
+    val colors = MaterialTheme.colorScheme
+    val summary = uiState.summary
+    var range by rememberSaveable { mutableStateOf(com.hardtekpt.crux.ui.charts.ChartRange.Quarter) }
+    val start = range.start(uiState.today)
+    val inRange = uiState.weights.filter { start == null || !it.date.isBefore(start) }.sortedBy { it.date }
+    CruxCard(fill = CruxCardFill.Default, modifier = Modifier.testTag("weight_card")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Eyebrow("Weight", Modifier.weight(1f))
+            CruxButton("Log", onLogWeight, variant = CruxButtonVariant.Tonal, size = CruxButtonSize.Small, icon = Icons.Rounded.Add)
+        }
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(summary?.latest?.value?.let { units.weight(it).value } ?: "–", style = CruxTheme.type.metricLarge)
+            if (summary !=
+                null
+            ) {
+                Text(
+                    " ${units.weightUnit()}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
+        }
+        Text(
+            when {
+                summary == null -> "No weigh-ins yet"
+                summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window} · last weigh-in ${summary.latest.date.dayLabel()}"
+                else -> "Last weigh-in ${summary.latest.date.dayLabel()}"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
+        if (uiState.weights.size >= 2) {
+            com.hardtekpt.crux.ui.components.CruxSegmentedButtons(
+                options = com.hardtekpt.crux.ui.charts.ChartRange.entries,
+                selected = range,
+                label = { it.label },
+                onSelect = { range = it },
+                modifier = Modifier.padding(top = CruxTheme.space.s3, bottom = CruxTheme.space.s2),
+            )
+            if (inRange.size < 2) {
+                Text(
+                    "Log another weigh-in in this window to see the trend.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = CruxTheme.space.s4),
+                )
+            } else {
+                com.hardtekpt.crux.ui.charts.TimeSeriesChart(
+                    points = inRange.map { com.hardtekpt.crux.ui.charts.SeriesPoint(it.date.toEpochDay().toDouble(), units.weightValue(it.value)) },
+                    formatX = { java.time.LocalDate.ofEpochDay(it.toLong()).shortLabel() },
+                    formatY = { it.oneDecimal() },
+                    unit = " ${units.weightUnit()}",
+                    height = 150.dp,
+                    description = "Bodyweight between ${inRange.first().date.shortLabel()} and ${inRange.last().date.shortLabel()}",
+                )
+            }
+        }
+    }
+}
+
 /**
  * Circumferences by body part. Limbs show left and right side by side as two pieces of tape,
  * with the difference between them; chest and waist have one.
@@ -143,60 +245,25 @@ fun CircumferencesScreen(onBack: () -> Unit, viewModel: YouViewModel = hiltViewM
         ) {
             item(key = "intro") {
                 Text(
-                    "Measured relaxed with a soft tape. Tap a side to update it; history is kept.",
+                    "Each band is where the tape goes. Tap a value to update that side.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.onSurfaceVariant,
                 )
             }
-            items(MeasurementType.circumferenceParts, key = { it.first }) { (part, types) ->
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.large)
-                        .background(colors.surfaceContainer)
-                        .border(CruxTheme.size.borderHairline, colors.outlineVariant, MaterialTheme.shapes.large)
-                        .padding(space.s4),
-                    verticalArrangement = Arrangement.spacedBy(space.s2),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(part, style = MaterialTheme.typography.titleMedium)
-                            Text(types.first().description, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-                        }
-                        if (types.size == 2) {
-                            val left = uiState.latest[types[0]]?.value
-                            val right = uiState.latest[types[1]]?.value
-                            if (left != null && right != null && left != right) {
-                                val bigger = if (right > left) "R" else "L"
-                                Text(
-                                    "$bigger +${units.measurement(types[0], kotlin.math.abs(right - left))}",
-                                    style = TapeLabel,
-                                    color = colors.tertiary,
-                                    modifier = Modifier.testTag("diff_$part"),
-                                )
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                        types.forEach { type ->
-                            val latest = uiState.latest[type]
-                            val side = when {
-                                types.size == 1 -> null
-                                type == types[0] -> "Left"
-                                else -> "Right"
-                            }
-                            TapeCell(
-                                side = side,
-                                value = latest?.let { units.measurement(type, it.value).toString() },
-                                date = latest?.date?.shortLabel(),
-                                onClick = { editing = type },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("stat_${type.name}"),
-                                valueModifier = Modifier.testTag("you_${type.name.lowercase()}"),
-                            )
-                        }
-                    }
+            item(key = "figure") {
+                CruxCard(fill = CruxCardFill.Default) {
+                    Eyebrow("Seen from behind · your left is left")
+                    CircumferenceFigure(
+                        latest = MeasurementType.circumferences.mapNotNull { type -> uiState.latest[type]?.let { type to it.value } }.toMap(),
+                        onEdit = { editing = it },
+                        modifier = Modifier.padding(top = space.s2),
+                    )
+                }
+            }
+            val last = MeasurementType.circumferences.mapNotNull { uiState.latest[it]?.date }.maxOrNull()
+            if (last != null) {
+                item(key = "last") {
+                    Text("Last measured ${last.shortLabel()}", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 }
             }
         }
@@ -214,59 +281,9 @@ fun CircumferencesScreen(onBack: () -> Unit, viewModel: YouViewModel = hiltViewM
     }
 }
 
-/** One side's value on a strip that reads like measuring tape, ticks along the top edge. */
-@Composable
-private fun TapeCell(
-    side: String?,
-    value: String?,
-    date: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    valueModifier: Modifier = Modifier,
-) {
-    val colors = MaterialTheme.colorScheme
-    val tick = colors.outline
-    Column(
-        modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.surfaceContainerHigh)
-            .clickable(onClick = onClick)
-            .androidxDrawTicks(tick)
-            .padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 10.dp),
-    ) {
-        side?.let { Text(it.uppercase(), style = TapeLabel, color = colors.onSurfaceVariant) }
-        if (value != null) {
-            Text(value, style = CruxTheme.type.grade.copy(fontSize = 20.sp), modifier = valueModifier)
-            date?.let { Text("set $it", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant) }
-        } else {
-            Text("Add", style = MaterialTheme.typography.titleSmall, color = colors.primary, modifier = Modifier.padding(vertical = 2.dp))
-        }
-    }
-}
-
-/** Short tick marks every 6 dp along the top, a longer one every fifth: the tape. */
-private fun Modifier.androidxDrawTicks(color: androidx.compose.ui.graphics.Color): Modifier = this.then(
-    Modifier.drawBehind {
-        val step = 6.dp.toPx()
-        var x = step
-        var i = 1
-        while (x < size.width) {
-            val h = if (i % 5 == 0) 8.dp.toPx() else 4.dp.toPx()
-            drawLine(color.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, h), strokeWidth = 1.dp.toPx())
-            x += step
-            i++
-        }
-    },
-)
-
 /** Every saved gym, crag and board, with the Crag/Gym/Board filters. */
 @Composable
-fun PlacesScreen(
-    onBack: () -> Unit,
-    onOpenPlace: (Long) -> Unit,
-    onNewPlace: () -> Unit,
-    viewModel: PlacesViewModel = hiltViewModel(),
-) {
+fun PlacesScreen(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, onNewPlace: () -> Unit, viewModel: PlacesViewModel = hiltViewModel()) {
     val places by viewModel.places.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf<PlaceType?>(null) }
     val space = CruxTheme.space

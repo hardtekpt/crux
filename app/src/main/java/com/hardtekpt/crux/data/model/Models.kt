@@ -26,6 +26,10 @@ data class Climb(
     /** An attached photo and video, as file names in app storage. */
     val imagePath: String? = null,
     val videoPath: String? = null,
+    /** The section of the place it was in, e.g. the place's Moonboard. */
+    val sectionId: Long? = null,
+    /** The live session it was logged in. */
+    val sessionId: Long? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
@@ -50,6 +54,8 @@ data class NewClimb(
     val effort: Int? = null,
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
+    val sectionId: Long? = null,
+    val sessionId: Long? = null,
 )
 
 data class PersonalBest(
@@ -68,8 +74,4 @@ data class PersonalBest(
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
-data class Measurement(
-    val id: Long,
-    val value: Double,
-    val date: LocalDate,
-)
+data class Measurement(val id: Long, val value: Double, val date: LocalDate)

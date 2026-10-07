@@ -7,6 +7,9 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+    alias(libs.plugins.kover)
+    alias(libs.plugins.aboutlibraries)
+    alias(libs.plugins.roborazzi)
 }
 
 // Version lives in version.properties; versionCode follows from it so it always increases.
@@ -72,7 +75,24 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Robolectric's native graphics (screenshot tests) need more than the default 512 MB.
+        unitTests.all { it.maxHeapSize = "2g" }
         animationsDisabled = true
+    }
+
+    // F-Droid rebuilds the APK from source and rejects Google's encrypted dependency report in it.
+    // App bundles (Play) keep it.
+    dependenciesInfo {
+        includeInApk = false
+    }
+
+    // Existing findings live in the baseline; anything new fails the build.
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        checkDependencies = false
+        // Version checks need the network and change by the day; Dependabot covers updates.
+        disable += setOf("NewerVersionAvailable", "GradleDependency", "AndroidGradlePluginVersion")
     }
 }
 
@@ -96,6 +116,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // OpenStreetMap map view for picking a place on a map; no account or API key needed.
     implementation(libs.osmdroid.android)
+    // Open-source licences screen (Settings → About); the list is generated at build time.
+    implementation(libs.aboutlibraries.compose.m3)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -109,8 +131,6 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.health.connect)
-    implementation(libs.vico.compose.m3)
     implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
@@ -125,6 +145,10 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // Screenshot tests: goldens in src/test/screenshots, checked by verifyRoborazziDebug.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     // Instrumented tests (run on the emulator)
     androidTestImplementation(libs.androidx.test.runner)
@@ -144,4 +168,26 @@ kotlin {
         // Material 3 still marks top app bar scrolling, sheets and date pickers experimental.
         optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
     }
+}
+
+// Unit-test coverage of the debug build: ./gradlew koverHtmlReportDebug (report only, no threshold yet).
+kover {
+    reports {
+        filters {
+            excludes {
+                // Generated code: Hilt, Room, Compose singletons, BuildConfig.
+                classes(
+                    "*Hilt_*", "*_HiltModules*", "*_Factory*", "*_MembersInjector*", "hilt_aggregated_deps.*", "dagger.hilt.*",
+                    "*_Impl*", "*ComposableSingletons*", "*.BuildConfig",
+                )
+                annotatedBy("androidx.compose.ui.tooling.preview.Preview")
+            }
+        }
+    }
+}
+
+aboutLibraries {
+    // No network at build time: licences come from the dependencies' own metadata, so the
+    // generated list (and the APK) is the same on every machine, as F-Droid's builds need.
+    offlineMode = true
 }

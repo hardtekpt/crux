@@ -8,10 +8,10 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
@@ -19,10 +19,7 @@ enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("
 enum class UnitSystem(val label: String) { METRIC("Metric"), IMPERIAL("Imperial") }
 
 /** The grade scale the climber picked per discipline. New climbs are logged in it. */
-data class GradeScales(
-    val boulder: GradeScale = Discipline.BOULDER.defaultScale,
-    val route: GradeScale = Discipline.ROUTE.defaultScale,
-) {
+data class GradeScales(val boulder: GradeScale = Discipline.BOULDER.defaultScale, val route: GradeScale = Discipline.ROUTE.defaultScale) {
     fun forDiscipline(discipline: Discipline): GradeScale = when (discipline) {
         Discipline.BOULDER -> boulder
         Discipline.ROUTE -> route
@@ -31,9 +28,7 @@ data class GradeScales(
 
 /** Small app-wide settings backed by Preferences DataStore. */
 @Singleton
-class UserPreferencesRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
-) {
+class UserPreferencesRepository @Inject constructor(private val dataStore: DataStore<Preferences>) {
     /** Dark is the app default; the climber can switch to light or follow the system. */
     val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
         prefs[THEME_MODE]?.let(ThemeMode::valueOf) ?: ThemeMode.DARK
@@ -58,7 +53,21 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[DEMO_MODE] = enabled }
     }
 
+    /** Which version of the sample data the demo database holds; 0 before any. */
+    val demoDataVersion: Flow<Int> = dataStore.data.map { it[DEMO_DATA_VERSION] ?: 0 }
+
+    suspend fun setDemoDataVersion(version: Int) {
+        dataStore.edit { it[DEMO_DATA_VERSION] = version }
+    }
+
     /** The place last logged at, so the next log starts there. */
+    // Beeps for the last seconds of a timer phase and when the phase changes.
+    val timerSounds: Flow<Boolean> = dataStore.data.map { it[TIMER_SOUNDS] ?: true }
+
+    suspend fun setTimerSounds(enabled: Boolean) {
+        dataStore.edit { it[TIMER_SOUNDS] = enabled }
+    }
+
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
     suspend fun setLastPlaceId(id: Long?) {
@@ -81,13 +90,14 @@ class UserPreferencesRepository @Inject constructor(
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
+        val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 
-        fun String?.toScale(discipline: Discipline): GradeScale =
-            GradeScale.entries.firstOrNull { it.name == this && it.discipline == discipline }
-                ?: discipline.defaultScale
+        fun String?.toScale(discipline: Discipline): GradeScale = GradeScale.entries.firstOrNull { it.name == this && it.discipline == discipline }
+            ?: discipline.defaultScale
     }
 }

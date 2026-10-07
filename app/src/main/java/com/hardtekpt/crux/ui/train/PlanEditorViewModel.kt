@@ -13,6 +13,7 @@ import com.hardtekpt.crux.data.model.PlanItem
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.ui.navigation.PlanEditorRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** Stable keys let Compose animate and track rows while blocks and items move. */
 data class ItemDraft(val key: Long, val exercise: Exercise, val target: ExerciseTarget)
@@ -62,11 +62,8 @@ data class PlanDraft(
 }
 
 @HiltViewModel
-class PlanEditorViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val templates: TemplateRepository,
-    exercises: ExerciseRepository,
-) : ViewModel() {
+class PlanEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val templates: TemplateRepository, exercises: ExerciseRepository) :
+    ViewModel() {
     private val templateId = savedStateHandle.toRoute<PlanEditorRoute>().templateId
     private var nextKey = 0L
 
@@ -119,7 +116,7 @@ class PlanEditorViewModel @Inject constructor(
     /** Adds with sensible targets for the exercise's metric, then opens them for tweaking. */
     fun addExercise(exercise: Exercise) = _draft.update { draft ->
         val block = draft.pickingFor ?: return@update draft
-        val items = draft.blocks[block].items + ItemDraft(key(), exercise, ExerciseTarget.defaultFor(exercise.metric))
+        val items = draft.blocks[block].items + ItemDraft(key(), exercise, ExerciseTarget.defaultFor(exercise))
         draft.copy(
             blocks = draft.blocks.replaced(block) { it.copy(items = items) },
             pickingFor = null,
@@ -176,16 +173,14 @@ class PlanEditorViewModel @Inject constructor(
         }
     }
 
-    private fun updateBlock(block: Int, change: (BlockDraft) -> BlockDraft) =
-        _draft.update { it.copy(blocks = it.blocks.replaced(block, change)) }
+    private fun updateBlock(block: Int, change: (BlockDraft) -> BlockDraft) = _draft.update { it.copy(blocks = it.blocks.replaced(block, change)) }
 
     companion object {
         const val MAX_NAME = 40
     }
 }
 
-private fun <T> List<T>.replaced(index: Int, change: (T) -> T): List<T> =
-    mapIndexed { i, value -> if (i == index) change(value) else value }
+private fun <T> List<T>.replaced(index: Int, change: (T) -> T): List<T> = mapIndexed { i, value -> if (i == index) change(value) else value }
 
 private fun <T> List<T>.moved(index: Int, delta: Int): List<T> {
     val target = index + delta

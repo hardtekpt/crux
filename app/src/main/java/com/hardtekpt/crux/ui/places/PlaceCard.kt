@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +39,7 @@ import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.ui.components.areaImageFile
 import com.hardtekpt.crux.ui.components.rememberLocalImage
+import com.hardtekpt.crux.ui.gradesLabel
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -76,38 +78,8 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                 .fillMaxWidth()
                 .height(112.dp),
         ) {
-            val cover = summary.coverImage
-            val mapLocation = place.mapLocation
-            when {
-                cover != null -> {
-                    val image = rememberLocalImage(areaImageFile(cover), 900)
-                    Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.18f)))
-                    image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                    BannerShade()
-                }
-                mapLocation != null -> {
-                    MapPreview(mapLocation, Modifier.fillMaxSize())
-                    BannerShade()
-                }
-                else -> TypeArt(place.type, accent)
-            }
-            // The kind of place, top left; the favourite star, top right.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .padding(CruxTheme.space.s3)
-                    .clip(CircleShape)
-                    .background(colors.surface.copy(alpha = 0.88f))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Icon(placeIcon(place.type), contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-                Text(
-                    place.type.label.uppercase(),
-                    style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp),
-                    color = colors.onSurface,
-                )
-            }
+            PlaceBannerArt(place, summary.coverImage)
+            // The favourite star, top right; what's here shows as module chips below.
             if (place.favourite) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -136,7 +108,9 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     overflow = TextOverflow.Ellipsis,
                 )
                 val where = place.location ?: place.mapLocation?.address
-                val visit = summary.lastVisit?.let { "last visit ${it.relativeLabel(LocalDate.now()).lowercase()}" } ?: "not visited yet"
+                val visit =
+                    summary.lastVisit?.let { "last visit ${it.relativeLabel(LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current)).lowercase()}" }
+                        ?: "not visited yet"
                 Text(
                     listOfNotNull(where, visit).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
@@ -145,14 +119,72 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            // The modules here: each part of the place with its kind, at a glance.
+            if (place.sections.isNotEmpty()) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                    verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                    modifier = Modifier.testTag("place_modules"),
+                ) {
+                    place.sections.forEach { section ->
+                        val tint = section.type.accent()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(tint.copy(alpha = 0.12f))
+                                .border(CruxTheme.size.borderHairline, tint.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .testTag("module_${section.name}"),
+                        ) {
+                            Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(16.dp))
+                            Text(section.name, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
+                            Text(
+                                section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.onSurfaceVariant,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("module_grades_${section.name}"),
+                            )
+                        }
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.fillMaxWidth()) {
                 PlaceStat("Climbs", summary.climbs, Modifier.weight(1f))
-                PlaceStat(place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))
+                PlaceStat(if (place.hasSeveralTypes) "Areas" else place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))
                 PlaceStat("Projects", summary.openProjects, Modifier.weight(1f), highlight = summary.openProjects > 0)
             }
         }
     }
 }
+
+/** The banner behind a place: a wall photo, the map around its pin, or its kind drawn large. */
+@Composable
+internal fun BoxScope.PlaceBannerArt(place: com.hardtekpt.crux.data.model.Place, coverImage: String?) {
+    val accent = place.type.accent()
+    val mapLocation = place.mapLocation
+    when {
+        coverImage != null -> {
+            val image = rememberLocalImage(areaImageFile(coverImage), 900)
+            Box(Modifier.fillMaxSize().background(accent.copy(alpha = 0.18f)))
+            image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            BannerShade()
+        }
+
+        mapLocation != null -> {
+            MapPreview(mapLocation, Modifier.fillMaxSize())
+            BannerShade()
+        }
+
+        else -> TypeArt(place.type, accent)
+    }
+}
+
+/** A kind's colour: gyms in the primary, crags in sandstone, boards in lilac. */
+@Composable
+internal fun kindAccent(type: PlaceType): Color = type.accent()
 
 /** One number on a place card. Open projects light up so there is something to go back for. */
 @Composable

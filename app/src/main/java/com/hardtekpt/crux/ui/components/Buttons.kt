@@ -48,14 +48,17 @@ fun CruxButton(
             containerColor = colors.primary,
             contentColor = colors.onPrimary,
         )
+
         CruxButtonVariant.Tonal -> ButtonDefaults.buttonColors(
             containerColor = colors.primaryContainer,
             contentColor = colors.onPrimaryContainer,
         )
+
         CruxButtonVariant.Outlined, CruxButtonVariant.Text -> ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
             contentColor = colors.primary,
         )
+
         CruxButtonVariant.Destructive -> ButtonDefaults.buttonColors(
             containerColor = colors.error,
             contentColor = colors.onError,
@@ -84,12 +87,7 @@ fun CruxButton(
 
 /** Extended FAB: a tonal button at radius-2xl with elevation-2. */
 @Composable
-fun CruxFab(
-    text: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun CruxFab(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
     ExtendedFloatingActionButton(
         onClick = onClick,
         icon = { Icon(icon, contentDescription = null) },
