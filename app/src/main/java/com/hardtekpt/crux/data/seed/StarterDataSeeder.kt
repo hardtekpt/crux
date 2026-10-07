@@ -118,7 +118,7 @@ class StarterDataSeeder(private val clock: Clock) {
                     metric = exercise.metric,
                     notes = exercise.notes,
                     createdAtMillis = now,
-                ).withIntervals(exercise.intervals),
+                ).withDefaults(exercise.intervals?.toTarget(), exercise.intervals?.prepSeconds),
             )
         }
         val dao = db.templateDao()

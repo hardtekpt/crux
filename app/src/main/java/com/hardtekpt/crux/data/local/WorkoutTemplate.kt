@@ -13,7 +13,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Update
 import com.hardtekpt.crux.data.model.ExerciseCategory
-import com.hardtekpt.crux.data.model.IntervalSettings
+import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.MetricType
 import kotlinx.coroutines.flow.Flow
 
@@ -26,34 +26,41 @@ data class ExerciseEntity(
     val metric: MetricType,
     val notes: String? = null,
     val createdAtMillis: Long,
-    /** Interval exercises: the timer set up with the exercise (schema 18); null uses the defaults. */
-    val intervalPrepSeconds: Int? = null,
-    val intervalWorkSeconds: Int? = null,
-    val intervalRestSeconds: Int? = null,
-    val intervalRepeats: Int? = null,
-    val intervalCycles: Int? = null,
-    val intervalCycleRestSeconds: Int? = null,
+    /**
+     * What plans and sessions start the exercise at (schema 19; null uses the metric's defaults).
+     * For interval metrics they read as in [ExerciseTarget]: sets are cycles, reps are repeats.
+     */
+    val defaultSets: Int? = null,
+    val defaultReps: Int? = null,
+    val defaultSeconds: Int? = null,
+    val defaultLoadKg: Double? = null,
+    val defaultRestSeconds: Int? = null,
+    val defaultRepRestSeconds: Int? = null,
+    /** Interval exercises: the timer's preparation before the first repeat. */
+    val prepSeconds: Int? = null,
 ) {
-    val intervals: IntervalSettings?
+    val defaults: ExerciseTarget?
         get() {
-            val work = intervalWorkSeconds ?: return null
-            return IntervalSettings(
-                prepSeconds = intervalPrepSeconds ?: 10,
-                workSeconds = work,
-                restSeconds = intervalRestSeconds ?: 0,
-                repeats = intervalRepeats ?: 1,
-                cycles = intervalCycles ?: 1,
-                cycleRestSeconds = intervalCycleRestSeconds ?: 0,
+            val sets = defaultSets ?: return null
+            val base = ExerciseTarget.defaultFor(metric)
+            return ExerciseTarget(
+                sets = sets,
+                reps = defaultReps ?: base.reps,
+                seconds = defaultSeconds ?: base.seconds,
+                loadKg = defaultLoadKg ?: base.loadKg,
+                restSeconds = defaultRestSeconds ?: base.restSeconds,
+                repRestSeconds = defaultRepRestSeconds ?: base.repRestSeconds,
             )
         }
 
-    fun withIntervals(settings: IntervalSettings?) = copy(
-        intervalPrepSeconds = settings?.prepSeconds,
-        intervalWorkSeconds = settings?.workSeconds,
-        intervalRestSeconds = settings?.restSeconds,
-        intervalRepeats = settings?.repeats,
-        intervalCycles = settings?.cycles,
-        intervalCycleRestSeconds = settings?.cycleRestSeconds,
+    fun withDefaults(target: ExerciseTarget?, prep: Int?) = copy(
+        defaultSets = target?.sets,
+        defaultReps = target?.reps,
+        defaultSeconds = target?.seconds,
+        defaultLoadKg = target?.loadKg,
+        defaultRestSeconds = target?.restSeconds,
+        defaultRepRestSeconds = target?.repRestSeconds,
+        prepSeconds = prep,
     )
 }
 

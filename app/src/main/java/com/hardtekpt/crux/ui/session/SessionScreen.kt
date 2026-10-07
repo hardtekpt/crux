@@ -255,7 +255,7 @@ class SessionViewModel @Inject constructor(
         if (item == null || !item.exercise.metric.usesIntervals) return lastFreeSpec
         val t = item.target
         return IntervalSpec(
-            prepSeconds = item.exercise.intervals?.prepSeconds ?: 10,
+            prepSeconds = item.exercise.prepSeconds ?: 10,
             workSeconds = t.seconds.coerceAtLeast(1),
             restSeconds = t.repRestSeconds,
             repeats = t.reps.coerceAtLeast(1),

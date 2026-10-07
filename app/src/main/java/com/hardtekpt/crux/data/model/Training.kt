@@ -42,15 +42,20 @@ data class Exercise(
     val category: ExerciseCategory,
     val metric: MetricType,
     val notes: String?,
-    /** Interval exercises: the timer set up with the exercise; null uses the defaults. */
-    val intervals: IntervalSettings? = null,
-)
+    /** What plans and sessions start it at; null uses the metric's defaults. */
+    val defaults: ExerciseTarget? = null,
+    /** Interval exercises: the timer's preparation; null is 10 s. */
+    val prepSeconds: Int? = null,
+) {
+    /** Interval exercises: the timer its defaults make. */
+    val intervals: IntervalSettings?
+        get() = if (!metric.usesIntervals) null else (defaults ?: ExerciseTarget.defaultFor(metric)).toIntervals(prepSeconds ?: 10)
+}
 
 /**
  * An interval exercise's own timer: preparation, work and rest per repeat, repeats per cycle,
  * cycles and the rest between them. Plans start from it and the session timer runs it.
  */
-@kotlinx.serialization.Serializable
 data class IntervalSettings(
     val prepSeconds: Int = 10,
     val workSeconds: Int = 20,
@@ -71,9 +76,7 @@ data class IntervalSettings(
 
     companion object {
         /** The default for an interval metric, from its default target, with 10 s to prepare. */
-        fun defaultFor(metric: MetricType): IntervalSettings = ExerciseTarget.defaultFor(metric).let {
-            IntervalSettings(10, it.seconds, it.repRestSeconds, it.reps, it.sets, it.restSeconds)
-        }
+        fun defaultFor(metric: MetricType): IntervalSettings = ExerciseTarget.defaultFor(metric).toIntervals()
     }
 }
 
@@ -107,6 +110,9 @@ data class ExerciseTarget(
         }
     }
 
+    /** The interval timer this target makes, in the interval reading of its fields. */
+    fun toIntervals(prepSeconds: Int = 10) = IntervalSettings(prepSeconds, seconds, repRestSeconds, reps, sets, restSeconds)
+
     fun restLabel(): String? = if (restSeconds <= 0) null else formatDuration(restSeconds)
 
     /** Rough seconds this exercise takes: work plus rest between sets. */
@@ -123,10 +129,7 @@ data class ExerciseTarget(
         private const val SECONDS_PER_REP = 4
 
         /** What a plan or session starts an exercise at: its own interval timer, if it has one. */
-        fun defaultFor(exercise: Exercise): ExerciseTarget {
-            val base = defaultFor(exercise.metric)
-            return exercise.intervals?.takeIf { exercise.metric.usesIntervals }?.toTarget(base.loadKg) ?: base
-        }
+        fun defaultFor(exercise: Exercise): ExerciseTarget = exercise.defaults ?: defaultFor(exercise.metric)
 
         fun defaultFor(metric: MetricType) = when (metric) {
             MetricType.REPS -> ExerciseTarget(sets = 3, reps = 10, restSeconds = 90)

@@ -165,6 +165,26 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate18To19KeepsAnExercisesIntervalTimerAsItsDefaults() {
+        helper.createDatabase(DB, 18).apply {
+            execSQL(
+                "INSERT INTO exercises (id, name, category, metric, createdAtMillis, intervalPrepSeconds, intervalWorkSeconds, " +
+                    "intervalRestSeconds, intervalRepeats, intervalCycles, intervalCycleRestSeconds) " +
+                    "VALUES (1, 'Repeaters', 'FINGERS', 'INTERVALS', 0, 5, 7, 3, 6, 3, 180)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 19, true)
+        db.query(
+            "SELECT prepSeconds, defaultSeconds, defaultRepRestSeconds, defaultReps, defaultSets, defaultRestSeconds, defaultLoadKg FROM exercises",
+        ).use { c ->
+            c.moveToFirst()
+            assertEquals(listOf(5, 7, 3, 6, 3, 180), (0..5).map { c.getInt(it) })
+            assertEquals(true, c.isNull(6))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

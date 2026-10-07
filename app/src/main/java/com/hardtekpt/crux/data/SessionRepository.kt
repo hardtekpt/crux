@@ -258,7 +258,7 @@ private fun SessionEntity.toModel(
             val exercise = exercises[item.exerciseId] ?: return@mapNotNull null
             SessionItem(
                 id = item.id,
-                exercise = Exercise(exercise.id, exercise.name, exercise.category, exercise.metric, exercise.notes, exercise.intervals),
+                exercise = Exercise(exercise.id, exercise.name, exercise.category, exercise.metric, exercise.notes, exercise.defaults, exercise.prepSeconds),
                 blockName = item.blockName,
                 target = ExerciseTarget(
                     sets = item.sets,

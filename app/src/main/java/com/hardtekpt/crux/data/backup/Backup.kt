@@ -89,8 +89,20 @@ data class ExerciseDto(
     val category: ExerciseCategory,
     val metric: MetricType,
     val notes: String? = null,
-    /** Interval exercises: their timer. Older backups omit it. */
-    val intervals: com.hardtekpt.crux.data.model.IntervalSettings? = null,
+    /** What plans and sessions start it at. Older backups omit it. */
+    val defaults: ExerciseDefaultsDto? = null,
+)
+
+/** An exercise's defaults; for interval exercises, also the timer's preparation. */
+@Serializable
+data class ExerciseDefaultsDto(
+    val sets: Int,
+    val reps: Int,
+    val seconds: Int,
+    val loadKg: Double,
+    val restSeconds: Int,
+    val repRestSeconds: Int = 0,
+    val prepSeconds: Int? = null,
 )
 
 @Serializable
@@ -376,7 +388,10 @@ class BackupRepository(
                 metric = dto.metric,
                 notes = dto.notes,
                 createdAtMillis = now,
-            ).withIntervals(dto.intervals?.takeIf { dto.metric.usesIntervals })
+            ).withDefaults(
+                dto.defaults?.let { com.hardtekpt.crux.data.model.ExerciseTarget(it.sets, it.reps, it.seconds, it.loadKg, it.restSeconds, it.repRestSeconds) },
+                dto.defaults?.prepSeconds,
+            )
             val id = exerciseDao.insert(entity)
             existing[dto.name.lowercase()] = entity.copy(id = id)
             if (countAs != null) added.merge(countAs, 1, Int::plus)
@@ -626,7 +641,13 @@ class BackupRepository(
     }
 }
 
-private fun ExerciseEntity.toDto() = ExerciseDto(name, category, metric, notes, intervals)
+private fun ExerciseEntity.toDto() = ExerciseDto(
+    name,
+    category,
+    metric,
+    notes,
+    defaults?.let { ExerciseDefaultsDto(it.sets, it.reps, it.seconds, it.loadKg, it.restSeconds, it.repRestSeconds, prepSeconds) },
+)
 
 private fun ClimbEntity.toDto() = ClimbDto(
     discipline = discipline,

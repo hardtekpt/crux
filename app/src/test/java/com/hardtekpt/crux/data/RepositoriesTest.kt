@@ -147,9 +147,15 @@ class RepositoriesTest {
     }
 
     @Test
-    fun `an interval exercise keeps its timer, and plans start from it`() = runTest {
+    fun `an exercise keeps its defaults, and plans and the timer start from them`() = runTest {
         val dbs = databases()
         val exercises = OfflineExerciseRepository(dbs, FIXED_CLOCK)
+        val pullUps = com.hardtekpt.crux.data.model.ExerciseTarget(sets = 4, reps = 6, loadKg = 12.5, restSeconds = 150)
+        val weighted = exercises.saveExercise(
+            ExerciseInput(name = "Weighted pull-ups", category = ExerciseCategory.PULLING, metric = MetricType.WEIGHTED_REPS, notes = null, defaults = pullUps),
+        )
+        assertEquals(pullUps, com.hardtekpt.crux.data.model.ExerciseTarget.defaultFor(exercises.getExercise(weighted)!!))
+
         val timer = com.hardtekpt.crux.data.model.IntervalSettings(
             prepSeconds = 5,
             workSeconds = 7,
@@ -159,22 +165,23 @@ class RepositoriesTest {
             cycleRestSeconds = 180,
         )
         val id = exercises.saveExercise(
-            ExerciseInput(name = "Repeaters", category = ExerciseCategory.FINGERS, metric = MetricType.INTERVALS, notes = null, intervals = timer),
+            ExerciseInput(
+                name = "Repeaters",
+                category = ExerciseCategory.FINGERS,
+                metric = MetricType.INTERVALS,
+                notes = null,
+                defaults = timer.toTarget(),
+                prepSeconds = 5,
+            ),
         )
-        val saved = exercises.getExercise(id)!!
-        assertEquals(timer, saved.intervals)
-        val target = com.hardtekpt.crux.data.model.ExerciseTarget.defaultFor(saved)
-        assertEquals(3, target.sets)
-        assertEquals(6, target.reps)
-        assertEquals(7, target.seconds)
-        assertEquals(3, target.repRestSeconds)
-        assertEquals(180, target.restSeconds)
+        assertEquals(timer, exercises.getExercise(id)!!.intervals)
 
-        // Measured another way, the timer is dropped.
+        // Measured another way, it has no timer and no preparation.
         exercises.saveExercise(
-            ExerciseInput(id = id, name = "Repeaters", category = ExerciseCategory.FINGERS, metric = MetricType.TIME, notes = null, intervals = timer),
+            ExerciseInput(id = id, name = "Repeaters", category = ExerciseCategory.FINGERS, metric = MetricType.TIME, notes = null, prepSeconds = 5),
         )
         assertNull(exercises.getExercise(id)!!.intervals)
+        assertNull(exercises.getExercise(id)!!.prepSeconds)
     }
 
     @Test

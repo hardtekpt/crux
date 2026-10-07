@@ -4,7 +4,7 @@ import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
-import com.hardtekpt.crux.data.model.IntervalSettings
+import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.MetricType
 import java.time.Clock
 import javax.inject.Inject
@@ -18,8 +18,10 @@ data class ExerciseInput(
     val category: ExerciseCategory,
     val metric: MetricType,
     val notes: String?,
-    /** Kept only for interval metrics. */
-    val intervals: IntervalSettings? = null,
+    /** What plans and sessions start it at; null keeps the metric's defaults. */
+    val defaults: ExerciseTarget? = null,
+    /** Interval metrics only: the timer's preparation. */
+    val prepSeconds: Int? = null,
 )
 
 interface ExerciseRepository {
@@ -42,9 +44,9 @@ class OfflineExerciseRepository @Inject constructor(private val dbs: CruxDatabas
         val notes = input.notes?.trim()?.takeIf { it.isNotEmpty() }
         val dao = dbs.current().exerciseDao()
         val existing = if (input.id != 0L) dao.get(input.id) else null
-        val intervals = input.intervals?.takeIf { input.metric.usesIntervals }
+        val prep = input.prepSeconds?.takeIf { input.metric.usesIntervals }
         return if (existing != null) {
-            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes).withIntervals(intervals))
+            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes).withDefaults(input.defaults, prep))
             existing.id
         } else {
             dao.insert(
@@ -54,7 +56,7 @@ class OfflineExerciseRepository @Inject constructor(private val dbs: CruxDatabas
                     metric = input.metric,
                     notes = notes,
                     createdAtMillis = clock.millis(),
-                ).withIntervals(intervals),
+                ).withDefaults(input.defaults, prep),
             )
         }
     }
@@ -70,5 +72,6 @@ internal fun ExerciseEntity.toModel() = Exercise(
     category = category,
     metric = metric,
     notes = notes,
-    intervals = intervals,
+    defaults = defaults,
+    prepSeconds = prepSeconds,
 )

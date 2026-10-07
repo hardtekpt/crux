@@ -7,6 +7,20 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
+ * Schema 19 widens the interval timer kept on an exercise (schema 18) into defaults for every
+ * kind of exercise. The interval columns carry over under their general names; load is new.
+ */
+@androidx.room.RenameColumn.Entries(
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalPrepSeconds", toColumnName = "prepSeconds"),
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalWorkSeconds", toColumnName = "defaultSeconds"),
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalRestSeconds", toColumnName = "defaultRepRestSeconds"),
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalRepeats", toColumnName = "defaultReps"),
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalCycles", toColumnName = "defaultSets"),
+    androidx.room.RenameColumn(tableName = "exercises", fromColumnName = "intervalCycleRestSeconds", toColumnName = "defaultRestSeconds"),
+)
+class ExerciseDefaultsMigration : AutoMigrationSpec
+
+/**
  * Schema 16 turns each place's kinds into named sections: one per kind it had, named after
  * the kind, with its areas and climbs linked to the section of their kind.
  */
@@ -105,6 +119,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 15, to = 16, spec = SectionsMigration::class),
         AutoMigration(from = 16, to = 17),
         AutoMigration(from = 17, to = 18),
+        AutoMigration(from = 18, to = 19, spec = ExerciseDefaultsMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -120,7 +135,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 18
+        const val VERSION = 19
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"
