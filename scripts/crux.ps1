@@ -4,14 +4,15 @@
 
 .EXAMPLE
   .\crux run            # build, boot the emulator if needed, install and open the app
-  .\crux test           # JVM unit tests + Robolectric Compose UI tests (no emulator)
+  .\crux test           # ktlint, JVM unit tests + Robolectric Compose UI tests, Android Lint (no emulator)
+  .\crux format         # fix ktlint formatting in place
   .\crux device-test    # instrumented Compose/Room tests on the emulator
   .\crux check          # test + device-test
   .\crux run -Device 192.168.1.128:37223   # same, on a phone over wireless debugging
 #>
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('run', 'build', 'test', 'device-test', 'check', 'emulator', 'stop', 'avd', 'help')]
+    [ValidateSet('run', 'build', 'test', 'format', 'device-test', 'check', 'emulator', 'stop', 'avd', 'help')]
     [string]$Command = 'help',
     # Show the emulator window (default) or run it headless, e.g. for test-only runs.
     [switch]$Headless,
@@ -99,7 +100,9 @@ function Start-CruxEmulator {
 
 switch ($Command) {
     'build' { Invoke-Gradle @('assembleDebug') }
-    'test' { Invoke-Gradle @('testDebugUnitTest') }
+    # Same checks as CI, so a green local run means a green push.
+    'test' { Invoke-Gradle @('spotlessCheck', 'testDebugUnitTest', 'lintDebug') }
+    'format' { Invoke-Gradle @('spotlessApply') }
     'avd' { New-CruxAvd; Write-Host "Emulator '$AvdName' is ready to boot." }
     'emulator' { Start-CruxEmulator | Out-Null }
     'stop' {
@@ -112,7 +115,7 @@ switch ($Command) {
         Invoke-Gradle @('connectedDebugAndroidTest')
     }
     'check' {
-        Invoke-Gradle @('testDebugUnitTest')
+        Invoke-Gradle @('spotlessCheck', 'testDebugUnitTest', 'lintDebug')
         $env:ANDROID_SERIAL = Start-CruxEmulator
         Invoke-Gradle @('connectedDebugAndroidTest')
     }

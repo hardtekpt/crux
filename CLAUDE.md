@@ -11,6 +11,13 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
   "ship it"). Every push to `main` publishes a GitHub release, so never merge or push to
   `main` on your own initiative.
 
+## Checks
+- `.\crux.cmd test` runs what CI runs: ktlint (Spotless), unit tests and Android Lint. Fix formatting
+  with `.\crux.cmd format`. New lint findings fail the build; `app/lint-baseline.xml` holds the
+  old ones, so don't add to it to make a build pass.
+- Device tests run in CI on PRs into `main`, on demand (`gh workflow run "Device tests" --ref dev`)
+  and before every release.
+
 ## Versioning
 - The app version lives in [version.properties](version.properties) (`VERSION_NAME=major.minor.patch`).
   `versionCode` is derived from it in [app/build.gradle.kts](app/build.gradle.kts)
@@ -26,8 +33,9 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
 3. Push `dev`, then merge into `main` and push:
    `git switch main; git pull; git merge --no-ff dev -m "Release vX.Y.Z"; git tag -a vX.Y.Z -m "Crux vX.Y.Z"; git push --atomic origin main vX.Y.Z; git switch dev`
 4. The **Release** workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) runs the
-   unit tests, builds a signed release APK and publishes it as release `vX.Y.Z` with the APK
-   attached. Check it with `gh run watch` / `gh release view vX.Y.Z` and report the release link.
+   device tests on an emulator, then ktlint, unit tests and lint, builds a signed release APK, checks it
+   is signed with the release key (`CRUX_CERT_SHA256`) and publishes release `vX.Y.Z` with the APK, its
+   SHA-256 and the R8 mapping attached. Check it with `gh run watch` / `gh release view vX.Y.Z` and report the release link.
    If `main` is pushed without a version bump, the workflow publishes a prerelease
    `vX.Y.Z-build.N` instead of overwriting the existing tag.
 

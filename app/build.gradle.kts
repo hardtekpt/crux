@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+    alias(libs.plugins.kover)
 }
 
 // Version lives in version.properties; versionCode follows from it so it always increases.
@@ -73,6 +74,15 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         animationsDisabled = true
+    }
+
+    // Existing findings live in the baseline; anything new fails the build.
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        checkDependencies = false
+        // Version checks need the network and change by the day; Dependabot covers updates.
+        disable += setOf("NewerVersionAvailable", "GradleDependency", "AndroidGradlePluginVersion")
     }
 }
 
@@ -143,5 +153,21 @@ kotlin {
     compilerOptions {
         // Material 3 still marks top app bar scrolling, sheets and date pickers experimental.
         optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
+    }
+}
+
+// Unit-test coverage of the debug build: ./gradlew koverHtmlReportDebug (report only, no threshold yet).
+kover {
+    reports {
+        filters {
+            excludes {
+                // Generated code: Hilt, Room, Compose singletons, BuildConfig.
+                classes(
+                    "*Hilt_*", "*_HiltModules*", "*_Factory*", "*_MembersInjector*", "hilt_aggregated_deps.*", "dagger.hilt.*",
+                    "*_Impl*", "*ComposableSingletons*", "*.BuildConfig",
+                )
+                annotatedBy("androidx.compose.ui.tooling.preview.Preview")
+            }
+        }
     }
 }

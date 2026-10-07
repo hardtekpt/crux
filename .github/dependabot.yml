@@ -1,0 +1,26 @@
+# Weekly dependency updates as PRs into dev, grouped so a Compose or AndroidX bump is one PR.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      androidx-compose:
+        patterns: ["androidx.*", "com.google.dagger*"]
+      kotlin:
+        patterns: ["org.jetbrains.kotlin*", "com.google.devtools.ksp*", "org.jetbrains.kotlinx*"]
+      tooling:
+        patterns: ["com.android.*", "com.diffplug.spotless*", "com.pinterest*"]
+      testing:
+        patterns: ["junit*", "org.robolectric*", "app.cash.turbine*", "androidx.test*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
