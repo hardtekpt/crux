@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 ### Added
 
 - **Live sessions.** Start one of your plans, or a climbing day without a plan, from the Log menu,
@@ -78,5 +80,6 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.1.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.2.0...dev
+[0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hardtekpt/crux/releases/tag/v0.1.0

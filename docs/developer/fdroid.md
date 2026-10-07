@@ -19,8 +19,8 @@ F-Droid and GitHub installs without uninstalling or losing data.
 ## Before submitting
 
 1. The repo is public (done).
-2. Make a release that includes the changes above. v0.1.0 doesn't have them. Use that release's
-   `versionName`, `versionCode` and tag below.
+2. Make a release that includes the changes above (done: v0.2.0 is the first; v0.1.0 doesn't have
+   them). The recipe below uses its `versionName`, `versionCode` and tag.
 3. Build the recipe locally with fdroidserver (Docker), from a checkout of
    [fdroiddata](https://gitlab.com/fdroid/fdroiddata) with the file below saved as
    `metadata/com.hardtekpt.crux.yml`:
@@ -52,9 +52,9 @@ Repo: https://github.com/hardtekpt/crux.git
 Binaries: https://github.com/hardtekpt/crux/releases/download/v%v/crux-v%v.apk
 
 Builds:
-  - versionName: X.Y.Z          # the first release with the F-Droid changes
-    versionCode: XYYZZ          # major * 10000 + minor * 100 + patch
-    commit: vX.Y.Z
+  - versionName: 0.2.0          # the first release with the F-Droid changes
+    versionCode: 200            # major * 10000 + minor * 100 + patch
+    commit: v0.2.0
     subdir: app
     # If the build server's default JDK can't run AGP 9.4, add a `sudo:` step that installs
     # JDK 21, copied from a current fdroiddata recipe that does the same.
@@ -66,8 +66,8 @@ AllowedAPKSigningKeys: a28e87817c000b9f3c8dd2429803605e2d78f76eaf9c7c6356676bfe2
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-CurrentVersion: X.Y.Z
-CurrentVersionCode: XYYZZ
+CurrentVersion: 0.2.0
+CurrentVersionCode: 200
 ```
 
 ## Anti-features

@@ -160,7 +160,7 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 
 ## Changelog
 
-**Unreleased** (on `dev`):
+**[0.2.0](https://github.com/hardtekpt/crux/releases/tag/v0.2.0)** (2026-10-07):
 - **Live sessions** with a rest timer and an interval timer that logs cycles for you.
 - **Session summaries** in the Journal.
 - **Exercise defaults** and interval timers set on the exercise.
