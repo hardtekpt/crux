@@ -58,6 +58,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hardtekpt.crux.data.model.IntervalSettings
 import com.hardtekpt.crux.data.model.formatDuration
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
@@ -75,6 +76,10 @@ internal object TimerColors {
     val prep: Color
         @Composable get() = MaterialTheme.colorScheme.outline
 
+    /** The longer rest between cycles, apart from the rest between repeats. */
+    val cycleRest: Color
+        @Composable get() = if (dark()) Color(0xFFC9A7FF) else Color(0xFF6D45C4)
+
     /** The rest between sets, which isn't part of an interval timer. */
     val setRest: Color
         @Composable get() = MaterialTheme.colorScheme.secondary
@@ -86,7 +91,8 @@ internal object TimerColors {
     fun of(kind: IntervalPhase.Kind): Color = when (kind) {
         IntervalPhase.Kind.PREP -> prep
         IntervalPhase.Kind.WORK -> work
-        IntervalPhase.Kind.REST, IntervalPhase.Kind.CYCLE_REST -> rest
+        IntervalPhase.Kind.REST -> rest
+        IntervalPhase.Kind.CYCLE_REST -> cycleRest
     }
 }
 
@@ -215,20 +221,34 @@ internal fun RestBand(rest: Rest, nowMillis: Long, next: String, segments: List<
 internal fun IntervalBand(run: IntervalRun, nowMillis: Long, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit) {
     val position = run.position(nowMillis)
     val accent = TimerColors.of(position.phase.kind)
-    val phases = run.spec.phases
+    // Along the bottom, one piece per cycle and per rest between cycles, filled as they pass.
     val work = TimerColors.work
-    val rest = TimerColors.rest
-    val segments = phases.mapIndexedNotNull { index, phase ->
-        if (phase.kind == IntervalPhase.Kind.PREP) return@mapIndexedNotNull null
-        val color = if (phase.kind == IntervalPhase.Kind.WORK) work else rest
-        val filled = when {
-            index < position.index -> 1f
-            index == position.index -> 1f - position.leftMillis / (phase.seconds * 1000f)
-            else -> 0f
+    val cycleRest = TimerColors.cycleRest
+    val elapsed = run.elapsed(nowMillis)
+    var start = 0L
+    val segments = buildList {
+        run.spec.phases.groupBy {
+            if (it.kind ==
+                IntervalPhase.Kind.CYCLE_REST
+            ) {
+                -1 - it.cycle * 2
+            } else if (it.kind == IntervalPhase.Kind.PREP) {
+                Int.MIN_VALUE
+            } else {
+                it.cycle * 2
+            }
         }
-        Segment(filled, color)
+            .forEach { (key, group) ->
+                val length = group.sumOf { it.seconds * 1000L }
+                if (key != Int.MIN_VALUE) {
+                    val filled = ((elapsed - start).toFloat() / length).coerceIn(0f, 1f)
+                    add(Segment(filled, if (key < 0) cycleRest else work))
+                }
+                start += length
+            }
     }
-    TimerBand(accent, position.leftMillis / (position.phase.seconds * 1000f), segments, Modifier.testTag("timer_band")) {
+    // The fill drains over the whole cycle, in the colour of the phase it's in.
+    TimerBand(accent, run.stretch(nowMillis).fractionLeft, segments, Modifier.testTag("timer_band")) {
         BandNumber(
             position.leftMillis,
             if (run.paused) {
@@ -315,17 +335,13 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
                     }
                 }
             }
-            SetupRow("Preparation", "before the first repeat", TimerColors.prep) {
-                CruxStepper(prep, { prep = it }, 0..120, "s", step = 5, testTagPrefix = "timer_prep")
-            }
-            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
-            SetupRow("Work", "each repeat", TimerColors.work) { CruxStepper(work, { work = it }, 1..600, "s", testTagPrefix = "timer_work") }
-            SetupRow("Rest", "between repeats", TimerColors.rest) { CruxStepper(rest, { rest = it }, 0..600, "s", testTagPrefix = "timer_rest") }
-            SetupRow("Repeats", "in a cycle", null) { CruxStepper(repeats, { repeats = it }, 1..50, "", testTagPrefix = "timer_repeats") }
-            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
-            SetupRow("Cycles", null, null) { CruxStepper(cycles, { cycles = it }, 1..20, "", testTagPrefix = "timer_cycles") }
-            SetupRow("Rest between cycles", null, TimerColors.rest) {
-                CruxStepper(cycleRest, { cycleRest = it }, 0..900, "s", step = 15, enabled = cycles > 1, testTagPrefix = "timer_cycle_rest")
+            IntervalFields(spec.toSettings()) {
+                prep = it.prepSeconds
+                work = it.workSeconds
+                rest = it.restSeconds
+                repeats = it.repeats
+                cycles = it.cycles
+                cycleRest = it.cycleRestSeconds
             }
             Text(
                 "Takes ${formatDuration(spec.totalSeconds)}",
@@ -339,6 +355,45 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
                 icon = Icons.Rounded.PlayArrow,
                 size = CruxButtonSize.Large,
                 modifier = Modifier.fillMaxWidth().testTag("timer_start"),
+            )
+        }
+    }
+}
+
+/**
+ * The six settings of an interval timer as rows of steppers, coloured like the phases they set.
+ * Used when setting a timer up in a session and when setting an exercise up.
+ */
+@Composable
+fun IntervalFields(settings: IntervalSettings, onChange: (IntervalSettings) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+        SetupRow("Preparation", "before the first repeat", TimerColors.prep) {
+            CruxStepper(settings.prepSeconds, { onChange(settings.copy(prepSeconds = it)) }, 0..120, "s", step = 5, testTagPrefix = "timer_prep")
+        }
+        HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
+        SetupRow("Work", "each repeat", TimerColors.work) {
+            CruxStepper(settings.workSeconds, { onChange(settings.copy(workSeconds = it)) }, 1..600, "s", testTagPrefix = "timer_work")
+        }
+        SetupRow("Rest", "between repeats", TimerColors.rest) {
+            CruxStepper(settings.restSeconds, { onChange(settings.copy(restSeconds = it)) }, 0..600, "s", testTagPrefix = "timer_rest")
+        }
+        SetupRow("Repeats", "in a cycle", null) {
+            CruxStepper(settings.repeats, { onChange(settings.copy(repeats = it)) }, 1..50, "", testTagPrefix = "timer_repeats")
+        }
+        HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
+        SetupRow("Cycles", null, null) {
+            CruxStepper(settings.cycles, { onChange(settings.copy(cycles = it)) }, 1..20, "", testTagPrefix = "timer_cycles")
+        }
+        SetupRow("Rest between cycles", null, TimerColors.cycleRest) {
+            CruxStepper(
+                settings.cycleRestSeconds,
+                { onChange(settings.copy(cycleRestSeconds = it)) },
+                0..900,
+                "s",
+                step = 15,
+                enabled = settings.cycles > 1,
+                testTagPrefix = "timer_cycle_rest",
             )
         }
     }

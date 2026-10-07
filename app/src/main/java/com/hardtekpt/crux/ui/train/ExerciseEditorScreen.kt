@@ -34,7 +34,9 @@ import androidx.navigation.toRoute
 import com.hardtekpt.crux.data.ExerciseInput
 import com.hardtekpt.crux.data.ExerciseRepository
 import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.IntervalSettings
 import com.hardtekpt.crux.data.model.MetricType
+import com.hardtekpt.crux.data.model.formatDuration
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxFilterChip
@@ -43,6 +45,8 @@ import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
+import com.hardtekpt.crux.ui.session.IntervalFields
+import com.hardtekpt.crux.ui.session.toSpec
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -58,6 +62,8 @@ data class ExerciseDraft(
     val category: ExerciseCategory = ExerciseCategory.FINGERS,
     val metric: MetricType = MetricType.REPS,
     val notes: String = "",
+    /** The interval timer, kept for interval metrics only. */
+    val intervals: IntervalSettings? = null,
     val nameError: String? = null,
     /** Set when the climber asks to delete: how many plans would lose this exercise. */
     val confirmDeleteInPlans: Int? = null,
@@ -83,6 +89,7 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
                             category = exercise.category,
                             metric = exercise.metric,
                             notes = exercise.notes.orEmpty(),
+                            intervals = exercise.intervals,
                         )
                     }
                 }
@@ -92,7 +99,10 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
 
     fun setName(name: String) = _draft.update { it.copy(name = name, nameError = null) }
     fun setCategory(category: ExerciseCategory) = _draft.update { it.copy(category = category) }
-    fun setMetric(metric: MetricType) = _draft.update { it.copy(metric = metric) }
+    fun setMetric(metric: MetricType) = _draft.update {
+        it.copy(metric = metric, intervals = if (metric.usesIntervals) it.intervals ?: IntervalSettings.defaultFor(metric) else it.intervals)
+    }
+    fun setIntervals(intervals: IntervalSettings) = _draft.update { it.copy(intervals = intervals) }
     fun setNotes(notes: String) = _draft.update { it.copy(notes = notes) }
 
     fun save() {
@@ -109,7 +119,14 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
         }
         viewModelScope.launch {
             repository.saveExercise(
-                ExerciseInput(id = draft.id, name = name, category = draft.category, metric = draft.metric, notes = draft.notes),
+                ExerciseInput(
+                    id = draft.id,
+                    name = name,
+                    category = draft.category,
+                    metric = draft.metric,
+                    notes = draft.notes,
+                    intervals = draft.intervals?.takeIf { draft.metric.usesIntervals },
+                ),
             )
             _draft.update { it.copy(done = true) }
         }
@@ -209,6 +226,19 @@ fun ExerciseEditorScreen(onDone: () -> Unit, viewModel: ExerciseEditorViewModel 
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (draft.metric.usesIntervals) {
+                val intervals = draft.intervals ?: IntervalSettings.defaultFor(draft.metric)
+                Eyebrow("Interval timer", Modifier.padding(top = space.s3))
+                Column(Modifier.testTag("exercise_intervals")) {
+                    IntervalFields(intervals, viewModel::setIntervals)
+                }
+                Text(
+                    "Plans start from these, and the session timer runs them. Takes " +
+                        formatDuration(intervals.toSpec().totalSeconds) + ".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             CruxTextField(
                 label = "Notes",
                 value = draft.notes,
@@ -264,6 +294,6 @@ private fun metricHelp(metric: MetricType): String = when (metric) {
     MetricType.WEIGHTED_REPS -> "Plans set sets, reps and added load. Weighted pull-ups, dips."
     MetricType.TIME -> "Plans set sets and seconds. Lever holds, traversing, stretches."
     MetricType.WEIGHTED_TIME -> "Plans set sets, seconds and added load. Hangboard hangs."
-    MetricType.INTERVALS -> "Plans set work, rest, repeats, cycles and rest between cycles. Tabata, circuits."
+    MetricType.INTERVALS -> "Timed work and rest, repeated in cycles. Tabata, circuits."
     MetricType.WEIGHTED_INTERVALS -> "Intervals with added load. Hangboard repeaters."
 }

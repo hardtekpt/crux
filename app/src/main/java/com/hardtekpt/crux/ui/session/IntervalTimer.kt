@@ -29,6 +29,8 @@ data class IntervalSpec(
 
     val totalSeconds: Int get() = phases.sumOf { it.seconds }
 
+    fun toSettings() = com.hardtekpt.crux.data.model.IntervalSettings(prepSeconds, workSeconds, restSeconds, repeats, cycles, cycleRestSeconds)
+
     companion object {
         /** Classic Tabata: 8 × 20 s on, 10 s off. */
         val TABATA = IntervalSpec(prepSeconds = 10, workSeconds = 20, restSeconds = 10, repeats = 8, cycles = 1, cycleRestSeconds = 60)
@@ -36,6 +38,12 @@ data class IntervalSpec(
         /** Hangboard repeaters: 6 × 7 s on, 3 s off, three cycles with 3 min between. */
         val REPEATERS = IntervalSpec(prepSeconds = 10, workSeconds = 7, restSeconds = 3, repeats = 6, cycles = 3, cycleRestSeconds = 180)
     }
+}
+
+fun com.hardtekpt.crux.data.model.IntervalSettings.toSpec() = IntervalSpec(prepSeconds, workSeconds, restSeconds, repeats, cycles, cycleRestSeconds)
+
+data class IntervalStretch(val leftMillis: Long, val totalMillis: Long) {
+    val fractionLeft: Float get() = if (totalMillis <= 0) 0f else leftMillis.toFloat() / totalMillis
 }
 
 data class IntervalPhase(val kind: Kind, val seconds: Int, val cycle: Int, val repeat: Int) {
@@ -106,6 +114,26 @@ data class IntervalRun(
             IntervalPhase.Kind.CYCLE_REST -> position.phase.cycle + 1
             else -> position.phase.cycle
         }
+    }
+
+    /**
+     * How far through its stretch the timer is: the preparation, a whole cycle (its repeats and
+     * the rests between them) or the rest between cycles.
+     */
+    fun stretch(nowMillis: Long): IntervalStretch {
+        val position = position(nowMillis)
+        val phase = position.phase
+        if (phase.kind == IntervalPhase.Kind.PREP || phase.kind == IntervalPhase.Kind.CYCLE_REST || position.finished) {
+            return IntervalStretch(position.leftMillis, phase.seconds * 1000L)
+        }
+        val inCycle = spec.phases.withIndex().filter { (_, p) ->
+            p.cycle == phase.cycle &&
+                (p.kind == IntervalPhase.Kind.WORK || p.kind == IntervalPhase.Kind.REST)
+        }
+        val total = inCycle.sumOf { it.value.seconds * 1000L }
+        val before = inCycle.filter { it.index < position.index }.sumOf { it.value.seconds * 1000L }
+        val done = before + phase.seconds * 1000L - position.leftMillis
+        return IntervalStretch(total - done, total)
     }
 
     fun pause(nowMillis: Long): IntervalRun = if (paused) this else copy(pausedAtMillis = nowMillis)

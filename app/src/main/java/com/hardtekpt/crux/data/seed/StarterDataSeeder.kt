@@ -68,8 +68,9 @@ class StarterData @Inject constructor(
  * 3: places have named sections; Block Lab is "Main gym" plus "Kilter board".
  * 4: the max hangs plan has Repeaters, an interval exercise (7 Oct 2026).
  * 5: interval exercises keep their rest between repeats.
+ * 6: Repeaters and Tabata core come with their interval timer set up.
  */
-const val SAMPLE_DATA_VERSION = 5
+const val SAMPLE_DATA_VERSION = 6
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -117,7 +118,7 @@ class StarterDataSeeder(private val clock: Clock) {
                     metric = exercise.metric,
                     notes = exercise.notes,
                     createdAtMillis = now,
-                ),
+                ).withIntervals(exercise.intervals),
             )
         }
         val dao = db.templateDao()
@@ -322,13 +323,31 @@ private val SAMPLE_NOTES = listOf(
     11 to "Felt strong on the board. Warm-up on the 4x4 circuit worked well.",
 )
 
-private data class StarterExercise(val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String? = null)
+private data class StarterExercise(
+    val name: String,
+    val category: ExerciseCategory,
+    val metric: MetricType,
+    val notes: String? = null,
+    val intervals: com.hardtekpt.crux.data.model.IntervalSettings? = null,
+)
 
 private val STARTER_EXERCISES = listOf(
     StarterExercise("Half-crimp hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, "20 mm edge"),
     StarterExercise("Open-hand hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, "20 mm edge"),
-    StarterExercise("Repeaters", ExerciseCategory.FINGERS, MetricType.WEIGHTED_INTERVALS, "20 mm edge, half crimp"),
-    StarterExercise("Tabata core", ExerciseCategory.CORE, MetricType.INTERVALS, "Hollow holds or mountain climbers"),
+    StarterExercise(
+        "Repeaters",
+        ExerciseCategory.FINGERS,
+        MetricType.WEIGHTED_INTERVALS,
+        "20 mm edge, half crimp",
+        com.hardtekpt.crux.data.model.IntervalSettings(prepSeconds = 10, workSeconds = 7, restSeconds = 3, repeats = 6, cycles = 3, cycleRestSeconds = 180),
+    ),
+    StarterExercise(
+        "Tabata core",
+        ExerciseCategory.CORE,
+        MetricType.INTERVALS,
+        "Hollow holds or mountain climbers",
+        com.hardtekpt.crux.data.model.IntervalSettings(prepSeconds = 10, workSeconds = 20, restSeconds = 10, repeats = 8, cycles = 2, cycleRestSeconds = 60),
+    ),
     StarterExercise("Scap pull-ups", ExerciseCategory.PULLING, MetricType.REPS),
     StarterExercise("Weighted pull-ups", ExerciseCategory.PULLING, MetricType.WEIGHTED_REPS),
     StarterExercise("Front lever tucks", ExerciseCategory.CORE, MetricType.TIME),

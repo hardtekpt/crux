@@ -36,7 +36,46 @@ enum class MetricType(
     WEIGHTED_INTERVALS("Intervals with load", "Intervals+kg", usesReps = false, usesTime = false, usesLoad = true, usesIntervals = true),
 }
 
-data class Exercise(val id: Long, val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String?)
+data class Exercise(
+    val id: Long,
+    val name: String,
+    val category: ExerciseCategory,
+    val metric: MetricType,
+    val notes: String?,
+    /** Interval exercises: the timer set up with the exercise; null uses the defaults. */
+    val intervals: IntervalSettings? = null,
+)
+
+/**
+ * An interval exercise's own timer: preparation, work and rest per repeat, repeats per cycle,
+ * cycles and the rest between them. Plans start from it and the session timer runs it.
+ */
+@kotlinx.serialization.Serializable
+data class IntervalSettings(
+    val prepSeconds: Int = 10,
+    val workSeconds: Int = 20,
+    val restSeconds: Int = 10,
+    val repeats: Int = 8,
+    val cycles: Int = 1,
+    val cycleRestSeconds: Int = 60,
+) {
+    /** The plan target these settings make, in the target's interval reading. */
+    fun toTarget(loadKg: Double = 0.0) = ExerciseTarget(
+        sets = cycles,
+        reps = repeats,
+        seconds = workSeconds,
+        loadKg = loadKg,
+        restSeconds = cycleRestSeconds,
+        repRestSeconds = restSeconds,
+    )
+
+    companion object {
+        /** The default for an interval metric, from its default target, with 10 s to prepare. */
+        fun defaultFor(metric: MetricType): IntervalSettings = ExerciseTarget.defaultFor(metric).let {
+            IntervalSettings(10, it.seconds, it.repRestSeconds, it.reps, it.sets, it.restSeconds)
+        }
+    }
+}
 
 /**
  * What a plan asks for one exercise. Fields the metric does not use are ignored.
@@ -82,6 +121,12 @@ data class ExerciseTarget(
 
     companion object {
         private const val SECONDS_PER_REP = 4
+
+        /** What a plan or session starts an exercise at: its own interval timer, if it has one. */
+        fun defaultFor(exercise: Exercise): ExerciseTarget {
+            val base = defaultFor(exercise.metric)
+            return exercise.intervals?.takeIf { exercise.metric.usesIntervals }?.toTarget(base.loadKg) ?: base
+        }
 
         fun defaultFor(metric: MetricType) = when (metric) {
             MetricType.REPS -> ExerciseTarget(sets = 3, reps = 10, restSeconds = 90)

@@ -62,6 +62,10 @@ class BackupRepositoryTest {
         val record = target.exerciseRecordDao().getAll().single { it.createdAtMillis == 2L }
         assertEquals(12.5, record.loadKg!!, 0.0)
         assertEquals(exercise.name, target.exerciseDao().getAll().first { it.id == record.exerciseId }.name)
+        // Interval exercises bring their timer.
+        val repeaters = target.exerciseDao().getAll().first { it.name == "Repeaters" }
+        assertEquals(source.exerciseDao().getAll().first { it.name == "Repeaters" }.intervals, repeaters.intervals)
+        assertEquals(7, repeaters.intervals!!.workSeconds)
 
         // Places come back with their walls and problems, and climbs link to them again.
         assertEquals(source.placeDao().getPlaces().size, target.placeDao().getPlaces().size)

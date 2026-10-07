@@ -188,7 +188,7 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
 
     override suspend fun addExercise(sessionId: Long, exercise: Exercise): Long {
         val dao = dbs.current().sessionDao()
-        val target = ExerciseTarget.defaultFor(exercise.metric)
+        val target = ExerciseTarget.defaultFor(exercise)
         return dao.insertItem(
             SessionItemEntity(
                 sessionId = sessionId,
@@ -258,7 +258,7 @@ private fun SessionEntity.toModel(
             val exercise = exercises[item.exerciseId] ?: return@mapNotNull null
             SessionItem(
                 id = item.id,
-                exercise = Exercise(exercise.id, exercise.name, exercise.category, exercise.metric, exercise.notes),
+                exercise = Exercise(exercise.id, exercise.name, exercise.category, exercise.metric, exercise.notes, exercise.intervals),
                 blockName = item.blockName,
                 target = ExerciseTarget(
                     sets = item.sets,

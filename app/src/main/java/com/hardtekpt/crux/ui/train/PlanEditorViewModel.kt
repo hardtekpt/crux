@@ -116,7 +116,7 @@ class PlanEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle
     /** Adds with sensible targets for the exercise's metric, then opens them for tweaking. */
     fun addExercise(exercise: Exercise) = _draft.update { draft ->
         val block = draft.pickingFor ?: return@update draft
-        val items = draft.blocks[block].items + ItemDraft(key(), exercise, ExerciseTarget.defaultFor(exercise.metric))
+        val items = draft.blocks[block].items + ItemDraft(key(), exercise, ExerciseTarget.defaultFor(exercise))
         draft.copy(
             blocks = draft.blocks.replaced(block) { it.copy(items = items) },
             pickingFor = null,

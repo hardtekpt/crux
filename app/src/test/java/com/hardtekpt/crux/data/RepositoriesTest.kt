@@ -147,6 +147,37 @@ class RepositoriesTest {
     }
 
     @Test
+    fun `an interval exercise keeps its timer, and plans start from it`() = runTest {
+        val dbs = databases()
+        val exercises = OfflineExerciseRepository(dbs, FIXED_CLOCK)
+        val timer = com.hardtekpt.crux.data.model.IntervalSettings(
+            prepSeconds = 5,
+            workSeconds = 7,
+            restSeconds = 3,
+            repeats = 6,
+            cycles = 3,
+            cycleRestSeconds = 180,
+        )
+        val id = exercises.saveExercise(
+            ExerciseInput(name = "Repeaters", category = ExerciseCategory.FINGERS, metric = MetricType.INTERVALS, notes = null, intervals = timer),
+        )
+        val saved = exercises.getExercise(id)!!
+        assertEquals(timer, saved.intervals)
+        val target = com.hardtekpt.crux.data.model.ExerciseTarget.defaultFor(saved)
+        assertEquals(3, target.sets)
+        assertEquals(6, target.reps)
+        assertEquals(7, target.seconds)
+        assertEquals(3, target.repRestSeconds)
+        assertEquals(180, target.restSeconds)
+
+        // Measured another way, the timer is dropped.
+        exercises.saveExercise(
+            ExerciseInput(id = id, name = "Repeaters", category = ExerciseCategory.FINGERS, metric = MetricType.TIME, notes = null, intervals = timer),
+        )
+        assertNull(exercises.getExercise(id)!!.intervals)
+    }
+
+    @Test
     fun `deleting an exercise takes it out of the plans that used it`() = runTest {
         val dbs = databases()
         StarterDataSeeder(FIXED_CLOCK).seed(real, includeSampleData = false)

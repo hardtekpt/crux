@@ -84,7 +84,14 @@ data class BackupFile(
 }
 
 @Serializable
-data class ExerciseDto(val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String? = null)
+data class ExerciseDto(
+    val name: String,
+    val category: ExerciseCategory,
+    val metric: MetricType,
+    val notes: String? = null,
+    /** Interval exercises: their timer. Older backups omit it. */
+    val intervals: com.hardtekpt.crux.data.model.IntervalSettings? = null,
+)
 
 @Serializable
 data class PlanItemDto(
@@ -369,7 +376,7 @@ class BackupRepository(
                 metric = dto.metric,
                 notes = dto.notes,
                 createdAtMillis = now,
-            )
+            ).withIntervals(dto.intervals?.takeIf { dto.metric.usesIntervals })
             val id = exerciseDao.insert(entity)
             existing[dto.name.lowercase()] = entity.copy(id = id)
             if (countAs != null) added.merge(countAs, 1, Int::plus)
@@ -619,7 +626,7 @@ class BackupRepository(
     }
 }
 
-private fun ExerciseEntity.toDto() = ExerciseDto(name, category, metric, notes)
+private fun ExerciseEntity.toDto() = ExerciseDto(name, category, metric, notes, intervals)
 
 private fun ClimbEntity.toDto() = ClimbDto(
     discipline = discipline,

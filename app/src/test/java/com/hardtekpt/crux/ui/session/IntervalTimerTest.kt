@@ -48,4 +48,16 @@ class IntervalTimerTest {
         assertEquals(5_000, run.elapsed(65_000))
         assertEquals(IntervalPhase.Kind.PREP, run.position(65_000).phase.kind)
     }
+
+    @Test
+    fun `the stretch is the whole cycle while working or resting between repeats`() {
+        val run = IntervalRun(spec, startedAtMillis = 0)
+        // A cycle is 3 × 20 s of work and 2 × 10 s of rest: 80 s. 45 s in is 35 s into it.
+        val cycle = run.stretch(45_000)
+        assertEquals(80_000, cycle.totalMillis)
+        assertEquals(45_000, cycle.leftMillis)
+        // Preparation and the rest between cycles are stretches of their own.
+        assertEquals(IntervalStretch(5_000, 10_000), run.stretch(5_000))
+        assertEquals(IntervalStretch(50_000, 60_000), run.stretch(100_000))
+    }
 }

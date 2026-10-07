@@ -4,6 +4,7 @@ import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.IntervalSettings
 import com.hardtekpt.crux.data.model.MetricType
 import java.time.Clock
 import javax.inject.Inject
@@ -11,7 +12,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /** What the exercise form edits. `id == 0` creates a new exercise. */
-data class ExerciseInput(val id: Long = 0, val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String?)
+data class ExerciseInput(
+    val id: Long = 0,
+    val name: String,
+    val category: ExerciseCategory,
+    val metric: MetricType,
+    val notes: String?,
+    /** Kept only for interval metrics. */
+    val intervals: IntervalSettings? = null,
+)
 
 interface ExerciseRepository {
     fun observeExercises(): Flow<List<Exercise>>
@@ -33,8 +42,9 @@ class OfflineExerciseRepository @Inject constructor(private val dbs: CruxDatabas
         val notes = input.notes?.trim()?.takeIf { it.isNotEmpty() }
         val dao = dbs.current().exerciseDao()
         val existing = if (input.id != 0L) dao.get(input.id) else null
+        val intervals = input.intervals?.takeIf { input.metric.usesIntervals }
         return if (existing != null) {
-            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes))
+            dao.update(existing.copy(name = name, category = input.category, metric = input.metric, notes = notes).withIntervals(intervals))
             existing.id
         } else {
             dao.insert(
@@ -44,7 +54,7 @@ class OfflineExerciseRepository @Inject constructor(private val dbs: CruxDatabas
                     metric = input.metric,
                     notes = notes,
                     createdAtMillis = clock.millis(),
-                ),
+                ).withIntervals(intervals),
             )
         }
     }
@@ -60,4 +70,5 @@ internal fun ExerciseEntity.toModel() = Exercise(
     category = category,
     metric = metric,
     notes = notes,
+    intervals = intervals,
 )

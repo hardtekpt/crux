@@ -13,6 +13,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Update
 import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.IntervalSettings
 import com.hardtekpt.crux.data.model.MetricType
 import kotlinx.coroutines.flow.Flow
 
@@ -25,7 +26,36 @@ data class ExerciseEntity(
     val metric: MetricType,
     val notes: String? = null,
     val createdAtMillis: Long,
-)
+    /** Interval exercises: the timer set up with the exercise (schema 18); null uses the defaults. */
+    val intervalPrepSeconds: Int? = null,
+    val intervalWorkSeconds: Int? = null,
+    val intervalRestSeconds: Int? = null,
+    val intervalRepeats: Int? = null,
+    val intervalCycles: Int? = null,
+    val intervalCycleRestSeconds: Int? = null,
+) {
+    val intervals: IntervalSettings?
+        get() {
+            val work = intervalWorkSeconds ?: return null
+            return IntervalSettings(
+                prepSeconds = intervalPrepSeconds ?: 10,
+                workSeconds = work,
+                restSeconds = intervalRestSeconds ?: 0,
+                repeats = intervalRepeats ?: 1,
+                cycles = intervalCycles ?: 1,
+                cycleRestSeconds = intervalCycleRestSeconds ?: 0,
+            )
+        }
+
+    fun withIntervals(settings: IntervalSettings?) = copy(
+        intervalPrepSeconds = settings?.prepSeconds,
+        intervalWorkSeconds = settings?.workSeconds,
+        intervalRestSeconds = settings?.restSeconds,
+        intervalRepeats = settings?.repeats,
+        intervalCycles = settings?.cycles,
+        intervalCycleRestSeconds = settings?.cycleRestSeconds,
+    )
+}
 
 /** A session plan. */
 @Entity(tableName = "workout_templates")
