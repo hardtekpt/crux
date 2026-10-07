@@ -40,7 +40,8 @@ a2:8e:87:81:7c:00:0b:9f:3c:8d:d2:42:98:03:60:5e:2d:78:f7:6e:af:9c:7c:63:56:67:6b
 ```
 
 You can check a download against the `.sha256` file next to it, or with
-`apksigner verify --print-certs crux-vX.Y.Z.apk`. An F-Droid listing is on the way.
+`apksigner verify --print-certs crux-vX.Y.Z.apk`. An F-Droid listing is on the way
+([docs/FDROID.md](docs/FDROID.md)).
 
 ## Privacy
 
