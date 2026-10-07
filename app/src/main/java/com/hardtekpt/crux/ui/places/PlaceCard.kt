@@ -108,7 +108,9 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     overflow = TextOverflow.Ellipsis,
                 )
                 val where = place.location ?: place.mapLocation?.address
-                val visit = summary.lastVisit?.let { "last visit ${it.relativeLabel(LocalDate.now()).lowercase()}" } ?: "not visited yet"
+                val visit =
+                    summary.lastVisit?.let { "last visit ${it.relativeLabel(LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current)).lowercase()}" }
+                        ?: "not visited yet"
                 Text(
                     listOfNotNull(where, visit).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,

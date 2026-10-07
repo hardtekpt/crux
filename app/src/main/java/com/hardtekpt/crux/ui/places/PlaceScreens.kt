@@ -328,7 +328,8 @@ fun PlaceDetailScreen(
                     PlaceFigure(
                         value = climbs.size,
                         label = if (climbs.size == 1) "climb logged" else "climbs logged",
-                        detail = lastVisit?.let { "last ${it.relativeLabel(LocalDate.now()).lowercase()}" } ?: "none yet",
+                        detail =
+                            lastVisit?.let { "last ${it.relativeLabel(LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current)).lowercase()}" } ?: "none yet",
                         modifier = Modifier.weight(1f),
                     )
                     PlaceFigure(

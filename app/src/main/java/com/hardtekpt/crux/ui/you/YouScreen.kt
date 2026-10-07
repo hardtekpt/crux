@@ -68,6 +68,7 @@ import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.ui.LocalClock
 import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.WeightSummary
 import com.hardtekpt.crux.ui.charts.ChartCard
@@ -484,7 +485,7 @@ private fun WeightSparkline(values: List<Double>, modifier: Modifier = Modifier)
 internal fun WeightTrendCard(weights: List<Measurement>, modifier: Modifier = Modifier) {
     val units = LocalUnits.current
     var range by rememberSaveable { mutableStateOf(ChartRange.Quarter) }
-    val today = LocalDate.now()
+    val today = LocalDate.now(LocalClock.current)
     val start = range.start(today)
     val inRange = weights.filter { start == null || !it.date.isBefore(start) }.sortedBy { it.date }
     val change = if (inRange.size > 1) inRange.last().value - inRange.first().value else null

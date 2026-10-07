@@ -15,6 +15,12 @@ import kotlin.math.roundToInt
  * and what the inputs step in.
  */
 
+/**
+ * The clock screens read "today" from: the system clock in the app, a fixed one in screenshot
+ * tests so their goldens don't change from day to day.
+ */
+val LocalClock = staticCompositionLocalOf<java.time.Clock> { java.time.Clock.systemDefaultZone() }
+
 /** The climber's unit system, provided at the app root. */
 val LocalUnits = staticCompositionLocalOf { UnitSystem.METRIC }
 

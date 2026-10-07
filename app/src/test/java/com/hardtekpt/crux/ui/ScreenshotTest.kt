@@ -4,12 +4,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
+import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,28 +20,40 @@ import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
+import com.hardtekpt.crux.data.FakeImageFiles
 import com.hardtekpt.crux.data.OfflineBodyRepository
 import com.hardtekpt.crux.data.OfflineClimbRepository
+import com.hardtekpt.crux.data.OfflineExerciseRepository
 import com.hardtekpt.crux.data.OfflineNoteRepository
 import com.hardtekpt.crux.data.OfflinePlaceRepository
 import com.hardtekpt.crux.data.OfflineRecordRepository
 import com.hardtekpt.crux.data.OfflineSessionRepository
 import com.hardtekpt.crux.data.OfflineTemplateRepository
 import com.hardtekpt.crux.data.dashboard.DashboardRepository
+import com.hardtekpt.crux.data.images.AreaImageStore
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.DatabaseFactory
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.data.seed.StarterData
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
 import com.hardtekpt.crux.ui.home.HomeContent
 import com.hardtekpt.crux.ui.home.HomeViewModel
 import com.hardtekpt.crux.ui.journal.JournalContent
 import com.hardtekpt.crux.ui.journal.JournalViewModel
+import com.hardtekpt.crux.ui.journal.LogClimbScreen
+import com.hardtekpt.crux.ui.journal.LogClimbViewModel
+import com.hardtekpt.crux.ui.places.PlaceDetailScreen
+import com.hardtekpt.crux.ui.places.PlaceDetailViewModel
 import com.hardtekpt.crux.ui.progress.ProgressContent
 import com.hardtekpt.crux.ui.progress.ProgressViewModel
+import com.hardtekpt.crux.ui.session.SessionScreen
+import com.hardtekpt.crux.ui.session.SessionViewModel
 import com.hardtekpt.crux.ui.settings.SettingsContent
 import com.hardtekpt.crux.ui.settings.SettingsUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.train.TrainScreen
+import com.hardtekpt.crux.ui.train.TrainViewModel
 import com.hardtekpt.crux.ui.you.ProfileActions
 import com.hardtekpt.crux.ui.you.YouContent
 import com.hardtekpt.crux.ui.you.YouViewModel
@@ -125,19 +140,68 @@ class ScreenshotTest {
         SettingsContent(uiState = SettingsUiState(), onBack = {}, onGradeScale = {}, onThemeMode = {})
     }
 
+    @Test
+    fun train() {
+        val vm = TrainViewModel(OfflineTemplateRepository(dbs), exercises, StarterData(dbs, preferences, FIXED_CLOCK))
+        bothThemes("train", readyText = "Max hangs") { TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = vm) }
+    }
+
+    @Test
+    fun session() {
+        val sessions = sessions()
+        val sessionId = runBlocking {
+            val plan = OfflineTemplateRepository(dbs).observeTemplates().first().first()
+            val place = db.placeDao().getPlaces().first { it.name == "Block Lab" }
+            val id = sessions.start(plan.id, place.id, db.placeDao().getSections(place.id).first().id)
+            // The warm-up done, so the screen shows a session under way.
+            val warmUp = sessions.observeSession(id).first { it != null }!!.items.first()
+            repeat(warmUp.target.sets) { sessions.logSet(warmUp.id, it, warmUp.target.reps, warmUp.target.seconds, warmUp.target.loadKg) }
+            id
+        }
+        val vm = SessionViewModel(SavedStateHandle(mapOf("sessionId" to sessionId)), sessions, exercises, places, preferences, FIXED_CLOCK)
+        bothThemes("session", readyText = "Max hangs") { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
+    }
+
+    @Test
+    fun logClimb() {
+        val vm = LogClimbViewModel(SavedStateHandle(), climbs, places, FIXED_CLOCK, preferences, FakeImageFiles(), sessions())
+        bothThemes("logclimb", readyText = "Log climb") { LogClimbScreen(onDone = {}, viewModel = vm) }
+    }
+
+    @Test
+    fun place() {
+        val placeId = runBlocking { db.placeDao().getPlaces().first { it.name == "Block Lab" }.id }
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val vm = PlaceDetailViewModel(SavedStateHandle(mapOf("placeId" to placeId)), places, AreaImageStore(context), climbs)
+        bothThemes("place", readyText = "Block Lab") {
+            PlaceDetailScreen(onBack = {}, onEdit = {}, onOpenProblem = {}, onNewProblem = {}, onLogHere = { _, _ -> }, viewModel = vm)
+        }
+    }
+
+    private val exercises by lazy { OfflineExerciseRepository(dbs, FIXED_CLOCK) }
+
+    private fun sessions() = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+
     /** The view model's state once it has loaded, so the screenshot never catches a half-filled screen. */
     private fun <T> loaded(state: Flow<T>, isLoaded: (T) -> Boolean): T = runBlocking { withTimeout(10_000) { state.first(isLoaded) } }
 
     /** Renders [content] dark (the app's default) and light. */
-    private fun bothThemes(name: String, content: @Composable () -> Unit) {
+    private fun bothThemes(name: String, readyText: String? = null, content: @Composable () -> Unit) {
         var dark by mutableStateOf(true)
         compose.setContent {
-            CruxTheme(darkTheme = dark) {
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
+            // "Today" is the fixed test day everywhere, so the goldens don't change from day to day.
+            CompositionLocalProvider(LocalClock provides FIXED_CLOCK) {
+                CruxTheme(darkTheme = dark) {
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
+                }
             }
         }
         listOf(true, false).forEach { theme ->
             dark = theme
+            // Screens that load their own data: wait until it's on screen.
+            readyText?.let { text ->
+                compose.waitUntil(10_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+            }
             compose.waitForIdle()
             // The main screens in dark double as the store screenshots (fastlane/, in this order).
             val path = STORE_ORDER[name]?.takeIf { theme }?.let { "$STORE_SCREENSHOTS/${it}_$name.png" }
@@ -148,6 +212,15 @@ class ScreenshotTest {
 
     private companion object {
         const val STORE_SCREENSHOTS = "../fastlane/metadata/android/en-US/images/phoneScreenshots"
-        val STORE_ORDER = mapOf("home" to 1, "journal" to 2, "progress" to 3, "you" to 4)
+        val STORE_ORDER = mapOf(
+            "home" to 1,
+            "journal" to 2,
+            "progress" to 3,
+            "you" to 4,
+            "train" to 5,
+            "session" to 6,
+            "logclimb" to 7,
+            "place" to 8,
+        )
     }
 }

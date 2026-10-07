@@ -160,7 +160,7 @@ fun LogClimbContent(
     onDelete: () -> Unit = {},
     onEffort: (Int?) -> Unit = {},
     media: @Composable () -> Unit = {},
-    today: LocalDate = remember { LocalDate.now() },
+    today: LocalDate = LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current),
 ) {
     val space = CruxTheme.space
     var pickingDate by rememberSaveable { mutableStateOf(false) }

@@ -47,6 +47,7 @@ import com.hardtekpt.crux.data.Note
 import com.hardtekpt.crux.data.model.MetricType
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.formatKg
+import com.hardtekpt.crux.ui.LocalClock
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
@@ -137,8 +138,8 @@ fun ClimberCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s5)) {
-                HeroFigure(daysThisYear.toString(), "Days ${LocalDate.now().year}")
-                HeroFigure(climbsThisYear.toString(), "Climbs ${LocalDate.now().year}")
+                HeroFigure(daysThisYear.toString(), "Days ${LocalDate.now(LocalClock.current).year}")
+                HeroFigure(climbsThisYear.toString(), "Climbs ${LocalDate.now(LocalClock.current).year}")
             }
             Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3), verticalAlignment = Alignment.CenterVertically) {
                 HardestChip("Boulder", hardestBoulder)
