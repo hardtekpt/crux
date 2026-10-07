@@ -37,7 +37,11 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Build app, test and release APKs
-        run: ./gradlew assembleDebug assembleDebugAndroidTest assembleRelease
+        # Then stop Gradle's and Kotlin's daemons: the runner has ~7 GB, and the emulator needs its share.
+        run: |
+          ./gradlew assembleDebug assembleDebugAndroidTest assembleRelease
+          ./gradlew --stop
+          pkill -f KotlinCompileDaemon || true
 
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -49,7 +53,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           disk-size: 4096M
-          ram-size: 3072M
+          ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Instrumented tests on the debug build, then a launch check of the minified release build.
           script: |
