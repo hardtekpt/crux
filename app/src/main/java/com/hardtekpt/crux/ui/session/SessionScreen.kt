@@ -234,6 +234,11 @@ class SessionViewModel @Inject constructor(
         }
     }
 
+    /** Changes what a logged set holds; a skipped set becomes done. */
+    fun editSet(item: SessionItem, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?) {
+        viewModelScope.launch { sessions.logSet(item.id, setIndex, reps, seconds, loadKg) }
+    }
+
     fun undoSet(item: SessionItem, setIndex: Int) {
         viewModelScope.launch { sessions.undoSet(item.id, setIndex) }
         _currentItem.value = item.id
@@ -380,6 +385,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
     var picking by rememberSaveable { mutableStateOf(false) }
     var settingUpTimer by rememberSaveable { mutableStateOf(false) }
     var freeTimer by rememberSaveable { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Pair<Long, Int>?>(null) }
     val context = LocalContext.current
     val sounds = rememberTimerSounds(soundsOn)
 
@@ -509,7 +515,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                     onDraft = viewModel::updateDraft,
                     onDone = { viewModel.doneSet(item) },
                     onSkip = { viewModel.skipSet(item) },
-                    onUndo = { setIndex -> viewModel.undoSet(item, setIndex) },
+                    onEdit = { setIndex -> editing = item.id to setIndex },
                     onStartTimer = { settingUpTimer = true },
                     onPrevious = current.items.getOrNull(index - 1)?.let { prev -> { viewModel.show(prev.id) } },
                     onNext = current.items.getOrNull(index + 1)?.let { next -> { viewModel.show(next.id) } },
@@ -579,6 +585,27 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
         }
     }
 
+    editing?.let { (itemId, setIndex) ->
+        val editItem = current.items.firstOrNull { it.id == itemId }
+        val set = editItem?.sets?.firstOrNull { it.setIndex == setIndex }
+        if (editItem == null || set == null) {
+            editing = null
+        } else {
+            SetEditSheet(
+                item = editItem,
+                set = set,
+                onSave = { reps, seconds, load ->
+                    viewModel.editSet(editItem, setIndex, reps, seconds, load)
+                    editing = null
+                },
+                onRemove = {
+                    viewModel.undoSet(editItem, setIndex)
+                    editing = null
+                },
+                onDismiss = { editing = null },
+            )
+        }
+    }
     if (picking) {
         ExercisePicker(
             exercises = library,
@@ -671,7 +698,7 @@ private fun ExerciseView(
     onDraft: ((SetDraft) -> SetDraft) -> Unit,
     onDone: () -> Unit,
     onSkip: () -> Unit,
-    onUndo: (Int) -> Unit,
+    onEdit: (Int) -> Unit,
     onStartTimer: () -> Unit,
     onPrevious: (() -> Unit)?,
     onNext: (() -> Unit)?,
@@ -715,7 +742,7 @@ private fun ExerciseView(
                         setIndex == next -> SetState.NOW
                         else -> SetState.TO_DO
                     },
-                    onUndo = { onUndo(setIndex) }.takeIf { logged != null },
+                    onEdit = { onEdit(setIndex) }.takeIf { logged != null },
                     modifier = Modifier.testTag("session_set_$setIndex"),
                 )
             }
@@ -723,7 +750,7 @@ private fun ExerciseView(
 
         when {
             item.nextSet == null -> Text(
-                "All sets in. Tap a set to undo it.",
+                "All sets in. Tap a set to change it.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )
@@ -773,6 +800,13 @@ private fun ExerciseView(
                         size = CruxButtonSize.Large,
                         modifier = Modifier.fillMaxWidth().testTag("session_start_timer"),
                     )
+                    CruxButton(
+                        "Log cycle ${draft.setIndex + 1} without the timer",
+                        onDone,
+                        variant = CruxButtonVariant.Text,
+                        size = CruxButtonSize.Small,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).testTag("session_log_cycle"),
+                    )
                 } else {
                     CruxButton(
                         text = "Done · set ${draft.setIndex + 1}",
@@ -798,7 +832,7 @@ private enum class SetState { DONE, NOW, TO_DO, SKIPPED }
 
 /** A set as a dot and a value: ticked when done, ringed in the accent when it's next. */
 @Composable
-private fun SetLine(number: Int, text: String, state: SetState, onUndo: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun SetLine(number: Int, text: String, state: SetState, onEdit: (() -> Unit)?, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val success = CruxTheme.colors.success
     Row(
@@ -807,7 +841,7 @@ private fun SetLine(number: Int, text: String, state: SetState, onUndo: (() -> U
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .then(if (onUndo != null) Modifier.clickable(onClickLabel = "Undo", onClick = onUndo) else Modifier)
+            .then(if (onEdit != null) Modifier.clickable(onClickLabel = "Change this set", onClick = onEdit) else Modifier)
             .padding(vertical = 7.dp),
     ) {
         Box(
@@ -1004,5 +1038,106 @@ private fun FinishSheet(session: Session, nowMillis: Long, onSave: (Int?, String
             },
             dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep") } },
         )
+    }
+}
+
+/**
+ * Changes a logged set: what was done (repeats and work time for a cycle) and the load, or takes
+ * it out so it can be done again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SetEditSheet(
+    item: SessionItem,
+    set: com.hardtekpt.crux.data.SessionSet,
+    onSave: (Int?, Int?, Double?) -> Unit,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val metric = item.exercise.metric
+    val imperial = LocalUnits.current == UnitSystem.IMPERIAL
+    var reps by rememberSaveable { mutableStateOf(set.reps ?: item.target.reps) }
+    var seconds by rememberSaveable { mutableStateOf(set.seconds ?: item.target.seconds) }
+    var loadKg by rememberSaveable { mutableStateOf(set.loadKg ?: item.target.loadKg) }
+    val space = CruxTheme.space
+    val noun = if (metric.usesIntervals) "Cycle" else "Set"
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("set_edit"),
+    ) {
+        Column(
+            Modifier.padding(horizontal = space.s4).padding(bottom = space.s4).navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Text("$noun ${set.setIndex + 1}", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                if (set.skipped) "${item.exercise.name}. Skipped; saving logs it as done." else item.exercise.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (metric.usesReps || metric.usesIntervals) {
+                EditRow(if (metric.usesIntervals) "Repeats" else "Reps") {
+                    CruxStepper(reps, { reps = it }, 0..200, "", testTagPrefix = "edit_reps")
+                }
+            }
+            if (metric.usesTime || metric.usesIntervals) {
+                EditRow(if (metric.usesIntervals) "Work each repeat" else "Time") {
+                    CruxStepper(seconds, { seconds = it }, 0..3600, "s", testTagPrefix = "edit_seconds")
+                }
+            }
+            if (metric.usesLoad) {
+                EditRow("Added load") {
+                    val step = if (imperial) poundsToKg(2.5) else 1.25
+                    val shown = loadValue(loadKg, imperial)
+                    CruxValueStepper(
+                        display = (
+                            if (loadKg > 0) {
+                                "+"
+                            } else if (loadKg < 0) {
+                                "−"
+                            } else {
+                                ""
+                            }
+                            ) + formatLoad(loadKg, imperial),
+                        unit = loadUnit(imperial),
+                        canDecrease = shown > -100,
+                        canIncrease = shown < 300,
+                        onDecrease = { loadKg -= step },
+                        onIncrease = { loadKg += step },
+                        testTagPrefix = "edit_load",
+                    )
+                }
+            }
+            CruxButton(
+                "Save",
+                {
+                    onSave(
+                        reps.takeIf { metric.usesReps || metric.usesIntervals },
+                        seconds.takeIf { metric.usesTime || metric.usesIntervals },
+                        loadKg.takeIf { metric.usesLoad },
+                    )
+                },
+                icon = Icons.Rounded.Check,
+                size = CruxButtonSize.Large,
+                modifier = Modifier.fillMaxWidth().testTag("set_edit_save"),
+            )
+            CruxButton(
+                "Take this ${noun.lowercase()} out",
+                onRemove,
+                variant = CruxButtonVariant.Text,
+                modifier = Modifier.fillMaxWidth().testTag("set_edit_remove"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditRow(label: String, field: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        field()
     }
 }

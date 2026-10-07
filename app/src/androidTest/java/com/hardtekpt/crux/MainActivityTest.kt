@@ -181,6 +181,20 @@ class MainActivityTest {
         composeRule.waitForTag("screen_Session")
         composeRule.waitForTag("session_climb")
 
+        // An interval exercise added on the spot: a cycle logged by hand, then changed.
+        composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()
+        composeRule.waitForTag("pick_Repeaters")
+        composeRule.onNodeWithTag("pick_Repeaters").performScrollTo().performClick()
+        composeRule.waitForTag("session_log_cycle")
+        composeRule.onNodeWithTag("session_log_cycle").performScrollTo().performClick()
+        composeRule.onNodeWithTag("session_rest_skip").performClick()
+        composeRule.onNodeWithTag("session_set_0").performScrollTo().performClick()
+        composeRule.waitForTag("set_edit")
+        composeRule.onNodeWithTag("edit_reps_minus").performClick()
+        composeRule.onNodeWithTag("set_edit_save").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("set_edit").fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithTag("session_set_0").assertTextContains("5 × 7 s", substring = true)
+
         // A timer of its own opens the band at the top; paused, it can be stopped.
         composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
         composeRule.waitForTag("timer_start")
