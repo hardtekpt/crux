@@ -5,8 +5,8 @@ Native Android app for planning climbing workouts, journaling climbs and trackin
 ## Stack
 
 Kotlin, Jetpack Compose with Material 3, Navigation Compose (type-safe routes), Hilt, Room,
-DataStore, WorkManager, Coroutines/Flow with MVVM, Vico for charts and Health Connect for body
-metrics. Versions live in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
+DataStore, WorkManager, Coroutines/Flow with MVVM, osmdroid (OpenStreetMap) for maps and
+kotlinx.serialization for backups. Charts are drawn with Compose Canvas. Versions live in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
 
 Build: AGP 9.4, Gradle 9.7, Kotlin 2.4, compileSdk 37.2, minSdk 28. Opening the project in
 Android Studio needs a version that supports AGP 9.4 (Help > Check for Updates); command-line
