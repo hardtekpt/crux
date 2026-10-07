@@ -252,7 +252,10 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_plan").performClick()
 
         composeRule.waitForTag("screen_Train")
-        composeRule.onNodeWithTag("train_list").performScrollToNode(hasText("Power day"))
+        // The plan reaches the list once Room has saved it, which can trail the navigation.
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching { composeRule.onNodeWithTag("train_list").performScrollToNode(hasText("Power day")) }.isSuccess
+        }
         composeRule.onNode(hasText("Power day")).performClick()
         composeRule.waitForTag("template_exercise")
         composeRule.onNode(hasText("Campus ladders")).assertIsDisplayed()
