@@ -1,9 +1,12 @@
 # Instrumented tests (Room migrations, DAOs, Compose UI with Hilt) on an emulator.
-# Runs on PRs into main, by hand, and before every release (release.yml calls it).
+# Runs on PRs into main, by hand, before every release (release.yml calls it), and on pushes to
+# ci/* branches (git push origin HEAD:ci/device-tests) for a run from any commit.
 # Not on every dev push: an emulator run takes ~15 minutes of the Actions allowance.
 name: Device tests
 
 on:
+  push:
+    branches: ['ci/**']
   pull_request:
     branches: [main]
   workflow_dispatch:

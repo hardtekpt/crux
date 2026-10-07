@@ -15,8 +15,8 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
 - `.\crux.cmd test` runs what CI runs: ktlint (Spotless), unit tests and Android Lint. Fix formatting
   with `.\crux.cmd format`. New lint findings fail the build; `app/lint-baseline.xml` holds the
   old ones, so don't add to it to make a build pass.
-- Device tests run in CI on PRs into `main`, on demand (`gh workflow run "Device tests" --ref dev`)
-  and before every release.
+- Device tests run in CI on PRs into `main`, before every release, and on demand: push any commit to
+  a `ci/` branch (`git push origin HEAD:ci/device-tests`, delete it afterwards).
 
 ## Versioning
 - The app version lives in [version.properties](version.properties) (`VERSION_NAME=major.minor.patch`).
