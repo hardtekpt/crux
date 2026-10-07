@@ -96,9 +96,13 @@ jobs:
         run: |
           apk="crux-${{ steps.version.outputs.tag }}.apk"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
-          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          certs=$("$apksigner" verify --print-certs "$apk")
+          # Every signer must be the release key. The line reads "Signer #1 certificate SHA-256
+          # digest: …" up to build-tools 36 and "V2 Signer: certificate SHA-256 digest: …" from 37.
+          actual=$(sed -n 's/^.*[Ss]igner.* certificate SHA-256 digest: //p' <<< "$certs" | sort -u)
           if [ "$actual" != "$CRUX_CERT_SHA256" ]; then
-            echo "::error::$apk is signed with $actual, expected $CRUX_CERT_SHA256."
+            echo "$certs"
+            echo "::error::$apk is signed with ${actual:-no certificate found}, expected $CRUX_CERT_SHA256."
             exit 1
           fi
           sha256sum "$apk" > "$apk.sha256"
