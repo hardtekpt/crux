@@ -44,7 +44,7 @@ sealed interface TimelineEntry {
         override val kind get() = JournalFilter.Training
     }
 
-    /** A finished live session. Its climbs also show with the day's climbs. */
+    /** A finished live session, with the climbs logged in it. */
     data class SessionEntry(val session: com.hardtekpt.crux.data.Session) : TimelineEntry {
         override val key get() = "session|${session.id}"
         override val kind get() = JournalFilter.Training
@@ -112,7 +112,9 @@ fun buildTimeline(
     sessions: List<com.hardtekpt.crux.data.Session> = emptyList(),
     zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
 ): List<TimelineDay> {
-    val entries = climbs.groupByDayAndPlace().map { it.date to TimelineEntry.Climbs(it) } +
+    // Climbs from a finished session show inside that session, not on their own.
+    val inSessions = sessions.map { it.id }.toSet()
+    val entries = climbs.filter { it.sessionId == null || it.sessionId !in inSessions }.groupByDayAndPlace().map { it.date to TimelineEntry.Climbs(it) } +
         sessions.map { it.date(zone) to TimelineEntry.SessionEntry(it) } +
         results.groupBy { it.record.date }.map { (date, list) -> date to TimelineEntry.Training(date, list) } +
         notes.sortedByDescending { it.id }.map { it.created to TimelineEntry.NoteEntry(it) }
@@ -158,7 +160,8 @@ fun List<TimelineDay>.matching(query: JournalQuery, today: LocalDate): List<Time
 
                 is TimelineEntry.SessionEntry -> {
                     if (climbsOnly || notesOnly) return@mapNotNull null
-                    if (matches(entry.session.name, entry.session.notes, *entry.session.items.map { it.exercise.name }.toTypedArray())) entry else null
+                    val text = entry.session.items.map { it.exercise.name } + entry.session.climbs.flatMap { listOfNotNull(it.name, it.place, it.grade) }
+                    if (matches(entry.session.name, entry.session.notes, *text.toTypedArray())) entry else null
                 }
 
                 is TimelineEntry.NoteEntry -> {

@@ -109,6 +109,27 @@ class DerivedDataTest {
     }
 
     @Test
+    fun `climbs from a finished session sit inside it, not on their own`() {
+        val inSession = climb(1, today, "Arco").copy(sessionId = 9)
+        val loose = climb(2, today, "Arco")
+        val session = com.hardtekpt.crux.data.Session(
+            id = 9, name = "Climbing session", templateId = null, placeId = null, sectionId = null,
+            startedAtMillis = today.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(), endedAtMillis = null,
+            running = false, effort = null, notes = null, items = emptyList(), climbs = listOf(inSession),
+        )
+        val day = com.hardtekpt.crux.ui.journal.buildTimeline(
+            listOf(inSession, loose),
+            emptyList(),
+            emptyList(),
+            listOf(session),
+            java.time.ZoneOffset.UTC,
+        ).single()
+        val loneClimbs = day.entries.filterIsInstance<com.hardtekpt.crux.ui.journal.TimelineEntry.Climbs>().flatMap { it.day.climbs }
+        assertEquals(listOf(2L), loneClimbs.map { it.id })
+        assertEquals(1, day.entries.count { it is com.hardtekpt.crux.ui.journal.TimelineEntry.SessionEntry })
+    }
+
+    @Test
     fun `hardest send per discipline ignores style`() {
         val bests = listOf(
             best(Discipline.BOULDER, AscentStyle.FLASH, 9),

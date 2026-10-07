@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -292,7 +293,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
     val item = viewModel.shownItem(current)
     LaunchedEffect(item?.id, item?.logged) { item?.let(viewModel::prepare) }
 
-    Column(Modifier.fillMaxSize().testTag("screen_Session")) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().testTag("screen_Session")) {
         // Top: leave (the session keeps running), what and where, the clock, Finish.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = space.s1, vertical = space.s1)) {
             IconButton(onClick = onLeave, modifier = Modifier.testTag("session_leave")) {

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -140,7 +141,7 @@ class JournalViewModel @Inject constructor(
         JournalUiState(
             today = today,
             weekDays = week.size,
-            weekClimbs = week.sumOf { day -> day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size } },
+            weekClimbs = week.sumOf { day -> day.climbs().size },
             isLoading = false,
             all = all,
             days = all.matching(q, today),
@@ -223,7 +224,7 @@ fun JournalContent(
                     when (entry) {
                         is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
                         is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
-                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session)
+                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb)
                         is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
                     }
                 }
@@ -390,10 +391,15 @@ private fun RailLink(modifier: Modifier = Modifier) {
     }
 }
 
-/** A day's tally: climbs and sends, results, notes. */
+/** Every climb on a day, including those inside its sessions. */
+private fun TimelineDay.climbs(): List<Climb> = entries.filterIsInstance<TimelineEntry.Climbs>().flatMap { it.day.climbs } +
+    entries.filterIsInstance<TimelineEntry.SessionEntry>().flatMap { it.session.climbs }
+
+/** A day's tally: climbs and sends, results, notes, sessions. */
 private fun daySummary(day: TimelineDay): String {
-    val climbs = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { it.day.climbs.size }
-    val sends = day.entries.filterIsInstance<TimelineEntry.Climbs>().sumOf { e -> e.day.climbs.count { it.style.isSend } }
+    val dayClimbs = day.climbs()
+    val climbs = dayClimbs.size
+    val sends = dayClimbs.count { it.style.isSend }
     val results = day.entries.filterIsInstance<TimelineEntry.Training>().sumOf { it.results.size }
     val notes = day.entries.count { it is TimelineEntry.NoteEntry }
     val sessions = day.entries.count { it is TimelineEntry.SessionEntry }
@@ -687,7 +693,7 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
 
 /** A finished session: its name, how long, what got done and how it felt. */
 @Composable
-private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session) {
+private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClimb: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.tertiary) {
         Column(
@@ -732,6 +738,11 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session) {
                 }
             }
             session.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            // The climbs logged during it, inside the session.
+            if (session.climbs.isNotEmpty()) {
+                HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f), modifier = Modifier.padding(vertical = 2.dp))
+                session.climbs.sortedBy { it.id }.forEach { climb -> TapeRow(climb, onClick = { onOpenClimb(climb.id) }) }
+            }
         }
     }
 }
