@@ -59,7 +59,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The main screens with the demo data, in both themes, rendered on the JVM and compared with
- * the goldens in `src/test/screenshots`. `./gradlew recordRoborazziDebug` refreshes them after
+ * the goldens in `src/test/screenshots` (the dark main screens are the store screenshots in
+ * `fastlane/.../phoneScreenshots`). `./gradlew recordRoborazziDebug` refreshes them after
  * an intended change; `verifyRoborazziDebug` (CI) fails on any other difference.
  */
 @RunWith(AndroidJUnit4::class)
@@ -138,9 +139,15 @@ class ScreenshotTest {
         listOf(true, false).forEach { theme ->
             dark = theme
             compose.waitForIdle()
-            compose.onRoot().captureRoboImage(
-                "src/test/screenshots/${name}_${if (theme) "dark" else "light"}.png",
-            )
+            // The main screens in dark double as the store screenshots (fastlane/, in this order).
+            val path = STORE_ORDER[name]?.takeIf { theme }?.let { "$STORE_SCREENSHOTS/${it}_$name.png" }
+                ?: "src/test/screenshots/${name}_${if (theme) "dark" else "light"}.png"
+            compose.onRoot().captureRoboImage(path)
         }
+    }
+
+    private companion object {
+        const val STORE_SCREENSHOTS = "../fastlane/metadata/android/en-US/images/phoneScreenshots"
+        val STORE_ORDER = mapOf("home" to 1, "journal" to 2, "progress" to 3, "you" to 4)
     }
 }
