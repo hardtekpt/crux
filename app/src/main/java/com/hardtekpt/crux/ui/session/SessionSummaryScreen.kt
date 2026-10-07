@@ -230,7 +230,11 @@ private fun ExerciseSummary(item: SessionItem, imperial: Boolean) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text("${item.done} of ${item.target.sets} sets", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(
+                if (item.target.sets == 1) (if (item.done == 1) "Done" else "") else "${item.done} of ${item.target.sets} sets",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
         }
         if (item.sets.isEmpty()) {
             Text("Not done", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))

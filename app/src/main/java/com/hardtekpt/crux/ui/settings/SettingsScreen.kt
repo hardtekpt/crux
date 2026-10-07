@@ -49,6 +49,7 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.DARK,
     val demoMode: Boolean = false,
     val units: UnitSystem = UnitSystem.METRIC,
+    val timerSounds: Boolean = true,
 )
 
 @HiltViewModel
@@ -58,7 +59,8 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
         preferences.themeMode,
         preferences.demoMode,
         preferences.units,
-    ) { scales, theme, demo, units -> SettingsUiState(scales, theme, demo, units) }
+        preferences.timerSounds,
+    ) { scales, theme, demo, units, sounds -> SettingsUiState(scales, theme, demo, units, sounds) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
@@ -71,6 +73,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { preferences.setThemeMode(mode) }
+    }
+
+    fun setTimerSounds(enabled: Boolean) {
+        viewModelScope.launch { preferences.setTimerSounds(enabled) }
     }
 
     fun setUnits(units: UnitSystem) {
@@ -96,6 +102,7 @@ fun SettingsScreen(
         onThemeMode = viewModel::setThemeMode,
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
+        onTimerSounds = viewModel::setTimerSounds,
         backup = { BackupCard(backupState, backupViewModel) },
         diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
         onAbout = openAbout,
@@ -114,6 +121,7 @@ fun SettingsContent(
     backup: @Composable () -> Unit = {},
     diagnostics: @Composable () -> Unit = {},
     onAbout: () -> Unit = {},
+    onTimerSounds: (Boolean) -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -187,6 +195,28 @@ fun SettingsContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Eyebrow("Sessions", Modifier.padding(top = space.s4))
+            CruxCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Timer sounds", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Beeps for the last three seconds of a rest or interval. The phone buzzes either way.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = uiState.timerSounds,
+                        onCheckedChange = onTimerSounds,
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.secondary),
+                        modifier = Modifier
+                            .padding(start = space.s3)
+                            .testTag("timer_sounds"),
+                    )
+                }
+            }
 
             Eyebrow("Your data", Modifier.padding(top = space.s4))
             CruxCard {

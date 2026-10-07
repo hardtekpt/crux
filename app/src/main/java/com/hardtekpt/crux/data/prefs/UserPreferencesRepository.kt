@@ -61,6 +61,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
     }
 
     /** The place last logged at, so the next log starts there. */
+    // Beeps for the last seconds of a timer phase and when the phase changes.
+    val timerSounds: Flow<Boolean> = dataStore.data.map { it[TIMER_SOUNDS] ?: true }
+
+    suspend fun setTimerSounds(enabled: Boolean) {
+        dataStore.edit { it[TIMER_SOUNDS] = enabled }
+    }
+
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
     suspend fun setLastPlaceId(id: Long?) {
@@ -86,6 +93,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
+        val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

@@ -181,6 +181,16 @@ class MainActivityTest {
         composeRule.waitForTag("screen_Session")
         composeRule.waitForTag("session_climb")
 
+        // A timer of its own opens the band at the top; paused, it can be stopped.
+        composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
+        composeRule.waitForTag("timer_start")
+        composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
+        composeRule.waitForTag("timer_band")
+        composeRule.onNodeWithTag("timer_pause").performClick()
+        composeRule.waitForTag("timer_stop")
+        composeRule.onNodeWithTag("timer_stop").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("timer_band").fetchSemanticsNodes().isEmpty() }
+
         composeRule.onNodeWithTag("session_finish").performClick()
         composeRule.waitForTag("session_save")
         composeRule.onNodeWithTag("session_save").performScrollTo().performClick()

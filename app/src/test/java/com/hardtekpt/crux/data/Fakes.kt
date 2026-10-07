@@ -255,10 +255,16 @@ class FakeImageFiles : com.hardtekpt.crux.data.images.ImageFiles {
 class FakeSessionRepository(var runningSession: RunningSession? = null) : SessionRepository {
     override fun observeRunning(): Flow<Session?> = MutableStateFlow(null)
     override suspend fun running(): RunningSession? = runningSession
-    override fun observeSession(id: Long): Flow<Session?> = MutableStateFlow(null)
+    val session = MutableStateFlow<Session?>(null)
+
+    /** Sets logged, as (item id, set). */
+    val loggedSets = mutableListOf<Pair<Long, SessionSet>>()
+    override fun observeSession(id: Long): Flow<Session?> = session
     override fun observeFinished(): Flow<List<Session>> = MutableStateFlow(emptyList())
     override suspend fun start(templateId: Long?, placeId: Long?, sectionId: Long?): Long = 1
-    override suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?) = Unit
+    override suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?) {
+        loggedSets += itemId to SessionSet(setIndex, reps, seconds, loadKg, skipped = false)
+    }
     override suspend fun skipSet(itemId: Long, setIndex: Int) = Unit
     override suspend fun undoSet(itemId: Long, setIndex: Int) = Unit
     override suspend fun addExercise(sessionId: Long, exercise: com.hardtekpt.crux.data.model.Exercise): Long = 1
