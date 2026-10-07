@@ -11,21 +11,18 @@ import androidx.room.Room
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.ExerciseRepository
-import com.hardtekpt.crux.data.OfflinePlaceRepository
-import com.hardtekpt.crux.data.PlaceRepository
-import com.hardtekpt.crux.data.OfflineExerciseRepository
 import com.hardtekpt.crux.data.OfflineBodyRepository
 import com.hardtekpt.crux.data.OfflineClimbRepository
+import com.hardtekpt.crux.data.OfflineExerciseRepository
+import com.hardtekpt.crux.data.OfflinePlaceRepository
 import com.hardtekpt.crux.data.OfflineTemplateRepository
+import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.local.ApplicationScope
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.DataMode
 import com.hardtekpt.crux.data.local.DatabaseFactory
 import com.hardtekpt.crux.data.local.DatabaseSnapshots
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -34,6 +31,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -49,6 +49,7 @@ object DatabaseModule {
             // Demo data can be seeded again, so a schema it can't migrate is simply rebuilt.
             DataMode.DEMO -> Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.DEMO_NAME)
                 .fallbackToDestructiveMigration(dropAllTables = true)
+
             // The climber's own data is never wiped: a missing migration fails loudly instead,
             // and the old file is copied aside before any migration runs.
             DataMode.REAL -> {

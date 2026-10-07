@@ -128,11 +128,7 @@ fun FloatingNavBar(
 }
 
 @Composable
-private fun NavTab(
-    destination: TopLevelDestination,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
+private fun NavTab(destination: TopLevelDestination, selected: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val tint by animateColorAsState(
         targetValue = if (selected) colors.primary else colors.onSurfaceVariant,

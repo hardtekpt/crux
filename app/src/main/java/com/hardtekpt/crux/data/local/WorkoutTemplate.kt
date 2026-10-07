@@ -29,12 +29,7 @@ data class ExerciseEntity(
 
 /** A session plan. */
 @Entity(tableName = "workout_templates")
-data class WorkoutTemplateEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val description: String,
-    val position: Int,
-)
+data class WorkoutTemplateEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String, val description: String, val position: Int)
 
 /** A named section of a plan: Warm-up, Max hangs, Limit bouldering. */
 @Entity(
@@ -49,12 +44,7 @@ data class WorkoutTemplateEntity(
     ],
     indices = [Index("templateId")],
 )
-data class TemplateBlockEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val templateId: Long,
-    val position: Int,
-    val name: String,
-)
+data class TemplateBlockEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val templateId: Long, val position: Int, val name: String)
 
 /** One library exercise placed in a block, with its targets. */
 @Entity(

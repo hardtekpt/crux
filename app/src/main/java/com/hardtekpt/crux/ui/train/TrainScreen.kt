@@ -38,6 +38,7 @@ import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
 import com.hardtekpt.crux.data.model.WorkoutTemplate
+import com.hardtekpt.crux.data.seed.StarterData
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
@@ -50,32 +51,23 @@ import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.hardtekpt.crux.data.seed.StarterData
-import javax.inject.Inject
 
 enum class TrainView(val label: String) { Plans("Plans"), Exercises("Exercises") }
 
-data class TrainUiState(
-    val isLoading: Boolean = true,
-    val plans: List<WorkoutTemplate> = emptyList(),
-    val exercises: List<Exercise> = emptyList(),
-) {
+data class TrainUiState(val isLoading: Boolean = true, val plans: List<WorkoutTemplate> = emptyList(), val exercises: List<Exercise> = emptyList()) {
     /** Library grouped by category, categories in their defined order. */
     val exercisesByCategory: Map<ExerciseCategory, List<Exercise>>
         get() = exercises.groupBy { it.category }.toSortedMap(compareBy { it.ordinal })
 }
 
 @HiltViewModel
-class TrainViewModel @Inject constructor(
-    templates: TemplateRepository,
-    exercises: ExerciseRepository,
-    private val starterData: StarterData,
-) : ViewModel() {
+class TrainViewModel @Inject constructor(templates: TemplateRepository, exercises: ExerciseRepository, private val starterData: StarterData) : ViewModel() {
     /** Copies the starter exercises and plans into the active data set. */
     fun addStarterLibrary() {
         viewModelScope.launch { starterData.addStarterLibraryToCurrent() }

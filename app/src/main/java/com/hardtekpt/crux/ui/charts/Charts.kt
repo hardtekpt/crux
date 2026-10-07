@@ -197,15 +197,7 @@ private fun DrawScope.drawDot(center: Offset, fill: Color, ring: Color) {
     drawCircle(fill, radius = DotRadius.toPx(), center = center)
 }
 
-private fun DrawScope.drawTooltip(
-    measurer: TextMeasurer,
-    text: String,
-    style: TextStyle,
-    anchorX: Float,
-    minX: Float,
-    maxX: Float,
-    background: Color,
-) {
+private fun DrawScope.drawTooltip(measurer: TextMeasurer, text: String, style: TextStyle, anchorX: Float, minX: Float, maxX: Float, background: Color) {
     val layout = measurer.measure(text, style)
     val padH = 8.dp.toPx()
     val padV = 4.dp.toPx()
@@ -390,7 +382,10 @@ fun DonutChart(
                             if (hypot(offset.x - c.x, offset.y - c.y) > this.size.width / 2f) return@detectTapGestures
                             val angle = (Math.toDegrees(atan2((offset.y - c.y).toDouble(), (offset.x - c.x).toDouble())) + 90 + 360) % 360
                             var acc = 0.0
-                            val hit = shown.indexOfFirst { acc += it.value / total * 360; angle <= acc }
+                            val hit = shown.indexOfFirst {
+                                acc += it.value / total * 360
+                                angle <= acc
+                            }
                             selected = if (selected == hit) null else hit
                         }
                     },

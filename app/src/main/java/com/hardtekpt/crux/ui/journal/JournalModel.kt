@@ -14,11 +14,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import java.time.LocalDate
 
 /** One journal group: a day at a place. */
-data class JournalDay(
-    val date: LocalDate,
-    val place: String?,
-    val climbs: List<Climb>,
-) {
+data class JournalDay(val date: LocalDate, val place: String?, val climbs: List<Climb>) {
     val key: String get() = "$date|${place.orEmpty()}|$venue"
     val venue: Venue get() = climbs.first().venue
     val title: String get() = listOfNotNull(date.dayLabel(), place, venue.label).joinToString(" · ")
@@ -139,11 +135,13 @@ fun List<TimelineDay>.matching(query: JournalQuery, today: LocalDate): List<Time
                     }
                     if (kept.isEmpty()) null else TimelineEntry.Climbs(entry.day.copy(climbs = kept))
                 }
+
                 is TimelineEntry.Training -> {
                     if (climbsOnly || notesOnly) return@mapNotNull null
                     val kept = entry.results.filter { matches(it.exercise.name, it.record.notes) }
                     if (kept.isEmpty()) null else entry.copy(results = kept)
                 }
+
                 is TimelineEntry.NoteEntry -> {
                     if (climbsOnly) return@mapNotNull null
                     if (notesOnly && entry.note.tag !in query.tags) return@mapNotNull null

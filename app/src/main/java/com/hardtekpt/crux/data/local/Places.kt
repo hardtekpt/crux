@@ -57,13 +57,7 @@ data class PlaceEntity(
     ],
     indices = [Index("placeId")],
 )
-data class SectionEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val placeId: Long,
-    val type: PlaceType,
-    val name: String,
-    val position: Int = 0,
-)
+data class SectionEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val placeId: Long, val type: PlaceType, val name: String, val position: Int = 0)
 
 /** A wall or sector inside a place; for a board, a named angle or set. */
 @Entity(
@@ -130,11 +124,7 @@ data class ProblemStatsRow(
 )
 
 /** Activity at a place, for the places list. */
-data class PlaceActivityRow(
-    val placeId: Long,
-    val climbs: Int,
-    val lastEpochDay: Long?,
-)
+data class PlaceActivityRow(val placeId: Long, val climbs: Int, val lastEpochDay: Long?)
 
 @Dao
 interface PlaceDao {

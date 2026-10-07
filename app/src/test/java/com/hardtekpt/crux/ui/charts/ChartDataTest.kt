@@ -7,10 +7,10 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.ui.progress.progressCharts
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class ChartDataTest {
 

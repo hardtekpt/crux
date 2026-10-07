@@ -1,8 +1,8 @@
 package com.hardtekpt.crux.data.local
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 
 /**
  * Every schema version since migrations began has its exported JSON committed, so the

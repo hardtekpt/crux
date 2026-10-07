@@ -17,10 +17,7 @@ data class LocalGrade(val name: String, val colour: Long? = null)
  * Local grades are never converted to or compared with standard scales.
  */
 @Serializable
-data class LocalScale(
-    val kind: LocalKind,
-    val grades: List<LocalGrade>,
-) {
+data class LocalScale(val kind: LocalKind, val grades: List<LocalGrade>) {
     val labels: List<String> get() = grades.map { it.name }
 
     fun encode(): String = json.encodeToString(this)
@@ -28,11 +25,9 @@ data class LocalScale(
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 
-        fun decode(text: String?): LocalScale? =
-            text?.let { runCatching { json.decodeFromString<LocalScale>(it) }.getOrNull() }
+        fun decode(text: String?): LocalScale? = text?.let { runCatching { json.decodeFromString<LocalScale>(it) }.getOrNull() }
 
-        fun numbers(from: Int, to: Int): LocalScale =
-            LocalScale(LocalKind.NUMBERS, (from..to).map { LocalGrade(it.toString()) })
+        fun numbers(from: Int, to: Int): LocalScale = LocalScale(LocalKind.NUMBERS, (from..to).map { LocalGrade(it.toString()) })
 
         /** A common gym circuit, easiest first; the climber renames, recolours and reorders it. */
         val DEFAULT_COLOURS = LocalScale(
@@ -91,5 +86,4 @@ data class GradeSystem(val scale: GradeScale, val local: LocalScale? = null) {
 }
 
 /** A grade label for display, falling back for local grades stored without one. */
-fun gradeLabel(scale: GradeScale, index: Int, label: String?): String =
-    if (scale.isLocal) label ?: "#${index + 1}" else scale.label(index)
+fun gradeLabel(scale: GradeScale, index: Int, label: String?): String = if (scale.isLocal) label ?: "#${index + 1}" else scale.label(index)

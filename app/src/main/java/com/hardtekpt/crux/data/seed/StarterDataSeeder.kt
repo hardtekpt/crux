@@ -3,14 +3,15 @@ package com.hardtekpt.crux.data.seed
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.ExerciseRecordEntity
 import com.hardtekpt.crux.data.NoteEntity
+import com.hardtekpt.crux.data.local.AreaEntity
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
-import com.hardtekpt.crux.data.local.AreaEntity
-import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.local.PlaceEntity
 import com.hardtekpt.crux.data.local.ProblemEntity
+import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
 import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
@@ -29,9 +30,8 @@ import com.hardtekpt.crux.data.model.Venue
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.flow.first
-import com.hardtekpt.crux.data.local.CruxDatabases
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 /**
  * Demo mode's data set and the optional starter library. The demo database is filled with
@@ -101,11 +101,7 @@ class StarterDataSeeder(private val clock: Clock) {
         return added
     }
 
-    private suspend fun insertLibraryAndPlans(
-        db: CruxDatabase,
-        skipPlans: Set<String> = emptySet(),
-        onAdded: () -> Unit = {},
-    ) {
+    private suspend fun insertLibraryAndPlans(db: CruxDatabase, skipPlans: Set<String> = emptySet(), onAdded: () -> Unit = {}) {
         val now = clock.millis()
         val present = db.exerciseDao().getAll().associate { it.name.lowercase() to it.id }
         val exerciseIds = STARTER_EXERCISES.associate { exercise ->
@@ -199,14 +195,16 @@ class StarterDataSeeder(private val clock: Clock) {
         // Saved places with their walls; every named sample climb is a problem on one of them.
         val placeDao = db.placeDao()
         val placeIds = SAMPLE_PLACES.associate { sample ->
-            sample.name to placeDao.insertPlace(PlaceEntity(
-                name = sample.name,
-                type = sample.type,
-                location = sample.location,
-                createdAtMillis = now,
-                extraTypes = if (sample.boardAreas.isNotEmpty()) PlaceType.BOARD.name else "",
-                defaultAngle = 40.takeIf { sample.boardAreas.isNotEmpty() },
-            ))
+            sample.name to placeDao.insertPlace(
+                PlaceEntity(
+                    name = sample.name,
+                    type = sample.type,
+                    location = sample.location,
+                    createdAtMillis = now,
+                    extraTypes = if (sample.boardAreas.isNotEmpty()) PlaceType.BOARD.name else "",
+                    defaultAngle = 40.takeIf { sample.boardAreas.isNotEmpty() },
+                ),
+            )
         }
         // Each place gets its main section; a place with a board gets a board section too.
         val mainSections = SAMPLE_PLACES.associate { sample ->
@@ -227,7 +225,14 @@ class StarterDataSeeder(private val clock: Clock) {
             )
             sample.boardAreas.forEachIndexed { index, area ->
                 placeDao.insertArea(
-                    AreaEntity(placeId = placeIds.getValue(sample.name), name = area, position = sample.areas.size + index, type = PlaceType.BOARD, angle = 40, sectionId = board),
+                    AreaEntity(
+                        placeId = placeIds.getValue(sample.name),
+                        name = area,
+                        position = sample.areas.size + index,
+                        type = PlaceType.BOARD,
+                        angle = 40,
+                        sectionId = board,
+                    ),
                 )
             }
         }
@@ -295,13 +300,7 @@ class StarterDataSeeder(private val clock: Clock) {
     }
 }
 
-private data class SampleRecord(
-    val exercise: String,
-    val daysAgo: Int,
-    val reps: Int? = null,
-    val seconds: Int? = null,
-    val loadKg: Double? = null,
-)
+private data class SampleRecord(val exercise: String, val daysAgo: Int, val reps: Int? = null, val seconds: Int? = null, val loadKg: Double? = null)
 
 private val SAMPLE_RECORDS = listOf(
     SampleRecord("Half-crimp hang", 30, seconds = 10, loadKg = 12.5),
@@ -320,12 +319,7 @@ private val SAMPLE_NOTES = listOf(
     11 to "Felt strong on the board. Warm-up on the 4x4 circuit worked well.",
 )
 
-private data class StarterExercise(
-    val name: String,
-    val category: ExerciseCategory,
-    val metric: MetricType,
-    val notes: String? = null,
-)
+private data class StarterExercise(val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String? = null)
 
 private val STARTER_EXERCISES = listOf(
     StarterExercise("Half-crimp hang", ExerciseCategory.FINGERS, MetricType.WEIGHTED_TIME, "20 mm edge"),
@@ -345,11 +339,7 @@ private val STARTER_EXERCISES = listOf(
     StarterExercise("Forearm stretch", ExerciseCategory.MOBILITY, MetricType.TIME),
 )
 
-private data class StarterTemplate(
-    val name: String,
-    val description: String,
-    val blocks: List<Pair<String, List<Pair<String, ExerciseTarget>>>>,
-)
+private data class StarterTemplate(val name: String, val description: String, val blocks: List<Pair<String, List<Pair<String, ExerciseTarget>>>>)
 
 private val STARTER_TEMPLATES = listOf(
     StarterTemplate(
@@ -427,7 +417,15 @@ private data class SamplePlace(
 )
 
 private val SAMPLE_PLACES = listOf(
-    SamplePlace("Block Lab", PlaceType.GYM, "Lisbon", listOf("Cave", "Slab", "Comp wall"), boardAreas = listOf("Benchmarks", "Circuits"), sectionName = "Main gym", boardName = "Kilter board"),
+    SamplePlace(
+        "Block Lab",
+        PlaceType.GYM,
+        "Lisbon",
+        listOf("Cave", "Slab", "Comp wall"),
+        boardAreas = listOf("Benchmarks", "Circuits"),
+        sectionName = "Main gym",
+        boardName = "Kilter board",
+    ),
     SamplePlace("Arco", PlaceType.CRAG, "Trentino", listOf("Policromuro", "Massi di Prabi")),
     SamplePlace("The Arch", PlaceType.GYM, "London", listOf("Overhang", "Lead wall")),
 )
@@ -453,5 +451,11 @@ private val SAMPLE_CLIMBS = listOf(
 
 /** Days ago to kg. */
 private val SAMPLE_WEIGHTS = listOf(
-    40 to 73.4, 33 to 73.1, 26 to 72.8, 19 to 72.9, 12 to 72.5, 5 to 72.2, 1 to 72.4,
+    40 to 73.4,
+    33 to 73.1,
+    26 to 72.8,
+    19 to 72.9,
+    12 to 72.5,
+    5 to 72.2,
+    1 to 72.4,
 )

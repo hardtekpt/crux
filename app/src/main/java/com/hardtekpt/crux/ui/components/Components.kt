@@ -17,12 +17,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -32,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -85,11 +85,7 @@ enum class CruxCardFill { Default, Low, Outlined }
 
 /** The container everything sits in: `radius-lg`, `space-4` padding, no shadow. */
 @Composable
-fun CruxCard(
-    modifier: Modifier = Modifier,
-    fill: CruxCardFill = CruxCardFill.Default,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+fun CruxCard(modifier: Modifier = Modifier, fill: CruxCardFill = CruxCardFill.Default, content: @Composable ColumnScope.() -> Unit) {
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier,
@@ -182,6 +178,7 @@ fun StatTile(
                 )
                 Text("New best", style = MaterialTheme.typography.labelMedium, color = colors.secondary)
             }
+
             delta != null -> Text(
                 text = delta,
                 style = MaterialTheme.typography.bodySmall,
@@ -193,13 +190,7 @@ fun StatTile(
 
 /** Full empty state: icon in a circle, what is missing, the first action. */
 @Composable
-fun EmptyState(
-    icon: ImageVector,
-    headline: String,
-    sentence: String,
-    modifier: Modifier = Modifier,
-    action: (@Composable () -> Unit)? = null,
-) {
+fun EmptyState(icon: ImageVector, headline: String, sentence: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     Column(
         modifier = modifier
             .fillMaxSize()

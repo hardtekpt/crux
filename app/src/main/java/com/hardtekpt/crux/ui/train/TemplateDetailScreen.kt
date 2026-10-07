@@ -37,22 +37,16 @@ import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
-data class TemplateDetailUiState(
-    val isLoading: Boolean = true,
-    val template: WorkoutTemplate? = null,
-)
+data class TemplateDetailUiState(val isLoading: Boolean = true, val template: WorkoutTemplate? = null)
 
 @HiltViewModel
-class TemplateDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    repository: TemplateRepository,
-) : ViewModel() {
+class TemplateDetailViewModel @Inject constructor(savedStateHandle: SavedStateHandle, repository: TemplateRepository) : ViewModel() {
     val templateId = savedStateHandle.toRoute<TemplateDetailRoute>().templateId
 
     val uiState: StateFlow<TemplateDetailUiState> = repository.observeTemplate(templateId)
@@ -62,11 +56,7 @@ class TemplateDetailViewModel @Inject constructor(
 
 /** A plan's blocks and targets, with Edit in the app bar. Sessions arrive with the session logger. */
 @Composable
-fun TemplateDetailScreen(
-    onBack: () -> Unit,
-    onEdit: (Long) -> Unit,
-    viewModel: TemplateDetailViewModel = hiltViewModel(),
-) {
+fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: TemplateDetailViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val template = uiState.template
     val space = CruxTheme.space

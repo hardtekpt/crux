@@ -86,17 +86,17 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.you.describe
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import java.time.format.TextStyle as DateTextStyle
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import java.time.Clock
-import java.time.LocalDate
-import java.time.format.TextStyle as DateTextStyle
-import java.util.Locale
-import javax.inject.Inject
 
 data class JournalUiState(
     val isLoading: Boolean = true,
@@ -153,17 +153,10 @@ class JournalViewModel @Inject constructor(
 }
 
 /** Where the journal's taps lead. */
-data class JournalActions(
-    val openClimb: (Long) -> Unit = {},
-    val openNote: (Long) -> Unit = {},
-    val openRecords: (Long) -> Unit = {},
-)
+data class JournalActions(val openClimb: (Long) -> Unit = {}, val openNote: (Long) -> Unit = {}, val openRecords: (Long) -> Unit = {})
 
 @Composable
-fun JournalScreen(
-    actions: JournalActions,
-    viewModel: JournalViewModel = hiltViewModel(),
-) {
+fun JournalScreen(actions: JournalActions, viewModel: JournalViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions)
 }
@@ -245,12 +238,7 @@ fun JournalContent(
  * type pills, and any applied filters.
  */
 @Composable
-private fun JournalHeader(
-    uiState: JournalUiState,
-    todayDay: TimelineDay?,
-    onQuery: ((JournalQuery) -> JournalQuery) -> Unit,
-    onOpenFilters: () -> Unit,
-) {
+private fun JournalHeader(uiState: JournalUiState, todayDay: TimelineDay?, onQuery: ((JournalQuery) -> JournalQuery) -> Unit, onOpenFilters: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val space = CruxTheme.space
     val query = uiState.query
@@ -277,8 +265,16 @@ private fun JournalHeader(
                         .padding(horizontal = 7.dp, vertical = 4.dp)
                         .testTag("journal_today"),
                 ) {
-                    Text(today.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp), color = colors.onPrimaryContainer)
-                    Text(today.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onPrimaryContainer)
+                    Text(
+                        today.dayOfMonth.toString(),
+                        style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp),
+                        color = colors.onPrimaryContainer,
+                    )
+                    Text(
+                        today.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(),
+                        style = MonoLabel.copy(fontSize = 9.sp),
+                        color = colors.onPrimaryContainer,
+                    )
                 }
             }
             Column(Modifier.padding(start = space.s2, end = space.s4).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -350,7 +346,17 @@ private fun JournalHeader(
                         .clickable(onClick = onOpenFilters)
                         .testTag("journal_open_filters"),
                 ) {
-                    Icon(Icons.Rounded.Tune, contentDescription = "Filters", tint = if (query.activeFilters > 0) colors.onPrimaryContainer else colors.onSurface)
+                    Icon(
+                        Icons.Rounded.Tune,
+                        contentDescription = "Filters",
+                        tint = if (query.activeFilters >
+                            0
+                        ) {
+                            colors.onPrimaryContainer
+                        } else {
+                            colors.onSurface
+                        },
+                    )
                 }
                 if (query.activeFilters > 0) {
                     Text(
@@ -417,7 +423,12 @@ private fun TypePills(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit
                     .padding(horizontal = 6.dp, vertical = 10.dp)
                     .testTag("journal_filter_${option.name}"),
             ) {
-                Text(option.label, style = MaterialTheme.typography.labelMedium, color = if (selected) colors.onPrimaryContainer else colors.onSurface, maxLines = 1)
+                Text(
+                    option.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) colors.onPrimaryContainer else colors.onSurface,
+                    maxLines = 1,
+                )
                 Text((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
             }
         }
@@ -509,7 +520,9 @@ private fun FilterSheet(uiState: JournalUiState, onQuery: ((JournalQuery) -> Jou
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     uiState.places.forEach { place ->
                         val on = place in query.places
-                        CruxFilterChip(place, on, { onQuery { it.copy(places = if (on) it.places - place else it.places + place) } }, Modifier.testTag("place_filter_$place"))
+                        CruxFilterChip(place, on, {
+                            onQuery { it.copy(places = if (on) it.places - place else it.places + place) }
+                        }, Modifier.testTag("place_filter_$place"))
                     }
                 }
             }
@@ -576,8 +589,15 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
                     .background(colors.surfaceContainer)
                     .padding(horizontal = 6.dp, vertical = 3.dp),
             ) {
-                Text(day.date.dayOfMonth.toString(), style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp))
-                Text(day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(), style = MonoLabel.copy(fontSize = 9.sp), color = colors.onSurfaceVariant)
+                Text(
+                    day.date.dayOfMonth.toString(),
+                    style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp),
+                )
+                Text(
+                    day.date.month.getDisplayName(DateTextStyle.SHORT, Locale.UK).take(3).uppercase(),
+                    style = MonoLabel.copy(fontSize = 9.sp),
+                    color = colors.onSurfaceVariant,
+                )
             }
         }
         Column(Modifier.padding(start = CruxTheme.space.s2, top = CruxTheme.space.s4, bottom = CruxTheme.space.s2)) {
@@ -665,7 +685,12 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.tertiary) {
         Column {
-            Text("Training", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+            Text(
+                "Training",
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+            )
             entry.results.forEach { result ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -677,12 +702,21 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
                         .padding(vertical = 6.dp)
                         .testTag("journal_training"),
                 ) {
-                    Text(result.exercise.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        result.exercise.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (result.isBest) {
                         Icon(Icons.Rounded.EmojiEvents, contentDescription = "Personal record", tint = colors.secondary, modifier = Modifier.size(16.dp))
                     }
                     Text(
-                        result.record.describe(result.exercise.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                        result.record.describe(
+                            result.exercise.metric,
+                            com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                        ),
                         style = CruxTheme.type.gradeSmall,
                         color = if (result.isBest) colors.secondary else colors.onSurface,
                     )

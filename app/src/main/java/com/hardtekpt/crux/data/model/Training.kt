@@ -36,13 +36,7 @@ enum class MetricType(
     WEIGHTED_INTERVALS("Intervals with load", "Intervals+kg", usesReps = false, usesTime = false, usesLoad = true, usesIntervals = true),
 }
 
-data class Exercise(
-    val id: Long,
-    val name: String,
-    val category: ExerciseCategory,
-    val metric: MetricType,
-    val notes: String?,
-)
+data class Exercise(val id: Long, val name: String, val category: ExerciseCategory, val metric: MetricType, val notes: String?)
 
 /**
  * What a plan asks for one exercise. Fields the metric does not use are ignored.
@@ -91,11 +85,16 @@ data class ExerciseTarget(
 
         fun defaultFor(metric: MetricType) = when (metric) {
             MetricType.REPS -> ExerciseTarget(sets = 3, reps = 10, restSeconds = 90)
+
             MetricType.WEIGHTED_REPS -> ExerciseTarget(sets = 5, reps = 5, loadKg = 10.0, restSeconds = 180)
+
             MetricType.TIME -> ExerciseTarget(sets = 3, seconds = 30, restSeconds = 60)
+
             MetricType.WEIGHTED_TIME -> ExerciseTarget(sets = 6, seconds = 10, loadKg = 5.0, restSeconds = 180)
+
             // Classic Tabata: 8 × 20 s on / 10 s off.
             MetricType.INTERVALS -> ExerciseTarget(sets = 1, reps = 8, seconds = 20, repRestSeconds = 10, restSeconds = 120)
+
             // Hangboard repeaters: 6 × 7 s on / 3 s off, three cycles.
             MetricType.WEIGHTED_INTERVALS ->
                 ExerciseTarget(sets = 3, reps = 6, seconds = 7, repRestSeconds = 3, restSeconds = 180)
@@ -113,8 +112,7 @@ fun formatDuration(seconds: Int): String = when {
 private const val LB_PER_KG = 2.2046226218
 
 /** Added load in the display unit: kilograms, or pounds to the nearest half pound. */
-fun loadValue(kg: Double, imperial: Boolean): Double =
-    if (imperial) (kg * LB_PER_KG * 2).roundToInt() / 2.0 else kg
+fun loadValue(kg: Double, imperial: Boolean): Double = if (imperial) (kg * LB_PER_KG * 2).roundToInt() / 2.0 else kg
 
 /** Pounds back to the kilograms everything is stored in. */
 fun poundsToKg(lb: Double): Double = lb / LB_PER_KG
@@ -126,7 +124,13 @@ fun formatLoad(kg: Double, imperial: Boolean): String = formatKg(kotlin.math.abs
 
 /** `+10 kg`, `−5 kg`, `+22 lb`, `0 kg`. Minus is assisted. */
 fun signedLoad(kg: Double, imperial: Boolean): String {
-    val sign = if (kg > 0) "+" else if (kg < 0) "−" else ""
+    val sign = if (kg > 0) {
+        "+"
+    } else if (kg < 0) {
+        "−"
+    } else {
+        ""
+    }
     return sign + formatLoad(kg, imperial) + " " + loadUnit(imperial)
 }
 
@@ -135,25 +139,14 @@ fun formatKg(kg: Double): String =
     if (kg == kg.roundToInt().toDouble()) kg.roundToInt().toString() else String.format(Locale.UK, "%.2f", kg).trimEnd('0').trimEnd('.')
 
 /** One exercise placed in a plan, with its targets. */
-data class PlanItem(
-    val exercise: Exercise,
-    val target: ExerciseTarget,
-) {
+data class PlanItem(val exercise: Exercise, val target: ExerciseTarget) {
     fun prescription(imperial: Boolean = false): String = target.prescription(exercise.metric, imperial)
 }
 
-data class PlanBlock(
-    val name: String,
-    val items: List<PlanItem>,
-)
+data class PlanBlock(val name: String, val items: List<PlanItem>)
 
 /** A session plan: named blocks of exercises from the library. */
-data class WorkoutTemplate(
-    val id: Long,
-    val name: String,
-    val description: String,
-    val blocks: List<PlanBlock>,
-) {
+data class WorkoutTemplate(val id: Long, val name: String, val description: String, val blocks: List<PlanBlock>) {
     val exerciseCount: Int get() = blocks.sumOf { it.items.size }
 
     /** Work and rest, plus a short changeover between exercises, rounded up to 5 min. */

@@ -89,7 +89,8 @@ class MigrationTest {
     @Test
     fun migrate5To6TurnsTypedPlacesIntoSavedPlaces() {
         helper.createDatabase(DB, 5).apply {
-            val insert = "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) VALUES "
+            val insert = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) VALUES "
             execSQL(insert + "(1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0, NULL, 'Block Lab', NULL)")
             execSQL(insert + "(2, 'BOULDER', 'FONT', 11, 'REDPOINT', 3, 'GYM', 20001, 0, NULL, ' block lab ', NULL)")
             execSQL(insert + "(3, 'ROUTE', 'FRENCH', 14, 'ONSIGHT', 1, 'CRAG', 20002, 0, NULL, 'Arco', NULL)")
@@ -137,7 +138,8 @@ class MigrationTest {
             execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (2, 'Arco', 'CRAG', 0, 0, '')")
             execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (1, 1, 'Cave', 0, NULL)")
             execSQL("INSERT INTO areas (id, placeId, name, position, type) VALUES (2, 1, 'Kilter', 1, 'BOARD')")
-            val climb = "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, placeId, areaId) VALUES "
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, placeId, areaId) VALUES "
             execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'BOARD', 20000, 0, 1, NULL)")
             execSQL(climb + "(2, 'BOULDER', 'FONT', 10, 'FLASH', 1, 'GYM', 20000, 0, 1, 1)")
             close()
@@ -150,17 +152,22 @@ class MigrationTest {
         val gym = sections[0][0]
         val board = sections[1][0]
         db.query("SELECT sectionId FROM areas ORDER BY id").use { c ->
-            c.moveToNext(); assertEquals(gym, c.getLong(0))
-            c.moveToNext(); assertEquals(board, c.getLong(0))
+            c.moveToNext()
+            assertEquals(gym, c.getLong(0))
+            c.moveToNext()
+            assertEquals(board, c.getLong(0))
         }
         db.query("SELECT sectionId FROM climbs ORDER BY id").use { c ->
-            c.moveToNext(); assertEquals(board, c.getLong(0))
-            c.moveToNext(); assertEquals(gym, c.getLong(0))
+            c.moveToNext()
+            assertEquals(board, c.getLong(0))
+            c.moveToNext()
+            assertEquals(gym, c.getLong(0))
         }
     }
 
     private companion object {
         const val DB = "migration-test.db"
+
         /** Auto-migrations start at schema 4. */
         const val FIRST_MIGRATABLE_VERSION = 4
     }

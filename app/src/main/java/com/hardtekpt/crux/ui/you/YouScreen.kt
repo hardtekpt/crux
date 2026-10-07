@@ -1,57 +1,37 @@
 package com.hardtekpt.crux.ui.you
 
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.Accessibility
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.Leaderboard
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Straighten
-import com.hardtekpt.crux.data.ClimbRepository
-import com.hardtekpt.crux.data.ExerciseBest
-import com.hardtekpt.crux.data.Note
-import com.hardtekpt.crux.data.NoteRepository
-import com.hardtekpt.crux.data.RecordRepository
-import com.hardtekpt.crux.data.model.Discipline
-import com.hardtekpt.crux.data.model.PersonalBest
-import com.hardtekpt.crux.data.prefs.GradeScales
-import com.hardtekpt.crux.data.prefs.ThemeMode
-import com.hardtekpt.crux.data.prefs.UnitSystem
-import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
-import com.hardtekpt.crux.ui.components.CruxButtonSize
-import com.hardtekpt.crux.ui.components.CruxCard
-import com.hardtekpt.crux.ui.components.CruxCardFill
-import java.time.Clock
-import java.time.DayOfWeek
-import java.time.temporal.TemporalAdjusters
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,56 +43,76 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
+import com.hardtekpt.crux.data.ClimbRepository
+import com.hardtekpt.crux.data.ExerciseBest
+import com.hardtekpt.crux.data.Note
+import com.hardtekpt.crux.data.NoteRepository
+import com.hardtekpt.crux.data.RecordRepository
+import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.MeasurementType
+import com.hardtekpt.crux.data.model.PersonalBest
+import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.data.prefs.ThemeMode
+import com.hardtekpt.crux.data.prefs.UnitSystem
+import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.WeightSummary
 import com.hardtekpt.crux.ui.charts.ChartCard
 import com.hardtekpt.crux.ui.charts.ChartRange
 import com.hardtekpt.crux.ui.charts.SeriesPoint
 import com.hardtekpt.crux.ui.charts.TimeSeriesChart
 import com.hardtekpt.crux.ui.components.CruxButton
-import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxListRow
-import com.hardtekpt.crux.ui.LocalUnits
-import com.hardtekpt.crux.ui.components.input.RulerInput
-import com.hardtekpt.crux.ui.lengthDifference
-import com.hardtekpt.crux.ui.measureInput
-import com.hardtekpt.crux.ui.measurement
-import com.hardtekpt.crux.ui.typicalValue
-import com.hardtekpt.crux.ui.weight
-import com.hardtekpt.crux.ui.weightChange
-import com.hardtekpt.crux.ui.weightUnit
-import com.hardtekpt.crux.ui.weightValue
+import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.StatTile
+import com.hardtekpt.crux.ui.components.input.RulerInput
 import com.hardtekpt.crux.ui.dayLabel
+import com.hardtekpt.crux.ui.lengthDifference
+import com.hardtekpt.crux.ui.measureInput
+import com.hardtekpt.crux.ui.measurement
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
-import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.typicalValue
+import com.hardtekpt.crux.ui.weight
+import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightSummary
+import com.hardtekpt.crux.ui.weightUnit
+import com.hardtekpt.crux.ui.weightValue
 import com.hardtekpt.crux.ui.wholeOrOneDecimal
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import javax.inject.Inject
 
 data class YouUiState(
     val isLoading: Boolean = true,
@@ -259,10 +259,7 @@ data class ProfileActions(
 )
 
 @Composable
-fun YouScreen(
-    actions: ProfileActions,
-    viewModel: YouViewModel = hiltViewModel(),
-) {
+fun YouScreen(actions: ProfileActions, viewModel: YouViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     YouContent(uiState = uiState, actions = actions)
 }
@@ -274,11 +271,7 @@ fun YouScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun YouContent(
-    uiState: YouUiState,
-    actions: ProfileActions,
-    modifier: Modifier = Modifier,
-) {
+fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier = Modifier) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     val units = LocalUnits.current
@@ -330,7 +323,10 @@ fun YouContent(
             item(key = "records_header") { ProfileSectionHeader("Personal records", action = "Log a record", onAction = actions.logRecord) }
             if (uiState.records.isEmpty()) {
                 item(key = "records_empty") {
-                    InlineEmptyState(icon = Icons.Rounded.EmojiEvents, text = "Log a result on an exercise, like a max hang or a 1-arm pull, and your best shows here.")
+                    InlineEmptyState(
+                        icon = Icons.Rounded.EmojiEvents,
+                        text = "Log a result on an exercise, like a max hang or a 1-arm pull, and your best shows here.",
+                    )
                 }
             }
             items(uiState.records, key = { "record_${it.exercise.id}" }) { best ->
@@ -353,8 +349,13 @@ fun YouContent(
                             Icons.Rounded.Accessibility,
                             "Measurements",
                             when {
-                                height != null && ape != null -> "${units.measurement(MeasurementType.HEIGHT, height.value)} · ape ${units.lengthDifference(ape.differenceCm)}"
+                                height != null && ape != null -> "${units.measurement(
+                                    MeasurementType.HEIGHT,
+                                    height.value,
+                                )} · ape ${units.lengthDifference(ape.differenceCm)}"
+
                                 height != null -> units.measurement(MeasurementType.HEIGHT, height.value).toString()
+
                                 else -> "Height, reach, body fat"
                             },
                             actions.openMeasurements,
@@ -552,12 +553,7 @@ internal fun BodyStatGrid(uiState: YouUiState, onEdit: (MeasurementType) -> Unit
 }
 
 @Composable
-internal fun BodyStatTile(
-    type: MeasurementType,
-    uiState: YouUiState,
-    onEdit: (MeasurementType) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun BodyStatTile(type: MeasurementType, uiState: YouUiState, onEdit: (MeasurementType) -> Unit, modifier: Modifier = Modifier) {
     val latest = uiState.latest[type]
     val shown = latest?.let { LocalUnits.current.measurement(type, it.value) }
     StatTile(
@@ -573,7 +569,6 @@ internal fun BodyStatTile(
         valueModifier = Modifier.testTag("you_${type.name.lowercase()}"),
     )
 }
-
 
 /** Sets a body stat on a ruler, opened on the last value (or a typical one), in the climber's units. */
 @Composable

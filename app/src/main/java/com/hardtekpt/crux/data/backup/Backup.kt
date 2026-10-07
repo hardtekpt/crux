@@ -1,18 +1,18 @@
 package com.hardtekpt.crux.data.backup
 
-import com.hardtekpt.crux.data.parseTypes
-import com.hardtekpt.crux.data.local.SectionEntity
 import androidx.room.withTransaction
+import com.hardtekpt.crux.data.images.AreaImageStore
+import com.hardtekpt.crux.data.local.AreaEntity
 import com.hardtekpt.crux.data.local.BodyMeasurementEntity
 import com.hardtekpt.crux.data.local.ClimbEntity
 import com.hardtekpt.crux.data.local.ClimbMediaEntity
-import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
-import com.hardtekpt.crux.data.local.AreaEntity
+import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.local.PlaceEntity
 import com.hardtekpt.crux.data.local.ProblemEntity
+import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.local.TemplateBlockEntity
 import com.hardtekpt.crux.data.local.TemplateExerciseEntity
 import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
@@ -20,20 +20,20 @@ import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.ExerciseCategory
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.MetricType
-import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.PlaceType
-import com.hardtekpt.crux.data.model.gradeLabel
 import com.hardtekpt.crux.data.model.Venue
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import com.hardtekpt.crux.data.images.AreaImageStore
+import com.hardtekpt.crux.data.model.gradeLabel
+import com.hardtekpt.crux.data.parseTypes
 import java.time.Clock
-import java.util.Base64
 import java.time.Instant
+import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** What a backup can carry. Each can be switched on or off for export and import. */
 enum class BackupSection(val label: String, val description: String, val available: Boolean = true) {
@@ -308,7 +308,15 @@ class BackupRepository(
             records = if (BackupSection.RECORDS in sections) {
                 db.exerciseRecordDao().getAll().mapNotNull { r ->
                     byId[r.exerciseId]?.let { ex ->
-                        RecordDto(ex.toDto(), java.time.LocalDate.ofEpochDay(r.dateEpochDay).toString(), r.reps, r.seconds, r.loadKg, r.notes, r.createdAtMillis)
+                        RecordDto(
+                            ex.toDto(),
+                            java.time.LocalDate.ofEpochDay(r.dateEpochDay).toString(),
+                            r.reps,
+                            r.seconds,
+                            r.loadKg,
+                            r.notes,
+                            r.createdAtMillis,
+                        )
                     }
                 }
             } else {
@@ -594,7 +602,15 @@ class BackupRepository(
                     skipped.merge(BackupSection.NOTES, 1, Int::plus)
                     return@forEach
                 }
-                dao.insert(com.hardtekpt.crux.data.NoteEntity(text = dto.text, createdAtMillis = dto.createdAt, updatedAtMillis = dto.updatedAt, pinned = dto.pinned, tag = dto.tag))
+                dao.insert(
+                    com.hardtekpt.crux.data.NoteEntity(
+                        text = dto.text,
+                        createdAtMillis = dto.createdAt,
+                        updatedAtMillis = dto.updatedAt,
+                        pinned = dto.pinned,
+                        tag = dto.tag,
+                    ),
+                )
                 seen += dto.createdAt to dto.text
                 added.merge(BackupSection.NOTES, 1, Int::plus)
             }

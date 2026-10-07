@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.PlaceRepository
-import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
@@ -13,6 +12,7 @@ import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
+import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
@@ -21,6 +21,11 @@ import com.hardtekpt.crux.ui.progress.ProgressCharts
 import com.hardtekpt.crux.ui.progress.progressCharts
 import com.hardtekpt.crux.ui.weightSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,17 +36,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Clock
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.temporal.TemporalAdjusters
-import javax.inject.Inject
 
-data class WeekSummary(
-    val climbs: Int = 0,
-    val sends: Int = 0,
-    val daysClimbed: Int = 0,
-)
+data class WeekSummary(val climbs: Int = 0, val sends: Int = 0, val daysClimbed: Int = 0)
 
 /** Everything the dashboard's widgets can draw from. */
 data class HomeUiState(
@@ -58,11 +54,7 @@ data class HomeUiState(
 )
 
 /** The layout being shown, and while editing, the working copy. */
-data class DashboardState(
-    val widgets: List<DashboardWidget> = emptyList(),
-    val editing: Boolean = false,
-    val addingWidget: Boolean = false,
-)
+data class DashboardState(val widgets: List<DashboardWidget> = emptyList(), val editing: Boolean = false, val addingWidget: Boolean = false)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(

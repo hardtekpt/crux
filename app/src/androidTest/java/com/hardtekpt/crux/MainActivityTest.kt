@@ -1,13 +1,12 @@
 package com.hardtekpt.crux
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -18,28 +17,32 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import com.hardtekpt.crux.data.seed.StarterData
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import javax.inject.Inject
 
 /** End-to-end Compose tests on a device: real Activity, Hilt graph and Room (in memory). */
 @HiltAndroidTest
 class MainActivityTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
-    @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Inject lateinit var starterData: StarterData
 
@@ -369,7 +372,13 @@ class MainActivityTest {
         composeRule.waitForTag("exercise_row")
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("screen_Train").performTouchInput {
-            swipe(start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f), end = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.08f))
+            swipe(
+                start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f),
+                end = androidx.compose.ui.geometry.Offset(
+                    width * 0.85f,
+                    height * 0.08f,
+                ),
+            )
         }
         composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("exercise_row").fetchSemanticsNodes().isEmpty() }
         // The main tab itself didn't change.
@@ -437,8 +446,7 @@ class MainActivityTest {
     }
 }
 
-private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction =
-    onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)))
+private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction = onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag)))
 
 private fun ComposeTestRule.waitForTag(tag: String) {
     waitUntil(timeoutMillis = 10_000) { onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }

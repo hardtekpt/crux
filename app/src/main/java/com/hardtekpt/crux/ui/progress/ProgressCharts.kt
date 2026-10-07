@@ -39,13 +39,7 @@ data class ProgressCharts(
     val hasSends: Boolean get() = sendsByStyle.isNotEmpty()
 }
 
-fun progressCharts(
-    climbs: List<Climb>,
-    scales: GradeScales,
-    today: LocalDate,
-    weeks: Int = 8,
-    pyramidRows: Int = 6,
-): ProgressCharts {
+fun progressCharts(climbs: List<Climb>, scales: GradeScales, today: LocalDate, weeks: Int = 8, pyramidRows: Int = 6): ProgressCharts {
     val sends = climbs.filter { it.style.isSend }
     val thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val weekly = (weeks - 1 downTo 0).map { back ->

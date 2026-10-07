@@ -6,11 +6,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -18,42 +26,34 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.BodyRepository
-import com.hardtekpt.crux.ui.components.CruxButton
-import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.LocalUnits
+import com.hardtekpt.crux.ui.components.CruxButton
+import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxTopAppBar
+import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.input.DayStrip
 import com.hardtekpt.crux.ui.components.input.PastDayDialog
 import com.hardtekpt.crux.ui.components.input.RulerInput
+import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.measureInput
 import com.hardtekpt.crux.ui.shortLabel
+import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.typicalValue
 import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightValue
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.first
-import com.hardtekpt.crux.ui.components.CruxTopAppBar
-import com.hardtekpt.crux.ui.components.Eyebrow
-import com.hardtekpt.crux.ui.dayLabel
-import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class LogWeightDraft(
     /** Kilograms; starts at the last weigh-in so a new one is a small nudge. */
@@ -67,10 +67,7 @@ data class LogWeightDraft(
 )
 
 @HiltViewModel
-class LogWeightViewModel @Inject constructor(
-    private val bodyRepository: BodyRepository,
-    clock: Clock,
-) : ViewModel() {
+class LogWeightViewModel @Inject constructor(private val bodyRepository: BodyRepository, clock: Clock) : ViewModel() {
     private val today = LocalDate.now(clock)
     private val _draft = MutableStateFlow(LogWeightDraft(date = today, today = today))
     val draft: StateFlow<LogWeightDraft> = _draft.asStateFlow()
@@ -109,10 +106,7 @@ class LogWeightViewModel @Inject constructor(
 }
 
 @Composable
-fun LogWeightScreen(
-    onDone: () -> Unit,
-    viewModel: LogWeightViewModel = hiltViewModel(),
-) {
+fun LogWeightScreen(onDone: () -> Unit, viewModel: LogWeightViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     LaunchedEffect(draft.saved) { if (draft.saved) onDone() }
     val space = CruxTheme.space
@@ -158,7 +152,12 @@ fun LogWeightScreen(
                 onOpenCalendar = { pickingDay = true },
             )
             draft.error?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = space.s4))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = space.s4),
+                )
             }
         }
         CruxButton(

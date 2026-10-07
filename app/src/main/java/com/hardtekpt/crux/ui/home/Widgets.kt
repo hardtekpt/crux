@@ -1,11 +1,16 @@
 package com.hardtekpt.crux.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.MaterialTheme
@@ -13,11 +18,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetSize
 import com.hardtekpt.crux.data.dashboard.WidgetType
+import com.hardtekpt.crux.data.model.Project
+import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.charts.BarChart
 import com.hardtekpt.crux.ui.charts.ChartCard
 import com.hardtekpt.crux.ui.charts.DonutChart
@@ -34,26 +44,16 @@ import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.components.TrendDirection
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
-import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.oneDecimal
-import com.hardtekpt.crux.ui.weight
-import com.hardtekpt.crux.ui.weightChange
-import com.hardtekpt.crux.ui.weightUnit
-import com.hardtekpt.crux.ui.weightValue
-import com.hardtekpt.crux.data.model.Project
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.weight
+import com.hardtekpt.crux.ui.weightChange
+import com.hardtekpt.crux.ui.weightUnit
+import com.hardtekpt.crux.ui.weightValue
 import java.time.LocalDate
 
 /** Where a widget's taps lead. Ignored while the dashboard is being edited. */
@@ -67,15 +67,11 @@ data class WidgetActions(
 
 /** Draws one dashboard widget at its size from the shared home state. */
 @Composable
-fun DashboardWidgetContent(
-    widget: DashboardWidget,
-    state: HomeUiState,
-    actions: WidgetActions,
-    modifier: Modifier = Modifier,
-) {
+fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions: WidgetActions, modifier: Modifier = Modifier) {
     val large = widget.size == WidgetSize.LARGE
     when (widget.type) {
         WidgetType.TODAYS_PLAN -> TodaysPlanWidget(state, large, actions.openTemplate, modifier)
+
         WidgetType.WEEK_CLIMBS -> StatTile(
             label = "Climbs this week",
             value = state.figure(state.week.climbs),
@@ -84,12 +80,14 @@ fun DashboardWidgetContent(
             modifier = modifier,
             valueModifier = Modifier.testTag("week_climbs"),
         )
+
         WidgetType.DAYS_ON_WALL -> StatTile(
             label = "Days on the wall",
             value = state.figure(state.week.daysClimbed),
             delta = "since Monday",
             modifier = modifier,
         )
+
         WidgetType.LATEST_BEST -> {
             val best = state.latestBest
             if (best == null) {
@@ -105,6 +103,7 @@ fun DashboardWidgetContent(
                 )
             }
         }
+
         WidgetType.BODYWEIGHT -> {
             val weight = state.weight
             if (weight == null) {
@@ -122,7 +121,9 @@ fun DashboardWidgetContent(
                 )
             }
         }
+
         WidgetType.WEIGHT_TREND -> WeightTrendWidget(state, large, modifier)
+
         WidgetType.WEEKLY_SENDS -> {
             val weeks = if (large) state.charts.weeklySends else state.charts.weeklySends.takeLast(5)
             ChartCard(
@@ -133,6 +134,7 @@ fun DashboardWidgetContent(
                 BarChart(bars = weeks, formatValue = ::formatTick, height = if (large) 170.dp else 110.dp)
             }
         }
+
         WidgetType.SENDS_BY_STYLE -> ChartCard(title = "Sends by style", modifier = modifier) {
             if (state.charts.sendsByStyle.isEmpty()) {
                 EmptyWidgetText("Log a send to see how you send.")
@@ -146,7 +148,9 @@ fun DashboardWidgetContent(
                 )
             }
         }
+
         WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
+
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions.openProblem, actions.openProgress, modifier)
     }
 }
@@ -175,7 +179,11 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
                 plan.blocks.flatMap { it.items }.forEach { item ->
                     Row {
                         Text(item.exercise.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Text(item.prescription(LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL), style = CruxTheme.type.code, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            item.prescription(LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                            style = CruxTheme.type.code,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -304,7 +312,13 @@ private fun ClimbLine(climb: com.hardtekpt.crux.data.model.Climb, today: LocalDa
                 .clip(RoundedCornerShape(2.dp))
                 .background(tape),
         )
-        Text(climb.grade, style = CruxTheme.type.grade, color = if (sent) colors.onSurface else colors.onSurfaceVariant, modifier = Modifier.width(44.dp), maxLines = 1)
+        Text(
+            climb.grade,
+            style = CruxTheme.type.grade,
+            color = if (sent) colors.onSurface else colors.onSurfaceVariant,
+            modifier = Modifier.width(44.dp),
+            maxLines = 1,
+        )
         Column(Modifier.weight(1f)) {
             Text(climb.displayName(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(

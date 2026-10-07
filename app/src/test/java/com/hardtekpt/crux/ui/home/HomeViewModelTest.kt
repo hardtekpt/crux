@@ -8,22 +8,22 @@ import com.hardtekpt.crux.data.FakeBodyRepository
 import com.hardtekpt.crux.data.FakeClimbRepository
 import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.FakeTemplateRepository
+import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
-import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.model.WorkoutTemplate
+import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import java.io.File
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
-import org.junit.rules.TemporaryFolder
-import java.io.File
-import com.hardtekpt.crux.data.dashboard.DashboardRepository
-import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import org.junit.Test
-import java.time.LocalDate
+import org.junit.rules.TemporaryFolder
 
 class HomeViewModelTest {
 

@@ -7,23 +7,26 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Image files kept in app storage: wall photos and maps, and photos of climbs. */
 interface ImageFiles {
     /** Copies a picked or captured image in; returns its file name. */
     suspend fun importFrom(uri: Uri): String
     suspend fun delete(name: String?)
+
     /** Where the camera writes a new photo before it is imported. */
     fun newCaptureUri(): Uri
+
     /** Copies a picked or recorded video in as it is (no re-encoding); returns its file name. */
     suspend fun importVideo(uri: Uri): String
+
     /** Where the camera writes a new video before it is imported. */
     fun newVideoCaptureUri(): Uri
 }
@@ -35,9 +38,7 @@ interface ImageFiles {
  * only the file name.
  */
 @Singleton
-class AreaImageStore @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : ImageFiles {
+class AreaImageStore @Inject constructor(@ApplicationContext private val context: Context) : ImageFiles {
     private val dir: File get() = File(context.filesDir, DIR).apply { mkdirs() }
 
     fun file(name: String): File = File(dir, name)

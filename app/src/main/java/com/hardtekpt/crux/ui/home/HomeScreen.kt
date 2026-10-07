@@ -51,11 +51,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -117,11 +117,7 @@ data class DashboardEditor(
     val reset: () -> Unit = {},
 )
 
-data class DragCallbacks(
-    val onStart: (String) -> Unit,
-    val onDrag: (Offset) -> Unit,
-    val onEnd: () -> Unit,
-)
+data class DragCallbacks(val onStart: (String) -> Unit, val onDrag: (Offset) -> Unit, val onEnd: () -> Unit)
 
 /**
  * The dashboard: a two-column flow of widgets the climber arranges. Long-press a widget
@@ -419,11 +415,7 @@ private fun EditableWidget(
  * half-width widget keeps its half, full-width widgets take a row.
  */
 @Composable
-private fun DashboardGrid(
-    widgets: List<DashboardWidget>,
-    spacing: androidx.compose.ui.unit.Dp,
-    content: @Composable () -> Unit,
-) {
+private fun DashboardGrid(widgets: List<DashboardWidget>, spacing: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
     Layout(content = content) { measurables, constraints ->
         val gap = spacing.roundToPx()
         val width = constraints.maxWidth
@@ -434,9 +426,18 @@ private fun DashboardGrid(
         var pending: Int? = null
         measurables.indices.forEach { i ->
             when {
-                isFull(i) -> { pending?.let { rows += listOf(it) }; pending = null; rows += listOf(i) }
+                isFull(i) -> {
+                    pending?.let { rows += listOf(it) }
+                    pending = null
+                    rows += listOf(i)
+                }
+
                 pending == null -> pending = i
-                else -> { rows += listOf(pending!!, i); pending = null }
+
+                else -> {
+                    rows += listOf(pending!!, i)
+                    pending = null
+                }
             }
         }
         pending?.let { rows += listOf(it) }

@@ -45,12 +45,12 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class ExerciseDraft(
     val id: Long = 0,
@@ -67,10 +67,7 @@ data class ExerciseDraft(
 }
 
 @HiltViewModel
-class ExerciseEditorViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val repository: ExerciseRepository,
-) : ViewModel() {
+class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: ExerciseRepository) : ViewModel() {
     private val exerciseId = savedStateHandle.toRoute<ExerciseEditorRoute>().exerciseId
 
     private val _draft = MutableStateFlow(ExerciseDraft(id = exerciseId))
@@ -141,10 +138,7 @@ class ExerciseEditorViewModel @Inject constructor(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ExerciseEditorScreen(
-    onDone: () -> Unit,
-    viewModel: ExerciseEditorViewModel = hiltViewModel(),
-) {
+fun ExerciseEditorScreen(onDone: () -> Unit, viewModel: ExerciseEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     LaunchedEffect(draft.done) { if (draft.done) onDone() }
     val space = CruxTheme.space

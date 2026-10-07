@@ -116,6 +116,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "lb",
         )
+
         type == MeasurementType.WEIGHT -> MeasureInput(
             scale = RulerScale(30.0, 200.0, 0.1, midEvery = 5, majorEvery = 10, labelEvery = 10),
             unit = "kg",
@@ -125,6 +126,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "kg",
         )
+
         type.isCircumference && imperial -> MeasureInput(
             scale = RulerScale(
                 min = floor(type.range.start / CM_PER_INCH),
@@ -142,6 +144,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "in",
         )
+
         type.isCircumference -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 2, majorEvery = 10, labelEvery = 10, spacing = 10.dp),
             unit = "cm",
@@ -151,6 +154,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "cm",
         )
+
         type.isLength && imperial -> MeasureInput(
             scale = RulerScale(
                 min = floor(type.range.start / CM_PER_INCH),
@@ -169,6 +173,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = ::parseFeetInches,
             typeUnit = "feet and inches, like 5'10",
         )
+
         type.isLength -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 10, majorEvery = 20, labelEvery = 20),
             unit = "cm",
@@ -178,6 +183,7 @@ fun UnitSystem.measureInput(type: MeasurementType): MeasureInput {
             parse = decimal,
             typeUnit = "cm",
         )
+
         else -> MeasureInput(
             scale = RulerScale(type.range.start, type.range.endInclusive, 0.5, midEvery = 2, majorEvery = 10, labelEvery = 10, spacing = 10.dp),
             unit = type.unit,

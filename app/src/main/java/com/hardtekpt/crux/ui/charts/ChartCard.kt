@@ -14,12 +14,7 @@ import java.time.LocalDate
 
 /** A chart lives in a card whose header names the series; no legend needed. */
 @Composable
-fun ChartCard(
-    title: String,
-    modifier: Modifier = Modifier,
-    trailing: String? = null,
-    content: @Composable () -> Unit,
-) {
+fun ChartCard(title: String, modifier: Modifier = Modifier, trailing: String? = null, content: @Composable () -> Unit) {
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = CruxTheme.space.s2)) {
             Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))

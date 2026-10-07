@@ -6,6 +6,7 @@ import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.PlaceEntity
 import com.hardtekpt.crux.data.local.ProblemEntity
 import com.hardtekpt.crux.data.local.ProblemStatsRow
+import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
@@ -15,17 +16,16 @@ import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
-import com.hardtekpt.crux.data.model.Section
-import com.hardtekpt.crux.data.local.SectionEntity
 import com.hardtekpt.crux.data.model.Problem
 import com.hardtekpt.crux.data.model.ProblemStats
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Project
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import com.hardtekpt.crux.data.model.Section
 import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 /** What the place form edits. `id == 0` creates. */
 data class PlaceInput(
@@ -67,6 +67,7 @@ interface PlaceRepository {
     fun observePlaces(): Flow<List<PlaceSummary>>
     fun observePlaceDetail(id: Long): Flow<PlaceDetail?>
     fun observeProblem(id: Long): Flow<ProblemWithStats?>
+
     /** Problems with goes but no send, most recently tried first. */
     fun observeProjects(): Flow<List<Project>>
     suspend fun getPlace(id: Long): Place?
@@ -75,6 +76,7 @@ interface PlaceRepository {
     suspend fun deletePlace(id: Long)
     suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long? = null): Long
     suspend fun deleteArea(id: Long)
+
     /** Records a reset today and retires the problems that were on the wall. */
     suspend fun resetArea(id: Long)
     suspend fun saveProblem(input: ProblemInput): Long
@@ -82,10 +84,7 @@ interface PlaceRepository {
     suspend fun deleteProblem(id: Long)
 }
 
-class OfflinePlaceRepository @Inject constructor(
-    private val dbs: CruxDatabases,
-    private val clock: Clock,
-) : PlaceRepository {
+class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : PlaceRepository {
 
     override fun observePlaces(): Flow<List<PlaceSummary>> = dbs.observe { db ->
         val dao = db.placeDao()
@@ -93,7 +92,13 @@ class OfflinePlaceRepository @Inject constructor(
             val byPlace = sections.groupBy { it.placeId }
             places.map { it.toModel(byPlace[it.id].orEmpty()) }
         }
-        combine(placesWithSections, dao.observeActivity(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats()) { places, activity, areas, problems, problemStats ->
+        combine(placesWithSections, dao.observeActivity(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats()) {
+                places,
+                activity,
+                areas,
+                problems,
+                problemStats,
+            ->
             val byPlace = activity.associateBy { it.placeId }
             val areasByPlace = areas.groupBy { it.placeId }
             val liveProblems = problems.filter { !it.retired }.groupBy { it.placeId }
@@ -116,7 +121,13 @@ class OfflinePlaceRepository @Inject constructor(
 
     override fun observePlaceDetail(id: Long): Flow<PlaceDetail?> = dbs.observe { db ->
         val dao = db.placeDao()
-        combine(dao.observePlace(id), dao.observeSections(id), dao.observeAreas(id), dao.observeProblems(id), dao.observeProblemStats()) { place, sections, areas, problems, stats ->
+        combine(dao.observePlace(id), dao.observeSections(id), dao.observeAreas(id), dao.observeProblems(id), dao.observeProblemStats()) {
+                place,
+                sections,
+                areas,
+                problems,
+                stats,
+            ->
             place ?: return@combine null
             val byProblem = stats.associateBy { it.problemId }
             PlaceDetail(
@@ -232,7 +243,14 @@ class OfflinePlaceRepository @Inject constructor(
             areaId
         } else {
             dao.insertArea(
-                AreaEntity(placeId = placeId, name = name.trim(), angle = angle, position = dao.nextAreaPosition(placeId), imagePath = imagePath, sectionId = section),
+                AreaEntity(
+                    placeId = placeId,
+                    name = name.trim(),
+                    angle = angle,
+                    position = dao.nextAreaPosition(placeId),
+                    imagePath = imagePath,
+                    sectionId = section,
+                ),
             )
         }
     }

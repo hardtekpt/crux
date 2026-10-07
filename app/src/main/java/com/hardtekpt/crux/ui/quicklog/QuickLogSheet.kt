@@ -24,12 +24,7 @@ import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.theme.CruxTheme
 
-enum class QuickLogAction(
-    val label: String,
-    val description: String,
-    val icon: ImageVector,
-    val available: Boolean,
-) {
+enum class QuickLogAction(val label: String, val description: String, val icon: ImageVector, val available: Boolean) {
     LogClimb("Log climb", "A send or an attempt, with grade and style", Icons.Rounded.Landscape, true),
     LogWeight("Log weight", "Today's bodyweight", Icons.Rounded.MonitorWeight, true),
     StartWorkout("Start a workout", "Coming next, with the session logger", Icons.Rounded.FitnessCenter, false),
@@ -39,10 +34,7 @@ enum class QuickLogAction(
 /** The Log FAB's sheet: the four things a climber logs, two of them live in the MVP. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickLogSheet(
-    onDismiss: () -> Unit,
-    onAction: (QuickLogAction) -> Unit,
-) {
+fun QuickLogSheet(onDismiss: () -> Unit, onAction: (QuickLogAction) -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),

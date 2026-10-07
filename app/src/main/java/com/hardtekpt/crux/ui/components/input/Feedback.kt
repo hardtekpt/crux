@@ -51,8 +51,7 @@ fun rememberReduceMotion(): Boolean {
     return remember(context) { context.animationsOff() }
 }
 
-private fun Context.animationsOff(): Boolean =
-    Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+private fun Context.animationsOff(): Boolean = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
 /** Fades content toward both ends along one axis; [edge] is the share faded at each end. */
 fun Modifier.fadeEdges(vertical: Boolean, edge: Float = 0.3f): Modifier = this

@@ -71,6 +71,7 @@ fun GradeConverterScreen(onBack: () -> Unit) {
             routeGrade = newGrade
         }
     }
+
     /** Switch system, keeping the same difficulty (the first grade it maps to). */
     fun switchTo(target: System) {
         val mapped = GradeConversion.rowsFor(system, grade).firstOrNull()?.values?.get(target) ?: GradeConversion.grades(target).first()

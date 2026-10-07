@@ -3,8 +3,8 @@ package com.hardtekpt.crux.ui.you
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,9 +44,9 @@ import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.Shown
 import com.hardtekpt.crux.ui.measurement
-import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
+import com.hardtekpt.crux.ui.weight
 
 /*
  * Vector body outlines for the Measurements and Circumferences pages, drawn from SVG path
@@ -78,12 +78,7 @@ private class FigureScope(val box: ViewBox, val scale: Float) {
 
 /** A figure the width of its parent, its height from the view box, with labels laid over it. */
 @Composable
-private fun Figure(
-    box: ViewBox,
-    modifier: Modifier = Modifier,
-    draw: DrawScope.(FigureScope) -> Unit,
-    labels: @Composable BoxScope.(FigureScope) -> Unit,
-) {
+private fun Figure(box: ViewBox, modifier: Modifier = Modifier, draw: DrawScope.(FigureScope) -> Unit, labels: @Composable BoxScope.(FigureScope) -> Unit) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val widthPx = constraints.maxWidth.toFloat()
         val scope = remember(widthPx) { FigureScope(box, box.scale(widthPx)) }
@@ -97,14 +92,7 @@ private fun Figure(
 
 /** Places [content] so that its [anchor] edge sits at view-box x and its top at view-box y. */
 @Composable
-private fun Placed(
-    scope: FigureScope,
-    x: Float,
-    top: Float,
-    anchor: Anchor,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+private fun Placed(scope: FigureScope, x: Float, top: Float, anchor: Anchor, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(
         Modifier.layout { measurable, constraints ->
             val placeable = measurable.measure(Constraints())
@@ -150,7 +138,19 @@ private fun valueText(shown: Shown, size: Int): AnnotatedString {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return buildAnnotatedString {
         append(shown.value)
-        shown.unit?.let { withStyle(SpanStyle(color = muted, fontSize = (size * 0.66f).sp, fontWeight = FontWeight.Normal)) { append(if (it == "%") it else " $it") } }
+        shown.unit?.let {
+            withStyle(SpanStyle(color = muted, fontSize = (size * 0.66f).sp, fontWeight = FontWeight.Normal)) {
+                append(
+                    if (it ==
+                        "%"
+                    ) {
+                        it
+                    } else {
+                        " $it"
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -222,7 +222,15 @@ fun ProportionsFigure(
                 }
             }
             Placed(s, x = 434f, top = reachTop + 4f, anchor = Anchor.End) {
-                Callout("REACH", reach?.let { units.measurement(MeasurementType.STANDING_REACH, it) }, "you_standing_reach", Alignment.End, "stat_STANDING_REACH") {
+                Callout(
+                    "REACH",
+                    reach?.let {
+                        units.measurement(MeasurementType.STANDING_REACH, it)
+                    },
+                    "you_standing_reach",
+                    Alignment.End,
+                    "stat_STANDING_REACH",
+                ) {
                     onEdit(MeasurementType.STANDING_REACH)
                 }
             }
@@ -307,11 +315,7 @@ private val SITES = listOf(
  * Chest and waist sit inside the torso. A site with no value yet has a dashed band and Add.
  */
 @Composable
-fun CircumferenceFigure(
-    latest: Map<MeasurementType, Double>,
-    onEdit: (MeasurementType) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun CircumferenceFigure(latest: Map<MeasurementType, Double>, onEdit: (MeasurementType) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val units = LocalUnits.current
     Figure(
@@ -325,7 +329,19 @@ fun CircumferenceFigure(
                 val bands = if (site.right == null) listOf(site.cx to site.left) else listOf(site.cx to site.left, (328f - site.cx) to site.right)
                 bands.forEach { (cx, type) ->
                     val set = type in latest
-                    val style = if (set) Stroke(2f * s.scale) else Stroke(1.5f * s.scale, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f * s.scale, 3f * s.scale)))
+                    val style = if (set) {
+                        Stroke(2f * s.scale)
+                    } else {
+                        Stroke(
+                            1.5f * s.scale,
+                            pathEffect = PathEffect.dashPathEffect(
+                                floatArrayOf(
+                                    3f * s.scale,
+                                    3f * s.scale,
+                                ),
+                            ),
+                        )
+                    }
                     drawOval(
                         if (set) colors.primary else colors.outline,
                         topLeft = Offset(s.px(cx - site.rx), s.py(site.y - 4.5f)),
@@ -345,13 +361,30 @@ fun CircumferenceFigure(
                 if (site.right != null) {
                     val left = latest[site.left]
                     val right = latest[site.right]
-                    SideLabel(s, x = 58f, top = site.y - 17f, Anchor.End, "L ${site.name.uppercase()}", left?.let { units.measurement(site.left, it) }, site.left, null, onEdit)
+                    SideLabel(
+                        s, x = 58f, top = site.y - 17f, Anchor.End, "L ${site.name.uppercase()}",
+                        left?.let {
+                            units.measurement(site.left, it)
+                        },
+                        site.left, null, onEdit,
+                    )
                     val diff = if (left != null && right != null && left != right) {
                         "${if (right > left) "R" else "L"} +${units.measurement(site.left, kotlin.math.abs(right - left))}"
                     } else {
                         null
                     }
-                    SideLabel(s, x = 270f, top = site.y - 17f, Anchor.Start, "R ${site.name.uppercase()}", right?.let { units.measurement(site.right, it) }, site.right, diff?.let { it to "diff_${site.name}" }, onEdit)
+                    SideLabel(
+                        s, x = 270f, top = site.y - 17f, Anchor.Start, "R ${site.name.uppercase()}",
+                        right?.let {
+                            units.measurement(site.right, it)
+                        },
+                        site.right,
+                        diff?.let {
+                            it to
+                                "diff_${site.name}"
+                        },
+                        onEdit,
+                    )
                 } else {
                     val value = latest[site.left]
                     // Value above the band, name below it, inside the torso.
@@ -410,7 +443,12 @@ private fun BoxScope.SideLabel(
 private fun SiteValue(shown: Shown?, type: MeasurementType, size: Int) {
     val tag = "you_${type.name.lowercase()}"
     if (shown == null) {
-        Text("Add", style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.SemiBold, fontSize = size.sp), color = MaterialTheme.colorScheme.primary, modifier = Modifier.testTag(tag))
+        Text(
+            "Add",
+            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.SemiBold, fontSize = size.sp),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag(tag),
+        )
     } else {
         Text(
             valueText(shown, size),

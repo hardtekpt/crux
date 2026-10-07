@@ -8,6 +8,7 @@ import com.hardtekpt.crux.data.FakePlaceRepository
 import com.hardtekpt.crux.data.FakeTemplateRepository
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.home.HomeViewModel
+import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,11 +17,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class DashboardTest {
 
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
+
     @get:Rule val tmp = TemporaryFolder()
 
     private val dataStore by lazy { mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb")) }

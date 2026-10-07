@@ -3,7 +3,6 @@ package com.hardtekpt.crux.ui.you
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,7 +62,15 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 private val Mono11 = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
-private val BigFigure = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 32.sp, letterSpacing = (-0.6).sp, fontFeatureSettings = "tnum")
+private val BigFigure =
+    TextStyle(
+        fontFamily = Archivo,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 30.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.6).sp,
+        fontFeatureSettings = "tnum",
+    )
 
 /** A section title with an optional action on the right, used to separate the profile's parts. */
 @Composable
@@ -178,7 +186,13 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                     val monday = firstMonday.plusWeeks(w.toLong())
                     val label = if (monday.dayOfMonth <= 7) monday.month.getDisplayName(DateTextStyle.SHORT, Locale.UK) else ""
                     Box(Modifier.width(cell + gap)) {
-                        Text(label, style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant, maxLines = 1, softWrap = false)
+                        Text(
+                            label,
+                            style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp),
+                            color = colors.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
                     }
                 }
             }
@@ -230,9 +244,19 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                     }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = labelWidth)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(start = labelWidth),
+            ) {
                 Text("Less", style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
-                listOf(colors.surfaceContainerHighest, colors.primary.copy(alpha = 0.35f), colors.primary.copy(alpha = 0.6f), colors.primary.copy(alpha = 0.82f), colors.primary).forEach {
+                listOf(
+                    colors.surfaceContainerHighest,
+                    colors.primary.copy(alpha = 0.35f),
+                    colors.primary.copy(alpha = 0.6f),
+                    colors.primary.copy(alpha = 0.82f),
+                    colors.primary,
+                ).forEach {
                     Box(Modifier.width(10.dp).height(10.dp).clip(RoundedCornerShape(2.dp)).background(it))
                 }
                 Text("More", style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
@@ -256,7 +280,12 @@ fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier, hig
             style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, fontFeatureSettings = "tnum"),
             color = if (highlight) colors.onPrimaryContainer else colors.onSurface,
         )
-        Text(label.uppercase(), style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.sp), color = if (highlight) colors.onPrimaryContainer else colors.onSurfaceVariant, maxLines = 1)
+        Text(
+            label.uppercase(),
+            style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.sp),
+            color = if (highlight) colors.onPrimaryContainer else colors.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 

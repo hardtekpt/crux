@@ -2,6 +2,11 @@ package com.hardtekpt.crux.data
 
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Exercise
+import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
+import com.hardtekpt.crux.data.model.NewClimb
+import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
@@ -9,19 +14,14 @@ import com.hardtekpt.crux.data.model.Problem
 import com.hardtekpt.crux.data.model.ProblemStats
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Project
-import com.hardtekpt.crux.data.model.Exercise
-import com.hardtekpt.crux.data.model.Measurement
-import com.hardtekpt.crux.data.model.MeasurementType
-import com.hardtekpt.crux.data.model.NewClimb
-import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.WorkoutTemplate
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.LocalDate
-import java.time.ZoneOffset
 
 /** Monday 5 October 2026, noon UTC. */
 val FIXED_CLOCK: Clock = Clock.fixed(
@@ -35,8 +35,7 @@ class FakeClimbRepository : ClimbRepository {
 
     override fun observeClimbs(): Flow<List<Climb>> = climbs.map { list -> list.sortedByDescending { it.date } }
     override fun observeRecentClimbs(limit: Int): Flow<List<Climb>> = observeClimbs().map { it.take(limit) }
-    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> =
-        climbs.map { list -> list.filter { !it.date.isBefore(from) } }
+    override fun observeClimbsSince(from: LocalDate): Flow<List<Climb>> = climbs.map { list -> list.filter { !it.date.isBefore(from) } }
     override fun observeClimbCount(): Flow<Int> = climbs.map { it.size }
 
     override fun observePersonalBests(): Flow<List<PersonalBest>> = climbs.map { list ->
@@ -76,11 +75,9 @@ class FakeClimbRepository : ClimbRepository {
         climbs.value = climbs.value.filterNot { it.id == id }
     }
 
-    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> =
-        observeClimbs().map { list -> list.filter { it.problemId == problemId } }
+    override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> = observeClimbs().map { list -> list.filter { it.problemId == problemId } }
 
-    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> =
-        observeClimbs().map { list -> list.filter { it.placeId == placeId } }
+    override fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>> = observeClimbs().map { list -> list.filter { it.placeId == placeId } }
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
@@ -138,9 +135,15 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
         val old = places.value.find { it.id == id }?.sections.orEmpty()
-        val sections = input.sections.map { s -> com.hardtekpt.crux.data.model.Section(s.id.takeIf { sid -> old.any { it.id == sid } } ?: nextId++, id, s.type, s.name.ifBlank { s.type.label }) }
+        val sections = input.sections.map { s ->
+            val sectionId = s.id.takeIf { sid -> old.any { it.id == sid } } ?: nextId++
+            com.hardtekpt.crux.data.model.Section(sectionId, id, s.type, s.name.ifBlank { s.type.label })
+        }
         val kinds = sections.map { it.type }.distinct()
-        val place = Place(id, input.name, kinds.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes, input.localScale, types = kinds, sections = sections)
+        val place = Place(
+            id, input.name, kinds.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes,
+            input.localScale, types = kinds, sections = sections,
+        )
         places.value = places.value.filterNot { it.id == id } + place
         return id
     }

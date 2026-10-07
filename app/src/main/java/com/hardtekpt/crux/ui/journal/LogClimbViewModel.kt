@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.ui.journal
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,12 +8,11 @@ import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.ProblemInput
+import com.hardtekpt.crux.data.images.ImageFiles
+import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
-import android.net.Uri
-import com.hardtekpt.crux.data.images.ImageFiles
-import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.model.GradeSystem
 import com.hardtekpt.crux.data.model.LocalScale
 import com.hardtekpt.crux.data.model.NewClimb
@@ -24,6 +24,9 @@ import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,9 +40,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Clock
-import java.time.LocalDate
-import javax.inject.Inject
 
 /** The draft lives here so rotation keeps what was typed. */
 data class LogClimbDraft(
@@ -252,7 +252,8 @@ class LogClimbViewModel @Inject constructor(
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
             venue = placeDetail.value?.let { d -> d.place.typeOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }).venue } ?: it.venue,
-            sectionId = placeDetail.value?.let { d -> d.place.sectionOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) })?.id } ?: it.sectionId,
+            sectionId =
+                placeDetail.value?.let { d -> d.place.sectionOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) })?.id } ?: it.sectionId,
             discipline = problem.discipline,
             scaleOverride = problem.gradeScale,
             gradeIndex = problem.gradeIndex,

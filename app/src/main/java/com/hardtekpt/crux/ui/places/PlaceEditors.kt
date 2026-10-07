@@ -1,59 +1,27 @@
 package com.hardtekpt.crux.ui.places
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import com.hardtekpt.crux.ui.components.CruxCardFill
-import com.hardtekpt.crux.ui.components.CruxListRow
-import com.hardtekpt.crux.data.model.GradeSystem
-import com.hardtekpt.crux.data.model.LocalGrade
-import com.hardtekpt.crux.data.model.LocalKind
-import com.hardtekpt.crux.data.model.LocalScale
-import com.hardtekpt.crux.data.model.MapLocation
-import androidx.compose.material.icons.rounded.Map
-import androidx.compose.runtime.saveable.rememberSaveable
-import com.hardtekpt.crux.ui.components.CruxCard
-import com.hardtekpt.crux.ui.components.input.TapeSwatch
-import com.hardtekpt.crux.ui.components.input.argb
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.hardtekpt.crux.ui.components.CruxButtonVariant
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,19 +29,40 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -84,25 +73,37 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.PlaceRepository
 import com.hardtekpt.crux.data.ProblemInput
+import com.hardtekpt.crux.data.SectionInput
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.GradeSystem
+import com.hardtekpt.crux.data.model.LocalGrade
+import com.hardtekpt.crux.data.model.LocalKind
+import com.hardtekpt.crux.data.model.LocalScale
+import com.hardtekpt.crux.data.model.MapLocation
 import com.hardtekpt.crux.data.model.PlaceType
-import com.hardtekpt.crux.data.SectionInput
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
+import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxFilterChip
+import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
-import com.hardtekpt.crux.ui.components.input.GradeStrip
-import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.input.GradeStrip
+import com.hardtekpt.crux.ui.components.input.TapeSwatch
+import com.hardtekpt.crux.ui.components.input.argb
+import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -112,7 +113,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 private const val MAX_NAME = 40
 
@@ -120,13 +120,7 @@ private const val MAX_NAME = 40
 
 /** One part of the place: its kind as chips, a name, and a remove button when there are others. */
 @Composable
-private fun SectionEditor(
-    section: SectionDraft,
-    index: Int,
-    removable: Boolean,
-    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
-    onRemove: () -> Unit,
-) {
+private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean, onChange: ((SectionDraft) -> SectionDraft) -> Unit, onRemove: () -> Unit) {
     val space = CruxTheme.space
     CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -186,6 +180,7 @@ data class PlaceDraft(
     val types: List<PlaceType> get() = sections.map { it.type }.distinct()
     val type: PlaceType get() = types.first()
     val hasBoard: Boolean get() = PlaceType.BOARD in types
+
     /** Only a board: no routes, and "where it is" rather than a city. */
     val onlyBoard: Boolean get() = types == listOf(PlaceType.BOARD)
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (!onlyBoard && routeScale?.isLocal == true)
@@ -201,10 +196,7 @@ data class PlaceDraft(
 data class SectionDraft(val id: Long = 0, val type: PlaceType, val name: String = "", val key: Int = 0)
 
 @HiltViewModel
-class PlaceEditorViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val repository: PlaceRepository,
-) : ViewModel() {
+class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: PlaceRepository) : ViewModel() {
     private val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val _draft = MutableStateFlow(PlaceDraft(id = placeId))
     val draft: StateFlow<PlaceDraft> = _draft.asStateFlow()
@@ -286,11 +278,7 @@ class PlaceEditorViewModel @Inject constructor(
  * Create or edit a gym, crag or board. [onSaved] gets the place id, or 0 when it was deleted.
  */
 @Composable
-fun PlaceEditorScreen(
-    onBack: () -> Unit,
-    onSaved: (Long) -> Unit,
-    viewModel: PlaceEditorViewModel = hiltViewModel(),
-) {
+fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: PlaceEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     LaunchedEffect(draft.doneId) { draft.doneId?.let(onSaved) }
     val space = CruxTheme.space
@@ -352,7 +340,11 @@ fun PlaceEditorScreen(
                     )
                 }
                 // Add another part, starting from a kind.
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("add_section")) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.testTag("add_section"),
+                ) {
                     Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     PlaceType.entries.forEach { t ->
                         CruxFilterChip(
@@ -501,9 +493,13 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
                 )
                 Row {
                     CruxButton("Change", { picking = true }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
-                    CruxButton("Open in Maps", { openInMaps(context, location, placeName.ifBlank { "Place" }) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    CruxButton("Open in Maps", {
+                        openInMaps(context, location, placeName.ifBlank { "Place" })
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                     Box(Modifier.weight(1f))
-                    CruxButton("Remove", { onChange(null) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
+                    CruxButton("Remove", {
+                        onChange(null)
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("remove_map_location"))
                 }
             }
         }
@@ -550,19 +546,19 @@ private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeSc
         }
         // Anchored at the right, under the current choice.
         Box(Modifier.align(Alignment.BottomEnd)) {
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEach { (scale, name) ->
-                DropdownMenuItem(
-                    text = { Text(name) },
-                    trailingIcon = if (scale == selected) ({ Icon(Icons.Rounded.Check, contentDescription = null) }) else null,
-                    onClick = {
-                        onSelect(scale)
-                        open = false
-                    },
-                    modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}" else "scale_option_${name}"),
-                )
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                options.forEach { (scale, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        trailingIcon = if (scale == selected) ({ Icon(Icons.Rounded.Check, contentDescription = null) }) else null,
+                        onClick = {
+                            onSelect(scale)
+                            open = false
+                        },
+                        modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}" else "scale_option_$name"),
+                    )
+                }
             }
-        }
         }
     }
 }
@@ -613,6 +609,7 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                     )
                 }
             }
+
             LocalKind.COLOURS -> {
                 Column(verticalArrangement = Arrangement.spacedBy(space.s1)) {
                     scale.grades.forEachIndexed { index, grade ->
@@ -622,7 +619,9 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
                             isFirst = index == 0,
                             isLast = index == scale.grades.lastIndex,
                             canRemove = scale.grades.size > 2,
-                            onRename = { name -> onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = grade.copy(name = name.take(16)) })) },
+                            onRename = { name ->
+                                onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = grade.copy(name = name.take(16)) }))
+                            },
                             onPickColour = { pickingColourFor = index },
                             onMove = { by ->
                                 val list = scale.grades.toMutableList()
@@ -722,9 +721,18 @@ private fun LocalColourRow(
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${grade.name} options") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("Move easier") }, enabled = !isFirst, onClick = { menu = false; onMove(-1) })
-                DropdownMenuItem(text = { Text("Move harder") }, enabled = !isLast, onClick = { menu = false; onMove(1) })
-                DropdownMenuItem(text = { Text("Remove") }, enabled = canRemove, onClick = { menu = false; onRemove() })
+                DropdownMenuItem(text = { Text("Move easier") }, enabled = !isFirst, onClick = {
+                    menu = false
+                    onMove(-1)
+                })
+                DropdownMenuItem(text = { Text("Move harder") }, enabled = !isLast, onClick = {
+                    menu = false
+                    onMove(1)
+                })
+                DropdownMenuItem(text = { Text("Remove") }, enabled = canRemove, onClick = {
+                    menu = false
+                    onRemove()
+                })
             }
         }
     }
@@ -830,8 +838,7 @@ class ProblemEditorViewModel @Inject constructor(
     }
 
     /** The place's scale for a discipline, else the climber's setting. */
-    private suspend fun scaleFor(discipline: Discipline): GradeScale =
-        repository.getPlace(placeId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
+    private suspend fun scaleFor(discipline: Discipline): GradeScale = repository.getPlace(placeId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
 
     fun setDiscipline(discipline: Discipline) {
         viewModelScope.launch {
@@ -878,10 +885,7 @@ class ProblemEditorViewModel @Inject constructor(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ProblemEditorScreen(
-    onDone: (deleted: Boolean) -> Unit,
-    viewModel: ProblemEditorViewModel = hiltViewModel(),
-) {
+fun ProblemEditorScreen(onDone: (deleted: Boolean) -> Unit, viewModel: ProblemEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val areas by viewModel.areas.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()

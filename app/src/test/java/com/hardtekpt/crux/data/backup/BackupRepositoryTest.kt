@@ -37,7 +37,9 @@ class BackupRepositoryTest {
         StarterDataSeeder(FIXED_CLOCK).seed(source, includeSampleData = true)
         source.noteDao().insert(com.hardtekpt.crux.data.NoteEntity(text = "Left finger tweak, easy on crimps", createdAtMillis = 1, updatedAtMillis = 1))
         val exercise = source.exerciseDao().getAll().first()
-        source.exerciseRecordDao().insert(com.hardtekpt.crux.data.ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2))
+        source.exerciseRecordDao().insert(
+            com.hardtekpt.crux.data.ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2),
+        )
         val text = BackupRepository(source, FIXED_CLOCK).export(BackupSection.entries.toSet())
 
         val target = newDb()

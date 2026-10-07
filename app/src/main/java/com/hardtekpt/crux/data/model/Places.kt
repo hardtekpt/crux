@@ -44,8 +44,7 @@ data class Place(
     }
 
     /** The grades climbs here pick from, or null to use the climber's settings. */
-    fun systemFor(discipline: Discipline): GradeSystem? =
-        scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
+    fun systemFor(discipline: Discipline): GradeSystem? = scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
 }
 
 /** One named part of a place: a kind and a name, like Board "Moonboard". */
@@ -87,12 +86,7 @@ data class Problem(
 }
 
 /** Every go the climber logged on one problem, summed. */
-data class ProblemStats(
-    val sessions: Int,
-    val attempts: Int,
-    val firstSend: LocalDate?,
-    val lastGo: LocalDate,
-) {
+data class ProblemStats(val sessions: Int, val attempts: Int, val firstSend: LocalDate?, val lastGo: LocalDate) {
     val sent: Boolean get() = firstSend != null
 }
 
@@ -114,16 +108,7 @@ data class PlaceSummary(
     val coverImage: String? = null,
 )
 
-data class PlaceDetail(
-    val place: Place,
-    val areas: List<Area>,
-    val problems: List<ProblemWithStats>,
-)
+data class PlaceDetail(val place: Place, val areas: List<Area>, val problems: List<ProblemWithStats>)
 
 /** An open project: a problem with goes but no send, and where it is. */
-data class Project(
-    val problem: Problem,
-    val placeName: String,
-    val areaName: String?,
-    val stats: ProblemStats,
-)
+data class Project(val problem: Problem, val placeName: String, val areaName: String?, val stats: ProblemStats)

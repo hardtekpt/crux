@@ -71,8 +71,4 @@ data class PersonalBest(
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
-data class Measurement(
-    val id: Long,
-    val value: Double,
-    val date: LocalDate,
-)
+data class Measurement(val id: Long, val value: Double, val date: LocalDate)

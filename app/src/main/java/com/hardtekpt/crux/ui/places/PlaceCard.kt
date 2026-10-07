@@ -162,10 +162,12 @@ internal fun BoxScope.PlaceBannerArt(place: com.hardtekpt.crux.data.model.Place,
             image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
             BannerShade()
         }
+
         mapLocation != null -> {
             MapPreview(mapLocation, Modifier.fillMaxSize())
             BannerShade()
         }
+
         else -> TypeArt(place.type, accent)
     }
 }

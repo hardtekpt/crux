@@ -5,13 +5,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -41,6 +44,8 @@ import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -48,6 +53,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.lengthDifference
 import com.hardtekpt.crux.ui.measurement
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.places.PlacesViewModel
 import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.shortLabel
@@ -55,14 +61,8 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.weightChange
-import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.weightUnit
 import com.hardtekpt.crux.ui.weightValue
-import com.hardtekpt.crux.ui.components.CruxCard
-import com.hardtekpt.crux.ui.components.CruxCardFill
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.height
 
 private val TapeLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
 
@@ -129,7 +129,9 @@ fun MeasurementsScreen(onBack: () -> Unit, onLogWeight: () -> Unit, viewModel: Y
                 item(key = "weight_history_label") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Eyebrow("Weigh-ins", Modifier.weight(1f))
-                        CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", { allWeights = !allWeights }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                        CruxButton(if (allWeights) "Show fewer" else "Show all ${uiState.weights.size}", {
+                            allWeights = !allWeights
+                        }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                     }
                 }
             }
@@ -174,7 +176,16 @@ private fun WeightCard(uiState: YouUiState, onLogWeight: () -> Unit) {
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(summary?.latest?.value?.let { units.weight(it).value } ?: "–", style = CruxTheme.type.metricLarge)
-            if (summary != null) Text(" ${units.weightUnit()}", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
+            if (summary !=
+                null
+            ) {
+                Text(
+                    " ${units.weightUnit()}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
         }
         Text(
             when {
@@ -194,7 +205,12 @@ private fun WeightCard(uiState: YouUiState, onLogWeight: () -> Unit) {
                 modifier = Modifier.padding(top = CruxTheme.space.s3, bottom = CruxTheme.space.s2),
             )
             if (inRange.size < 2) {
-                Text("Log another weigh-in in this window to see the trend.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(vertical = CruxTheme.space.s4))
+                Text(
+                    "Log another weigh-in in this window to see the trend.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = CruxTheme.space.s4),
+                )
             } else {
                 com.hardtekpt.crux.ui.charts.TimeSeriesChart(
                     points = inRange.map { com.hardtekpt.crux.ui.charts.SeriesPoint(it.date.toEpochDay().toDouble(), units.weightValue(it.value)) },
@@ -267,12 +283,7 @@ fun CircumferencesScreen(onBack: () -> Unit, viewModel: YouViewModel = hiltViewM
 
 /** Every saved gym, crag and board, with the Crag/Gym/Board filters. */
 @Composable
-fun PlacesScreen(
-    onBack: () -> Unit,
-    onOpenPlace: (Long) -> Unit,
-    onNewPlace: () -> Unit,
-    viewModel: PlacesViewModel = hiltViewModel(),
-) {
+fun PlacesScreen(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, onNewPlace: () -> Unit, viewModel: PlacesViewModel = hiltViewModel()) {
     val places by viewModel.places.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf<PlaceType?>(null) }
     val space = CruxTheme.space

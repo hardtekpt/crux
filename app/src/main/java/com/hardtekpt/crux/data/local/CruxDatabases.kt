@@ -1,6 +1,9 @@
 package com.hardtekpt.crux.data.local
 
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import javax.inject.Inject
+import javax.inject.Qualifier
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -11,9 +14,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
-import javax.inject.Qualifier
-import javax.inject.Singleton
 
 /** Which data set the app is showing. */
 enum class DataMode { REAL, DEMO }

@@ -37,8 +37,7 @@ val CategoricalSlots: Int get() = CategoricalLight.size
 /** Picks the palette by the theme actually in use, not the system setting. */
 @Composable
 @ReadOnlyComposable
-fun categoricalColors(): List<Color> =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) CategoricalDark else CategoricalLight
+fun categoricalColors(): List<Color> = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) CategoricalDark else CategoricalLight
 
 /** Axis ticks on round numbers that bracket the data. */
 data class AxisScale(val min: Double, val max: Double, val ticks: List<Double>) {

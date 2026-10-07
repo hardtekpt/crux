@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
-import com.hardtekpt.crux.ui.components.CruxFilterChip
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -45,16 +44,17 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
-import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.Problem
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
@@ -95,12 +95,7 @@ private enum class WhereStep { PLACE, AREA, PROBLEM }
  * skipped or the sheet closed early, and the line updates to match.
  */
 @Composable
-fun WhereSection(
-    draft: LogClimbDraft,
-    places: List<PlaceSummary>,
-    detail: PlaceDetail?,
-    actions: WhereActions,
-) {
+fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions) {
     var open by rememberSaveable { mutableStateOf(false) }
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     val area = place?.let { detail.areas.firstOrNull { it.id == draft.areaId } }
@@ -182,13 +177,7 @@ private fun WhereRow(summary: String?, kind: String, icon: ImageVector, onClick:
 }
 
 @Composable
-private fun WhereSheet(
-    draft: LogClimbDraft,
-    places: List<PlaceSummary>,
-    detail: PlaceDetail?,
-    actions: WhereActions,
-    onClose: () -> Unit,
-) {
+private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions, onClose: () -> Unit) {
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     var step by rememberSaveable { mutableStateOf(WhereStep.PLACE) }
     var creatingPlace by rememberSaveable { mutableStateOf(false) }
@@ -270,7 +259,9 @@ private fun WhereSheet(
                             modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
                         ) {
                             place.sections.forEach { section ->
-                                CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, { actions.selectSection(section.id) }, Modifier.testTag("where_section_${section.name}"))
+                                CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, {
+                                    actions.selectSection(section.id)
+                                }, Modifier.testTag("where_section_${section.name}"))
                             }
                         }
                     }
@@ -280,7 +271,9 @@ private fun WhereSheet(
                     WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = { picked ->
                         step = if (picked.walls > 0 || picked.place.hasSeveralTypes) WhereStep.AREA else WhereStep.PROBLEM
                     }, onNew = { creatingPlace = true })
+
                     WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = next)
+
                     WhereStep.PROBLEM -> if (detail != null) problemStep(draft, detail, query, problemNoun, actions, onPicked = onClose)
                 }
                 if (place == null) {
@@ -380,14 +373,7 @@ private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, ac
     }
 }
 
-private fun LazyListScope.problemStep(
-    draft: LogClimbDraft,
-    detail: PlaceDetail,
-    query: String,
-    noun: String,
-    actions: WhereActions,
-    onPicked: () -> Unit,
-) {
+private fun LazyListScope.problemStep(draft: LogClimbDraft, detail: PlaceDetail, query: String, noun: String, actions: WhereActions, onPicked: () -> Unit) {
     // At a mixed place, only problems on this kind's walls (or on no wall).
     val section = detail.place.sectionFor(draft)
     val areaSection = detail.areas.associate { it.id to detail.place.sectionOf(it)?.id }
@@ -448,14 +434,7 @@ private fun LazyListScope.problemStep(
 }
 
 @Composable
-private fun PickRow(
-    title: String,
-    selected: Boolean,
-    tag: String,
-    supporting: String? = null,
-    icon: ImageVector? = null,
-    onClick: () -> Unit,
-) {
+private fun PickRow(title: String, selected: Boolean, tag: String, supporting: String? = null, icon: ImageVector? = null, onClick: () -> Unit) {
     CruxListRow(
         title = title,
         supporting = supporting?.takeIf { it.isNotBlank() },
@@ -495,7 +474,13 @@ private fun NewPlaceDialog(onCreate: (String, PlaceType) -> Unit, onDismiss: () 
                     label = "Name",
                     value = name,
                     onValueChange = { name = it.take(LogClimbViewModel.MAX_TEXT) },
-                    placeholder = if (type == PlaceType.CRAG) "Arco" else if (type == PlaceType.BOARD) "Home Kilter" else "Block Lab",
+                    placeholder = if (type == PlaceType.CRAG) {
+                        "Arco"
+                    } else if (type == PlaceType.BOARD) {
+                        "Home Kilter"
+                    } else {
+                        "Block Lab"
+                    },
                     modifier = Modifier.testTag("field_new_place"),
                 )
             }

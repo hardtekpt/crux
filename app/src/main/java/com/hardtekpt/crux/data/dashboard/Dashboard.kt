@@ -4,13 +4,13 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * How much room a widget takes on the two-column dashboard. Half-width widgets sit side
@@ -40,11 +40,7 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
 }
 
 @Serializable
-data class DashboardWidget(
-    val id: String = UUID.randomUUID().toString(),
-    val type: WidgetType,
-    val size: WidgetSize = type.defaultSize,
-) {
+data class DashboardWidget(val id: String = UUID.randomUUID().toString(), val type: WidgetType, val size: WidgetSize = type.defaultSize) {
     /** The next size this widget supports, wrapping around. */
     fun nextSize(): DashboardWidget {
         val sizes = type.sizes
@@ -68,9 +64,7 @@ fun defaultDashboard(): List<DashboardWidget> = listOf(
  * MVP's destructive schema changes.
  */
 @Singleton
-class DashboardRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
-) {
+class DashboardRepository @Inject constructor(private val dataStore: DataStore<Preferences>) {
     private val json = Json { ignoreUnknownKeys = true }
 
     val layout: Flow<List<DashboardWidget>> = dataStore.data.map { prefs ->

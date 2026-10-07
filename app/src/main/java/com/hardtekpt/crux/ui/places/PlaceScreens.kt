@@ -1,61 +1,45 @@
 package com.hardtekpt.crux.ui.places
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.hardtekpt.crux.ui.theme.Archivo
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.PhotoCamera
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Map
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import com.hardtekpt.crux.data.images.AreaImageStore
-import com.hardtekpt.crux.ui.components.CruxButtonSize
-import com.hardtekpt.crux.ui.components.ImageThumbnail
-import com.hardtekpt.crux.ui.components.ImageViewer
-import com.hardtekpt.crux.ui.components.areaImageFile
-import com.hardtekpt.crux.ui.components.rememberLocalImage
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Domain
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Landscape
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Domain
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -72,43 +56,59 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.hardtekpt.crux.ui.components.CruxFilterChip
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.PlaceRepository
+import com.hardtekpt.crux.data.images.AreaImageStore
 import com.hardtekpt.crux.data.model.Area
 import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.ui.components.CruxButton
+import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
+import com.hardtekpt.crux.ui.components.ImageThumbnail
+import com.hardtekpt.crux.ui.components.ImageViewer
 import com.hardtekpt.crux.ui.components.InlineEmptyState
+import com.hardtekpt.crux.ui.components.areaImageFile
+import com.hardtekpt.crux.ui.components.rememberLocalImage
 import com.hardtekpt.crux.ui.journal.TapeDot
 import com.hardtekpt.crux.ui.journal.problemLine
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
+import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import javax.inject.Inject
 
 // ---- Places list (Journal › Places) --------------------------------------------------
 
@@ -295,12 +295,26 @@ fun PlaceDetailScreen(
                     ) {
                         Text(
                             current.place.name,
-                            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = (-0.4).sp),
+                            style = TextStyle(
+                                fontFamily = Archivo,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 28.sp,
+                                lineHeight = 32.sp,
+                                letterSpacing = (-0.4).sp,
+                            ),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                         val where = current.place.location ?: current.place.mapLocation?.address
-                        where?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        where?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }
@@ -444,7 +458,13 @@ fun PlaceDetailScreen(
                                 ?: "No ${areaLabel.lowercase()}",
                             Modifier.weight(1f),
                         )
-                        if (area != null) AreaMenu(area, onEdit = { editingArea = area }, onReset = { viewModel.resetArea(area.id) }, onDelete = { viewModel.deleteArea(area) })
+                        if (area !=
+                            null
+                        ) {
+                            AreaMenu(area, onEdit = {
+                                editingArea = area
+                            }, onReset = { viewModel.resetArea(area.id) }, onDelete = { viewModel.deleteArea(area) })
+                        }
                     }
                 }
                 if (area != null && problems.isEmpty()) {
@@ -539,7 +559,11 @@ private fun PlaceFigure(value: Int, label: String, detail: String, modifier: Mod
     ) {
         Text(value.toString(), style = CruxTheme.type.metricMedium, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
         Text(label, style = MaterialTheme.typography.labelLarge, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
-        Text(detail, style = MaterialTheme.typography.bodySmall, color = if (highlight) colors.onSecondaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant)
+        Text(
+            detail,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (highlight) colors.onSecondaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant,
+        )
     }
 }
 
@@ -583,7 +607,12 @@ private fun FacilityTile(
             color = colors.onSurfaceVariant,
         )
         Text(
-            listOfNotNull("$problems ${if (problems == 1) "problem" else "problems"}", scales.joinToString(" / ").takeIf { it.isNotEmpty() }).joinToString(" · "),
+            listOfNotNull(
+                "$problems ${if (problems == 1) "problem" else "problems"}",
+                scales.joinToString(" / ").takeIf {
+                    it.isNotEmpty()
+                },
+            ).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant,
         )
@@ -611,7 +640,12 @@ private fun ProblemLine(item: ProblemWithStats, onOpen: (Long) -> Unit) {
         Box(Modifier.width(4.dp).height(32.dp).clip(RoundedCornerShape(2.dp)).background(tape))
         Text(item.problem.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
         Column(Modifier.weight(1f)) {
-            Text(item.problem.name + if (item.problem.retired) " (retired)" else "", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                item.problem.name + if (item.problem.retired) " (retired)" else "",
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 when {
                     stats == null -> "Not tried yet"
@@ -654,9 +688,18 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${area.name} options") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text("Edit") }, onClick = { open = false; onEdit() })
-            DropdownMenuItem(text = { Text("Reset (retire its problems)") }, onClick = { open = false; onReset() })
-            DropdownMenuItem(text = { Text("Delete") }, onClick = { open = false; onDelete() })
+            DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                open = false
+                onEdit()
+            })
+            DropdownMenuItem(text = { Text("Reset (retire its problems)") }, onClick = {
+                open = false
+                onReset()
+            })
+            DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                open = false
+                onDelete()
+            })
         }
     }
 }
@@ -759,6 +802,7 @@ private fun AreaDialog(
                 val current = image
                 when {
                     loading -> Text("Adding image…", style = MaterialTheme.typography.bodyMedium)
+
                     current != null -> {
                         val preview = rememberLocalImage(areaImageFile(current), 800)
                         Box(
@@ -774,7 +818,9 @@ private fun AreaDialog(
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-                            CruxButton("Replace", { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                            CruxButton("Replace", {
+                                gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
                             CruxButton(
                                 "Remove",
                                 {
@@ -787,6 +833,7 @@ private fun AreaDialog(
                             )
                         }
                     }
+
                     else -> Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
                         CruxButton(
                             "Choose",
@@ -816,7 +863,9 @@ private fun AreaDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, angle.toIntOrNull(), image, sectionId) }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
+            TextButton(onClick = {
+                onSave(name, angle.toIntOrNull(), image, sectionId)
+            }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }
         },

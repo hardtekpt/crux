@@ -23,13 +23,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.PlaceRepository
-import com.hardtekpt.crux.data.model.Project
-import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.PersonalBest
+import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
-import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
@@ -37,17 +36,18 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.StatTile
-import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.places.ProjectRow
+import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import java.time.Clock
-import java.time.LocalDate
-import javax.inject.Inject
 
 /**
  * Bests for one discipline in one scale. Grades in different scales are never compared, and

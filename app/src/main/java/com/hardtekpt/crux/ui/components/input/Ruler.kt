@@ -1,12 +1,9 @@
 package com.hardtekpt.crux.ui.components.input
 
+import androidx.compose.animation.core.FloatExponentialDecaySpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.animation.core.FloatExponentialDecaySpec
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -28,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -61,10 +59,12 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 /**
  * The scale a [RulerInput] draws: values from [min] to [max] in [step]s, a mid tick every
@@ -144,6 +144,7 @@ fun RulerInput(
     }
 
     val dragState = rememberDraggableState { delta -> offset = (offset - delta).coerceIn(0f, maxOffset) }
+
     // Glides on after a flick and comes to rest exactly on the nearest tick. It runs in its
     // own scope, so recompositions while the value changes can't cut it short.
     fun settleFrom(velocity: Float) {
@@ -188,7 +189,14 @@ fun RulerInput(
             ) {
                 Text(
                     display(value),
-                    style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 36.sp, lineHeight = 40.sp, letterSpacing = (-1).sp, fontFeatureSettings = "tnum"),
+                    style = TextStyle(
+                        fontFamily = Archivo,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 36.sp,
+                        lineHeight = 40.sp,
+                        letterSpacing = (-1).sp,
+                        fontFeatureSettings = "tnum",
+                    ),
                     color = colors.onSurface,
                 )
                 if (unit != null) {
@@ -209,8 +217,16 @@ fun RulerInput(
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
-                        Key.DirectionLeft, Key.DirectionDown, Key.VolumeDown -> { nudge(-1); true }
-                        Key.DirectionRight, Key.DirectionUp, Key.VolumeUp -> { nudge(1); true }
+                        Key.DirectionLeft, Key.DirectionDown, Key.VolumeDown -> {
+                            nudge(-1)
+                            true
+                        }
+
+                        Key.DirectionRight, Key.DirectionUp, Key.VolumeUp -> {
+                            nudge(1)
+                            true
+                        }
+
                         else -> false
                     }
                 }

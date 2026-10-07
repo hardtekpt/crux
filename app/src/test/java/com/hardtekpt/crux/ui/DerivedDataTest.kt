@@ -5,22 +5,22 @@ import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
+import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.PersonalBest
-import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
-import com.hardtekpt.crux.ui.journal.count
-import com.hardtekpt.crux.ui.journal.matching
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.ui.journal.count
+import com.hardtekpt.crux.ui.journal.groupByDayAndPlace
+import com.hardtekpt.crux.ui.journal.matching
 import com.hardtekpt.crux.ui.progress.ProgressUiState
 import com.hardtekpt.crux.ui.progress.toDisciplineBests
-import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.ui.you.apeIndex
 import com.hardtekpt.crux.ui.you.parseMeasurement
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class DerivedDataTest {
 
@@ -163,10 +163,6 @@ class DerivedDataTest {
         id, Discipline.BOULDER, GradeScale.FONT, 5, AscentStyle.FLASH, 1, Venue.GYM, date, null, place, null,
     )
 
-    private fun best(
-        discipline: Discipline,
-        style: AscentStyle,
-        index: Int,
-        scale: GradeScale = discipline.defaultScale,
-    ) = PersonalBest(discipline, style, scale, index, null, null, today)
+    private fun best(discipline: Discipline, style: AscentStyle, index: Int, scale: GradeScale = discipline.defaultScale) =
+        PersonalBest(discipline, style, scale, index, null, null, today)
 }

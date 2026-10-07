@@ -46,9 +46,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.hardtekpt.crux.data.images.AreaImageStore
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /** The file for a stored wall image. */
 @Composable
@@ -75,13 +75,7 @@ fun rememberLocalImage(file: File, maxPx: Int): ImageBitmap? {
 
 /** A small square crop of a stored image; tap to open it. */
 @Composable
-fun ImageThumbnail(
-    name: String,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: Dp = 48.dp,
-) {
+fun ImageThumbnail(name: String, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 48.dp) {
     val colors = MaterialTheme.colorScheme
     val px = with(LocalDensity.current) { size.roundToPx() } * 2
     val image = rememberLocalImage(areaImageFile(name), px)
@@ -178,13 +172,7 @@ fun rememberVideoFrame(file: File, maxPx: Int): ImageBitmap? {
 
 /** A square crop of a video's first frame with a play mark; tap to play it. */
 @Composable
-fun VideoThumbnail(
-    name: String,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: Dp = 48.dp,
-) {
+fun VideoThumbnail(name: String, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 48.dp) {
     val colors = MaterialTheme.colorScheme
     val px = with(LocalDensity.current) { size.roundToPx() } * 2
     val frame = rememberVideoFrame(areaImageFile(name), px)

@@ -31,14 +31,7 @@ val JetBrainsMono = variableFamily(R.font.jetbrains_mono, listOf(400, 500, 600, 
 
 private const val TABULAR = "tnum"
 
-private fun style(
-    family: FontFamily,
-    size: Int,
-    line: Int,
-    weight: Int,
-    tracking: Double = 0.0,
-    tabular: Boolean = false,
-) = TextStyle(
+private fun style(family: FontFamily, size: Int, line: Int, weight: Int, tracking: Double = 0.0, tabular: Boolean = false) = TextStyle(
     fontFamily = family,
     fontWeight = FontWeight(weight),
     fontSize = size.sp,

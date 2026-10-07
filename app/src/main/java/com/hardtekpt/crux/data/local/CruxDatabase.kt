@@ -7,10 +7,6 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Schema 6 adds places, areas and problems. Every distinct place name already typed into a
- * climb becomes a place of the matching kind, and those climbs are linked to it.
- */
-/**
  * Schema 16 turns each place's kinds into named sections: one per kind it had, named after
  * the kind, with its areas and climbs linked to the section of their kind.
  */
@@ -46,6 +42,10 @@ class SectionsMigration : AutoMigrationSpec {
     }
 }
 
+/**
+ * Schema 6 adds places, areas and problems. Every distinct place name already typed into a
+ * climb becomes a place of the matching kind, and those climbs are linked to it.
+ */
 class PlacesMigration : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -115,8 +115,10 @@ abstract class CruxDatabase : RoomDatabase() {
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
         const val VERSION = 16
+
         /** The climber's own data. */
         const val NAME = "crux-user.db"
+
         /** Demo mode's data set. */
         const val DEMO_NAME = "crux.db"
     }
