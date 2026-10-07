@@ -8,7 +8,7 @@
   .\crux format         # fix ktlint formatting in place
   .\crux device-test    # instrumented Compose/Room tests on the emulator
   .\crux check          # test + device-test
-  .\crux run -Device 192.168.1.128:37223   # same, on a phone over wireless debugging
+  .\crux run -Device <phone-ip>:<port>   # same, on a phone over wireless debugging
 #>
 param(
     [Parameter(Position = 0)]
@@ -17,7 +17,7 @@ param(
     # Show the emulator window (default) or run it headless, e.g. for test-only runs.
     [switch]$Headless,
     # Target a connected device instead of the emulator, e.g. a phone on wireless
-    # debugging: -Device 192.168.1.128:37223 (connects with adb first if needed).
+    # debugging: -Device <phone-ip>:<port> (connects with adb first if needed).
     [string]$Device
 )
 
