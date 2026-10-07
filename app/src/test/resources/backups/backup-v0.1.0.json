@@ -1,0 +1,1082 @@
+{
+    "format": "crux-backup",
+    "version": 1,
+    "exportedAt": "2026-10-05T12:00:00Z",
+    "exercises": [
+        {
+            "name": "4×4 circuit",
+            "category": "CLIMBING",
+            "metric": "REPS",
+            "notes": "Four problems back to back"
+        },
+        {
+            "name": "Dips",
+            "category": "ANTAGONIST",
+            "metric": "WEIGHTED_REPS",
+            "notes": null
+        },
+        {
+            "name": "Easy traversing",
+            "category": "CLIMBING",
+            "metric": "TIME",
+            "notes": null
+        },
+        {
+            "name": "Forearm stretch",
+            "category": "MOBILITY",
+            "metric": "TIME",
+            "notes": null
+        },
+        {
+            "name": "Front lever tucks",
+            "category": "CORE",
+            "metric": "TIME",
+            "notes": null
+        },
+        {
+            "name": "Half-crimp hang",
+            "category": "FINGERS",
+            "metric": "WEIGHTED_TIME",
+            "notes": "20 mm edge"
+        },
+        {
+            "name": "Hanging leg raises",
+            "category": "CORE",
+            "metric": "REPS",
+            "notes": null
+        },
+        {
+            "name": "Limit boulders",
+            "category": "CLIMBING",
+            "metric": "REPS",
+            "notes": "Count attempts as reps"
+        },
+        {
+            "name": "Open-hand hang",
+            "category": "FINGERS",
+            "metric": "WEIGHTED_TIME",
+            "notes": "20 mm edge"
+        },
+        {
+            "name": "Push-ups",
+            "category": "ANTAGONIST",
+            "metric": "REPS",
+            "notes": null
+        },
+        {
+            "name": "Repeaters",
+            "category": "FINGERS",
+            "metric": "WEIGHTED_INTERVALS",
+            "notes": "20 mm edge, half crimp"
+        },
+        {
+            "name": "Reverse wrist curls",
+            "category": "ANTAGONIST",
+            "metric": "WEIGHTED_REPS",
+            "notes": null
+        },
+        {
+            "name": "Scap pull-ups",
+            "category": "PULLING",
+            "metric": "REPS",
+            "notes": null
+        },
+        {
+            "name": "Tabata core",
+            "category": "CORE",
+            "metric": "INTERVALS",
+            "notes": "Hollow holds or mountain climbers"
+        },
+        {
+            "name": "Weighted pull-ups",
+            "category": "PULLING",
+            "metric": "WEIGHTED_REPS",
+            "notes": null
+        }
+    ],
+    "plans": [
+        {
+            "name": "Max hangs + limit bouldering",
+            "description": "Finger strength first, then your hardest moves while you are fresh.",
+            "blocks": [
+                {
+                    "name": "Warm-up",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Easy traversing",
+                                "category": "CLIMBING",
+                                "metric": "TIME",
+                                "notes": null
+                            },
+                            "sets": 1,
+                            "reps": 8,
+                            "seconds": 600,
+                            "loadKg": 0.0,
+                            "restSeconds": 0,
+                            "repRestSeconds": 0
+                        },
+                        {
+                            "exercise": {
+                                "name": "Scap pull-ups",
+                                "category": "PULLING",
+                                "metric": "REPS",
+                                "notes": null
+                            },
+                            "sets": 2,
+                            "reps": 8,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 60,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Max hangs",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Half-crimp hang",
+                                "category": "FINGERS",
+                                "metric": "WEIGHTED_TIME",
+                                "notes": "20 mm edge"
+                            },
+                            "sets": 6,
+                            "reps": 8,
+                            "seconds": 10,
+                            "loadKg": 5.0,
+                            "restSeconds": 180,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Limit bouldering",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Limit boulders",
+                                "category": "CLIMBING",
+                                "metric": "REPS",
+                                "notes": "Count attempts as reps"
+                            },
+                            "sets": 4,
+                            "reps": 4,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 180,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Power endurance 4×4",
+            "description": "Four problems back to back, four rounds. Pick grades you flash on a good day.",
+            "blocks": [
+                {
+                    "name": "Warm-up",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Easy traversing",
+                                "category": "CLIMBING",
+                                "metric": "TIME",
+                                "notes": null
+                            },
+                            "sets": 1,
+                            "reps": 8,
+                            "seconds": 600,
+                            "loadKg": 0.0,
+                            "restSeconds": 0,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "4×4",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "4×4 circuit",
+                                "category": "CLIMBING",
+                                "metric": "REPS",
+                                "notes": "Four problems back to back"
+                            },
+                            "sets": 4,
+                            "reps": 4,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 240,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Cool-down",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Push-ups",
+                                "category": "ANTAGONIST",
+                                "metric": "REPS",
+                                "notes": null
+                            },
+                            "sets": 3,
+                            "reps": 12,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 60,
+                            "repRestSeconds": 0
+                        },
+                        {
+                            "exercise": {
+                                "name": "Forearm stretch",
+                                "category": "MOBILITY",
+                                "metric": "TIME",
+                                "notes": null
+                            },
+                            "sets": 2,
+                            "reps": 8,
+                            "seconds": 60,
+                            "loadKg": 0.0,
+                            "restSeconds": 0,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Strength day",
+            "description": "Pulling, core and antagonists for the days off the wall.",
+            "blocks": [
+                {
+                    "name": "Pulling",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Weighted pull-ups",
+                                "category": "PULLING",
+                                "metric": "WEIGHTED_REPS",
+                                "notes": null
+                            },
+                            "sets": 5,
+                            "reps": 5,
+                            "seconds": 10,
+                            "loadKg": 10.0,
+                            "restSeconds": 180,
+                            "repRestSeconds": 0
+                        },
+                        {
+                            "exercise": {
+                                "name": "Front lever tucks",
+                                "category": "CORE",
+                                "metric": "TIME",
+                                "notes": null
+                            },
+                            "sets": 4,
+                            "reps": 8,
+                            "seconds": 8,
+                            "loadKg": 0.0,
+                            "restSeconds": 120,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Core",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Hanging leg raises",
+                                "category": "CORE",
+                                "metric": "REPS",
+                                "notes": null
+                            },
+                            "sets": 3,
+                            "reps": 10,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 90,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Antagonists",
+                    "items": [
+                        {
+                            "exercise": {
+                                "name": "Dips",
+                                "category": "ANTAGONIST",
+                                "metric": "WEIGHTED_REPS",
+                                "notes": null
+                            },
+                            "sets": 3,
+                            "reps": 8,
+                            "seconds": 10,
+                            "loadKg": 0.0,
+                            "restSeconds": 120,
+                            "repRestSeconds": 0
+                        },
+                        {
+                            "exercise": {
+                                "name": "Reverse wrist curls",
+                                "category": "ANTAGONIST",
+                                "metric": "WEIGHTED_REPS",
+                                "notes": null
+                            },
+                            "sets": 3,
+                            "reps": 15,
+                            "seconds": 10,
+                            "loadKg": 5.0,
+                            "restSeconds": 60,
+                            "repRestSeconds": 0
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "climbs": [
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "6B",
+            "style": "FLASH",
+            "attempts": 1,
+            "venue": "GYM",
+            "date": "2026-09-09",
+            "loggedAt": 1791200820000,
+            "name": "Green slab",
+            "place": "Block Lab",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Slab",
+            "problem": "Green slab",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "6C",
+            "style": "REDPOINT",
+            "attempts": 4,
+            "venue": "GYM",
+            "date": "2026-09-09",
+            "loggedAt": 1791200880000,
+            "name": "Pinch roof",
+            "place": "Block Lab",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Cave",
+            "problem": "Pinch roof",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "7A",
+            "style": "ATTEMPT",
+            "attempts": 6,
+            "venue": "GYM",
+            "date": "2026-09-09",
+            "loggedAt": 1791200940000,
+            "name": "Yellow dyno",
+            "place": "Block Lab",
+            "notes": "Missing the left foot.",
+            "placeType": "GYM",
+            "area": "Comp wall",
+            "problem": "Yellow dyno",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "ROUTE",
+            "gradeScale": "FRENCH",
+            "grade": "6b+",
+            "style": "ONSIGHT",
+            "attempts": 1,
+            "venue": "CRAG",
+            "date": "2026-09-16",
+            "loggedAt": 1791201000000,
+            "name": "Diedro",
+            "place": "Arco",
+            "notes": null,
+            "placeType": "CRAG",
+            "area": "Policromuro",
+            "problem": "Diedro",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "ROUTE",
+            "gradeScale": "FRENCH",
+            "grade": "7a",
+            "style": "REDPOINT",
+            "attempts": 3,
+            "venue": "CRAG",
+            "date": "2026-09-16",
+            "loggedAt": 1791201060000,
+            "name": "Pilastro",
+            "place": "Arco",
+            "notes": "Clipped the chains on the third go.",
+            "placeType": "CRAG",
+            "area": "Policromuro",
+            "problem": "Pilastro",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "ROUTE",
+            "gradeScale": "FRENCH",
+            "grade": "6c",
+            "style": "FLASH",
+            "attempts": 1,
+            "venue": "CRAG",
+            "date": "2026-09-16",
+            "loggedAt": 1791201120000,
+            "name": null,
+            "place": "Arco",
+            "notes": null,
+            "placeType": "CRAG",
+            "area": null,
+            "problem": null,
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "6C+",
+            "style": "FLASH",
+            "attempts": 1,
+            "venue": "GYM",
+            "date": "2026-09-23",
+            "loggedAt": 1791201180000,
+            "name": "Blue crimps",
+            "place": "Block Lab",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Cave",
+            "problem": "Blue crimps",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "7A",
+            "style": "REDPOINT",
+            "attempts": 5,
+            "venue": "GYM",
+            "date": "2026-09-23",
+            "loggedAt": 1791201240000,
+            "name": "Yellow dyno",
+            "place": "Block Lab",
+            "notes": "Left foot high, then commit.",
+            "placeType": "GYM",
+            "area": "Comp wall",
+            "problem": "Yellow dyno",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "6B+",
+            "style": "FLASH",
+            "attempts": 1,
+            "venue": "GYM",
+            "date": "2026-09-30",
+            "loggedAt": 1791201300000,
+            "name": null,
+            "place": "The Arch",
+            "notes": null,
+            "placeType": "GYM",
+            "area": null,
+            "problem": null,
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "7A+",
+            "style": "ATTEMPT",
+            "attempts": 8,
+            "venue": "GYM",
+            "date": "2026-09-30",
+            "loggedAt": 1791201360000,
+            "name": "Overhang project",
+            "place": "The Arch",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Overhang",
+            "problem": "Overhang project",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "ROUTE",
+            "gradeScale": "FRENCH",
+            "grade": "6c+",
+            "style": "ONSIGHT",
+            "attempts": 1,
+            "venue": "GYM",
+            "date": "2026-10-03",
+            "loggedAt": 1791201420000,
+            "name": "Red arete",
+            "place": "The Arch",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Lead wall",
+            "problem": "Red arete",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "ROUTE",
+            "gradeScale": "FRENCH",
+            "grade": "7a+",
+            "style": "ATTEMPT",
+            "attempts": 2,
+            "venue": "GYM",
+            "date": "2026-10-03",
+            "loggedAt": 1791201480000,
+            "name": "Black roof",
+            "place": "The Arch",
+            "notes": "Pumped out at the third bolt.",
+            "placeType": "GYM",
+            "area": "Lead wall",
+            "problem": "Black roof",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        },
+        {
+            "discipline": "BOULDER",
+            "gradeScale": "FONT",
+            "grade": "6C",
+            "style": "FLASH",
+            "attempts": 1,
+            "venue": "GYM",
+            "date": "2026-10-05",
+            "loggedAt": 1791201540000,
+            "name": "Purple sloper",
+            "place": "Block Lab",
+            "notes": null,
+            "placeType": "GYM",
+            "area": "Slab",
+            "problem": "Purple sloper",
+            "angle": null,
+            "effort": null,
+            "gradeIndex": null,
+            "gradeColour": null,
+            "image": null
+        }
+    ],
+    "places": [
+        {
+            "name": "Arco",
+            "type": "CRAG",
+            "location": "Trentino",
+            "boulderScale": null,
+            "routeScale": null,
+            "defaultAngle": null,
+            "notes": null,
+            "areas": [
+                {
+                    "name": "Policromuro",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                },
+                {
+                    "name": "Massi di Prabi",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                }
+            ],
+            "problems": [
+                {
+                    "name": "Diedro",
+                    "discipline": "ROUTE",
+                    "gradeScale": "FRENCH",
+                    "grade": "6b+",
+                    "area": "Policromuro",
+                    "tape": null,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Pilastro",
+                    "discipline": "ROUTE",
+                    "gradeScale": "FRENCH",
+                    "grade": "7a",
+                    "area": "Policromuro",
+                    "tape": null,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                }
+            ],
+            "localScale": null,
+            "favourite": false,
+            "latitude": null,
+            "longitude": null,
+            "address": null
+        },
+        {
+            "name": "Block Lab",
+            "type": "GYM",
+            "location": "Lisbon",
+            "boulderScale": null,
+            "routeScale": null,
+            "defaultAngle": null,
+            "notes": null,
+            "areas": [
+                {
+                    "name": "Cave",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                },
+                {
+                    "name": "Slab",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                },
+                {
+                    "name": "Comp wall",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                }
+            ],
+            "problems": [
+                {
+                    "name": "Green slab",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "6B",
+                    "area": "Slab",
+                    "tape": 3,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Pinch roof",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "6C",
+                    "area": "Cave",
+                    "tape": null,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Yellow dyno",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "7A",
+                    "area": "Comp wall",
+                    "tape": 2,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Blue crimps",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "6C+",
+                    "area": "Cave",
+                    "tape": 4,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Purple sloper",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "6C",
+                    "area": "Slab",
+                    "tape": 5,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                }
+            ],
+            "localScale": null,
+            "favourite": false,
+            "latitude": null,
+            "longitude": null,
+            "address": null
+        },
+        {
+            "name": "The Arch",
+            "type": "GYM",
+            "location": "London",
+            "boulderScale": null,
+            "routeScale": null,
+            "defaultAngle": null,
+            "notes": null,
+            "areas": [
+                {
+                    "name": "Overhang",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                },
+                {
+                    "name": "Lead wall",
+                    "angle": null,
+                    "resetDate": null,
+                    "image": null
+                }
+            ],
+            "problems": [
+                {
+                    "name": "Overhang project",
+                    "discipline": "BOULDER",
+                    "gradeScale": "FONT",
+                    "grade": "7A+",
+                    "area": "Overhang",
+                    "tape": null,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Red arete",
+                    "discipline": "ROUTE",
+                    "gradeScale": "FRENCH",
+                    "grade": "6c+",
+                    "area": "Lead wall",
+                    "tape": 0,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                },
+                {
+                    "name": "Black roof",
+                    "discipline": "ROUTE",
+                    "gradeScale": "FRENCH",
+                    "grade": "7a+",
+                    "area": "Lead wall",
+                    "tape": null,
+                    "setDate": "2026-09-05",
+                    "retired": false,
+                    "notes": null,
+                    "gradeIndex": null,
+                    "gradeColour": null
+                }
+            ],
+            "localScale": null,
+            "favourite": false,
+            "latitude": null,
+            "longitude": null,
+            "address": null
+        }
+    ],
+    "bodyMeasurements": [
+        {
+            "type": "WEIGHT",
+            "value": 73.4,
+            "date": "2026-08-26",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "HEIGHT",
+            "value": 178.0,
+            "date": "2026-08-26",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WINGSPAN",
+            "value": 184.0,
+            "date": "2026-08-26",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "STANDING_REACH",
+            "value": 231.0,
+            "date": "2026-08-26",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "BODY_FAT",
+            "value": 12.5,
+            "date": "2026-08-26",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 73.1,
+            "date": "2026-09-02",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 72.8,
+            "date": "2026-09-09",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 72.9,
+            "date": "2026-09-16",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 72.5,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "FOREARM",
+            "value": 29.5,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "FOREARM_RIGHT",
+            "value": 30.5,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "BICEP_RIGHT",
+            "value": 33.5,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "BICEP",
+            "value": 33.0,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "CHEST",
+            "value": 98.0,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WAIST",
+            "value": 78.0,
+            "date": "2026-09-23",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 72.2,
+            "date": "2026-09-30",
+            "loggedAt": 1791201600000
+        },
+        {
+            "type": "WEIGHT",
+            "value": 72.4,
+            "date": "2026-10-04",
+            "loggedAt": 1791201600000
+        }
+    ],
+    "records": [
+        {
+            "exercise": {
+                "name": "4×4 circuit",
+                "category": "CLIMBING",
+                "metric": "REPS",
+                "notes": "Four problems back to back"
+            },
+            "date": "2024-10-04",
+            "reps": 5,
+            "seconds": null,
+            "loadKg": 12.5,
+            "notes": null,
+            "loggedAt": 2
+        },
+        {
+            "exercise": {
+                "name": "Half-crimp hang",
+                "category": "FINGERS",
+                "metric": "WEIGHTED_TIME",
+                "notes": "20 mm edge"
+            },
+            "date": "2026-09-05",
+            "reps": null,
+            "seconds": 10,
+            "loadKg": 12.5,
+            "notes": null,
+            "loggedAt": 1791201600000
+        },
+        {
+            "exercise": {
+                "name": "Weighted pull-ups",
+                "category": "PULLING",
+                "metric": "WEIGHTED_REPS",
+                "notes": null
+            },
+            "date": "2026-09-14",
+            "reps": 5,
+            "seconds": null,
+            "loadKg": 20.0,
+            "notes": null,
+            "loggedAt": 1791201600003
+        },
+        {
+            "exercise": {
+                "name": "Half-crimp hang",
+                "category": "FINGERS",
+                "metric": "WEIGHTED_TIME",
+                "notes": "20 mm edge"
+            },
+            "date": "2026-09-19",
+            "reps": null,
+            "seconds": 10,
+            "loadKg": 15.0,
+            "notes": null,
+            "loggedAt": 1791201600001
+        },
+        {
+            "exercise": {
+                "name": "Front lever tucks",
+                "category": "CORE",
+                "metric": "TIME",
+                "notes": null
+            },
+            "date": "2026-09-26",
+            "reps": null,
+            "seconds": 14,
+            "loadKg": null,
+            "notes": null,
+            "loggedAt": 1791201600005
+        },
+        {
+            "exercise": {
+                "name": "Weighted pull-ups",
+                "category": "PULLING",
+                "metric": "WEIGHTED_REPS",
+                "notes": null
+            },
+            "date": "2026-09-29",
+            "reps": 5,
+            "seconds": null,
+            "loadKg": 22.5,
+            "notes": null,
+            "loggedAt": 1791201600004
+        },
+        {
+            "exercise": {
+                "name": "Half-crimp hang",
+                "category": "FINGERS",
+                "metric": "WEIGHTED_TIME",
+                "notes": "20 mm edge"
+            },
+            "date": "2026-10-02",
+            "reps": null,
+            "seconds": 10,
+            "loadKg": 17.5,
+            "notes": null,
+            "loggedAt": 1791201600002
+        }
+    ],
+    "notes": [
+        {
+            "text": "Left finger tweak, easy on crimps",
+            "createdAt": 1,
+            "updatedAt": 1,
+            "pinned": true,
+            "tag": null
+        },
+        {
+            "text": "Felt strong on the board. Warm-up on the 4x4 circuit worked well.",
+            "createdAt": 1790251200002,
+            "updatedAt": 1790251200002,
+            "pinned": false,
+            "tag": "training"
+        },
+        {
+            "text": "Blue at the cave: heel hook on the arete, then match the sloper before going left.",
+            "createdAt": 1790769600001,
+            "updatedAt": 1790769600001,
+            "pinned": false,
+            "tag": "beta"
+        },
+        {
+            "text": "Left ring finger a bit tender after the crimpy session. Open-hand only this week.",
+            "createdAt": 1791028800000,
+            "updatedAt": 1791028800000,
+            "pinned": true,
+            "tag": "injury"
+        }
+    ],
+    "sessions": null
+}

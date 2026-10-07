@@ -1,11 +1,16 @@
 package com.hardtekpt.crux.data.backup
 
+import android.graphics.Bitmap
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.hardtekpt.crux.data.FIXED_CLOCK
+import com.hardtekpt.crux.data.images.AreaImageStore
+import com.hardtekpt.crux.data.local.ClimbMediaEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
+import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -72,6 +77,64 @@ class BackupRepositoryTest {
         val linkedTarget = target.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }
         assertTrue(linkedSource > 0)
         assertEquals(linkedSource, linkedTarget)
+    }
+
+    /**
+     * A file exported by the released v0.1.0 (sample data, a pinned note and a record), kept in
+     * test resources. Backups people already made must keep importing as the app changes.
+     */
+    @Test
+    fun `a backup made by the first release still imports in full`() = runTest {
+        val text = javaClass.getResource("/backups/backup-v0.1.0.json")!!.readText()
+        val db = newDb()
+        val repo = BackupRepository(db, FIXED_CLOCK)
+        val file = repo.parse(text)
+
+        repo.import(file, BackupSection.entries.toSet())
+
+        assertEquals(file.exercises!!.size, db.exerciseDao().count())
+        assertEquals(file.plans!!.size, db.templateDao().count())
+        assertEquals(file.climbs!!.size, db.climbDao().count())
+        assertEquals(file.bodyMeasurements!!.size, db.bodyMeasurementDao().count())
+        assertEquals(file.records!!.size, db.exerciseRecordDao().getAll().size)
+        assertEquals(file.notes!!.size, db.noteDao().getAll().size)
+        assertTrue(db.noteDao().getAll().single { it.text == "Left finger tweak, easy on crimps" }.pinned)
+        assertEquals(12.5, db.exerciseRecordDao().getAll().single { it.createdAtMillis == 2L }.loadKg!!, 0.0)
+
+        // 0.1.0 had one kind per place; each becomes a place with one section of that kind.
+        val places = db.placeDao().getPlaces()
+        assertEquals(file.places!!.size, places.size)
+        places.forEach { place -> assertEquals(listOf(place.type), db.placeDao().getSections(place.id).map { it.type }) }
+        val linked = db.climbDao().getAll().count { it.problemId != null && it.sectionId != null }
+        assertEquals(file.climbs!!.count { it.problem != null }, linked)
+    }
+
+    @Test
+    fun `climb photos and wall images travel inside the backup`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val images = AreaImageStore(context)
+        val jpeg = ByteArrayOutputStream().also { out ->
+            Bitmap.createBitmap(8, 6, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }.toByteArray()
+        images.file("climb.jpg").writeBytes(jpeg)
+        images.file("wall.jpg").writeBytes(jpeg)
+
+        val source = newDb()
+        StarterDataSeeder(FIXED_CLOCK).seed(source, includeSampleData = true)
+        val climb = source.climbDao().getAll().first()
+        source.climbMediaDao().insert(ClimbMediaEntity(climbId = climb.id, kind = MediaKind.IMAGE, path = "climb.jpg", createdAtMillis = 1))
+        val wall = source.placeDao().getAllAreas().first()
+        source.placeDao().updateArea(wall.copy(imagePath = "wall.jpg"))
+        val text = BackupRepository({ source }, FIXED_CLOCK, images).export(BackupSection.entries.toSet())
+
+        val target = newDb()
+        val restore = BackupRepository({ target }, FIXED_CLOCK, images)
+        restore.import(restore.parse(text), BackupSection.entries.toSet())
+
+        val photo = target.climbMediaDao().getAll().single { it.kind == MediaKind.IMAGE }
+        assertTrue(images.file(photo.path).readBytes().contentEquals(jpeg))
+        val wallImage = target.placeDao().getAllAreas().single { it.name == wall.name }.imagePath!!
+        assertTrue(images.file(wallImage).readBytes().contentEquals(jpeg))
     }
 
     @Test
