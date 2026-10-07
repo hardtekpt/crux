@@ -11,13 +11,8 @@ data class Place(
     val name: String,
     val type: PlaceType,
     val location: String?,
-    /** Null means "use my settings" for that discipline. */
-    val boulderScale: GradeScale?,
-    val routeScale: GradeScale?,
     val defaultAngle: Int?,
     val notes: String?,
-    /** The place's own grades, used where a discipline's scale is local. */
-    val localScale: LocalScale? = null,
     /** Shown as a quick pick on Log climb. */
     val favourite: Boolean = false,
     /** Where it is on the map, if the climber set it. */
@@ -38,17 +33,40 @@ data class Place(
     /** The kind of climbing an area is: its section's, or the place's main kind. */
     fun typeOf(area: Area?): PlaceType = sectionOf(area)?.type ?: area?.type?.takeIf { it in types } ?: type
 
+    /** A section by id, or the place's first. */
+    fun section(id: Long?): Section? = sections.firstOrNull { it.id == id } ?: sections.firstOrNull()
+
+    /** The scale a section grades a discipline in, or null for the climber's settings. */
+    fun scaleFor(discipline: Discipline, sectionId: Long?): GradeScale? = section(sectionId)?.scaleFor(discipline)
+
+    /** The grades climbs in a section pick from, or null to use the climber's settings. */
+    fun systemFor(discipline: Discipline, sectionId: Long?): GradeSystem? = section(sectionId)?.systemFor(discipline)
+}
+
+/**
+ * One named part of a place: a kind and a name, like Board "Moonboard", and the grades climbs
+ * there use. Null scales use the climber's settings.
+ */
+data class Section(
+    val id: Long,
+    val placeId: Long,
+    val type: PlaceType,
+    val name: String,
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    /** The section's own grades, used where a discipline's scale is local. */
+    val localScale: LocalScale? = null,
+) {
+    /** Boards only hold boulders. */
+    val disciplines: List<Discipline> get() = if (type == PlaceType.BOARD) listOf(Discipline.BOULDER) else Discipline.entries
+
     fun scaleFor(discipline: Discipline): GradeScale? = when (discipline) {
         Discipline.BOULDER -> boulderScale
         Discipline.ROUTE -> routeScale
     }
 
-    /** The grades climbs here pick from, or null to use the climber's settings. */
     fun systemFor(discipline: Discipline): GradeSystem? = scaleFor(discipline)?.let { GradeSystem(it, localScale.takeIf { _ -> it.isLocal }) }
 }
-
-/** One named part of a place: a kind and a name, like Board "Moonboard". */
-data class Section(val id: Long, val placeId: Long, val type: PlaceType, val name: String)
 
 /** A point on the map and the address or place name found for it. */
 data class MapLocation(val latitude: Double, val longitude: Double, val address: String?)

@@ -137,12 +137,18 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         val old = places.value.find { it.id == id }?.sections.orEmpty()
         val sections = input.sections.map { s ->
             val sectionId = s.id.takeIf { sid -> old.any { it.id == sid } } ?: nextId++
-            com.hardtekpt.crux.data.model.Section(sectionId, id, s.type, s.name.ifBlank { s.type.label })
+            com.hardtekpt.crux.data.model.Section(sectionId, id, s.type, s.name.ifBlank { s.type.label }, s.boulderScale, s.routeScale, s.localScale)
         }
         val kinds = sections.map { it.type }.distinct()
         val place = Place(
-            id, input.name, kinds.first(), input.location, input.boulderScale, input.routeScale, input.defaultAngle, input.notes,
-            input.localScale, types = kinds, sections = sections,
+            id,
+            input.name,
+            kinds.first(),
+            input.location,
+            input.defaultAngle,
+            input.notes,
+            types = kinds,
+            sections = sections,
         )
         places.value = places.value.filterNot { it.id == id } + place
         return id

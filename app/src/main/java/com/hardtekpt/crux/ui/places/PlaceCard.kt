@@ -39,6 +39,7 @@ import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.ui.components.areaImageFile
 import com.hardtekpt.crux.ui.components.rememberLocalImage
+import com.hardtekpt.crux.ui.gradesLabel
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -137,6 +138,13 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                         ) {
                             Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(16.dp))
                             Text(section.name, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
+                            Text(
+                                section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.onSurfaceVariant,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("module_grades_${section.name}"),
+                            )
                         }
                     }
                 }

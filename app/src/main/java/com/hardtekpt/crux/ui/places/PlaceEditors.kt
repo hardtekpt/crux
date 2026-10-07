@@ -152,6 +152,12 @@ private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean,
             helper = "Name, optional: \"${section.type.label}\" if left blank",
             modifier = Modifier.testTag("section_name_$index"),
         )
+        // The grades climbs here use; boards hold boulders only.
+        val tag = if (index == 0) "" else "_$index"
+        ScaleChoice("Boulder grades", Discipline.BOULDER, section.boulderScale, tag) { scale -> onChange { it.copy(boulderScale = scale) } }
+        if (section.type != PlaceType.BOARD) {
+            ScaleChoice("Route grades", Discipline.ROUTE, section.routeScale, tag) { scale -> onChange { it.copy(routeScale = scale) } }
+        }
     }
 }
 
@@ -161,14 +167,8 @@ data class PlaceDraft(
     /** The named parts of the place, in order: a kind and a name each. At least one. */
     val sections: List<SectionDraft> = listOf(SectionDraft(type = PlaceType.GYM)),
     val location: String = "",
-    /** Null = use my settings. */
-    val boulderScale: GradeScale? = null,
-    val routeScale: GradeScale? = null,
     val defaultAngle: Int = 40,
     val notes: String = "",
-    /** The place's own grades; kept while editing even if no discipline uses them. */
-    val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
-    val localError: String? = null,
     val favourite: Boolean = false,
     val mapLocation: MapLocation? = null,
     val nameError: String? = null,
@@ -183,7 +183,6 @@ data class PlaceDraft(
 
     /** Only a board: no routes, and "where it is" rather than a city. */
     val onlyBoard: Boolean get() = types == listOf(PlaceType.BOARD)
-    val usesLocal: Boolean get() = boulderScale?.isLocal == true || (!onlyBoard && routeScale?.isLocal == true)
 
     fun addSection(type: PlaceType) = copy(sections = sections + SectionDraft(type = type, key = (sections.maxOfOrNull { it.key } ?: 0) + 1))
     fun updateSection(key: Int, change: (SectionDraft) -> SectionDraft) = copy(sections = sections.map { if (it.key == key) change(it) else it })
@@ -193,7 +192,21 @@ data class PlaceDraft(
 }
 
 /** One section in the place form. [key] tells rows apart before they have an id. */
-data class SectionDraft(val id: Long = 0, val type: PlaceType, val name: String = "", val key: Int = 0)
+data class SectionDraft(
+    val id: Long = 0,
+    val type: PlaceType,
+    val name: String = "",
+    val key: Int = 0,
+    /** Null = use my settings. */
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    /** This part's own grades; kept while editing even if no discipline uses them. */
+    val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
+    val localError: String? = null,
+) {
+    /** Boards hold boulders only. */
+    val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
+}
 
 @HiltViewModel
 class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: PlaceRepository) : ViewModel() {
@@ -209,11 +222,20 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                         it.copy(
                             name = p.name,
                             sections = p.sections.ifEmpty { p.types.map { t -> com.hardtekpt.crux.data.model.Section(0, p.id, t, t.label) } }
-                                .mapIndexed { index, section -> SectionDraft(section.id, section.type, section.name, index) },
+                                .mapIndexed { index, section ->
+                                    SectionDraft(
+                                        id = section.id,
+                                        type = section.type,
+                                        name = section.name,
+                                        key = index,
+                                        boulderScale = section.boulderScale,
+                                        routeScale = section.routeScale,
+                                        localScale = section.localScale ?: LocalScale.DEFAULT_COLOURS,
+                                    )
+                                },
                             location = p.location.orEmpty(),
-                            boulderScale = p.boulderScale, routeScale = p.routeScale,
-                            defaultAngle = p.defaultAngle ?: 40, notes = p.notes.orEmpty(),
-                            localScale = p.localScale ?: LocalScale.DEFAULT_COLOURS,
+                            defaultAngle = p.defaultAngle ?: 40,
+                            notes = p.notes.orEmpty(),
                             favourite = p.favourite,
                             mapLocation = p.mapLocation,
                         )
@@ -223,7 +245,9 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
         }
     }
 
-    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { change(it).copy(nameError = null, localError = null) }
+    fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { d ->
+        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null) }) }
+    }
 
     fun save() {
         val d = _draft.value
@@ -232,16 +256,20 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
             d.name.trim().length > MAX_NAME -> "Keep the name under $MAX_NAME characters"
             else -> null
         }
-        val local = d.localScale.copy(grades = d.localScale.grades.map { it.copy(name = it.name.trim()) })
-        val localError = when {
-            !d.usesLocal -> null
-            local.grades.size < 2 -> "A local scale needs at least two grades"
-            local.grades.any { it.name.isBlank() } -> "Name every grade"
-            local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
-            else -> null
+        // Each part with local grades needs a usable list.
+        val sections = d.sections.map { section ->
+            val local = section.localScale.copy(grades = section.localScale.grades.map { it.copy(name = it.name.trim()) })
+            val localError = when {
+                !section.usesLocal -> null
+                local.grades.size < 2 -> "A local scale needs at least two grades"
+                local.grades.any { it.name.isBlank() } -> "Name every grade"
+                local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
+                else -> null
+            }
+            section.copy(localScale = local, localError = localError)
         }
-        if (error != null || localError != null) {
-            _draft.update { it.copy(nameError = error, localError = localError) }
+        if (error != null || sections.any { it.localError != null }) {
+            _draft.update { it.copy(nameError = error, sections = sections) }
             return
         }
         viewModelScope.launch {
@@ -249,13 +277,19 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                 PlaceInput(
                     id = d.id,
                     name = d.name,
-                    sections = d.sections.map { SectionInput(it.id, it.type, it.name) },
+                    sections = sections.map {
+                        SectionInput(
+                            id = it.id,
+                            type = it.type,
+                            name = it.name,
+                            boulderScale = it.boulderScale,
+                            routeScale = it.routeScale,
+                            localScale = it.localScale.takeIf { _ -> it.usesLocal },
+                        )
+                    },
                     location = d.location,
-                    boulderScale = d.boulderScale,
-                    routeScale = d.routeScale,
                     defaultAngle = d.defaultAngle.takeIf { d.hasBoard },
                     notes = d.notes,
-                    localScale = local.takeIf { d.usesLocal },
                     favourite = d.favourite,
                     mapLocation = d.mapLocation,
                 ),
@@ -329,15 +363,23 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                 )
             }
 
-            FormSection("What's here", "Each part of the place, like a main gym, a spray wall and a Moonboard") {
+            FormSection("What's here", "Each part of the place, like a main gym, a spray wall and a Moonboard, and the grades it uses") {
                 draft.sections.forEachIndexed { index, section ->
+                    val change = { change: (SectionDraft) -> SectionDraft -> viewModel.update { it.updateSection(section.key, change) } }
                     SectionEditor(
                         section = section,
                         index = index,
                         removable = draft.sections.size > 1,
-                        onChange = { change -> viewModel.update { it.updateSection(section.key, change) } },
+                        onChange = change,
                         onRemove = { viewModel.update { it.removeSection(section.key) } },
                     )
+                    if (section.usesLocal) {
+                        LocalScaleEditor(
+                            scale = section.localScale,
+                            error = section.localError,
+                            onChange = { scale -> change { it.copy(localScale = scale) } },
+                        )
+                    }
                 }
                 // Add another part, starting from a kind.
                 Row(
@@ -378,23 +420,6 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                     placeName = draft.name,
                     onChange = { loc -> viewModel.update { it.copy(mapLocation = loc) } },
                 )
-            }
-
-            FormSection("Grades", "Used for climbs logged here") {
-                CruxCard(fill = CruxCardFill.Low) {
-                    ScaleChoice("Boulders", Discipline.BOULDER, draft.boulderScale) { s -> viewModel.update { it.copy(boulderScale = s) } }
-                    if (!draft.onlyBoard) {
-                        HorizontalDivider(Modifier.padding(vertical = space.s1), color = MaterialTheme.colorScheme.outlineVariant)
-                        ScaleChoice("Routes", Discipline.ROUTE, draft.routeScale) { s -> viewModel.update { it.copy(routeScale = s) } }
-                    }
-                }
-                if (draft.usesLocal) {
-                    LocalScaleEditor(
-                        scale = draft.localScale,
-                        error = draft.localError,
-                        onChange = { scale -> viewModel.update { it.copy(localScale = scale) } },
-                    )
-                }
             }
 
             FormSection("Notes · optional") {
@@ -522,7 +547,7 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
  * choices. Keeps the section to two quiet lines instead of rows of chips.
  */
 @Composable
-private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, onSelect: (GradeScale?) -> Unit) {
+private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, tagSuffix: String = "", onSelect: (GradeScale?) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val options: List<Pair<GradeScale?, String>> =
         listOf<Pair<GradeScale?, String>>(null to "My settings") +
@@ -538,7 +563,7 @@ private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeSc
                 .clip(MaterialTheme.shapes.small)
                 .clickable(onClickLabel = "Change $label grades") { open = true }
                 .padding(vertical = CruxTheme.space.s1)
-                .testTag("scale_${discipline.name}"),
+                .testTag("scale_${discipline.name}$tagSuffix"),
         ) {
             Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Text(current, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
@@ -555,7 +580,7 @@ private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeSc
                             onSelect(scale)
                             open = false
                         },
-                        modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}" else "scale_option_$name"),
+                        modifier = Modifier.testTag(if (scale?.isLocal == true) "local_${discipline.name}$tagSuffix" else "scale_option_$name"),
                     )
                 }
             }
@@ -819,9 +844,9 @@ class ProblemEditorViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settings = preferences.gradeScales.first()
-            val local = repository.getPlace(placeId)?.localScale
-            _draft.update { it.copy(local = local) }
             val problem = problemId.takeIf { it != 0L }?.let { repository.getProblem(it) }
+            val local = sectionOf(problem?.areaId)?.localScale
+            _draft.update { it.copy(local = local) }
             if (problem != null) {
                 _draft.update {
                     it.copy(
@@ -837,8 +862,15 @@ class ProblemEditorViewModel @Inject constructor(
         }
     }
 
-    /** The place's scale for a discipline, else the climber's setting. */
-    private suspend fun scaleFor(discipline: Discipline): GradeScale = repository.getPlace(placeId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
+    /** The part of the place a wall is in (the first part without a wall). */
+    private suspend fun sectionOf(areaId: Long?): com.hardtekpt.crux.data.model.Section? {
+        val detail = repository.observePlaceDetail(placeId).first() ?: return null
+        return detail.place.sectionOf(detail.areas.firstOrNull { it.id == areaId })
+    }
+
+    /** That part's scale for a discipline, else the climber's setting. */
+    private suspend fun scaleFor(discipline: Discipline): GradeScale =
+        sectionOf(_draft.value.areaId)?.scaleFor(discipline) ?: settings.forDiscipline(discipline)
 
     fun setDiscipline(discipline: Discipline) {
         viewModelScope.launch {
@@ -847,7 +879,26 @@ class ProblemEditorViewModel @Inject constructor(
         }
     }
 
-    fun update(change: (ProblemDraft) -> ProblemDraft) = _draft.update { change(it).copy(nameError = null) }
+    fun update(change: (ProblemDraft) -> ProblemDraft) {
+        val before = _draft.value.areaId
+        _draft.update { change(it).copy(nameError = null) }
+        // A wall in another part of the place can grade differently.
+        if (_draft.value.areaId != before && _draft.value.id == 0L) {
+            viewModelScope.launch {
+                val scale = scaleFor(_draft.value.discipline)
+                val local = sectionOf(_draft.value.areaId)?.localScale
+                _draft.update { d ->
+                    if (d.gradeScale == scale &&
+                        d.local == local
+                    ) {
+                        d
+                    } else {
+                        d.copy(gradeScale = scale, local = local).let { it.copy(gradeIndex = it.system.defaultIndex) }
+                    }
+                }
+            }
+        }
+    }
 
     fun save() {
         val d = _draft.value

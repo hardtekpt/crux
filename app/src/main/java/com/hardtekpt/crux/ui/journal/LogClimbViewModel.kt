@@ -169,7 +169,7 @@ class LogClimbViewModel @Inject constructor(
                 )
             }
             // Local grades need the place's list to show the strip.
-            climb.placeId?.let { placeRepository.getPlace(it) }?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
+            climb.placeId?.let { placeRepository.getPlace(it) }?.section(climb.sectionId)?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
             return
         }
         val problem = routeProblemId.takeIf { it != 0L }?.let { placeRepository.getProblem(it) }
@@ -180,14 +180,16 @@ class LogClimbViewModel @Inject constructor(
         placeId?.let { applyPlace(it) }
         val sessionSection = running?.sectionId?.takeIf { routeSectionId == 0L && running.placeId == placeId }
         if (sessionSection != null && placeId != null) {
-            placeRepository.getPlace(placeId)?.sections?.firstOrNull { it.id == sessionSection }?.let { section ->
-                _draft.update { it.copy(sectionId = section.id, venue = section.type.venue) }
+            val place = placeRepository.getPlace(placeId)
+            place?.sections?.firstOrNull { it.id == sessionSection }?.let { section ->
+                _draft.update { regrade(it.copy(sectionId = section.id, venue = section.type.venue), place) }
             }
         }
         // Logging from a facility on the place page starts in that facility.
         if (routeSectionId != 0L && placeId != null) {
-            placeRepository.getPlace(placeId)?.sections?.firstOrNull { it.id == routeSectionId }?.let { section ->
-                _draft.update { it.copy(sectionId = section.id, venue = section.type.venue) }
+            val place = placeRepository.getPlace(placeId)
+            place?.sections?.firstOrNull { it.id == routeSectionId }?.let { section ->
+                _draft.update { regrade(it.copy(sectionId = section.id, venue = section.type.venue), place) }
             }
         }
         problem?.let(::pickProblem)
@@ -201,7 +203,8 @@ class LogClimbViewModel @Inject constructor(
         run {
             val place = id?.let { placeRepository.getPlace(it) }
             _draft.update { draft ->
-                val override = place?.scaleFor(draft.discipline)
+                val section = place?.sections?.firstOrNull()
+                val override = section?.scaleFor(draft.discipline)
                 val next = draft.copy(
                     placeId = place?.id,
                     sectionId = place?.sections?.firstOrNull()?.id,
@@ -210,7 +213,7 @@ class LogClimbViewModel @Inject constructor(
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
                     angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
-                    local = place?.localScale,
+                    local = section?.localScale,
                     saveAsProblem = false,
                 )
                 if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
@@ -223,7 +226,7 @@ class LogClimbViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             val id = placeRepository.savePlace(
-                PlaceInput(name = name, types = listOf(type), location = null, boulderScale = null, routeScale = null, defaultAngle = null, notes = null),
+                PlaceInput(name = name, types = listOf(type), location = null, defaultAngle = null, notes = null),
             )
             applyPlace(id)
         }
@@ -236,11 +239,14 @@ class LogClimbViewModel @Inject constructor(
         // At a place with several parts, the wall says which part this was.
         val detail = placeDetail.value
         val section = id?.let { areaId -> detail?.areas?.firstOrNull { a -> a.id == areaId } }?.let { a -> detail?.place?.sectionOf(a) }
-        it.copy(
-            areaId = id,
-            problemId = if (keepProblem) it.problemId else null,
-            sectionId = section?.id ?: it.sectionId,
-            venue = section?.type?.venue ?: it.venue,
+        regrade(
+            it.copy(
+                areaId = id,
+                problemId = if (keepProblem) it.problemId else null,
+                sectionId = section?.id ?: it.sectionId,
+                venue = section?.type?.venue ?: it.venue,
+            ),
+            detail?.place,
         )
     }
 
@@ -250,12 +256,26 @@ class LogClimbViewModel @Inject constructor(
         val section = detail?.place?.sections?.firstOrNull { s -> s.id == sectionId } ?: return@update it
         val area = it.areaId?.let { id -> detail.areas.firstOrNull { a -> a.id == id } }
         val keepArea = area != null && detail.place.sectionOf(area)?.id == sectionId
-        it.copy(
-            sectionId = sectionId,
-            venue = section.type.venue,
-            areaId = if (keepArea) it.areaId else null,
-            problemId = if (keepArea) it.problemId else null,
+        regrade(
+            it.copy(
+                sectionId = sectionId,
+                venue = section.type.venue,
+                areaId = if (keepArea) it.areaId else null,
+                problemId = if (keepArea) it.problemId else null,
+            ),
+            detail.place,
         )
+    }
+
+    /**
+     * Each part of a place grades in its own scale: after the part changes, the grades follow it.
+     * A climb picked from a problem keeps the problem's grade.
+     */
+    private fun regrade(draft: LogClimbDraft, place: com.hardtekpt.crux.data.model.Place?): LogClimbDraft {
+        if (place == null || draft.problemId != null) return draft
+        val section = place.section(draft.sectionId)
+        val next = draft.copy(scaleOverride = section?.scaleFor(draft.discipline), local = section?.localScale)
+        return if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
     }
 
     /** Fills the form from a problem; everything stays editable. */
@@ -287,7 +307,7 @@ class LogClimbViewModel @Inject constructor(
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
         val style = draft.style.takeIf { it in AscentStyle.forDiscipline(discipline) } ?: AscentStyle.FLASH
-        val override = placeDetail.value?.place?.scaleFor(discipline)
+        val override = placeDetail.value?.place?.scaleFor(discipline, draft.sectionId)
         val next = draft.copy(discipline = discipline, style = style, scaleOverride = override, problemId = null)
         next.copy(gradeIndex = next.system.defaultIndex)
     }

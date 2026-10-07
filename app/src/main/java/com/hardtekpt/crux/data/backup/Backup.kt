@@ -166,7 +166,14 @@ data class AreaDto(
 
 /** One named part of a place. */
 @Serializable
-data class SectionDto(val type: PlaceType, val name: String)
+data class SectionDto(
+    val type: PlaceType,
+    val name: String,
+    /** The grades this part uses; older backups graded the whole place and omit these. */
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    val localScale: LocalScale? = null,
+)
 
 @Serializable
 data class ProblemDto(
@@ -318,7 +325,7 @@ class BackupRepository(
                             )
                         },
                         problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
-                    ).copy(sections = placeSections.map { SectionDto(it.type, it.name) })
+                    ).copy(sections = placeSections.map { SectionDto(it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) })
                 }
             } else {
                 null
@@ -453,12 +460,9 @@ class BackupRepository(
                         name = dto.name.trim(),
                         type = dto.type,
                         location = dto.location,
-                        boulderScale = dto.boulderScale,
-                        routeScale = dto.routeScale,
                         defaultAngle = dto.defaultAngle,
                         notes = dto.notes,
                         createdAtMillis = now,
-                        localScale = dto.localScale?.encode(),
                         favourite = dto.favourite,
                         latitude = dto.latitude,
                         longitude = dto.longitude,
@@ -470,8 +474,23 @@ class BackupRepository(
                 val sectionDtos = dto.sections.ifEmpty {
                     (listOf(dto.type) + dto.extraTypes.filter { it != dto.type }).distinct().map { SectionDto(it, it.label) }
                 }
+                // Grades: each part's own, or the whole place's from backups made before schema 20.
+                val oldGrades = dto.sections.none { it.boulderScale != null || it.routeScale != null }
                 val sectionIds = sectionDtos.mapIndexed { position, section ->
-                    section to placeDao.insertSection(SectionEntity(placeId = placeId, type = section.type, name = section.name, position = position))
+                    val boulder = if (oldGrades) dto.boulderScale else section.boulderScale
+                    val route = (if (oldGrades) dto.routeScale else section.routeScale).takeIf { section.type != PlaceType.BOARD }
+                    val local = (if (oldGrades) dto.localScale else section.localScale).takeIf { boulder?.isLocal == true || route?.isLocal == true }
+                    section to placeDao.insertSection(
+                        SectionEntity(
+                            placeId = placeId,
+                            type = section.type,
+                            name = section.name,
+                            position = position,
+                            boulderScale = boulder,
+                            routeScale = route,
+                            localScale = local?.encode(),
+                        ),
+                    )
                 }
                 fun sectionFor(name: String?, type: PlaceType?): Long? =
                     sectionIds.firstOrNull { (section, _) -> name != null && section.name.equals(name, ignoreCase = true) }?.second

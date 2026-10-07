@@ -45,6 +45,9 @@ class BackupRepositoryTest {
         source.exerciseRecordDao().insert(
             com.hardtekpt.crux.data.ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2),
         )
+        // A board graded apart from the gym it's in.
+        val kilterSection = source.placeDao().getAllSections().first { it.name == "Kilter board" }
+        source.placeDao().updateSection(kilterSection.copy(boulderScale = com.hardtekpt.crux.data.model.GradeScale.V_SCALE))
         val text = BackupRepository(source, FIXED_CLOCK).export(BackupSection.entries.toSet())
 
         val target = newDb()
@@ -77,6 +80,7 @@ class BackupRepositoryTest {
         assertEquals("BOARD", blockLab.extraTypes)
         val sections = target.placeDao().getSections(blockLab.id)
         assertEquals(listOf("Main gym", "Kilter board"), sections.map { it.name })
+        assertEquals(listOf(null, com.hardtekpt.crux.data.model.GradeScale.V_SCALE), sections.map { it.boulderScale })
         assertEquals(sections[1].id, target.placeDao().getAllAreas().first { it.name == "Benchmarks" }.sectionId)
         assertEquals(source.placeDao().getAllProblems().size, target.placeDao().getAllProblems().size)
         val linkedSource = source.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }

@@ -18,6 +18,19 @@ import kotlin.math.roundToInt
 /** The climber's unit system, provided at the app root. */
 val LocalUnits = staticCompositionLocalOf { UnitSystem.METRIC }
 
+/** The climber's grade scales, provided at the app root, for "my settings" labels. */
+val LocalGradeScales = staticCompositionLocalOf { com.hardtekpt.crux.data.prefs.GradeScales() }
+
+/**
+ * The grades a part of a place uses, in words: "Font · French", "V scale" for a board,
+ * "Local grades". Where it follows the climber's settings, those settings' scales.
+ */
+fun com.hardtekpt.crux.data.model.Section.gradesLabel(settings: com.hardtekpt.crux.data.prefs.GradeScales): String =
+    disciplines.map { scaleFor(it) ?: settings.forDiscipline(it) }
+        .map { if (it.isLocal) "Local grades" else it.label }
+        .distinct()
+        .joinToString(" · ")
+
 const val LB_PER_KG = 2.2046226218
 const val CM_PER_INCH = 2.54
 

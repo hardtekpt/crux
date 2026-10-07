@@ -95,6 +95,7 @@ import com.hardtekpt.crux.ui.components.ImageViewer
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.areaImageFile
 import com.hardtekpt.crux.ui.components.rememberLocalImage
+import com.hardtekpt.crux.ui.gradesLabel
 import com.hardtekpt.crux.ui.journal.TapeDot
 import com.hardtekpt.crux.ui.journal.problemLine
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -364,10 +365,7 @@ fun PlaceDetailScreen(
                                         areas = areas.size,
                                         problems = problems,
                                         angle = current.place.defaultAngle.takeIf { section.type == PlaceType.BOARD },
-                                        scales = listOfNotNull(
-                                            current.place.boulderScale?.label,
-                                            current.place.routeScale?.label.takeIf { section.type != PlaceType.BOARD },
-                                        ),
+                                        scales = listOf(section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current)),
                                         selected = sections.size > 1 && facility == section.id,
                                         onClick = { if (sections.size > 1) facility = if (facility == section.id) null else section.id },
                                         modifier = Modifier.weight(1f),
@@ -537,11 +535,6 @@ fun PlaceDetailScreen(
     viewingArea?.let { area ->
         area.imagePath?.let { image -> ImageViewer(image, area.name) { viewingArea = null } }
     }
-}
-
-private fun scaleLine(detail: PlaceDetail): String? {
-    val scales = listOfNotNull(detail.place.boulderScale?.label, detail.place.routeScale?.label)
-    return if (scales.isEmpty()) null else "grades in ${scales.joinToString(" / ")}"
 }
 
 /** One of the place's numbers: the figure, what it counts in words, and a line of context. */

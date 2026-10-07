@@ -53,10 +53,9 @@ class LogClimbViewModelTest {
                 name = "Moon board",
                 types = listOf(PlaceType.BOARD),
                 location = null,
-                boulderScale = GradeScale.V_SCALE,
-                routeScale = null,
                 defaultAngle = 40,
                 notes = null,
+                sections = listOf(SectionInput(type = PlaceType.BOARD, name = "Moon board", boulderScale = GradeScale.V_SCALE)),
             ),
         )
         val problemId = places.saveProblem(
@@ -80,8 +79,6 @@ class LogClimbViewModelTest {
             PlaceInput(
                 name = "Block Lab",
                 location = null,
-                boulderScale = null,
-                routeScale = null,
                 defaultAngle = 40,
                 notes = null,
                 sections = listOf(
@@ -253,17 +250,39 @@ class LogClimbViewModelTest {
     }
 
     @Test
+    fun `each part of a place grades in its own scale`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Block Lab",
+                location = null,
+                defaultAngle = 40,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Main gym", boulderScale = GradeScale.FONT),
+                    SectionInput(type = PlaceType.BOARD, name = "Kilter", boulderScale = GradeScale.V_SCALE),
+                ),
+            ),
+        )
+        val kilter = places.getPlace(placeId)!!.sections[1].id
+        val vm = viewModel("placeId" to placeId)
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId && it.gradeScale == GradeScale.FONT } }
+        withTimeout(5_000) { vm.placeDetail.first { it?.place?.id == placeId } }
+        vm.selectSection(kilter)
+        assertEquals(GradeScale.V_SCALE, vm.draft.value.gradeScale)
+    }
+
+    @Test
     fun `a place with local colour grades logs the colour, not a converted grade`() = runBlocking {
         val placeId = places.savePlace(
             PlaceInput(
                 name = "Tape Gym",
                 types = listOf(PlaceType.GYM),
                 location = null,
-                boulderScale = GradeScale.LOCAL_BOULDER,
-                routeScale = null,
                 defaultAngle = null,
                 notes = null,
-                localScale = LocalScale.DEFAULT_COLOURS,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Gym", boulderScale = GradeScale.LOCAL_BOULDER, localScale = LocalScale.DEFAULT_COLOURS),
+                ),
             ),
         )
         val vm = viewModel("placeId" to placeId)
@@ -284,7 +303,7 @@ class LogClimbViewModelTest {
     @Test
     fun `a climb logged while a session runs joins it, at the session's place`() = runBlocking {
         val placeId = places.savePlace(
-            PlaceInput(name = "Block Lab", location = null, boulderScale = null, routeScale = null, defaultAngle = null, notes = null),
+            PlaceInput(name = "Block Lab", location = null, defaultAngle = null, notes = null),
         )
         sessions.runningSession = com.hardtekpt.crux.data.RunningSession(id = 7, placeId = placeId, sectionId = null)
         val vm = viewModel()

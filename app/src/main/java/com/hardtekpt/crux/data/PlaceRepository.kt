@@ -34,11 +34,8 @@ data class PlaceInput(
     /** Every kind of climbing here, main first; used when [sections] isn't given. */
     val types: List<PlaceType> = listOf(PlaceType.GYM),
     val location: String?,
-    val boulderScale: GradeScale?,
-    val routeScale: GradeScale?,
     val defaultAngle: Int?,
     val notes: String?,
-    val localScale: LocalScale? = null,
     val favourite: Boolean = false,
     val mapLocation: MapLocation? = null,
     /** The place's named parts, in order; at least one. A blank name becomes the kind's. */
@@ -46,7 +43,16 @@ data class PlaceInput(
 )
 
 /** One section as the place form edits it. `id == 0` creates. */
-data class SectionInput(val id: Long = 0, val type: PlaceType, val name: String)
+data class SectionInput(
+    val id: Long = 0,
+    val type: PlaceType,
+    val name: String,
+    /** Null uses the climber's settings. */
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    /** Kept only where a scale is local. */
+    val localScale: LocalScale? = null,
+)
 
 /** What the problem form edits. `id == 0` creates. */
 data class ProblemInput(
@@ -188,12 +194,9 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             type = kinds.first(),
             extraTypes = kinds.drop(1).joinToString(",") { it.name },
             location = input.location?.trim()?.takeIf { it.isNotEmpty() },
-            boulderScale = input.boulderScale,
-            routeScale = input.routeScale,
             defaultAngle = input.defaultAngle,
             notes = input.notes?.trim()?.takeIf { it.isNotEmpty() },
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
-            localScale = input.localScale?.encode(),
             favourite = input.favourite,
             latitude = input.mapLocation?.latitude,
             longitude = input.mapLocation?.longitude,
@@ -212,11 +215,23 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         sections.forEachIndexed { position, section ->
             val name = section.name.trim().ifEmpty { section.type.label }.take(40)
             val old = before[section.id]
+            // Boards hold boulders only; local grades are kept only where a scale uses them.
+            val route = section.routeScale.takeIf { section.type != PlaceType.BOARD }
+            val local = section.localScale?.takeIf { section.boulderScale?.isLocal == true || route?.isLocal == true }?.encode()
+            val fresh = SectionEntity(
+                placeId = placeId,
+                type = section.type,
+                name = name,
+                position = position,
+                boulderScale = section.boulderScale,
+                routeScale = route,
+                localScale = local,
+            )
             if (old != null) {
-                dao.updateSection(old.copy(type = section.type, name = name, position = position))
+                dao.updateSection(fresh.copy(id = old.id))
                 kept += old.id
             } else {
-                kept += dao.insertSection(SectionEntity(placeId = placeId, type = section.type, name = name, position = position))
+                kept += dao.insertSection(fresh)
             }
         }
         before.keys.filter { it !in kept }.forEach { id ->
@@ -315,10 +330,14 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
 }
 
 internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = Place(
-    id, name, type, location, boulderScale, routeScale, defaultAngle, notes, LocalScale.decode(localScale), favourite,
+    id, name, type, location, defaultAngle, notes, favourite,
     mapLocation = if (latitude != null && longitude != null) MapLocation(latitude, longitude, address) else null,
     types = listOf(type) + PlaceEntity.parseTypes(extraTypes).filter { it != type },
-    sections = sections.sortedWith(compareBy({ it.position }, { it.id })).map { Section(it.id, it.placeId, it.type, it.name) },
+    sections = sections.sortedWith(
+        compareBy({
+            it.position
+        }, { it.id }),
+    ).map { Section(it.id, it.placeId, it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) },
 )
 
 internal fun PlaceEntity.Companion.parseTypes(text: String): List<PlaceType> =

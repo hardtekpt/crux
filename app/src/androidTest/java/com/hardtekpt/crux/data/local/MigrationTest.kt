@@ -185,6 +185,30 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate19To20GivesEachSectionItsPlacesGrades() {
+        helper.createDatabase(DB, 19).apply {
+            execSQL(
+                "INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes, boulderScale, routeScale, localScale) " +
+                    "VALUES (1, 'Block Lab', 'GYM', 0, 0, 'BOARD', 'V_SCALE', 'YDS', NULL)",
+            )
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Main gym', 0)")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (2, 1, 'BOARD', 'Kilter', 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 20, true)
+        db.query("SELECT boulderScale, routeScale FROM sections ORDER BY id").use { c ->
+            while (c.moveToNext()) {
+                assertEquals("V_SCALE", c.getString(0))
+                assertEquals("YDS", c.getString(1))
+            }
+        }
+        db.query("SELECT boulderScale FROM places").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

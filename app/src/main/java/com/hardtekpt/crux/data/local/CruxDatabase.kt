@@ -7,6 +7,22 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
+ * Schema 20 grades each section of a place rather than the place: every section takes the
+ * scales (and local grades) its place had, and the place's own are cleared.
+ */
+class SectionGradesMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "UPDATE sections SET " +
+                "boulderScale = (SELECT boulderScale FROM places WHERE places.id = sections.placeId), " +
+                "routeScale = (SELECT routeScale FROM places WHERE places.id = sections.placeId), " +
+                "localScale = (SELECT localScale FROM places WHERE places.id = sections.placeId)",
+        )
+        db.execSQL("UPDATE places SET boulderScale = NULL, routeScale = NULL, localScale = NULL")
+    }
+}
+
+/**
  * Schema 19 widens the interval timer kept on an exercise (schema 18) into defaults for every
  * kind of exercise. The interval columns carry over under their general names; load is new.
  */
@@ -120,6 +136,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 16, to = 17),
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19, spec = ExerciseDefaultsMigration::class),
+        AutoMigration(from = 19, to = 20, spec = SectionGradesMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -135,7 +152,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 19
+        const val VERSION = 20
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

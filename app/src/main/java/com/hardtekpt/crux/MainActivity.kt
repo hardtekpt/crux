@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val units by viewModel.units.collectAsStateWithLifecycle()
+            val gradeScales by viewModel.gradeScales.collectAsStateWithLifecycle()
             val darkTheme = themeMode.isDark()
 
             // Keep status/nav bar icons readable against whichever theme is in use.
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
             }
 
             CruxTheme(darkTheme = darkTheme) {
-                CompositionLocalProvider(LocalUnits provides units) {
+                CompositionLocalProvider(LocalUnits provides units, com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales) {
                     CruxApp()
                 }
             }
@@ -79,5 +80,11 @@ class MainViewModel @Inject constructor(preferences: UserPreferencesRepository) 
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = UnitSystem.METRIC,
+    )
+
+    val gradeScales: StateFlow<com.hardtekpt.crux.data.prefs.GradeScales> = preferences.gradeScales.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = com.hardtekpt.crux.data.prefs.GradeScales(),
     )
 }
