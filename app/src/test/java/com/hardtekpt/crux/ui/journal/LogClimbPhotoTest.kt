@@ -1,7 +1,6 @@
 package com.hardtekpt.crux.ui.journal
 
 import android.net.Uri
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.hardtekpt.crux.MainDispatcherRule
@@ -37,7 +36,7 @@ class LogClimbPhotoTest {
             climbs,
             FakePlaceRepository(climbs),
             FIXED_CLOCK,
-            UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") }),
+            UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(java.io.File(tmp.root, "prefs.preferences_pb"))),
             files,
         )
     }

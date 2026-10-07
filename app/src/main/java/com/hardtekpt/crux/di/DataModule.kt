@@ -2,6 +2,7 @@ package com.hardtekpt.crux.di
 
 import android.content.ContentResolver
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -21,6 +22,7 @@ import com.hardtekpt.crux.data.local.ApplicationScope
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.DataMode
 import com.hardtekpt.crux.data.local.DatabaseFactory
+import com.hardtekpt.crux.data.local.DatabaseSnapshots
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,11 +45,19 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabaseFactory(@ApplicationContext context: Context): DatabaseFactory = DatabaseFactory { mode ->
-        val name = if (mode == DataMode.DEMO) CruxDatabase.DEMO_NAME else CruxDatabase.NAME
-        Room.databaseBuilder(context, CruxDatabase::class.java, name)
-            // Until real migrations land, schema changes wipe local data.
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
+        val builder = when (mode) {
+            // Demo data can be seeded again, so a schema it can't migrate is simply rebuilt.
+            DataMode.DEMO -> Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.DEMO_NAME)
+                .fallbackToDestructiveMigration(dropAllTables = true)
+            // The climber's own data is never wiped: a missing migration fails loudly instead,
+            // and the old file is copied aside before any migration runs.
+            DataMode.REAL -> {
+                runCatching { DatabaseSnapshots.beforeMigration(context, CruxDatabase.NAME, CruxDatabase.VERSION) }
+                    .onFailure { Log.w("CruxDatabase", "Couldn't copy the database before migrating", it) }
+                Room.databaseBuilder(context, CruxDatabase::class.java, CruxDatabase.NAME)
+            }
+        }
+        builder.build()
     }
 
     @Provides

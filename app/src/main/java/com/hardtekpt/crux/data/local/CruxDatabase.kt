@@ -84,7 +84,7 @@ class PlacesMigration : AutoMigrationSpec {
         com.hardtekpt.crux.data.NoteEntity::class,
         com.hardtekpt.crux.data.ExerciseRecordEntity::class,
     ],
-    version = 16,
+    version = CruxDatabase.VERSION,
     exportSchema = true,
     // From here on schema changes migrate instead of wiping data.
     autoMigrations = [
@@ -113,6 +113,8 @@ abstract class CruxDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
 
     companion object {
+        /** The current schema; each bump needs an auto-migration below and its exported JSON. */
+        const val VERSION = 16
         /** The climber's own data. */
         const val NAME = "crux-user.db"
         /** Demo mode's data set. */

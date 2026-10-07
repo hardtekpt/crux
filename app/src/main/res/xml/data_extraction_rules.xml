@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ backup. Cloud backup holds the climber's database and preferences only: photos
+    and videos would push it past the 25 MB quota, and they travel in Crux's own export instead.
+    Phone-to-phone transfer has no quota, so it also brings the photos and videos.
+    The demo database is left out: it is seeded again on first launch.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="crux-user.db" />
+        <include domain="database" path="crux-user.db-wal" />
+        <include domain="file" path="datastore/" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="crux-user.db" />
+        <include domain="database" path="crux-user.db-wal" />
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="area_images/" />
+    </device-transfer>
+</data-extraction-rules>

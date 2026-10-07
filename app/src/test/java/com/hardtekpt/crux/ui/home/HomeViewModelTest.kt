@@ -20,7 +20,6 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import org.junit.Test
@@ -37,7 +36,7 @@ class HomeViewModelTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
-    private val dataStore by lazy { PreferenceDataStoreFactory.create { File(tmp.root, "prefs.preferences_pb") } }
+    private val dataStore by lazy { mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb")) }
     private val dashboard by lazy { DashboardRepository(dataStore) }
 
     private fun viewModel() = HomeViewModel(climbs, body, templates, FakePlaceRepository(climbs), UserPreferencesRepository(dataStore), dashboard, FIXED_CLOCK)

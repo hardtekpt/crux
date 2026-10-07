@@ -8,12 +8,61 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Schema 4 → 5 adds rest between repeats; 5 → 6 turns typed place names into saved places. */
+/**
+ * Every exported schema migrates to the current one, and data typed at the oldest schema
+ * survives the whole way. Step tests below cover the migrations that move data.
+ */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
 
     @get:Rule
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), CruxDatabase::class.java)
+
+    @Test
+    fun everyOldSchemaMigratesToTheLatest() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        for (version in FIRST_MIGRATABLE_VERSION until CruxDatabase.VERSION) {
+            val name = "migration-from-$version.db"
+            context.deleteDatabase(name)
+            helper.createDatabase(name, version).close()
+            helper.runMigrationsAndValidate(name, CruxDatabase.VERSION, true).close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun dataFromTheOldestSchemaSurvivesToTheLatest() {
+        helper.createDatabase(DB, FIRST_MIGRATABLE_VERSION).apply {
+            execSQL("INSERT INTO exercises (id, name, category, metric, notes, createdAtMillis) VALUES (1, 'Hang', 'FINGERS', 'WEIGHTED_TIME', NULL, 0)")
+            execSQL("INSERT INTO body_measurements (id, type, value, dateEpochDay, createdAtMillis) VALUES (1, 'WEIGHT', 68.5, 20000, 0)")
+            execSQL(
+                "INSERT INTO climbs (id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, name, place, notes) " +
+                    "VALUES (1, 'ROUTE', 'FRENCH', 14, 'ONSIGHT', 1, 'CRAG', 20002, 0, 'Classic', 'Arco', 'Polished')",
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB, CruxDatabase.VERSION, true)
+        db.query(
+            "SELECT c.gradeIndex, c.name, c.notes, p.name, s.type FROM climbs c " +
+                "JOIN places p ON p.id = c.placeId JOIN sections s ON s.id = c.sectionId WHERE c.id = 1",
+        ).use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals(14, cursor.getInt(0))
+            assertEquals("Classic", cursor.getString(1))
+            assertEquals("Polished", cursor.getString(2))
+            assertEquals("Arco", cursor.getString(3))
+            assertEquals("CRAG", cursor.getString(4))
+        }
+        db.query("SELECT value FROM body_measurements WHERE id = 1").use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals(68.5, cursor.getDouble(0), 0.0)
+        }
+        db.query("SELECT name FROM exercises WHERE id = 1").use { cursor ->
+            assertEquals(true, cursor.moveToFirst())
+            assertEquals("Hang", cursor.getString(0))
+        }
+    }
 
     @Test
     fun migrate4To5KeepsPlanExercises() {
@@ -112,5 +161,7 @@ class MigrationTest {
 
     private companion object {
         const val DB = "migration-test.db"
+        /** Auto-migrations start at schema 4. */
+        const val FIRST_MIGRATABLE_VERSION = 4
     }
 }

@@ -1,6 +1,5 @@
 package com.hardtekpt.crux.data.dashboard
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.FIXED_CLOCK
 import com.hardtekpt.crux.data.FakeBodyRepository
@@ -10,8 +9,7 @@ import com.hardtekpt.crux.data.FakeTemplateRepository
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.home.HomeViewModel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -25,7 +23,7 @@ class DashboardTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
     @get:Rule val tmp = TemporaryFolder()
 
-    private val dataStore by lazy { PreferenceDataStoreFactory.create { File(tmp.root, "prefs.preferences_pb") } }
+    private val dataStore by lazy { mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb")) }
     private val repository by lazy { DashboardRepository(dataStore) }
 
     private fun viewModel() = HomeViewModel(
@@ -57,14 +55,14 @@ class DashboardTest {
     }
 
     @Test
-    fun `a fresh install shows the default dashboard`() = runBlocking {
+    fun `a fresh install shows the default dashboard`() = runTest(mainDispatcherRule.testDispatcher) {
         assertEquals(defaultDashboard().map { it.type }, repository.layout.first().map { it.type })
     }
 
     @Test
-    fun `edits apply to the working copy and are saved on Done`() = runBlocking {
+    fun `edits apply to the working copy and are saved on Done`() = runTest(mainDispatcherRule.testDispatcher) {
         val vm = viewModel()
-        withTimeout(5_000) { vm.dashboard.first { it.widgets.isNotEmpty() } }
+        assertTrue(vm.dashboard.value.widgets.isNotEmpty())
         vm.startEditing()
 
         val ids = vm.dashboard.value.widgets.map { it.id }
@@ -75,7 +73,7 @@ class DashboardTest {
         vm.resize(weekId)
         vm.finishEditing()
 
-        val saved = withTimeout(5_000) { repository.layout.first { it.any { w -> w.type == WidgetType.WEIGHT_TREND } } }
+        val saved = repository.layout.first()
         assertEquals(WidgetType.RECENT_CLIMBS, saved.first().type)
         assertFalse(saved.any { it.type == WidgetType.TODAYS_PLAN })
         assertEquals(WidgetType.WEIGHT_TREND, saved.last().type)
@@ -84,7 +82,7 @@ class DashboardTest {
     }
 
     @Test
-    fun `a saved layout round-trips`() = runBlocking {
+    fun `a saved layout round-trips`() = runTest(mainDispatcherRule.testDispatcher) {
         val layout = listOf(DashboardWidget(type = WidgetType.WEIGHT_TREND, size = WidgetSize.LARGE))
         repository.save(layout)
         assertEquals(layout, repository.layout.first())

@@ -25,7 +25,8 @@ All five tabs read and write the local Room database:
 
 Grades are stored as a scale plus an index (Font for boulders, French for routes). Starter templates
 are seeded on every install; debug builds also seed a few weeks of sample climbs and weigh-ins.
-Schema changes wipe local data until real migrations land in phase 2.
+Schema changes migrate the climber's data (Room auto-migrations, tested from every old schema);
+the database is copied to `files/db-backups/` before each migration and is never wiped.
 
 ## Day-to-day commands
 

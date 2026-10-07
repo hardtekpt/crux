@@ -17,7 +17,6 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Venue
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -40,7 +39,7 @@ class LogClimbViewModelTest {
     private val places = FakePlaceRepository(repository)
     private val imageFiles = FakeImageFiles()
     private val preferences by lazy {
-        UserPreferencesRepository(PreferenceDataStoreFactory.create { java.io.File(tmp.root, "prefs.preferences_pb") })
+        UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(java.io.File(tmp.root, "prefs.preferences_pb")))
     }
     private val viewModel by lazy { viewModel() }
 
