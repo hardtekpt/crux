@@ -75,6 +75,7 @@ import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
 import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
 import com.hardtekpt.crux.ui.navigation.SessionRoute
+import com.hardtekpt.crux.ui.navigation.SessionSummaryRoute
 import com.hardtekpt.crux.ui.navigation.SettingsRoute
 import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
@@ -200,7 +201,14 @@ fun CruxApp() {
                                 openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
                                 openNote = { navController.navigate(NoteEditorRoute(it)) },
                                 openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                                openSession = { navController.navigate(SessionSummaryRoute(it)) },
                             ),
+                        )
+                    }
+                    page<SessionSummaryRoute> {
+                        com.hardtekpt.crux.ui.session.SessionSummaryScreen(
+                            onBack = navController::popBackStack,
+                            onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
                         )
                     }
                 }

@@ -156,7 +156,12 @@ class JournalViewModel @Inject constructor(
 }
 
 /** Where the journal's taps lead. */
-data class JournalActions(val openClimb: (Long) -> Unit = {}, val openNote: (Long) -> Unit = {}, val openRecords: (Long) -> Unit = {})
+data class JournalActions(
+    val openClimb: (Long) -> Unit = {},
+    val openNote: (Long) -> Unit = {},
+    val openRecords: (Long) -> Unit = {},
+    val openSession: (Long) -> Unit = {},
+)
 
 @Composable
 fun JournalScreen(actions: JournalActions, viewModel: JournalViewModel = hiltViewModel()) {
@@ -224,7 +229,7 @@ fun JournalContent(
                     when (entry) {
                         is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
                         is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
-                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb)
+                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
                         is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
                     }
                 }
@@ -693,7 +698,7 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
 
 /** A finished session: its name, how long, what got done and how it felt. */
 @Composable
-private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClimb: (Long) -> Unit) {
+private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClimb: (Long) -> Unit, onOpen: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.tertiary) {
         Column(
@@ -703,6 +708,7 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClim
                 .clip(RoundedCornerShape(12.dp))
                 .background(colors.surfaceContainerLow)
                 .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(12.dp))
+                .clickable(onClick = onOpen)
                 .padding(horizontal = 12.dp, vertical = 10.dp)
                 .testTag("journal_session"),
             verticalArrangement = Arrangement.spacedBy(4.dp),

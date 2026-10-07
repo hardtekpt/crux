@@ -188,6 +188,11 @@ class MainActivityTest {
 
         composeRule.onNodeWithTag("nav_Journal").performClick()
         composeRule.waitForTag("journal_session")
+
+        // Tapping the card (not one of its climbs) opens it.
+        composeRule.onNodeWithTag("journal_session").performSemanticsAction(SemanticsActions.OnClick)
+        composeRule.waitForTag("screen_SessionSummary")
+        composeRule.waitForTag("session_summary_climb")
     }
 
     @Test

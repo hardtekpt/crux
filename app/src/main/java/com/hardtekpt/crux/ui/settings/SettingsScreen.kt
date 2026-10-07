@@ -183,7 +183,7 @@ fun SettingsContent(
                 )
             }
             Text(
-                "Only what you see changes. Everything is stored in kilograms and centimetres, so switching back and forth loses nothing. Added load on exercises stays in kilograms.",
+                "Only what you see changes. Everything is stored in kilograms and centimetres, so switching back and forth loses nothing.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
