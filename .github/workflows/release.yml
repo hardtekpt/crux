@@ -55,6 +55,18 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
+      # The changelog for this versionCode is the release notes here and on F-Droid.
+      - name: Release notes
+        id: notes
+        run: |
+          IFS=. read -r major minor patch <<< "${{ steps.version.outputs.name }}"
+          file="fastlane/metadata/android/en-US/changelogs/$((major * 10000 + minor * 100 + patch)).txt"
+          if [ ! -f "$file" ]; then
+            echo "::error::$file is missing. Add what changed in this release (500 characters at most); see CLAUDE.md."
+            exit 1
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
       - name: Decode signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.CRUX_KEYSTORE_BASE64 }}
@@ -95,7 +107,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=(--title "Crux ${{ steps.version.outputs.tag }}" --target "$GITHUB_SHA" --generate-notes)
+          flags=(--title "Crux ${{ steps.version.outputs.tag }}" --target "$GITHUB_SHA" --notes-file "${{ steps.notes.outputs.file }}" --generate-notes)
           if [ "${{ steps.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); fi
           tag="${{ steps.version.outputs.tag }}"
           gh release create "$tag" "crux-$tag.apk" "crux-$tag.apk.sha256" "crux-$tag-mapping.txt" "${flags[@]}"

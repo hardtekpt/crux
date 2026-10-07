@@ -1,0 +1,43 @@
+# Builds the release APK twice from separate clean checkouts and checks they match byte for byte
+# apart from the signature. F-Droid relies on this to publish APKs with Crux's own signature:
+# it rebuilds from source and copies the signature from the GitHub release APK.
+name: Reproducible build
+
+on:
+  push:
+    branches: ['ci/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  reproducible:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: first
+
+      - uses: actions/checkout@v5
+        with:
+          path: second
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build twice
+        run: |
+          for dir in first second; do
+            (cd "$dir" && ./gradlew --no-daemon --no-build-cache --no-configuration-cache assembleRelease)
+          done
+
+      - name: Compare
+        run: |
+          pip install --quiet apksigcopier
+          export PATH="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1):$PATH"
+          apk=app/build/outputs/apk/release/app-release.apk
+          apksigcopier compare "first/$apk" "second/$apk"
+          echo "The two builds match apart from their signatures."

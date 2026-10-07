@@ -46,6 +46,7 @@ import com.hardtekpt.crux.ui.home.HomeScreen
 import com.hardtekpt.crux.ui.journal.JournalActions
 import com.hardtekpt.crux.ui.journal.JournalScreen
 import com.hardtekpt.crux.ui.journal.LogClimbScreen
+import com.hardtekpt.crux.ui.navigation.AboutRoute
 import com.hardtekpt.crux.ui.navigation.CircumferencesRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseRecordsRoute
@@ -91,6 +92,7 @@ import com.hardtekpt.crux.ui.places.ProblemEditorScreen
 import com.hardtekpt.crux.ui.progress.ProgressScreen
 import com.hardtekpt.crux.ui.quicklog.QuickLogAction
 import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
+import com.hardtekpt.crux.ui.settings.AboutScreen
 import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.train.ExerciseEditorScreen
@@ -209,7 +211,8 @@ fun CruxApp() {
                             ),
                         )
                     }
-                    page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack) }
+                    page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack, openAbout = { navController.navigate(AboutRoute) }) }
+                    page<AboutRoute> { AboutScreen(onBack = navController::popBackStack) }
                     page<MeasurementsRoute> {
                         MeasurementsScreen(onBack = navController::popBackStack, onLogWeight = { navController.navigate(LogWeightRoute) })
                     }

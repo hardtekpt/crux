@@ -1,0 +1,16 @@
+name: Feature request
+description: An idea for Crux
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: The climbing or training situation, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: Your idea of how Crux could support it. Rough is fine.

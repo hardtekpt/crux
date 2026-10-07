@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -27,6 +30,7 @@ import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -77,6 +81,7 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    openAbout: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
     backupViewModel: BackupViewModel = hiltViewModel(),
     crashReportsViewModel: CrashReportsViewModel = hiltViewModel(),
@@ -93,6 +98,7 @@ fun SettingsScreen(
         onUnits = viewModel::setUnits,
         backup = { BackupCard(backupState, backupViewModel) },
         diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
+        onAbout = openAbout,
     )
 }
 
@@ -107,6 +113,7 @@ fun SettingsContent(
     onUnits: (UnitSystem) -> Unit = {},
     backup: @Composable () -> Unit = {},
     diagnostics: @Composable () -> Unit = {},
+    onAbout: () -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -210,6 +217,15 @@ fun SettingsContent(
 
             Eyebrow("Diagnostics", Modifier.padding(top = space.s4))
             diagnostics()
+
+            Eyebrow("About", Modifier.padding(top = space.s4))
+            CruxListRow(
+                title = "About Crux",
+                supporting = "Version, licence, source code and open-source libraries",
+                trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                onClick = onAbout,
+                modifier = Modifier.testTag("open_about"),
+            )
         }
     }
 }

@@ -29,7 +29,10 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
 
 ## Release procedure (only when the user says so)
 1. On `dev`: make sure the work is committed and `.\crux.cmd test` passes.
-2. Bump `VERSION_NAME` in `version.properties` and commit on `dev`: `Bump version to X.Y.Z`.
+2. Bump `VERSION_NAME` in `version.properties`, add the release notes as
+   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (what changed for the climber,
+   500 characters at most; the release workflow fails without it), and commit on `dev`:
+   `Bump version to X.Y.Z`.
 3. Push `dev`, then merge into `main` and push:
    `git switch main; git pull; git merge --no-ff dev -m "Release vX.Y.Z"; git tag -a vX.Y.Z -m "Crux vX.Y.Z"; git push --atomic origin main vX.Y.Z; git switch dev`
 4. The **Release** workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) runs the

@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
     alias(libs.plugins.kover)
+    alias(libs.plugins.aboutlibraries)
 }
 
 // Version lives in version.properties; versionCode follows from it so it always increases.
@@ -76,6 +77,12 @@ android {
         animationsDisabled = true
     }
 
+    // F-Droid rebuilds the APK from source and rejects Google's encrypted dependency report in it.
+    // App bundles (Play) keep it.
+    dependenciesInfo {
+        includeInApk = false
+    }
+
     // Existing findings live in the baseline; anything new fails the build.
     lint {
         baseline = file("lint-baseline.xml")
@@ -106,6 +113,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // OpenStreetMap map view for picking a place on a map; no account or API key needed.
     implementation(libs.osmdroid.android)
+    // Open-source licences screen (Settings → About); the list is generated at build time.
+    implementation(libs.aboutlibraries.compose.m3)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -168,4 +177,10 @@ kover {
             }
         }
     }
+}
+
+aboutLibraries {
+    // No network at build time: licences come from the dependencies' own metadata, so the
+    // generated list (and the APK) is the same on every machine, as F-Droid's builds need.
+    offlineMode = true
 }

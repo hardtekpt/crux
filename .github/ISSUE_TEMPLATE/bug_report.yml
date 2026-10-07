@@ -1,0 +1,38 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Journal
+        2. Tap Log climb
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Crux version
+      description: Shown in Android's App info for Crux, or at the top of a crash report.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone and Android version
+      placeholder: Pixel 8a, Android 16
+  - type: textarea
+    id: crash
+    attributes:
+      label: Crash report
+      description: If Crux closed unexpectedly, share it from Settings → Diagnostics → Crash reports and paste it here.
+      render: text
