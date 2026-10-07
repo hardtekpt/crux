@@ -458,7 +458,16 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
             TextButton(onClick = { finishing = true }, modifier = Modifier.testTag("session_finish")) { Text("Finish") }
         }
 
-        // The band: the timer or a rest while one runs, else a hairline of the plan.
+        // The plan's progress, one segment per exercise, always in view; tap one to go there.
+        if (current.items.isNotEmpty()) {
+            SegmentStrip(
+                itemSegments,
+                Modifier.padding(horizontal = space.s4).padding(bottom = space.s2).testTag("session_rail"),
+                onPick = { index -> viewModel.show(current.items[index].id) },
+            )
+        }
+
+        // Under it, the band opens while the timer or a rest runs.
         val runningTimer = timer
         val runningRest = rest
         when {
@@ -474,15 +483,9 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 rest = runningRest,
                 nowMillis = now,
                 next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
-                segments = itemSegments,
+                segments = emptyList(),
                 onAdd = { viewModel.addRest(30) },
                 onSkip = viewModel::endRest,
-            )
-
-            current.items.size > 1 -> SegmentStrip(
-                itemSegments,
-                Modifier.padding(horizontal = space.s4).testTag("session_rail"),
-                onPick = { index -> viewModel.show(current.items[index].id) },
             )
         }
 
