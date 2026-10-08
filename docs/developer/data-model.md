@@ -60,7 +60,7 @@ erDiagram
 
 | Where | What |
 | --- | --- |
-| DataStore `files/datastore/user_prefs.preferences_pb` | Grade scales, theme, units, demo mode, demo data version, Home dashboard layout (JSON) |
+| DataStore `files/datastore/user_prefs.preferences_pb` | Grade scales, theme, units, timer, demo mode, demo data version, Home dashboard layout (JSON), backup photo and video switches |
 | `files/area_images/` | Photos (JPEG, at most 2048 px) and videos |
 | `files/crashes/` | Crash reports (newest 10) |
 | `files/db-backups/` | Copies of `crux-user.db` taken before migrations (newest 3) |

@@ -12,9 +12,21 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   way until you open it up again.
 - **Consistency widget** for Home: the grid of climbing days from the You page, with your week
   streak and days in the last 30.
+- **Everything in backups.** Session history (every set, and the climbs logged in it), your
+  settings and Home layout, and climb videos now go into backups too. Backups are now `.zip` files;
+  the `.json` backups you already have still import.
+- **Photos and videos switches** for backups, so you can leave them out to keep the file small.
+
+### Changed
+
+- **Import asks about duplicates.** When something in a backup is already in Crux, you see both and
+  choose: skip it, replace it with the backup's, or keep both. One answer can cover the rest of a
+  section. Replacing a place brings in the walls and problems it's missing.
 
 ### Fixed
 
+- **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
+  import twice.
 - **Log climb remembers where you were.** A new climb starts at the last climb's place, facility
   (gym, board) and wall, instead of going back to the place's first facility with no wall.
 

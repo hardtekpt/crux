@@ -54,4 +54,5 @@ Finished sessions appear in the [Journal](journal.md) with their length. Tap one
 summary: when, where and for how long, how it felt, what got done against the plan, every set of
 every exercise, the climbs and your note.
 
-> Session history is not in backups yet. Climbs logged during a session are.
+Session history is in backups, with every set, and the climbs logged in a session stay linked to it
+when you restore.

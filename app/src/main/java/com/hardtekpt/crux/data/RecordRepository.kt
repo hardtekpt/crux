@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Update
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.ExerciseEntity
 import com.hardtekpt.crux.data.model.Exercise
@@ -48,6 +49,9 @@ interface ExerciseRecordDao {
 
     @Insert
     suspend fun insert(record: ExerciseRecordEntity): Long
+
+    @Update
+    suspend fun update(record: ExerciseRecordEntity)
 
     @Query("DELETE FROM exercise_records WHERE id = :id")
     suspend fun delete(id: Long)

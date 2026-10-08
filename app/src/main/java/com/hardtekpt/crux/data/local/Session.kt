@@ -134,4 +134,17 @@ interface SessionDao {
 
     @Query("UPDATE climbs SET sessionId = NULL WHERE sessionId = :sessionId")
     suspend fun unlinkClimbs(sessionId: Long)
+
+    @Query("SELECT * FROM sessions WHERE status = 'FINISHED' ORDER BY startedAtMillis")
+    suspend fun getFinished(): List<SessionEntity>
+
+    @Query("SELECT * FROM session_items ORDER BY sessionId, position")
+    suspend fun getAllItems(): List<SessionItemEntity>
+
+    @Query("SELECT * FROM session_sets ORDER BY itemId, setIndex")
+    suspend fun getAllSets(): List<SessionSetEntity>
+
+    /** Its sets go with them. */
+    @Query("DELETE FROM session_items WHERE sessionId = :sessionId")
+    suspend fun deleteItems(sessionId: Long)
 }

@@ -66,5 +66,6 @@ anything older. Everything else works the same.
    or send it to yourself.
 2. On the new phone: install Crux, then *Settings → Backup → Import* that file.
 
-Photos come with it. Videos don't, so copy any you want to keep separately. If you use Android's
-phone-to-phone transfer, Crux's data (including photos and videos) comes along.
+Photos, videos, session history and settings come with it. If you already set something up on the
+new phone, Crux asks whether to keep it, replace it with the backup's, or keep both. If you use
+Android's phone-to-phone transfer, Crux's data (including photos and videos) comes along.

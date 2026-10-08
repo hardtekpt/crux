@@ -31,5 +31,5 @@ Tap the grid icon at the top right to start editing. Then:
 
 Tap *Done* to save. *Reset layout* brings back the default dashboard.
 
-The dashboard layout is a display setting. It isn't part of backups, and each data set (yours and
-demo) shows the same layout.
+The dashboard layout is a display setting: each data set (yours and demo) shows the same layout.
+Backups carry it with your other settings.

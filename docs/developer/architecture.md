@@ -143,9 +143,9 @@ ticked, so they stay right when the screen is off or the app is in the backgroun
 
 ## Backups
 
-See [Backup format](backup-format.md). In short: a self-describing JSON file with optional sections.
-Records refer to each other by name, never database id. Importing only adds. Photos are embedded as
-base64, videos aren't.
+See [Backup format](backup-format.md). In short: a zip archive with a self-describing JSON file of
+optional sections, and the photos and videos it names. Records refer to each other by name, never
+database id. Records already on the phone are listed first, and the climber decides each one.
 
 ## Reliability
 

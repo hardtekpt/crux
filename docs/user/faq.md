@@ -25,11 +25,12 @@ You don't: a problem you've tried and not sent is a project automatically. See
 Records come from results you log under *You → Personal records*. Sessions don't feed records yet.
 
 **Are my videos backed up?**
-Not in Crux's backup file: they're too large. Photos are. Videos do move with Android's
-phone-to-phone transfer. See [Settings and your data](settings-and-data.md#backups).
+Yes, with your photos, unless you switch them off under *Settings → Backup → Photos and videos*.
+They can make the backup file large. See [Settings and your data](settings-and-data.md#backups).
 
 **Can I import the same backup twice?**
-Yes. Importing only adds what isn't there yet.
+Yes. Crux asks about everything that's already there: skip it, replace it, or keep both. Skip all
+of it and nothing changes.
 
 **An update says something about a database copy. What is that?**
 Before an update changes how data is stored, Crux copies your database on the phone first, so

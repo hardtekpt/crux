@@ -83,7 +83,8 @@ tests, so they always match the current version.
 - **Home**: a dashboard of widgets you add, resize and arrange.
 
 **Your data**
-- Everything on your phone. Backups to a JSON file you keep (photos included); importing only adds.
+- Everything on your phone. Backups to a file you keep, with photos, videos, session history and
+  settings; on import, Crux asks about anything already there.
 - Demo mode with sample data, kept apart from yours.
 - Metric or imperial, dark or light. Crash reports stay on the phone unless you share them.
 
@@ -178,7 +179,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Roadmap
 
-- Session history in backups, and personal records from session sets.
+- Personal records from session sets.
 - An F-Droid listing, then Google Play.
 - Training reminders.
 

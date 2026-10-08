@@ -75,6 +75,19 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[TIMER_COMPACT] = compact }
     }
 
+    /** Whether backups carry photos (climb photos, wall images) and climb videos. */
+    val backupPhotos: Flow<Boolean> = dataStore.data.map { it[BACKUP_PHOTOS] ?: true }
+
+    suspend fun setBackupPhotos(enabled: Boolean) {
+        dataStore.edit { it[BACKUP_PHOTOS] = enabled }
+    }
+
+    val backupVideos: Flow<Boolean> = dataStore.data.map { it[BACKUP_VIDEOS] ?: true }
+
+    suspend fun setBackupVideos(enabled: Boolean) {
+        dataStore.edit { it[BACKUP_VIDEOS] = enabled }
+    }
+
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
     suspend fun setLastPlaceId(id: Long?) {
@@ -116,6 +129,8 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
         val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
+        val BACKUP_PHOTOS = booleanPreferencesKey("backup_photos")
+        val BACKUP_VIDEOS = booleanPreferencesKey("backup_videos")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

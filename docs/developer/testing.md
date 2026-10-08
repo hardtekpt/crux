@@ -17,7 +17,9 @@
   and a fixed clock (`FIXED_CLOCK`, Monday 5 October 2026).
 - **Repositories** on in-memory Room under Robolectric (`RepositoriesTest`, `PlaceRepositoryTest`),
   including demo-mode isolation.
-- **Backups**: round-trips, photos byte for byte, and importing a real v0.1.0 file.
+- **Backups**: round-trips of every section (sessions and settings too), photos and videos byte for
+  byte, the media switches, each duplicate choice, and importing real v0.1.0 and v0.2.0 files.
+  `BackupViewModelTest` walks the duplicate questions.
 - **Database safety**: `DatabaseSnapshotsTest` (copies before migrations), `SchemaExportTest`
   (every schema version has its exported JSON).
 - **Compose components** (Robolectric): the input kit, list rows, and so on.
