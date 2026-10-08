@@ -74,6 +74,18 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { if (id == null) it.remove(LAST_PLACE) else it[LAST_PLACE] = id }
     }
 
+    /** Where in the last place the last climb was: its facility and wall. */
+    val lastSpot: Flow<Pair<Long?, Long?>> = dataStore.data.map { it[LAST_SECTION] to it[LAST_AREA] }
+
+    /** Remembers the place, facility and wall of the last climb logged. */
+    suspend fun setLastSpot(placeId: Long?, sectionId: Long?, areaId: Long?) {
+        dataStore.edit { prefs ->
+            if (placeId == null) prefs.remove(LAST_PLACE) else prefs[LAST_PLACE] = placeId
+            if (sectionId == null) prefs.remove(LAST_SECTION) else prefs[LAST_SECTION] = sectionId
+            if (areaId == null) prefs.remove(LAST_AREA) else prefs[LAST_AREA] = areaId
+        }
+    }
+
     val gradeScales: Flow<GradeScales> = dataStore.data.map { prefs ->
         GradeScales(
             boulder = prefs[BOULDER_SCALE].toScale(Discipline.BOULDER),
@@ -93,6 +105,8 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
+        val LAST_SECTION = longPreferencesKey("last_section_id")
+        val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")

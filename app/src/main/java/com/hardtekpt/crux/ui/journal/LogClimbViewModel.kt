@@ -176,8 +176,13 @@ class LogClimbViewModel @Inject constructor(
         // A climb logged while a session runs joins it, and starts at the session's place.
         val running = sessions.running()
         _draft.update { it.copy(sessionId = running?.id) }
-        val placeId = problem?.placeId ?: routePlaceId.takeIf { it != 0L } ?: running?.placeId ?: preferences.lastPlaceId.first()
+        val lastPlaceId = preferences.lastPlaceId.first()
+        val placeId = problem?.placeId ?: routePlaceId.takeIf { it != 0L } ?: running?.placeId ?: lastPlaceId
         placeId?.let { applyPlace(it) }
+        // Back at the last place: start at the facility and wall the last climb was on.
+        if (problem == null && routeSectionId == 0L && running?.sectionId == null && placeId != null && placeId == lastPlaceId) {
+            restoreLastSpot(placeId)
+        }
         val sessionSection = running?.sectionId?.takeIf { routeSectionId == 0L && running.placeId == placeId }
         if (sessionSection != null && placeId != null) {
             val place = placeRepository.getPlace(placeId)
@@ -193,6 +198,25 @@ class LogClimbViewModel @Inject constructor(
             }
         }
         problem?.let(::pickProblem)
+    }
+
+    private suspend fun restoreLastSpot(placeId: Long) {
+        val (sectionId, areaId) = preferences.lastSpot.first()
+        val detail = placeRepository.observePlaceDetail(placeId).first() ?: return
+        val place = detail.place
+        val area = detail.areas.firstOrNull { it.id == areaId }
+        val section = place.sections.firstOrNull { it.id == sectionId } ?: area?.let { place.sectionOf(it) } ?: return
+        val keepArea = area != null && place.sectionOf(area)?.id == section.id
+        _draft.update {
+            regrade(
+                it.copy(
+                    sectionId = section.id,
+                    venue = section.type.venue,
+                    areaId = if (keepArea) area?.id else null,
+                ),
+                place,
+            )
+        }
     }
 
     fun selectPlace(id: Long?) {
@@ -473,8 +497,11 @@ class LogClimbViewModel @Inject constructor(
                 images.delete(draft.savedVideoPath)
             }
             _draft.update { it.copy(isSaving = false, saved = true) }
-            // The next new climb starts at the same place.
-            if (!draft.isEditing) preferences.setLastPlaceId(place?.id)
+            // The next new climb starts at the same place, facility and wall.
+            if (!draft.isEditing) {
+                val sectionId = draft.sectionId.takeIf { place != null && place.sections.any { s -> s.id == it } }
+                preferences.setLastSpot(place?.id, sectionId, draft.areaId.takeIf { place != null })
+            }
         }
     }
 

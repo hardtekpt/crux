@@ -250,6 +250,33 @@ class LogClimbViewModelTest {
     }
 
     @Test
+    fun `the next climb starts at the last climb's place, facility and wall`() = runBlocking {
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Block Lab",
+                location = null,
+                defaultAngle = 40,
+                notes = null,
+                sections = listOf(SectionInput(type = PlaceType.GYM, name = "Main gym"), SectionInput(type = PlaceType.BOARD, name = "Kilter")),
+            ),
+        )
+        val kilter = places.getPlace(placeId)!!.sections[1].id
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, kilter)
+        val first = viewModel("placeId" to placeId)
+        withTimeout(5_000) { first.placeDetail.first { it?.areas?.size == 1 } }
+        first.selectArea(benchmarks)
+        first.save()
+        withTimeout(5_000) { first.draft.first { it.saved } }
+
+        // A new climb with nothing picked yet.
+        val next = viewModel()
+        val draft = withTimeout(5_000) { next.draft.first { it.placeId == placeId && it.areaId != null } }
+        assertEquals(kilter, draft.sectionId)
+        assertEquals(benchmarks, draft.areaId)
+        assertEquals(Venue.BOARD, draft.venue)
+    }
+
+    @Test
     fun `each part of a place grades in its own scale`() = runBlocking {
         val placeId = places.savePlace(
             PlaceInput(

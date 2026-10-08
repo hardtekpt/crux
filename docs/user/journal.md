@@ -28,10 +28,11 @@ Open **+ → Log climb**, tap **Log here** on a place page, or **Log climb** ins
 1. **Where?** (optional): pick a place, then a facility or wall, then a problem. Your favourite
    places are quick picks at the top, and you can add a new place from here. Picking a problem
    copies its grade, which you can still change. *Save this climb as a new problem* turns a one-off
-   climb into a problem on that wall.
+   climb into a problem on that wall. A new climb starts where your last one was: the same place,
+   facility and wall.
 2. **Boulder** or **Route**.
-3. **Grade**: swipe the grade strip. It uses your scale from Settings, or the place's own grades
-   (numbers or colour tapes) when the place has them.
+3. **Grade**: swipe the grade strip. It uses your scale from Settings, or the grades of the
+   facility you picked (numbers or colour tapes) when it has its own.
 4. **Style**: *Flash* or *Onsight* (first go), *Redpoint* (sent after trying), or *Attempt* (not
    sent).
 5. **Attempts**: how many goes it took. Flash and onsight mean one.

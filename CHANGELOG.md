@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Fixed
+
+- **Log climb remembers where you were.** A new climb starts at the last climb's place, facility
+  (gym, board) and wall, instead of going back to the place's first facility with no wall.
+
 ## [0.2.0] - 2026-10-07
 
 ### Added
