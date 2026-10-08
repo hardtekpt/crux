@@ -136,7 +136,7 @@ class SessionViewModel @Inject constructor(
     private val sessions: SessionRepository,
     exercises: ExerciseRepository,
     private val places: PlaceRepository,
-    preferences: UserPreferencesRepository,
+    private val preferences: UserPreferencesRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
@@ -153,6 +153,14 @@ class SessionViewModel @Inject constructor(
 
     val timerSounds: StateFlow<Boolean> = preferences.timerSounds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    /** The timer band as one slim line; remembered between sessions. */
+    val timerCompact: StateFlow<Boolean> = preferences.timerCompact
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleTimerCompact() {
+        viewModelScope.launch { preferences.setTimerCompact(!timerCompact.value) }
+    }
 
     /** The exercise on screen; null follows the first one with sets still to do. */
     private val _currentItem = MutableStateFlow<Long?>(null)
@@ -381,6 +389,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
     val timer by viewModel.timer.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
+    val compactTimer by viewModel.timerCompact.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
     viewModel.currentItem.collectAsStateWithLifecycle()
     // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
@@ -498,6 +507,8 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 run = runningTimer.run,
                 nowMillis = now,
                 drainNowMillis = { drainNow },
+                compact = compactTimer,
+                onToggleCompact = viewModel::toggleTimerCompact,
                 onPause = viewModel::pauseTimer,
                 onResume = viewModel::resumeTimer,
                 onStop = viewModel::stopTimer,
@@ -509,6 +520,8 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 drainNowMillis = { drainNow },
                 next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
                 segments = emptyList(),
+                compact = compactTimer,
+                onToggleCompact = viewModel::toggleTimerCompact,
                 onAdd = { viewModel.addRest(30) },
                 onSkip = viewModel::endRest,
             )

@@ -18,6 +18,7 @@ Home is a dashboard of widgets that you choose and arrange yourself.
 | **Sends by style** | Flash, onsight and redpoint, side by side. |
 | **Recent climbs** | Your last few climbs. Tap one to open it. |
 | **Projects** | Problems you've tried but not sent yet, with how many goes and when you last tried. |
+| **Consistency** | The consistency grid from the You page: a square per day you climbed over the last weeks, with your week streak and days in the last 30. Large, it shows your streak, best streak and last 30 days as three figures. Tap it to open You. |
 
 ## Arranging the dashboard
 

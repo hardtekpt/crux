@@ -51,6 +51,12 @@ data class HomeUiState(
     val recentClimbs: List<Climb> = emptyList(),
     val charts: ProgressCharts = ProgressCharts(),
     val projects: List<Project> = emptyList(),
+    /** Climbs per day, for the consistency grid. */
+    val activity: Map<LocalDate, Int> = emptyMap(),
+    /** Weeks in a row, up to this one, with a day on the wall; and the longest run. */
+    val weekStreak: Int = 0,
+    val bestWeekStreak: Int = 0,
+    val daysLast30: Int = 0,
 )
 
 /** The layout being shown, and while editing, the working copy. */
@@ -107,6 +113,8 @@ class HomeViewModel @Inject constructor(
 
     private fun buildState(inputs: Inputs): HomeUiState {
         val weekClimbs = inputs.climbs.filter { !it.date.isBefore(weekStart) }
+        val climbDays = inputs.climbs.groupingBy { it.date }.eachCount()
+        val (streak, bestStreak) = com.hardtekpt.crux.ui.you.weekStreaks(climbDays.keys, today)
         return HomeUiState(
             isLoading = false,
             today = today,
@@ -123,6 +131,10 @@ class HomeViewModel @Inject constructor(
             recentClimbs = inputs.climbs.take(RECENT_LIMIT),
             charts = progressCharts(inputs.climbs, inputs.scales, today),
             projects = inputs.projects,
+            activity = climbDays,
+            weekStreak = streak,
+            bestWeekStreak = bestStreak,
+            daysLast30 = climbDays.keys.count { !it.isBefore(today.minusDays(29)) && !it.isAfter(today) },
         )
     }
 

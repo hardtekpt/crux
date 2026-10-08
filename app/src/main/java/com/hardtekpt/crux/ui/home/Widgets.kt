@@ -153,6 +153,8 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
 
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions.openProblem, actions.openProgress, modifier)
+
+        WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
     }
 }
 
@@ -408,3 +410,26 @@ private fun EmptyWidgetText(text: String) {
 }
 
 private fun HomeUiState.figure(value: Int) = if (isLoading) "–" else value.toString()
+
+/**
+ * Consistency, as on the You page: a square per day over the last weeks, today at the right.
+ * Wide, the streak and the last 30 days sit in the title line; large, as three figures.
+ */
+@Composable
+private fun ConsistencyWidget(state: HomeUiState, large: Boolean, onOpen: () -> Unit, modifier: Modifier) {
+    val streak = if (state.weekStreak == 1) "1 week streak" else "${state.weekStreak} week streak"
+    ChartCard(
+        title = "Consistency",
+        trailing = if (large) null else "$streak · ${state.daysLast30} days in 30",
+        modifier = modifier.clickable(onClick = onOpen).testTag("widget_consistency"),
+    ) {
+        com.hardtekpt.crux.ui.you.ConsistencyGrid(state.activity, state.today)
+        if (large) {
+            Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s3)) {
+                com.hardtekpt.crux.ui.you.ProfileStat("${state.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = state.weekStreak > 0)
+                com.hardtekpt.crux.ui.you.ProfileStat("${state.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
+                com.hardtekpt.crux.ui.you.ProfileStat(state.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
+            }
+        }
+    }
+}

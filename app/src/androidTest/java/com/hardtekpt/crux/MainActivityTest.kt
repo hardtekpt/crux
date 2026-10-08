@@ -200,6 +200,9 @@ class MainActivityTest {
         composeRule.waitForTag("timer_start")
         composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
         composeRule.waitForTag("timer_band")
+        // Compact, it keeps its controls on one line, and stays compact until opened up again.
+        composeRule.onNodeWithTag("timer_compact").performClick()
+        composeRule.waitForTag("timer_counts")
         composeRule.onNodeWithTag("timer_pause").performClick()
         composeRule.waitForTag("timer_stop")
         composeRule.onNodeWithTag("timer_stop").performClick()

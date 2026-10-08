@@ -66,6 +66,22 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `consistency counts climbing days and the week streak`() = runTest {
+        // Today (a Monday), last week and the week before: three weeks in a row.
+        climbs.logClimb(newClimb(today, AscentStyle.FLASH))
+        climbs.logClimb(newClimb(today.minusDays(1), AscentStyle.FLASH))
+        climbs.logClimb(newClimb(today.minusDays(1), AscentStyle.ATTEMPT))
+        climbs.logClimb(newClimb(today.minusDays(9), AscentStyle.FLASH))
+
+        viewModel().uiState.test {
+            val state = awaitLoaded()
+            assertEquals(3, state.weekStreak)
+            assertEquals(3, state.daysLast30)
+            assertEquals(2, state.activity[today.minusDays(1)])
+        }
+    }
+
+    @Test
     fun `logging a climb or weight updates home without a restart`() = runTest {
         templates.templates.value = listOf(WorkoutTemplate(1, "Strength day", "", emptyList()))
         viewModel().uiState.test {

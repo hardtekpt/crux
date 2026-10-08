@@ -68,6 +68,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[TIMER_SOUNDS] = enabled }
     }
 
+    /** The live session's timer band shown as one slim line. */
+    val timerCompact: Flow<Boolean> = dataStore.data.map { it[TIMER_COMPACT] ?: false }
+
+    suspend fun setTimerCompact(compact: Boolean) {
+        dataStore.edit { it[TIMER_COMPACT] = compact }
+    }
+
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
     suspend fun setLastPlaceId(id: Long?) {
@@ -108,6 +115,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val LAST_SECTION = longPreferencesKey("last_section_id")
         val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
+        val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

@@ -34,6 +34,7 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
     SENDS_BY_STYLE("Sends by style", "Flash, onsight and redpoint split", listOf(WidgetSize.LARGE, WidgetSize.WIDE)),
     RECENT_CLIMBS("Recent climbs", "Your latest journal entries", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     PROJECTS("Projects", "Problems you're still working", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
+    CONSISTENCY("Consistency", "Your days on the wall over the last weeks, and your week streak", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     ;
 
     val defaultSize: WidgetSize get() = sizes.first()

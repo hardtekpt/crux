@@ -29,9 +29,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.UnfoldLess
+import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -55,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.data.model.IntervalSettings
@@ -96,6 +100,7 @@ internal object TimerColors {
 }
 
 private val BigNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = 52.sp, lineHeight = 52.sp)
+private val CompactNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 30.sp)
 private val CountNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 24.sp)
 
 /** Whole seconds left, rounded up, so the last second reads 1 and not 0. */
@@ -107,10 +112,17 @@ internal fun secondsLeft(millis: Long): Int = ((millis.coerceAtLeast(0) + 999) /
  * [fraction] is read only while drawing, so the drain moves without recomposing the screen.
  */
 @Composable
-internal fun TimerBand(accent: Color, fraction: () -> Float, segments: List<Segment>, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+internal fun TimerBand(
+    accent: Color,
+    fraction: () -> Float,
+    segments: List<Segment>,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
     Box(
-        modifier.fillMaxWidth().height(96.dp).background(colors.surfaceContainerLow).drawBehind {
+        modifier.fillMaxWidth().height(if (compact) 56.dp else 96.dp).background(colors.surfaceContainerLow).drawBehind {
             val filled = size.width * fraction().coerceIn(0f, 1f)
             if (filled > 0f) {
                 drawRect(accent.copy(alpha = 0.2f), size = Size(filled, size.height))
@@ -121,8 +133,8 @@ internal fun TimerBand(accent: Color, fraction: () -> Float, segments: List<Segm
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 12.dp),
+            modifier = Modifier.fillMaxSize().padding(start = if (compact) 16.dp else 18.dp, end = if (compact) 8.dp else 18.dp),
             content = content,
         )
         if (segments.isNotEmpty()) SegmentStrip(segments, Modifier.align(Alignment.BottomStart))
@@ -153,8 +165,28 @@ internal fun SegmentStrip(segments: List<Segment>, modifier: Modifier = Modifier
 
 /** The big number in a band. */
 @Composable
-internal fun BandNumber(millisLeft: Long, color: Color, modifier: Modifier = Modifier) {
-    Text(clockLabel(secondsLeft(millisLeft) * 1000L), style = BigNumber, color = color, maxLines = 1, softWrap = false, modifier = modifier)
+internal fun BandNumber(millisLeft: Long, color: Color, modifier: Modifier = Modifier, compact: Boolean = false) {
+    Text(
+        clockLabel(secondsLeft(millisLeft) * 1000L),
+        style = if (compact) CompactNumber else BigNumber,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier,
+    )
+}
+
+/** Shrinks the band to one slim line, or opens it back up. */
+@Composable
+internal fun CompactToggle(compact: Boolean, onToggle: () -> Unit) {
+    IconButton(onClick = onToggle, modifier = Modifier.size(36.dp).testTag("timer_compact")) {
+        Icon(
+            if (compact) Icons.Rounded.UnfoldMore else Icons.Rounded.UnfoldLess,
+            contentDescription = if (compact) "Show the timer large" else "Make the timer compact",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
 }
 
 /** A count beside the number: `3` over "repeats left". */
@@ -168,17 +200,17 @@ internal fun BandCount(value: Int, label: String, modifier: Modifier = Modifier)
 
 /** A round outlined icon button for the band. */
 @Composable
-internal fun BandIconButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun BandIconButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, small: Boolean = false) {
     val ink = MaterialTheme.colorScheme.onSurface
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(44.dp)
+            .size(if (small) 40.dp else 44.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick),
     ) {
-        Box(Modifier.size(36.dp).border(1.dp, ink.copy(alpha = 0.3f), CircleShape), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = description, tint = ink, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(if (small) 32.dp else 36.dp).border(1.dp, ink.copy(alpha = 0.3f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, tint = ink, modifier = Modifier.size(if (small) 18.dp else 20.dp))
         }
     }
 }
@@ -203,19 +235,44 @@ internal fun BandPill(text: String, onClick: () -> Unit, modifier: Modifier = Mo
  * follows [nowMillis]; the drain follows [drainNowMillis], which moves smoothly.
  */
 @Composable
-internal fun RestBand(rest: Rest, nowMillis: Long, drainNowMillis: () -> Long, next: String, segments: List<Segment>, onAdd: () -> Unit, onSkip: () -> Unit) {
+internal fun RestBand(
+    rest: Rest,
+    nowMillis: Long,
+    drainNowMillis: () -> Long,
+    next: String,
+    segments: List<Segment>,
+    onAdd: () -> Unit,
+    onSkip: () -> Unit,
+    compact: Boolean = false,
+    onToggleCompact: () -> Unit = {},
+) {
     val accent = TimerColors.setRest
     val left = rest.endsAtMillis - nowMillis
-    TimerBand(accent, { (rest.endsAtMillis - drainNowMillis()) / (rest.totalSeconds * 1000f) }, segments, Modifier.testTag("session_rest")) {
-        BandNumber(left, accent, Modifier.testTag("session_rest_left"))
-        Column(Modifier.weight(1f)) {
-            Text("Rest", style = MaterialTheme.typography.titleSmall)
-            Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-        }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    TimerBand(accent, { (rest.endsAtMillis - drainNowMillis()) / (rest.totalSeconds * 1000f) }, segments, Modifier.testTag("session_rest"), compact) {
+        BandNumber(left, accent, Modifier.testTag("session_rest_left"), compact)
+        if (compact) {
+            // One line: what's next, then the two controls side by side.
+            Text(
+                "Rest · $next",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
             BandPill("+30 s", onAdd)
             BandPill("Skip", onSkip, Modifier.testTag("session_rest_skip"))
+        } else {
+            Column(Modifier.weight(1f)) {
+                Text("Rest", style = MaterialTheme.typography.titleSmall)
+                Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                BandPill("+30 s", onAdd)
+                BandPill("Skip", onSkip, Modifier.testTag("session_rest_skip"))
+            }
         }
+        CompactToggle(compact, onToggleCompact)
     }
 }
 
@@ -224,7 +281,16 @@ internal fun RestBand(rest: Rest, nowMillis: Long, drainNowMillis: () -> Long, n
  * Paused, it offers play and stop. Like [RestBand], the drain follows [drainNowMillis].
  */
 @Composable
-internal fun IntervalBand(run: IntervalRun, nowMillis: Long, drainNowMillis: () -> Long, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit) {
+internal fun IntervalBand(
+    run: IntervalRun,
+    nowMillis: Long,
+    drainNowMillis: () -> Long,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onStop: () -> Unit,
+    compact: Boolean = false,
+    onToggleCompact: () -> Unit = {},
+) {
     val position = run.position(nowMillis)
     val accent = TimerColors.of(position.phase.kind)
     // Along the bottom, one piece per cycle and per rest between cycles, filled as they pass.
@@ -254,7 +320,7 @@ internal fun IntervalBand(run: IntervalRun, nowMillis: Long, drainNowMillis: () 
             }
     }
     // The fill drains over the whole cycle, in the colour of the phase it's in.
-    TimerBand(accent, { run.stretch(drainNowMillis()).fractionLeft }, segments, Modifier.testTag("timer_band")) {
+    TimerBand(accent, { run.stretch(drainNowMillis()).fractionLeft }, segments, Modifier.testTag("timer_band"), compact) {
         BandNumber(
             position.leftMillis,
             if (run.paused) {
@@ -265,18 +331,37 @@ internal fun IntervalBand(run: IntervalRun, nowMillis: Long, drainNowMillis: () 
                 accent
             },
             Modifier.testTag("timer_left"),
+            compact,
         )
-        Spacer(Modifier.weight(1f))
-        BandCount(position.repeatsLeft, "repeats left", Modifier.testTag("timer_repeats_left"))
-        BandCount(position.cyclesLeft, "cycles left", Modifier.testTag("timer_cycles_left"))
+        if (compact) {
+            // The counts as one quiet line.
+            Text(
+                "${position.repeatsLeft} repeats · ${position.cyclesLeft} cycles left",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).testTag("timer_counts"),
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+            BandCount(position.repeatsLeft, "repeats left", Modifier.testTag("timer_repeats_left"))
+            BandCount(position.cyclesLeft, "cycles left", Modifier.testTag("timer_cycles_left"))
+        }
         if (run.paused) {
-            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                BandIconButton(Icons.Rounded.PlayArrow, "Resume", onResume, Modifier.testTag("timer_resume"))
-                BandIconButton(Icons.Rounded.Close, "Stop the timer", onStop, Modifier.testTag("timer_stop"))
+            if (compact) {
+                BandIconButton(Icons.Rounded.PlayArrow, "Resume", onResume, Modifier.testTag("timer_resume"), small = true)
+                BandIconButton(Icons.Rounded.Close, "Stop the timer", onStop, Modifier.testTag("timer_stop"), small = true)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    BandIconButton(Icons.Rounded.PlayArrow, "Resume", onResume, Modifier.testTag("timer_resume"))
+                    BandIconButton(Icons.Rounded.Close, "Stop the timer", onStop, Modifier.testTag("timer_stop"))
+                }
             }
         } else {
-            BandIconButton(Icons.Rounded.Pause, "Pause", onPause, Modifier.testTag("timer_pause"))
+            BandIconButton(Icons.Rounded.Pause, "Pause", onPause, Modifier.testTag("timer_pause"), small = compact)
         }
+        CompactToggle(compact, onToggleCompact)
     }
 }
 

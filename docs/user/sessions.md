@@ -35,6 +35,10 @@ session. Only one session runs at a time; starting another ends the first.
 - **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
   session shows your climbs, sends and hardest send so far.
 
+The arrows at the end of the band make it **compact**: one slim line with the number, what's left
+and the controls, so more of the exercise shows. Tap them again for the large band. Crux remembers
+which you chose.
+
 The screen stays on while something counts down. Timers are worked out from the clock, so they stay
 right if the screen turns off or you switch apps.
 

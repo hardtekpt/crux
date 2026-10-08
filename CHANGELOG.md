@@ -6,6 +6,13 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Added
+
+- **Compact timer.** The rest and interval timer band can shrink to one slim line, and stays that
+  way until you open it up again.
+- **Consistency widget** for Home: the grid of climbing days from the You page, with your week
+  streak and days in the last 30.
+
 ### Fixed
 
 - **Log climb remembers where you were.** A new climb starts at the last climb's place, facility
