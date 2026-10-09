@@ -62,9 +62,9 @@ anything older. Everything else works the same.
 
 ## Moving to a new phone
 
-1. On the old phone: *Settings → Backup → Export*, all sections, and save the file to a cloud drive
+1. On the old phone: *Settings → Backups → Export*, all sections, and save the file to a cloud drive
    or send it to yourself.
-2. On the new phone: install Crux, then *Settings → Backup → Import* that file.
+2. On the new phone: install Crux, then *Settings → Backups → Import* that file.
 
 Photos, videos, session history and settings come with it. If you already set something up on the
 new phone, Crux asks whether to keep it, replace it with the backup's, or keep both. If you use

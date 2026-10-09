@@ -54,7 +54,7 @@ Swipe back, or use the back arrow, to leave a page.
 ## Where your data lives
 
 Everything is stored on your phone, in Crux's private storage. Make a backup now and then from
-*Settings → Backup*; the file is yours to keep wherever you like. See
+*Settings → Backups*; the file is yours to keep wherever you like. See
 [Settings and your data](settings-and-data.md).
 
 ## Verifying a download

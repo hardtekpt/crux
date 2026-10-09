@@ -94,5 +94,5 @@ CI uploads the report as the `coverage` artifact. There's no threshold yet.
 | ViewModel logic | A JVM test with fakes |
 | Repository or DAO query | A Robolectric test on in-memory Room |
 | Schema | Migration step test if data moves; see [Database](database.md) |
-| Backup format | Round-trip, and the v0.1.0 fixture must still import |
+| Backup format | Round-trip, and the v0.1.0 and v0.2.0 fixtures must still import |
 | Visible UI | Re-recorded screenshots; a `MainActivityTest` flow for new interactions |

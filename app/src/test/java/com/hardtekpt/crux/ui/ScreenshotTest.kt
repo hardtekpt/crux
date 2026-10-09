@@ -49,6 +49,8 @@ import com.hardtekpt.crux.ui.progress.ProgressContent
 import com.hardtekpt.crux.ui.progress.ProgressViewModel
 import com.hardtekpt.crux.ui.session.SessionScreen
 import com.hardtekpt.crux.ui.session.SessionViewModel
+import com.hardtekpt.crux.ui.settings.BackupContent
+import com.hardtekpt.crux.ui.settings.BackupUiState
 import com.hardtekpt.crux.ui.settings.SettingsContent
 import com.hardtekpt.crux.ui.settings.SettingsUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -139,6 +141,9 @@ class ScreenshotTest {
     fun settings() = bothThemes("settings") {
         SettingsContent(uiState = SettingsUiState(), onBack = {}, onGradeScale = {}, onThemeMode = {})
     }
+
+    @Test
+    fun backups() = bothThemes("backups") { BackupContent(state = BackupUiState(), onBack = {}) }
 
     @Test
     fun train() {

@@ -31,7 +31,7 @@ Start with **[Development setup](developer/setup.md)**, then **[Architecture](de
 | [Project structure](developer/project-structure.md) | The repository and packages, and where to start reading |
 | [Data model](developer/data-model.md) | Tables and relationships, conventions, other storage |
 | [Database](developer/database.md) | The checklist for every schema change; migrations |
-| [Backup format](developer/backup-format.md) | The JSON backup file, field by field, and compatibility rules |
+| [Backup format](developer/backup-format.md) | The backup archive, field by field, duplicates on import, and compatibility rules |
 | [UI and design system](developer/ui-and-design-system.md) | Theme tokens, components, the touch input kit, conventions |
 | [Testing](developer/testing.md) | Unit, Robolectric, screenshot and instrumented tests; coverage |
 | [CI/CD](developer/ci-cd.md) | Workflows, triggers, secrets, gotchas |

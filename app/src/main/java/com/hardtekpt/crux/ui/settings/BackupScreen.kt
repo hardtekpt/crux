@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.backup.BackupFile
 import com.hardtekpt.crux.data.backup.BackupFormatException
@@ -48,6 +51,9 @@ import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxTopAppBar
+import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
@@ -225,100 +231,147 @@ class BackupViewModel @Inject constructor(
 
 private fun Set<BackupSection>.toggled(section: BackupSection) = if (section in this) this - section else this + section
 
-/** Settings card: choose what goes into a backup, export it to a file, or import one. */
+/** What the backups page can ask for. */
+data class BackupActions(
+    val toggleExport: (BackupSection) -> Unit = {},
+    val setPhotos: (Boolean) -> Unit = {},
+    val setVideos: (Boolean) -> Unit = {},
+    val export: () -> Unit = {},
+    val import: () -> Unit = {},
+    val toggleImport: (BackupSection) -> Unit = {},
+    val confirmImport: () -> Unit = {},
+    val cancelImport: () -> Unit = {},
+    val resolve: (Resolution, Boolean) -> Unit = { _, _ -> },
+)
+
+/** Settings → Backups: choose what goes into a backup, export it to a file, or import one. */
 @Composable
-fun BackupCard(state: BackupUiState, viewModel: BackupViewModel) {
+fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(viewModel::export)
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::pickedImport)
     }
-    CruxCard(modifier = Modifier.testTag("backup_card")) {
-        Text("Backup", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Save your data to a file you keep, or bring a backup in. When something in it is already here, Crux asks what to do.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = CruxTheme.space.s2),
-        )
-        BackupSection.entries.forEach { section ->
-            ToggleRow(
-                label = section.label,
-                description = section.description,
-                checked = section in state.exportSections,
-                onToggle = { viewModel.toggleExport(section) },
-                tag = "export_${section.name}",
-            )
-        }
-        Text(
-            "Photos and videos",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = CruxTheme.space.s3),
-        )
-        Text(
-            "For exports and imports alike.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        ToggleRow(
-            label = "Photos",
-            description = "Climb photos, wall photos and maps",
-            checked = state.media.photos,
-            onToggle = { viewModel.setPhotos(!state.media.photos) },
-            tag = "backup_photos",
-        )
-        ToggleRow(
-            label = "Videos",
-            description = "Climb videos. They can make a backup large.",
-            checked = state.media.videos,
-            onToggle = { viewModel.setVideos(!state.media.videos) },
-            tag = "backup_videos",
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-            modifier = Modifier.padding(top = CruxTheme.space.s3),
-        ) {
-            CruxButton(
-                text = "Export",
-                onClick = { exportLauncher.launch(viewModel.suggestedFileName) },
-                enabled = !state.busy && state.exportSections.isNotEmpty(),
-                icon = Icons.Rounded.Upload,
-                modifier = Modifier.testTag("export_backup"),
-            )
-            CruxButton(
-                text = "Import",
-                onClick = {
-                    importLauncher.launch(
-                        arrayOf("application/zip", "application/x-zip-compressed", "application/json", "text/plain", "application/octet-stream"),
-                    )
-                },
-                enabled = !state.busy,
-                variant = CruxButtonVariant.Outlined,
-                icon = Icons.Rounded.Download,
-                modifier = Modifier.testTag("import_backup"),
-            )
-        }
-        state.message?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .padding(top = CruxTheme.space.s2)
-                    .testTag("backup_message"),
-            )
-        }
-    }
-
-    state.pendingImport?.let { file -> ImportDialog(file, state, viewModel) }
-    state.conflict?.takeIf { !state.busy }?.let { conflict -> ConflictDialog(conflict, state, viewModel) }
+    BackupContent(
+        state = state,
+        onBack = onBack,
+        actions = BackupActions(
+            toggleExport = viewModel::toggleExport,
+            setPhotos = viewModel::setPhotos,
+            setVideos = viewModel::setVideos,
+            export = { exportLauncher.launch(viewModel.suggestedFileName) },
+            import = {
+                importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/json", "text/plain", "application/octet-stream"))
+            },
+            toggleImport = viewModel::toggleImport,
+            confirmImport = viewModel::confirmImport,
+            cancelImport = viewModel::cancelImport,
+            resolve = viewModel::resolve,
+        ),
+    )
 }
 
 @Composable
-private fun ImportDialog(file: BackupFile, state: BackupUiState, viewModel: BackupViewModel) {
+fun BackupContent(state: BackupUiState, onBack: () -> Unit, modifier: Modifier = Modifier, actions: BackupActions = BackupActions()) {
+    val space = CruxTheme.space
+    Column(modifier.fillMaxSize().testTag("screen_Backups")) {
+        CruxTopAppBar(title = "Backups", onBack = onBack)
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s4 + LocalNavBarClearance.current),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Text(
+                "Save your data to a file you keep, or bring a backup in. When something in a backup is already here, Crux asks what to do.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            state.message?.let {
+                CruxCard(modifier = Modifier.testTag("backup_message")) {
+                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            Eyebrow("Export", Modifier.padding(top = space.s2))
+            CruxCard {
+                Text("What to include", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = space.s2))
+                BackupSection.entries.forEach { section ->
+                    ToggleRow(
+                        label = section.label,
+                        description = section.description,
+                        checked = section in state.exportSections,
+                        onToggle = { actions.toggleExport(section) },
+                        tag = "export_${section.name}",
+                    )
+                }
+                CruxButton(
+                    text = "Export",
+                    onClick = actions.export,
+                    enabled = !state.busy && state.exportSections.isNotEmpty(),
+                    icon = Icons.Rounded.Upload,
+                    modifier = Modifier
+                        .padding(top = space.s3)
+                        .testTag("export_backup"),
+                )
+            }
+
+            Eyebrow("Photos and videos", Modifier.padding(top = space.s4))
+            CruxCard {
+                ToggleRow(
+                    label = "Photos",
+                    description = "Climb photos, wall photos and maps",
+                    checked = state.media.photos,
+                    onToggle = { actions.setPhotos(!state.media.photos) },
+                    tag = "backup_photos",
+                )
+                ToggleRow(
+                    label = "Videos",
+                    description = "Climb videos. They can make a backup large.",
+                    checked = state.media.videos,
+                    onToggle = { actions.setVideos(!state.media.videos) },
+                    tag = "backup_videos",
+                )
+            }
+            Text(
+                "For exports and imports alike: switched off, they're left out of the file you save and of the backups you bring in.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Eyebrow("Import", Modifier.padding(top = space.s4))
+            CruxCard {
+                Text("Bring a backup in", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Pick a backup file, then choose what to bring in. Nothing changes until you've answered for anything that's already here.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                CruxButton(
+                    text = "Import",
+                    onClick = actions.import,
+                    enabled = !state.busy,
+                    variant = CruxButtonVariant.Outlined,
+                    icon = Icons.Rounded.Download,
+                    modifier = Modifier
+                        .padding(top = space.s3)
+                        .testTag("import_backup"),
+                )
+            }
+        }
+    }
+
+    state.pendingImport?.let { file -> ImportDialog(file, state, actions) }
+    state.conflict?.takeIf { !state.busy }?.let { conflict -> ConflictDialog(conflict, state, actions) }
+}
+
+@Composable
+private fun ImportDialog(file: BackupFile, state: BackupUiState, actions: BackupActions) {
     AlertDialog(
-        onDismissRequest = viewModel::cancelImport,
+        onDismissRequest = actions.cancelImport,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.extraLarge,
         title = { Text("Import backup", style = MaterialTheme.typography.headlineSmall) },
@@ -343,7 +396,7 @@ private fun ImportDialog(file: BackupFile, state: BackupUiState, viewModel: Back
                         },
                         checked = section in state.importSections,
                         enabled = count > 0,
-                        onToggle = { viewModel.toggleImport(section) },
+                        onToggle = { actions.toggleImport(section) },
                         tag = "import_${section.name}",
                     )
                 }
@@ -351,18 +404,18 @@ private fun ImportDialog(file: BackupFile, state: BackupUiState, viewModel: Back
         },
         confirmButton = {
             TextButton(
-                onClick = viewModel::confirmImport,
+                onClick = actions.confirmImport,
                 enabled = state.importSections.isNotEmpty(),
                 modifier = Modifier.testTag("confirm_import"),
             ) { Text("Import") }
         },
-        dismissButton = { TextButton(onClick = viewModel::cancelImport) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = actions.cancelImport) { Text("Cancel") } },
     )
 }
 
 /** One record that is already here: what it is both ways, and what to do with it. */
 @Composable
-private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, viewModel: BackupViewModel) {
+private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, actions: BackupActions) {
     var forOthers by remember(conflict.section) { mutableStateOf(false) }
     val others = state.othersInSection
     AlertDialog(
@@ -390,7 +443,7 @@ private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, viewM
                 }
                 Column(Modifier.padding(top = CruxTheme.space.s2)) {
                     Resolution.entries.forEach { resolution ->
-                        Choice(resolution, onClick = { viewModel.resolve(resolution, forOthers && others > 0) })
+                        Choice(resolution, onClick = { actions.resolve(resolution, forOthers && others > 0) })
                     }
                 }
                 if (others > 0) {
@@ -410,7 +463,7 @@ private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, viewM
                 }
             }
         },
-        confirmButton = { TextButton(onClick = viewModel::cancelImport) { Text("Cancel import") } },
+        confirmButton = { TextButton(onClick = actions.cancelImport) { Text("Cancel import") } },
     )
 }
 

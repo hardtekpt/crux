@@ -88,12 +88,11 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 fun SettingsScreen(
     onBack: () -> Unit,
     openAbout: () -> Unit = {},
+    openBackups: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
-    backupViewModel: BackupViewModel = hiltViewModel(),
     crashReportsViewModel: CrashReportsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val backupState by backupViewModel.state.collectAsStateWithLifecycle()
     val crashCount by crashReportsViewModel.count.collectAsStateWithLifecycle()
     SettingsContent(
         uiState = uiState,
@@ -103,7 +102,7 @@ fun SettingsScreen(
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         onTimerSounds = viewModel::setTimerSounds,
-        backup = { BackupCard(backupState, backupViewModel) },
+        onBackups = openBackups,
         diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
         onAbout = openAbout,
     )
@@ -118,7 +117,7 @@ fun SettingsContent(
     onDemoMode: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     onUnits: (UnitSystem) -> Unit = {},
-    backup: @Composable () -> Unit = {},
+    onBackups: () -> Unit = {},
     diagnostics: @Composable () -> Unit = {},
     onAbout: () -> Unit = {},
     onTimerSounds: (Boolean) -> Unit = {},
@@ -243,7 +242,13 @@ fun SettingsContent(
                     )
                 }
             }
-            backup()
+            CruxListRow(
+                title = "Backups",
+                supporting = "Save your data to a file, or bring a backup in",
+                trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                onClick = onBackups,
+                modifier = Modifier.testTag("open_backups"),
+            )
 
             Eyebrow("Diagnostics", Modifier.padding(top = space.s4))
             diagnostics()

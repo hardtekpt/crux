@@ -48,6 +48,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object AboutRoute
 
+@Serializable data object BackupsRoute
+
 @Serializable data object MeasurementsRoute
 
 @Serializable data object CircumferencesRoute

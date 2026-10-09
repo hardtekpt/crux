@@ -25,7 +25,7 @@ You don't: a problem you've tried and not sent is a project automatically. See
 Records come from results you log under *You → Personal records*. Sessions don't feed records yet.
 
 **Are my videos backed up?**
-Yes, with your photos, unless you switch them off under *Settings → Backup → Photos and videos*.
+Yes, with your photos, unless you switch them off under *Settings → Backups → Photos and videos*.
 They can make the backup file large. See [Settings and your data](settings-and-data.md#backups).
 
 **Can I import the same backup twice?**

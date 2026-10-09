@@ -10,7 +10,7 @@ Open Settings from the gear on the **You** tab.
 - **Appearance**: Dark (the default), Light, or System.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
-- **Your data**: demo mode, and backups.
+- **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
 - **About**: version, licence, source code, and the open-source libraries Crux uses.
 
@@ -22,7 +22,9 @@ untouched until you turn demo mode off.
 
 ## Backups
 
-*Settings → Backup* saves your data to a file you keep, and brings a backup back in.
+*Settings → Backups* saves your data to a file you keep, and brings a backup back in.
+
+<img src="../../app/src/test/screenshots/backups_dark.png" width="300" alt="Backups: what to include, photos and videos, and import">
 
 - **Export**: choose sections (exercise list, plan list, journal, session history, places, body
   stats, personal records, notes, settings), then pick where to save the `.zip` file: your phone,
@@ -46,7 +48,7 @@ here when they have the same name; climbs, sessions, notes, records and body sta
 logged at the same moment.
 
 **Photos and videos** go into the backup unless you switch them off under *Photos and videos* on the
-backup card. The switches apply to imports too: with videos off, a backup's videos are left out.
+Backups page. The switches apply to imports too: with videos off, a backup's videos are left out.
 Videos can make a backup large.
 
 Backups from older versions of Crux keep importing into newer ones, the `.json` files they made

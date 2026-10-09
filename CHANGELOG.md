@@ -19,6 +19,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Backups page.** Export, the photo and video switches and import moved from the Settings list to
+  their own page, *Settings → Backups*.
 - **Import asks about duplicates.** When something in a backup is already in Crux, you see both and
   choose: skip it, replace it with the backup's, or keep both. One answer can cover the rest of a
   section. Replacing a place brings in the walls and problems it's missing.
