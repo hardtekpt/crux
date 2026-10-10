@@ -24,6 +24,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object DaysOnWallRoute
 
+@Serializable data object WeekClimbsRoute
+
 @Serializable data object TrainRoute
 
 @Serializable data class TemplateDetailRoute(val templateId: Long)

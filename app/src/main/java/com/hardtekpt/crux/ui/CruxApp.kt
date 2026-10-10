@@ -84,6 +84,7 @@ import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
 import com.hardtekpt.crux.ui.navigation.TrainGraph
 import com.hardtekpt.crux.ui.navigation.TrainRoute
+import com.hardtekpt.crux.ui.navigation.WeekClimbsRoute
 import com.hardtekpt.crux.ui.navigation.YouGraph
 import com.hardtekpt.crux.ui.navigation.YouRoute
 import com.hardtekpt.crux.ui.navigation.cruxEnter
@@ -183,6 +184,18 @@ fun CruxApp() {
                             onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
+                            onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
+                        )
+                    }
+                    page<WeekClimbsRoute> {
+                        com.hardtekpt.crux.ui.journal.WeekClimbsScreen(
+                            onBack = navController::popBackStack,
+                            actions = JournalActions(
+                                openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                                openNote = { navController.navigate(NoteEditorRoute(it)) },
+                                openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                                openSession = { navController.navigate(SessionSummaryRoute(it)) },
+                            ),
                         )
                     }
                     page<DaysOnWallRoute> {

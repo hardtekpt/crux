@@ -69,7 +69,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
 
         composeRule.waitForTag("screen_Home")
-        composeRule.onNodeWithTag("week_climbs").assertTextEquals("1")
+        composeRule.onNodeWithTag("week_climbs", useUnmergedTree = true).assertTextEquals("1")
         // The tile is tappable, so its text merges into one node; read the figure from the unmerged tree.
         composeRule.onNodeWithTag("home_list")
             .performScrollToNode(hasText("Latest best", substring = true, ignoreCase = true))
@@ -162,6 +162,15 @@ class MainActivityTest {
         composeRule.onNodeWithTag("segment_Boulders").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithTag("converter_list").performScrollToNode(hasTestTag("result_V"))
         composeRule.onNodeWithTag("value_V", useUnmergedTree = true).assertTextEquals("V5")
+    }
+
+    @Test
+    fun climbsThisWeekOpenFromHome() {
+        composeRule.waitForTag("widget_week_climbs")
+        composeRule.onNodeWithTag("widget_week_climbs").performClick()
+        composeRule.waitForTag("screen_WeekClimbs")
+        composeRule.onNodeWithTag("week_figures").assertIsDisplayed()
+        composeRule.onNodeWithTag("week_range").assertIsDisplayed()
     }
 
     @Test

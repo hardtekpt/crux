@@ -114,7 +114,7 @@ class ComponentsTest {
     @Test
     fun emptyHomeNamesTheFirstAction() {
         composeRule.setContent { CruxTheme { HomeContent(HomeUiState(isLoading = false)) } }
-        composeRule.onNodeWithTag("week_climbs").assertTextEquals("0")
+        composeRule.onNodeWithTag("week_climbs", useUnmergedTree = true).assertTextEquals("0")
         composeRule.onNodeWithTag("home_list")
             .performScrollToNode(hasText("No climbs logged yet", substring = true))
         composeRule.onNodeWithText("No climbs logged yet", substring = true).assertExists()

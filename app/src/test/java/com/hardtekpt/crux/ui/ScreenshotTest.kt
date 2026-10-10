@@ -133,6 +133,13 @@ class ScreenshotTest {
     }
 
     @Test
+    fun weekClimbs() {
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val state = loaded(com.hardtekpt.crux.ui.journal.WeekClimbsViewModel(climbs, records, notes, sessions, FIXED_CLOCK).uiState) { !it.isLoading }
+        bothThemes("week_climbs") { com.hardtekpt.crux.ui.journal.WeekClimbsContent(state) }
+    }
+
+    @Test
     fun progress() {
         val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK).uiState) { !it.isLoading }
         bothThemes("progress") { ProgressContent(uiState = state) }

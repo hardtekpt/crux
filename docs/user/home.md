@@ -9,7 +9,7 @@ Home is a dashboard of widgets that you choose and arrange yourself.
 | Widget | Shows |
 | --- | --- |
 | **Today's plan** | One of your plans, with how long it takes, its blocks, and *Start session* and *View plan*. Until scheduling exists, Crux rotates through your plans by day of the week. |
-| **This week** | Climbs and sends since Monday. |
+| **This week** | Climbs and sends since Monday. Tap it for the **Climbs this week** page: the week's climbs, sends, days and hardest send, then each day's climbs (sessions included) as the Journal shows them. The arrows go back through earlier weeks. |
 | **Days on the wall** | Days you climbed since Monday. Tap it for the **Days on the wall** page: your days this week, month and year and your week streak, and a month calendar with each climbing day filled (deeper for more climbs). Tap a day to see its journal under the calendar; the arrows page through the months. |
 | **Latest best** | Your newest hardest send: the latest send harder than every send before it, in any style. An easier flash after a harder redpoint doesn't replace it. Grades are compared within a scale. |
 | **Bodyweight** | Your latest weigh-in and the change over 30 days. |

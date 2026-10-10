@@ -64,6 +64,7 @@ data class WidgetActions(
     val openYou: () -> Unit = {},
     val openProblem: (Long) -> Unit = {},
     val openDaysOnWall: () -> Unit = {},
+    val openWeekClimbs: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
     /** "+1 go" on a project, and the one just logged, which can be undone. */
     val logGo: ((Long) -> Unit)? = null,
@@ -83,7 +84,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
             value = state.figure(state.week.climbs),
             delta = "${state.week.sends} sent",
             direction = if (state.week.sends > 0) TrendDirection.Wanted else TrendDirection.Neutral,
-            modifier = modifier,
+            modifier = modifier.clickable(onClick = actions.openWeekClimbs).testTag("widget_week_climbs"),
             valueModifier = Modifier.testTag("week_climbs"),
         )
 

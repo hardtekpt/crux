@@ -16,6 +16,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   settings and Home layout, and climb videos now go into backups too. Backups are now `.zip` files;
   the `.json` backups you already have still import.
 - **Photos and videos switches** for backups, so you can leave them out to keep the file small.
+- **Climbs this week page**, from the Home widget: the week's climbs, sends, days and hardest send,
+  then every climb by day. The arrows go back through earlier weeks.
 - **Days on the wall page**, from the Home widget: this week, month and year, your week streak,
   and a month calendar of your climbing days. Tap a day to see its journal.
 - **+1 go** on projects in Home and Progress: one tap logs an attempt on the problem today, with
