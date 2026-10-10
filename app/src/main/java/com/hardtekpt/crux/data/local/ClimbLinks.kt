@@ -118,7 +118,7 @@ object ClimbLinks {
         db.execSQL(
             "UPDATE climbs SET style = 'REDPOINT' WHERE style IN ('FLASH', 'ONSIGHT') AND problemId IS NOT NULL AND EXISTS (" +
                 "SELECT 1 FROM climbs e WHERE e.problemId = climbs.problemId AND e.id != climbs.id AND " +
-                "(e.dateEpochDay < climbs.dateEpochDay OR (e.dateEpochDay = climbs.dateEpochDay AND e.createdAtMillis < climbs.createdAtMillis)))",
+                "(e.dateEpochDay < climbs.dateEpochDay OR e.createdAtMillis < climbs.createdAtMillis))",
         )
     }
 

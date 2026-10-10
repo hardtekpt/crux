@@ -222,6 +222,22 @@ class LogClimbViewModelTest {
     }
 
     @Test
+    fun `a send logged after a go stays a redpoint, even when dated earlier`() = runBlocking {
+        val (_, problemId) = boardWithProblem()
+        val today = LocalDate.now(FIXED_CLOCK)
+        fun log(style: AscentStyle, sends: Int, date: LocalDate) = NewClimb(
+            Discipline.BOULDER, GradeScale.V_SCALE, 6, style, 1, Venue.BOARD, date, "Hard moves", "Moon board", null,
+            problemId = problemId, sends = sends,
+        )
+        repository.logClimb(log(AscentStyle.ATTEMPT, 0, today))
+        val sent = repository.logClimb(log(AscentStyle.REDPOINT, 1, today.minusDays(3)))
+
+        val vm = viewModel("climbId" to sent)
+        val draft = withTimeout(5_000) { vm.draft.first { it.climbId == sent && it.goesBefore > 0 } }
+        assertEquals(AscentStyle.REDPOINT, draft.style)
+    }
+
+    @Test
     fun `editing a climb keeps its id and delete removes it`() = runBlocking {
         val id = repository.logClimb(
             NewClimb(

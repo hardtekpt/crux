@@ -341,15 +341,15 @@ class LogClimbViewModel @Inject constructor(
     }
 
     /**
-     * Adds up the goes on a climb before this log: for an edit, those logged earlier (by day,
-     * then order); for a new log, all of them.
+     * Adds up the goes on a climb before this log: for an edit, those on an earlier day or logged
+     * before it (a log can be dated back after a later one was logged); for a new log, all of them.
      */
     private suspend fun refreshEarlierGoes(problemId: Long, climb: com.hardtekpt.crux.data.model.Climb?) {
         val goes = climbRepository.observeClimbsForProblem(problemId).first().filter { it.id != climb?.id }
         val earlier = if (climb == null) {
             goes
         } else {
-            goes.filter { it.date < climb.date || (it.date == climb.date && it.id < climb.id) }
+            goes.filter { it.date < climb.date || it.id < climb.id }
         }
         _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = earlier.sumOf { g -> g.attempts }) else it }
     }
