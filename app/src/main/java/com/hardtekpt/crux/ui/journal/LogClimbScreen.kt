@@ -59,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -412,13 +413,14 @@ private fun DayButton(date: LocalDate, today: LocalDate, onClick: () -> Unit) {
     }
 }
 
-/** Two big pads: a fall or a send, one tap per go, each with its count. */
+/** Two big pads: a fall or a send, one tap per go, each with the climb's count in all. */
 @Composable
 private fun GoPads(draft: LogClimbDraft, onGo: (Boolean) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-        GoPad("Fell", "not yet", draft.falls, colors.surfaceContainerHighest, colors.onSurface, Modifier.weight(1f).testTag("go_fell")) { onGo(false) }
-        GoPad("Sent", "topped", draft.sends, CruxTheme.colors.success, CruxTheme.colors.onSuccess, Modifier.weight(1f).testTag("go_sent")) { onGo(true) }
+        // The counts are the climb's in all; the dots below say which goes are today's.
+        GoPad("Fell", "not yet", draft.fallsInAll, colors.surfaceContainerHighest, colors.onSurface, Modifier.weight(1f).testTag("go_fell")) { onGo(false) }
+        GoPad("Sent", "topped", draft.sendsInAll, CruxTheme.colors.success, CruxTheme.colors.onSuccess, Modifier.weight(1f).testTag("go_sent")) { onGo(true) }
     }
 }
 
@@ -450,17 +452,25 @@ private fun GoPad(label: String, hint: String, count: Int, fill: Color, ink: Col
     }
 }
 
-/** The goes as ✕ and ✓ in order, the style they make, and Undo for the last one. */
+/**
+ * The goes as ✕ and ✓ in order: earlier logs' faded, then this log's, the style they make, and
+ * Undo for this log's last one.
+ */
 @Composable
 private fun GoTrail(draft: LogClimbDraft, onUndo: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val success = CruxTheme.colors.success
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.testTag("go_trail")) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f, fill = false)) {
-            draft.goes.takeLast(12).forEach { sent ->
+            val shown = (draft.earlier.map { it to true } + draft.goes.map { it to false }).takeLast(12)
+            shown.forEach { (sent, before) ->
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(22.dp).clip(CircleShape).background(if (sent) success else colors.surfaceContainerHighest),
+                    modifier = Modifier
+                        .size(22.dp)
+                        .alpha(if (before) 0.4f else 1f)
+                        .clip(CircleShape)
+                        .background(if (sent) success else colors.surfaceContainerHighest),
                 ) {
                     Icon(
                         if (sent) Icons.Rounded.Check else Icons.Rounded.Close,
@@ -484,7 +494,7 @@ private fun GoTrail(draft: LogClimbDraft, onUndo: () -> Unit) {
         )
         if (draft.goesBefore > 0) {
             Text(
-                "${draft.goesBefore + draft.attempts} in all",
+                "${draft.attempts} today · ${draft.goesBefore + draft.attempts} in all",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,

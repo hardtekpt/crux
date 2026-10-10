@@ -112,13 +112,13 @@ object ClimbLinks {
 
     /**
      * A flash or onsight is a send on the very first go. Once logs share a climb, a first-go send
-     * logged after earlier goes on it was really a redpoint.
+     * logged after other goes on it, whatever their day, was really a redpoint.
      */
     fun settleStyles(db: SupportSQLiteDatabase) {
         db.execSQL(
             "UPDATE climbs SET style = 'REDPOINT' WHERE style IN ('FLASH', 'ONSIGHT') AND problemId IS NOT NULL AND EXISTS (" +
                 "SELECT 1 FROM climbs e WHERE e.problemId = climbs.problemId AND e.id != climbs.id AND " +
-                "(e.dateEpochDay < climbs.dateEpochDay OR e.createdAtMillis < climbs.createdAtMillis))",
+                "(e.createdAtMillis < climbs.createdAtMillis OR (e.createdAtMillis = climbs.createdAtMillis AND e.id < climbs.id)))",
         )
     }
 

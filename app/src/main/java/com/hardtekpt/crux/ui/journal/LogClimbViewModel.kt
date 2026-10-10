@@ -89,7 +89,7 @@ data class LogClimbDraft(
     val addingVideo: Boolean = false,
     val videoFailed: Boolean = false,
     /** Goes logged on the picked climb before this log, so a first-go send can still be a redpoint. */
-    val earlierGoes: Int = 0,
+    val earlierGoes: List<Boolean> = emptyList(),
     val dateError: String? = null,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
@@ -104,7 +104,14 @@ data class LogClimbDraft(
     val attempts: Int get() = goes.size
 
     /** Goes on the picked climb before this log, when there are any. */
-    val goesBefore: Int get() = if (problemId != null) earlierGoes else 0
+    val goesBefore: Int get() = earlier.size
+
+    /** The climb's goes logged before this log, as a trail: falls (false) and sends (true). */
+    val earlier: List<Boolean> get() = if (problemId != null) earlierGoes else emptyList()
+
+    /** Falls and sends on the climb in all: the earlier logs' and this one's. */
+    val fallsInAll: Int get() = falls + earlier.count { !it }
+    val sendsInAll: Int get() = sends + earlier.count { it }
 
     /**
      * The style, worked out from the goes: no send is an attempt; a send on the very first go
@@ -273,7 +280,7 @@ class LogClimbViewModel @Inject constructor(
                     sectionId = place?.sections?.firstOrNull()?.id,
                     areaId = null,
                     problemId = null,
-                    earlierGoes = 0,
+                    earlierGoes = emptyList(),
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
                     angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
@@ -348,17 +355,19 @@ class LogClimbViewModel @Inject constructor(
     }
 
     /**
-     * Adds up the goes on a climb before this log: for an edit, those on an earlier day or logged
-     * before it (a log can be dated back after a later one was logged); for a new log, all of them.
+     * The goes on a climb before this log, in the order they were logged: for an edit, the logs
+     * logged before it, whatever their day (a climb can be repeated any time); for a new log, all
+     * of them.
      */
     private suspend fun refreshEarlierGoes(problemId: Long, climb: com.hardtekpt.crux.data.model.Climb?) {
         val goes = climbRepository.observeClimbsForProblem(problemId).first().filter { it.id != climb?.id }
         val earlier = if (climb == null) {
             goes
         } else {
-            goes.filter { it.date < climb.date || it.id < climb.id }
+            goes.filter { it.id < climb.id }
         }
-        _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = earlier.sumOf { g -> g.attempts }) else it }
+        val trail = earlier.sortedBy { it.id }.flatMap(::goesOf)
+        _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = trail) else it }
     }
 
     private fun applyProblem(problem: Problem) = _draft.update {
@@ -385,7 +394,7 @@ class LogClimbViewModel @Inject constructor(
         val match = candidates().firstOrNull { it.name.equals(trimmed, ignoreCase = true) && it.discipline == draft.discipline }
         when {
             match != null && match.id != draft.problemId -> pickProblem(match)
-            match == null && draft.problemId != null -> _draft.update { it.copy(problemId = null, earlierGoes = 0) }
+            match == null && draft.problemId != null -> _draft.update { it.copy(problemId = null, earlierGoes = emptyList()) }
         }
     }
 
@@ -426,7 +435,7 @@ class LogClimbViewModel @Inject constructor(
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
         val override = placeDetail.value?.place?.scaleFor(discipline, draft.sectionId)
-        val next = draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = 0)
+        val next = draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = emptyList())
         next.copy(gradeIndex = next.system.defaultIndex)
     }
 

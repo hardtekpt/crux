@@ -49,8 +49,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
-- **Goes on a climb add up across days**: a send on your first go today, after earlier tries, is
-  a redpoint, and the form shows your goes in all.
+- **Goes on a climb add up across days**: the go pads count the climb's falls and sends in all, its
+  earlier goes show before today's, and a send after earlier goes is a redpoint, whatever their day.
 - **The Journal's day tally** counts a session's logs on one climb once, like the session card.
 - **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
   import twice.

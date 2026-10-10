@@ -235,6 +235,9 @@ class LogClimbViewModelTest {
         val vm = viewModel("climbId" to sent)
         val draft = withTimeout(5_000) { vm.draft.first { it.climbId == sent && it.goesBefore > 0 } }
         assertEquals(AscentStyle.REDPOINT, draft.style)
+        // The counts are the climb's in all: the earlier fall and today's send.
+        assertEquals(1, draft.fallsInAll)
+        assertEquals(1, draft.sendsInAll)
     }
 
     @Test

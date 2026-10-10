@@ -39,8 +39,9 @@ Journal. Coming back to a climb adds another log to it.
    order you climbed. The dots show them in order, and **Undo** takes the last one back. The form
    starts on one send, so a flash needs no taps; the first tap replaces it. Crux works out the
    style: no send is an *Attempt*, a send on the very first go is a *Flash*, and any other send is
-   a *Redpoint*. On a climb you've tried before, a send on your first go today is a redpoint, and
-   the line shows your goes in all. For a route sent first go, **No beta** marks it an *Onsight*.
+   a *Redpoint*. On a climb you've tried before, the counts on the pads are the climb's in all, the
+   earlier goes show faded before today's, and any send is a redpoint, whatever day the earlier
+   goes were on. For a route sent first go, **No beta** marks it an *Onsight*.
 5. **How hard it felt** (optional): Easy, Steady, Moderate, Hard or Limit. Tap the picked word
    again to clear it.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
