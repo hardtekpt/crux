@@ -88,10 +88,7 @@ interface PlaceRepository {
     suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long? = null): Long
     suspend fun deleteArea(id: Long)
 
-    /** Records a reset today and retires the problems that were on the wall. */
-    suspend fun resetArea(id: Long)
     suspend fun saveProblem(input: ProblemInput): Long
-    suspend fun setRetired(problemId: Long, retired: Boolean)
     suspend fun deleteProblem(id: Long)
 }
 
@@ -112,7 +109,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             ->
             val byPlace = activity.associateBy { it.placeId }
             val areasByPlace = areas.groupBy { it.placeId }
-            val liveProblems = problems.filter { !it.retired }.groupBy { it.placeId }
+            val liveProblems = problems.groupBy { it.placeId }
             val statsByProblem = problemStats.associateBy { it.problemId }
             places.map { place ->
                 val stats = byPlace[place.id]
@@ -163,7 +160,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             val byId = problems.associateBy { it.id }
             stats.filter { it.firstSendEpochDay == null }
                 .mapNotNull { row ->
-                    val problem = byId[row.problemId]?.takeIf { !it.retired } ?: return@mapNotNull null
+                    val problem = byId[row.problemId] ?: return@mapNotNull null
                     Project(
                         problem = problem.toModel(),
                         placeName = problem.placeId?.let(placeNames::get).orEmpty(),
@@ -285,16 +282,6 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         }
     }
 
-    override suspend fun resetArea(id: Long) {
-        val db = dbs.current()
-        db.withTransaction {
-            val dao = db.placeDao()
-            val area = dao.getAllAreas().first { it.id == id }
-            dao.updateArea(area.copy(resetEpochDay = LocalDate.now(clock).toEpochDay()))
-            dao.retireProblemsOnArea(id)
-        }
-    }
-
     override suspend fun saveProblem(input: ProblemInput): Long {
         val db = dbs.current()
         return db.withTransaction { saveProblemIn(db, input) }
@@ -342,11 +329,6 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         } else {
             dao.insertProblem(entity)
         }
-    }
-
-    override suspend fun setRetired(problemId: Long, retired: Boolean) {
-        val dao = dbs.current().placeDao()
-        dao.getProblem(problemId)?.let { dao.updateProblem(it.copy(retired = retired)) }
     }
 
     override suspend fun deleteProblem(id: Long) {

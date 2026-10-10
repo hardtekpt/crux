@@ -34,8 +34,8 @@ erDiagram
 | `climb_media` | A climb's photo and video | `climbId`, `kind` (`IMAGE`/`VIDEO`), `path` (a file name in `files/area_images`) |
 | `places` | Gyms, crags, boards | `name`, `type` (main kind), `extraTypes`, `favourite`, `latitude`/`longitude`/`address`, legacy place-wide scales |
 | `sections` | A place's facilities | `placeId`, `type` (`GYM`/`CRAG`/`BOARD`), `name`, `position`, `boulderScale`/`routeScale`/`localScale` |
-| `areas` | Walls and boards | `placeId`, `sectionId`, `name`, `angle`, `resetEpochDay`, `imagePath` |
-| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId`, `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (taken down) |
+| `areas` | Walls and boards | `placeId`, `sectionId`, `name`, `angle`, `resetEpochDay` (legacy, unused), `imagePath` |
+| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId`, `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused) |
 | `exercises` | The exercise library | `name`, `category`, `metric`, defaults (`defaultSets`…`defaultRepRestSeconds`, `prepSeconds`) |
 | `workout_templates` | Session plans | `name`, `description`, `position` |
 | `template_blocks` | A plan's blocks | `templateId`, `position`, `name` |

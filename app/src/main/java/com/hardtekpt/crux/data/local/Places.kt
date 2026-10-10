@@ -121,6 +121,7 @@ data class ProblemEntity(
     /** Index into the design system's tape colours (red … purple), if the climber tagged one. */
     val tape: Int? = null,
     val setEpochDay: Long? = null,
+    /** Set by the old wall reset (before schema 21's app); no longer used, kept so nothing is lost. */
     @ColumnInfo(defaultValue = "0") val retired: Boolean = false,
     val notes: String? = null,
     val createdAtMillis: Long,
@@ -228,11 +229,7 @@ interface PlaceDao {
     @Query("DELETE FROM areas WHERE id = :id")
     suspend fun deleteArea(id: Long)
 
-    /** A reset retires everything still up on the wall. */
-    @Query("UPDATE problems SET retired = 1 WHERE areaId = :areaId AND retired = 0")
-    suspend fun retireProblemsOnArea(areaId: Long)
-
-    @Query("SELECT * FROM problems WHERE placeId = :placeId ORDER BY retired, gradeIndex DESC, name COLLATE NOCASE")
+    @Query("SELECT * FROM problems WHERE placeId = :placeId ORDER BY gradeIndex DESC, name COLLATE NOCASE")
     fun observeProblems(placeId: Long): Flow<List<ProblemEntity>>
 
     @Query("SELECT * FROM problems ORDER BY placeId")
@@ -279,7 +276,7 @@ interface PlaceDao {
     @Query("DELETE FROM climbs WHERE problemId = :id")
     suspend fun deleteLogsOfProblem(id: Long)
 
-    @Query("SELECT * FROM problems WHERE retired = 0 AND ((:placeId IS NULL AND placeId IS NULL) OR placeId = :placeId) ORDER BY name COLLATE NOCASE")
+    @Query("SELECT * FROM problems WHERE (:placeId IS NULL AND placeId IS NULL) OR placeId = :placeId ORDER BY name COLLATE NOCASE")
     suspend fun getClimbsAt(placeId: Long?): List<ProblemEntity>
 
     @Query("DELETE FROM problems WHERE id = :id")

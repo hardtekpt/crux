@@ -33,6 +33,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   attempt, flash, onsight (route, no beta) or redpoint. How hard it felt is five words. The day is
   a calendar button beside the place, amber when it isn't today. Name suggestions continue a
   climb; note, photo and video are chips until used.
+- **No more wall resets.** Crux never hides or removes a climb on its own: climbs taken down by an
+  earlier reset are back in your projects and suggestions.
 - **Tapping a climb or project opens Log climb on it**, ready for more goes, with its earlier logs
   listed at the bottom. There's no separate climb page to edit any more.
 

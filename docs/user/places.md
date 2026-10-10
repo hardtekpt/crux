@@ -34,7 +34,7 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 - **Log here**: starts *Log climb* at this place, and at the facility if one is selected.
 - **Walls** (areas), each with the climbs you've logged on it: grade, name, goes and when you sent
   it. A wall can have an **image** (a photo of the wall, or a gym map with it marked) and an
-  **angle**. Its menu has **Reset (take its climbs down)**, for when the gym resets that wall.
+  **angle**.
 - **Open in Maps** hands the pin to your maps app.
 
 ## Climbs
@@ -45,8 +45,8 @@ it is, if anywhere. You don't create climbs separately; logging goes starts one.
 logs** listed at the bottom; tap one to change or delete it. Changing the name, grade or wall in
 the form changes the climb and all its logs. Deleting a climb's last log deletes the climb.
 
-When the gym resets a wall, its climbs are **taken down**: hidden from suggestions and projects,
-with their history kept in your journal.
+Crux never hides or removes a climb on its own: everything you log stays, and a climb you haven't
+sent stays a project until you send it.
 
 ## Projects
 

@@ -227,10 +227,6 @@ class PlaceDetailViewModel @Inject constructor(
     }
 
     fun captureUri(): Uri = images.newCaptureUri()
-
-    fun resetArea(id: Long) {
-        viewModelScope.launch { repository.resetArea(id) }
-    }
 }
 
 /** A place's walls and the climbs on them, with how you've done on each. */
@@ -249,7 +245,6 @@ fun PlaceDetailScreen(
     var editingArea by remember { mutableStateOf<Area?>(null) }
     var viewingArea by remember { mutableStateOf<Area?>(null) }
     var addingArea by rememberSaveable { mutableStateOf(false) }
-    var showRetired by rememberSaveable { mutableStateOf(false) }
     val space = CruxTheme.space
     val place = detail?.place
 
@@ -320,7 +315,7 @@ fun PlaceDetailScreen(
             }
             // The numbers, each with a plain label and what it means.
             item(key = "stats") {
-                val live = current.problems.filter { !it.problem.retired }
+                val live = current.problems
                 val projects = live.count { it.isProject }
                 val lastVisit = climbs.maxOfOrNull { it.date }
                 Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min).testTag("place_stats")) {
@@ -359,7 +354,7 @@ fun PlaceDetailScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
                                 pair.forEach { section ->
                                     val areas = current.areas.filter { current.place.sectionOf(it)?.id == section.id }
-                                    val problems = current.problems.count { p -> !p.problem.retired && areas.any { it.id == p.problem.areaId } }
+                                    val problems = current.problems.count { p -> areas.any { it.id == p.problem.areaId } }
                                     FacilityTile(
                                         section = section,
                                         areas = areas.size,
@@ -414,7 +409,7 @@ fun PlaceDetailScreen(
                 }
             }
 
-            val visible = current.problems.filter { showRetired || !it.problem.retired }
+            val visible = current.problems
             // With a facility picked, only its walls and their problems.
             val shownAreas = current.areas.filter { picked == null || current.place.sectionOf(it)?.id == picked.id }
             val groups: List<Pair<Area?, List<ProblemWithStats>>> =
@@ -444,7 +439,6 @@ fun PlaceDetailScreen(
                                     a.name,
                                     current.place.sectionOf(a)?.name?.takeIf { current.place.hasSeveralTypes },
                                     a.angle?.let { "$it°" },
-                                    a.resetDate?.let { "reset ${it.shortLabel()}" },
                                 ).joinToString(" · ")
                             }
                                 ?: "No ${areaLabel.lowercase()}",
@@ -455,7 +449,7 @@ fun PlaceDetailScreen(
                         ) {
                             AreaMenu(area, onEdit = {
                                 editingArea = area
-                            }, onReset = { viewModel.resetArea(area.id) }, onDelete = { viewModel.deleteArea(area) })
+                            }, onDelete = { viewModel.deleteArea(area) })
                         }
                     }
                 }
@@ -496,13 +490,6 @@ fun PlaceDetailScreen(
                         icon = Icons.Rounded.Add,
                         modifier = Modifier.testTag("add_area"),
                     )
-                    if (current.problems.any { it.problem.retired }) {
-                        CruxButton(
-                            text = if (showRetired) "Hide taken down" else "Show taken down",
-                            onClick = { showRetired = !showRetired },
-                            variant = CruxButtonVariant.Text,
-                        )
-                    }
                 }
             }
         }
@@ -628,7 +615,7 @@ private fun ProblemLine(item: ProblemWithStats, onOpen: (Long) -> Unit) {
         Text(item.problem.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
         Column(Modifier.weight(1f)) {
             Text(
-                item.problem.name + if (item.problem.retired) " (taken down)" else "",
+                item.problem.name,
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -655,7 +642,7 @@ private fun ProblemRow(item: ProblemWithStats, detail: PlaceDetail, onOpen: (Lon
         else -> GradeState.Attempted
     }
     CruxListRow(
-        title = item.problem.name + if (item.problem.retired) " (taken down)" else "",
+        title = item.problem.name,
         supporting = problemLine(item, detail.copy(areas = emptyList())),
         leading = {
             Box(contentAlignment = Alignment.TopEnd) {
@@ -670,7 +657,7 @@ private fun ProblemRow(item: ProblemWithStats, detail: PlaceDetail, onOpen: (Lon
 }
 
 @Composable
-private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDelete: () -> Unit) {
+private fun AreaMenu(area: Area, onEdit: () -> Unit, onDelete: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Rounded.MoreVert, contentDescription = "${area.name} options") }
@@ -678,10 +665,6 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
             DropdownMenuItem(text = { Text("Edit") }, onClick = {
                 open = false
                 onEdit()
-            })
-            DropdownMenuItem(text = { Text("Reset (take its climbs down)") }, onClick = {
-                open = false
-                onReset()
             })
             DropdownMenuItem(text = { Text("Delete") }, onClick = {
                 open = false

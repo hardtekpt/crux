@@ -175,11 +175,6 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.map { if (it.areaId == id) it.copy(areaId = null) else it }
     }
 
-    override suspend fun resetArea(id: Long) {
-        areas.value = areas.value.map { if (it.id == id) it.copy(resetDate = LocalDate.now(FIXED_CLOCK)) else it }
-        problems.value = problems.value.map { if (it.areaId == id) it.copy(retired = true) else it }
-    }
-
     override suspend fun saveProblem(input: ProblemInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
         val old = problems.value.find { it.id == id }
@@ -190,10 +185,6 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         )
         problems.value = problems.value.filterNot { it.id == id } + problem
         return id
-    }
-
-    override suspend fun setRetired(problemId: Long, retired: Boolean) {
-        problems.value = problems.value.map { if (it.id == problemId) it.copy(retired = retired) else it }
     }
 
     override suspend fun deleteProblem(id: Long) {

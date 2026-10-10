@@ -138,9 +138,9 @@ ticked, so they stay right when the screen is off or the app is in the backgroun
   from the grade and where it was when the log has no name. Editing a climb rewrites its logs'
   name, grade and place (`PlaceDao.syncLogs`); deleting the last log deletes the climb. A climb has
   no page of its own: opening it opens Log climb with `problemId`, which lists its other logs.
-- **Projects are derived, not flagged**: a climb that isn't taken down, has goes, and has no send.
-- **Retired** (shown as *taken down*): hidden from suggestions and projects, history kept.
-  Resetting a wall takes its climbs down.
+- **Projects are derived, not flagged**: a climb with goes and no send.
+- **Nothing is hidden or removed automatically.** The wall reset is gone; `problems.retired` and
+  `areas.resetEpochDay` are legacy columns, still backed up, but nothing reads them.
 - **Units**: stored in kg and cm. Imperial only changes what's shown.
 - **Media**: photos are scaled to 2048 px JPEGs in `files/area_images`, and videos are copied as
   they are. The database stores only file names.

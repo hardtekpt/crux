@@ -14,8 +14,8 @@ They're safe. Demo mode shows a separate set of sample data. Turn it off in *Set
 and your own data is back, untouched.
 
 **Why isn't a climb showing in the name suggestions?**
-Its wall was probably reset, which takes its climbs down. Climbs taken down are hidden from
-suggestions and projects but stay in your history.
+Suggestions show the climbs at the place you picked (or, with no place, the climbs with none).
+Pick its place first, then start typing its name.
 
 **How do I mark something as a project?**
 You don't: a climb you've tried and not sent is a project automatically. See

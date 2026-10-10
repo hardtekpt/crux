@@ -404,7 +404,7 @@ class LogClimbViewModel @Inject constructor(
         return if (draft.placeId == null) {
             unplaced.value
         } else {
-            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems?.map { it.problem }?.filter { !it.retired }.orEmpty()
+            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems?.map { it.problem }.orEmpty()
         }
     }
 

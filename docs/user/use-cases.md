@@ -39,8 +39,7 @@ repeat on the board build up its list, and the ones you haven't sent yet show as
    goes, tap **+ Sent** and it's a redpoint.
 
 The climb stays in **Projects** on Home and Progress until you send it, with its goes and your
-last try. When the gym resets the wall, **Reset** it, and its climbs are taken down without losing
-your history.
+last try.
 
 ## A day at the crag
 
