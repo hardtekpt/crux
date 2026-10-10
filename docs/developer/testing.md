@@ -42,6 +42,7 @@ Pixel 7 size. Goldens:
 - Everything else (light themes, Settings) is in `app/src/test/screenshots/`.
 - `*_text_largest_dark` render Home, Log climb, Session and Settings with 1.69× text
   (`@Config(fontScale = …)`), to catch text that clips or overlaps when the font is large.
+- `home_{blue,violet,pink}_{dark,light}` show Home in each accent other than teal.
 - `StoreGraphicsTest` draws the store icon and feature graphic from the launcher icon.
 
 Comparison is **exact**: removing one letter changes about 200 pixels, so any tolerance would hide

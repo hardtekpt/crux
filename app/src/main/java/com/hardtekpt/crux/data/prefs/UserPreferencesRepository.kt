@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
+/** The app's accent colour. Teal is the brand; the others are tuned to match it (ui/theme/Color.kt). */
+enum class Accent(val label: String) { TEAL("Teal"), BLUE("Blue"), VIOLET("Violet"), PINK("Pink") }
+
 /** How weights and lengths are shown. Data is always stored in kg and cm. */
 enum class UnitSystem(val label: String) { METRIC("Metric"), IMPERIAL("Imperial") }
 
@@ -36,6 +39,14 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = mode.name }
+    }
+
+    val accent: Flow<Accent> = dataStore.data.map { prefs ->
+        prefs[ACCENT]?.let { name -> Accent.entries.firstOrNull { it.name == name } } ?: Accent.TEAL
+    }
+
+    suspend fun setAccent(accent: Accent) {
+        dataStore.edit { it[ACCENT] = accent.name }
     }
 
     val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
@@ -121,6 +132,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val ACCENT = stringPreferencesKey("accent")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")

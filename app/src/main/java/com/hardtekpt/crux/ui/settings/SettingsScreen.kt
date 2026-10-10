@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
@@ -32,10 +33,12 @@ import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxSwatchPicker
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.theme.cruxColorScheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,6 +50,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val scales: GradeScales = GradeScales(),
     val themeMode: ThemeMode = ThemeMode.DARK,
+    val accent: Accent = Accent.TEAL,
     val demoMode: Boolean = false,
     val units: UnitSystem = UnitSystem.METRIC,
     val timerSounds: Boolean = true,
@@ -56,11 +60,11 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(private val preferences: UserPreferencesRepository) : ViewModel() {
     val uiState: StateFlow<SettingsUiState> = combine(
         preferences.gradeScales,
-        preferences.themeMode,
+        combine(preferences.themeMode, preferences.accent, ::Pair),
         preferences.demoMode,
         preferences.units,
         preferences.timerSounds,
-    ) { scales, theme, demo, units, sounds -> SettingsUiState(scales, theme, demo, units, sounds) }
+    ) { scales, (theme, accent), demo, units, sounds -> SettingsUiState(scales, theme, accent, demo, units, sounds) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
@@ -73,6 +77,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { preferences.setThemeMode(mode) }
+    }
+
+    fun setAccent(accent: Accent) {
+        viewModelScope.launch { preferences.setAccent(accent) }
     }
 
     fun setTimerSounds(enabled: Boolean) {
@@ -99,6 +107,7 @@ fun SettingsScreen(
         onBack = onBack,
         onGradeScale = viewModel::setGradeScale,
         onThemeMode = viewModel::setThemeMode,
+        onAccent = viewModel::setAccent,
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         onTimerSounds = viewModel::setTimerSounds,
@@ -121,6 +130,7 @@ fun SettingsContent(
     diagnostics: @Composable () -> Unit = {},
     onAbout: () -> Unit = {},
     onTimerSounds: (Boolean) -> Unit = {},
+    onAccent: (Accent) -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -170,6 +180,20 @@ fun SettingsContent(
                     selected = uiState.themeMode,
                     label = { it.label },
                     onSelect = onThemeMode,
+                )
+                Text(
+                    "Accent",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = space.s4, bottom = space.s2),
+                )
+                val dark = CruxTheme.isDark
+                CruxSwatchPicker(
+                    options = Accent.entries,
+                    selected = uiState.accent,
+                    color = { cruxColorScheme(dark, it).primary },
+                    label = { it.label },
+                    onSelect = onAccent,
+                    tag = { "accent_${it.name}" },
                 )
             }
 

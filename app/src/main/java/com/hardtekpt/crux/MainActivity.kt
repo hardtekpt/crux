@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val accent by viewModel.accent.collectAsStateWithLifecycle()
             val units by viewModel.units.collectAsStateWithLifecycle()
             val gradeScales by viewModel.gradeScales.collectAsStateWithLifecycle()
             val darkTheme = themeMode.isDark()
@@ -49,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            CruxTheme(darkTheme = darkTheme) {
+            CruxTheme(darkTheme = darkTheme, accent = accent) {
                 CompositionLocalProvider(LocalUnits provides units, com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales) {
                     CruxApp()
                 }
@@ -74,6 +76,12 @@ class MainViewModel @Inject constructor(preferences: UserPreferencesRepository) 
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ThemeMode.DARK,
+    )
+
+    val accent: StateFlow<Accent> = preferences.accent.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = Accent.TEAL,
     )
 
     val units: StateFlow<UnitSystem> = preferences.units.stateIn(

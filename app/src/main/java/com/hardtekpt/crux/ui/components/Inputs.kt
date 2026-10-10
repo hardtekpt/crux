@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -100,6 +102,53 @@ fun CruxFilterChip(
         ),
         modifier = modifier.height(CruxTheme.size.controlHeightSmall),
     )
+}
+
+/** A few colours as round swatches with their names; exactly one is selected. */
+@Composable
+fun <T> CruxSwatchPicker(
+    options: List<T>,
+    selected: T,
+    color: (T) -> Color,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    tag: (T) -> String = { "swatch_${label(it)}" },
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+        options.forEach { option ->
+            val on = option == selected
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .selectable(selected = on, role = Role.RadioButton, onClick = { onSelect(option) })
+                    .widthIn(min = CruxTheme.size.touchTarget + CruxTheme.space.s4)
+                    .padding(CruxTheme.space.s1)
+                    .testTag(tag(option)),
+            ) {
+                // The picked swatch gets a ring with a gap and a check; the colour stays whole.
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(CruxTheme.size.controlHeight)
+                        .border(CruxTheme.size.borderEmphasis, if (on) colors.onSurface else Color.Transparent, CircleShape)
+                        .padding(CruxTheme.space.s1)
+                        .background(color(option), CircleShape),
+                ) {
+                    if (on) Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.surface, modifier = Modifier.size(CruxTheme.size.iconSm))
+                }
+                Text(
+                    label(option),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (on) colors.onSurface else colors.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
 }
 
 /** Two to four views of the same thing; exactly one is selected. */

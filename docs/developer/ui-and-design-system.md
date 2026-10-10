@@ -15,6 +15,15 @@ dark is the default theme, and light and system are options.
 | Sizes | `CruxSize` | `touchTarget` (48 dp), border widths, and so on |
 | Shapes | `CruxShape`, `CruxShapes` | Rounded corners for cards, rows and buttons |
 
+**Accents.** The climber picks an accent (`Accent` in `data/prefs`: Teal, Blue, Violet, Pink), and
+`CruxTheme(darkTheme, accent)` builds the scheme with `cruxColorScheme`. An accent sets the
+primary roles and tints the surfaces and `outlineVariant` slightly towards itself; everything else
+(text, outline, secondary amber, success, danger, tape, charts, timer phases) is the same in every
+accent. Teal is the brand palette. The others are teal's tones turned to their hue in OKLCH, at
+the same lightness and the same share of the chroma that hue allows. `AccentContrastTest` checks
+every accent in both modes. Don't add an amber, green or red accent: those colours already mean a
+go, a send and danger. `CruxTheme.isDark` says which mode is in use.
+
 Use them through `CruxTheme.space`, `CruxTheme.size`, `CruxTheme.type`, `CruxTheme.colors` and
 `MaterialTheme`. Don't hard-code colours or spacing in screens.
 

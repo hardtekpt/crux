@@ -7,7 +7,9 @@ Open Settings from the gear on the **You** tab.
 ## Settings
 
 - **Grades**: the scale new climbs are logged in, per discipline. See [Grades](grades.md).
-- **Appearance**: Dark (the default), Light, or System.
+- **Appearance**: Dark (the default), Light, or System, and the accent colour: Teal (the
+  default), Blue, Violet or Pink. The accent colours buttons, selected options and highlights;
+  the amber for goes and the green for sends stay the same in every accent.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
 - **Your data**: demo mode, and *Backups*, a page of its own.

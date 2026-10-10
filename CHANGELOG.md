@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Accent colour.** Pick teal, blue, violet or pink in Settings → Appearance. It colours buttons,
+  selected options and highlights, in dark and light.
 - **Compact timer.** The rest and interval timer band can shrink to one slim line, and stays that
   way until you open it up again.
 - **Consistency widget** for Home: the grid of climbing days from the You page, with your week

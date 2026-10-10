@@ -34,6 +34,7 @@ import com.hardtekpt.crux.data.images.AreaImageStore
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.DatabaseFactory
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.data.seed.StarterData
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
@@ -113,12 +114,22 @@ class ScreenshotTest {
     @Test
     fun home() = home("home")
 
-    private fun home(name: String, dark: List<Boolean> = BOTH) {
+    private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
         val vm = HomeViewModel(climbs, body, OfflineTemplateRepository(dbs), places, preferences, DashboardRepository(dataStore), FIXED_CLOCK)
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
-        bothThemes(name, dark = dark) { HomeContent(uiState = state, dashboard = dashboard) }
+        bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
     }
+
+    // Home in each accent but the brand's teal, which every other screenshot shows.
+    @Test
+    fun homeBlue() = home("home_blue", accent = Accent.BLUE)
+
+    @Test
+    fun homeViolet() = home("home_violet", accent = Accent.VIOLET)
+
+    @Test
+    fun homePink() = home("home_pink", accent = Accent.PINK)
 
     @Test
     fun journal() {
@@ -230,12 +241,18 @@ class ScreenshotTest {
     private fun <T> loaded(state: Flow<T>, isLoaded: (T) -> Boolean): T = runBlocking { withTimeout(10_000) { state.first(isLoaded) } }
 
     /** Renders [content] dark (the app's default) and light, or only the modes in [dark]. */
-    private fun bothThemes(name: String, readyText: String? = null, dark: List<Boolean> = BOTH, content: @Composable () -> Unit) {
+    private fun bothThemes(
+        name: String,
+        readyText: String? = null,
+        dark: List<Boolean> = BOTH,
+        accent: Accent = Accent.TEAL,
+        content: @Composable () -> Unit,
+    ) {
         var isDark by mutableStateOf(dark.first())
         compose.setContent {
             // "Today" is the fixed test day everywhere, so the goldens don't change from day to day.
             CompositionLocalProvider(LocalClock provides FIXED_CLOCK) {
-                CruxTheme(darkTheme = isDark) {
+                CruxTheme(darkTheme = isDark, accent = accent) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
                 }
             }

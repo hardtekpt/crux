@@ -4,6 +4,7 @@ import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetSize
 import com.hardtekpt.crux.data.dashboard.WidgetType
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +20,7 @@ class BackupSettings @Inject constructor(private val preferences: UserPreference
         val scales = preferences.gradeScales.first()
         return SettingsDto(
             theme = preferences.themeMode.first(),
+            accent = preferences.accent.first().name,
             units = preferences.units.first(),
             boulderScale = scales.boulder,
             routeScale = scales.route,
@@ -31,6 +33,8 @@ class BackupSettings @Inject constructor(private val preferences: UserPreference
     /** Applies what the backup has; anything it leaves out stays as it is. */
     suspend fun write(settings: SettingsDto) {
         settings.theme?.let { preferences.setThemeMode(it) }
+        // An accent this version doesn't know leaves the current one.
+        settings.accent?.let { name -> Accent.entries.firstOrNull { it.name == name } }?.let { preferences.setAccent(it) }
         settings.units?.let { preferences.setUnits(it) }
         settings.boulderScale?.let { preferences.setGradeScale(it) }
         settings.routeScale?.let { preferences.setGradeScale(it) }
