@@ -51,7 +51,7 @@ import java.time.LocalDate
 private fun PlaceType.accent(): Color = when (this) {
     PlaceType.GYM -> MaterialTheme.colorScheme.primary
     PlaceType.CRAG -> MaterialTheme.colorScheme.secondary
-    PlaceType.BOARD -> Color(0xFFB39DDB)
+    PlaceType.BOARD -> CruxTheme.colors.board
 }
 
 /**

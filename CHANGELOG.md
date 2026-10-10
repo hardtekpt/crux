@@ -51,6 +51,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
+- **Large text in Log climb**: with a big font size on your phone, the day button and the "how
+  hard it felt" words no longer get cut off.
 - **Goes on a climb add up across days**: the go pads count the climb's falls and sends in all, its
   earlier goes show before today's, and a send after earlier goes is a redpoint, whatever their day.
 - **The Journal's day tally** counts a session's logs on one climb once, like the session card.

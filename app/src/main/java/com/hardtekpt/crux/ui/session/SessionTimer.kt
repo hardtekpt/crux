@@ -53,7 +53,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -73,22 +72,19 @@ import com.hardtekpt.crux.ui.theme.JetBrainsMono
 /** The colours a timer phase is drawn in: work warm, rest cool, preparation neutral. */
 internal object TimerColors {
     val work: Color
-        @Composable get() = if (dark()) Color(0xFFFF8A65) else Color(0xFFC2410C)
+        @Composable get() = CruxTheme.colors.timerWork
     val rest: Color
-        @Composable get() = if (dark()) Color(0xFF8FB3FF) else Color(0xFF2F5BB7)
+        @Composable get() = CruxTheme.colors.timerRest
     val prep: Color
         @Composable get() = MaterialTheme.colorScheme.outline
 
     /** The longer rest between cycles, apart from the rest between repeats. */
     val cycleRest: Color
-        @Composable get() = if (dark()) Color(0xFFC9A7FF) else Color(0xFF6D45C4)
+        @Composable get() = CruxTheme.colors.timerCycleRest
 
     /** The rest between sets, which isn't part of an interval timer. */
     val setRest: Color
         @Composable get() = MaterialTheme.colorScheme.secondary
-
-    @Composable
-    private fun dark() = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     @Composable
     fun of(kind: IntervalPhase.Kind): Color = when (kind) {

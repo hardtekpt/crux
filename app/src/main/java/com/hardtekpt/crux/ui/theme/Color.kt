@@ -44,6 +44,16 @@ private object Light {
         Color(0xFFCDE3FB),
         Color(0xFFE3DAF9),
     )
+    val chart = listOf(
+        Color(0xFF00939D), // verdigris
+        Color(0xFFC26A1E), // sandstone
+        Color(0xFF5A4AB8), // violet
+        Color(0xFFC2457A), // magenta
+        Color(0xFF2A78D6), // blue
+    )
+    val timerWork = Color(0xFFC2410C)
+    val timerRest = Color(0xFF2F5BB7)
+    val timerCycleRest = Color(0xFF6D45C4)
 }
 
 private object Dark {
@@ -82,6 +92,16 @@ private object Dark {
         Color(0xFF1E3A5C),
         Color(0xFF3A2F5E),
     )
+    val chart = listOf(
+        Color(0xFF1FA3AD),
+        Color(0xFFC97A1E),
+        Color(0xFF9085E9),
+        Color(0xFFD55181),
+        Color(0xFF3987E5),
+    )
+    val timerWork = Color(0xFFFF8A65)
+    val timerRest = Color(0xFF8FB3FF)
+    val timerCycleRest = Color(0xFFC9A7FF)
 }
 
 internal val CruxLightColorScheme = with(Light) {
@@ -135,12 +155,29 @@ data class CruxColors(
     val onSuccessContainer: Color,
     /** Route tape: red, orange, yellow, green, blue, purple. Only for climber-tagged chips. */
     val tape: List<Color>,
+    /**
+     * Categorical colours for charts with more than one series (donut slices). Fixed order,
+     * never cycled; anything past the last slot folds into "Other". Both sets were run
+     * through the colour-blind and contrast checks against the Crux card surfaces.
+     */
+    val chart: List<Color>,
+    /** Timer phases: work warm, rest cool, the longer rest between cycles apart from both. */
+    val timerWork: Color,
+    val timerRest: Color,
+    val timerCycleRest: Color,
+    /** Boards' accent, beside gyms (primary) and crags (secondary). */
+    val board: Color,
+    /** The stripe down the side of the climber card on You. Decoration, not route tape. */
+    val profileTape: List<Color>,
 )
 
+private val Board = Color(0xFFB39DDB)
+private val ProfileTape = listOf(Color(0xFFF2C94C), Color(0xFF4CAF50), Color(0xFF2F80ED), Color(0xFF9B51E0), Color(0xFFEB5757))
+
 internal val CruxLightExtendedColors = with(Light) {
-    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape)
+    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape, chart, timerWork, timerRest, timerCycleRest, Board, ProfileTape)
 }
 
 internal val CruxDarkExtendedColors = with(Dark) {
-    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape)
+    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape, chart, timerWork, timerRest, timerCycleRest, Board, ProfileTape)
 }

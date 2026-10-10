@@ -111,11 +111,13 @@ class ScreenshotTest {
     fun close() = db.close()
 
     @Test
-    fun home() {
+    fun home() = home("home")
+
+    private fun home(name: String, dark: List<Boolean> = BOTH) {
         val vm = HomeViewModel(climbs, body, OfflineTemplateRepository(dbs), places, preferences, DashboardRepository(dataStore), FIXED_CLOCK)
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
-        bothThemes("home") { HomeContent(uiState = state, dashboard = dashboard) }
+        bothThemes(name, dark = dark) { HomeContent(uiState = state, dashboard = dashboard) }
     }
 
     @Test
@@ -152,7 +154,9 @@ class ScreenshotTest {
     }
 
     @Test
-    fun settings() = bothThemes("settings") {
+    fun settings() = settings("settings")
+
+    private fun settings(name: String, dark: List<Boolean> = BOTH) = bothThemes(name, dark = dark) {
         SettingsContent(uiState = SettingsUiState(), onBack = {}, onGradeScale = {}, onThemeMode = {})
     }
 
@@ -166,7 +170,9 @@ class ScreenshotTest {
     }
 
     @Test
-    fun session() {
+    fun session() = session("session")
+
+    private fun session(name: String, dark: List<Boolean> = BOTH) {
         val sessions = sessions()
         val sessionId = runBlocking {
             val plan = OfflineTemplateRepository(dbs).observeTemplates().first().first()
@@ -178,14 +184,33 @@ class ScreenshotTest {
             id
         }
         val vm = SessionViewModel(SavedStateHandle(mapOf("sessionId" to sessionId)), sessions, exercises, places, preferences, FIXED_CLOCK)
-        bothThemes("session", readyText = "Max hangs") { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
+        bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
     }
 
     @Test
-    fun logClimb() {
+    fun logClimb() = logClimb("logclimb")
+
+    private fun logClimb(name: String, dark: List<Boolean> = BOTH) {
         val vm = LogClimbViewModel(SavedStateHandle(), climbs, places, FIXED_CLOCK, preferences, FakeImageFiles(), sessions())
-        bothThemes("logclimb", readyText = "Log climb") { LogClimbScreen(onDone = {}, viewModel = vm) }
+        bothThemes(name, readyText = "Log climb", dark = dark) { LogClimbScreen(onDone = {}, viewModel = vm) }
     }
+
+    // The largest text size on top of a large phone font, so clipped or overlapping text shows up.
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun homeLargestText() = home("home_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun logClimbLargestText() = logClimb("logclimb_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun sessionLargestText() = session("session_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun settingsLargestText() = settings("settings_text_largest", dark = DARK)
 
     @Test
     fun place() {
@@ -204,19 +229,19 @@ class ScreenshotTest {
     /** The view model's state once it has loaded, so the screenshot never catches a half-filled screen. */
     private fun <T> loaded(state: Flow<T>, isLoaded: (T) -> Boolean): T = runBlocking { withTimeout(10_000) { state.first(isLoaded) } }
 
-    /** Renders [content] dark (the app's default) and light. */
-    private fun bothThemes(name: String, readyText: String? = null, content: @Composable () -> Unit) {
-        var dark by mutableStateOf(true)
+    /** Renders [content] dark (the app's default) and light, or only the modes in [dark]. */
+    private fun bothThemes(name: String, readyText: String? = null, dark: List<Boolean> = BOTH, content: @Composable () -> Unit) {
+        var isDark by mutableStateOf(dark.first())
         compose.setContent {
             // "Today" is the fixed test day everywhere, so the goldens don't change from day to day.
             CompositionLocalProvider(LocalClock provides FIXED_CLOCK) {
-                CruxTheme(darkTheme = dark) {
+                CruxTheme(darkTheme = isDark) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
                 }
             }
         }
-        listOf(true, false).forEach { theme ->
-            dark = theme
+        dark.forEach { theme ->
+            isDark = theme
             // Screens that load their own data: wait until it's on screen.
             readyText?.let { text ->
                 compose.waitUntil(10_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
@@ -230,6 +255,11 @@ class ScreenshotTest {
     }
 
     private companion object {
+        val BOTH = listOf(true, false)
+        val DARK = listOf(true)
+
+        /** Largest (1.3×) on a phone already set to 1.3×. */
+        const val LARGEST_TEXT = 1.69f
         const val STORE_SCREENSHOTS = "../fastlane/metadata/android/en-US/images/phoneScreenshots"
         val STORE_ORDER = mapOf(
             "home" to 1,

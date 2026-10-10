@@ -1,43 +1,13 @@
 package com.hardtekpt.crux.ui.charts
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
 
-/**
- * Categorical colours for charts with more than one series (donut slices). Fixed order,
- * never cycled; anything past the last slot folds into "Other". Both sets were run
- * through the colour-blind and contrast checks against the Crux card surfaces.
- */
-private val CategoricalLight = listOf(
-    Color(0xFF00939D), // verdigris
-    Color(0xFFC26A1E), // sandstone
-    Color(0xFF5A4AB8), // violet
-    Color(0xFFC2457A), // magenta
-    Color(0xFF2A78D6), // blue
-)
-private val CategoricalDark = listOf(
-    Color(0xFF1FA3AD),
-    Color(0xFFC97A1E),
-    Color(0xFF9085E9),
-    Color(0xFFD55181),
-    Color(0xFF3987E5),
-)
-
-val CategoricalSlots: Int get() = CategoricalLight.size
-
-/** Picks the palette by the theme actually in use, not the system setting. */
-@Composable
-@ReadOnlyComposable
-fun categoricalColors(): List<Color> = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) CategoricalDark else CategoricalLight
+/** Slots in `CruxTheme.colors.chart`; anything past the last folds into "Other". */
+const val CATEGORICAL_SLOTS: Int = 5
 
 /** Axis ticks on round numbers that bracket the data. */
 data class AxisScale(val min: Double, val max: Double, val ticks: List<Double>) {

@@ -9,7 +9,7 @@ dark is the default theme, and light and system are options.
 
 | Token set | Where | What |
 | --- | --- | --- |
-| Colours | `Color.kt` | Material colour schemes for dark and light, plus `CruxColors` (extended colours such as send/attempt, chart and timer phase colours) |
+| Colours | `Color.kt` | Material colour schemes for dark and light, plus `CruxColors`: success (sent), route tape, chart series, timer phases, the board accent and the climber card's stripe |
 | Typography | `Type.kt` | **Archivo** (variable, 400–800) for text, **JetBrains Mono** for numbers, labels and "code" style (`CruxTheme.type.code`) |
 | Spacing | `Dimens.kt` → `CruxSpace` | `s0`…`s16`: 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 dp |
 | Sizes | `CruxSize` | `touchTarget` (48 dp), border widths, and so on |
@@ -17,6 +17,11 @@ dark is the default theme, and light and system are options.
 
 Use them through `CruxTheme.space`, `CruxTheme.size`, `CruxTheme.type`, `CruxTheme.colors` and
 `MaterialTheme`. Don't hard-code colours or spacing in screens.
+
+Text is in `sp`, so it follows the phone's font size. Keep it from clipping when the font is large:
+let containers that hold text grow (`heightIn(min = …)`, `widthIn(min = …)` rather than a fixed
+size), give single-line labels `maxLines` with an ellipsis, or let a short word shrink to fit
+(`autoSize`). The `*_text_largest` screenshots show the main screens at 1.69× text.
 
 ## Components
 

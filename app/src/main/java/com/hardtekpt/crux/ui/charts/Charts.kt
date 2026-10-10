@@ -359,13 +359,13 @@ fun DonutChart(
     size: Dp = 140.dp,
 ) {
     val colors = MaterialTheme.colorScheme
-    val palette = categoricalColors()
+    val palette = CruxTheme.colors.chart
     val shown = remember(slices) { foldSlices(slices.filter { it.value > 0 }) }
     val total = shown.sumOf { it.value }.takeIf { it > 0 } ?: 1.0
     var selected by remember(slices) { mutableStateOf<Int?>(null) }
     val reveal = remember(slices) { Animatable(0f) }
     LaunchedEffect(slices) { reveal.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
-    fun colorAt(i: Int) = if (i < CategoricalSlots) palette[i] else colors.outline
+    fun colorAt(i: Int) = if (i < CATEGORICAL_SLOTS) palette[i] else colors.outline
 
     Row(
         modifier.testTag("donut_chart"),
@@ -457,8 +457,8 @@ fun DonutChart(
 
 /** Keeps the largest slices in palette order and folds the rest into Other. */
 internal fun foldSlices(slices: List<SliceDatum>): List<SliceDatum> {
-    if (slices.size <= CategoricalSlots) return slices
-    val keep = slices.sortedByDescending { it.value }.take(CategoricalSlots - 1)
+    if (slices.size <= CATEGORICAL_SLOTS) return slices
+    val keep = slices.sortedByDescending { it.value }.take(CATEGORICAL_SLOTS - 1)
     val rest = slices.filterNot { it in keep }
     return keep + SliceDatum("Other", rest.sumOf { it.value })
 }

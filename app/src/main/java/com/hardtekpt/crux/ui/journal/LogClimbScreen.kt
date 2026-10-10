@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -395,12 +395,12 @@ private fun DayButton(date: LocalDate, today: LocalDate, onClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxHeight()
-            .width(64.dp)
+            .widthIn(min = 64.dp)
             .clip(shape)
             .background(colors.surfaceContainerLow, shape)
             .border(CruxTheme.size.borderHairline, if (past) colors.secondary else colors.outlineVariant, shape)
             .clickable(onClickLabel = "Change the day", onClick = onClick)
-            .padding(vertical = CruxTheme.space.s2)
+            .padding(vertical = CruxTheme.space.s2, horizontal = CruxTheme.space.s1)
             .testTag("climb_day"),
     ) {
         Icon(Icons.Rounded.CalendarMonth, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
