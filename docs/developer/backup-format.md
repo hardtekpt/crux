@@ -25,7 +25,7 @@ Settings go through [`BackupSettings`](../../app/src/main/java/com/hardtekpt/cru
 
 | Version | File | Media |
 | --- | --- | --- |
-| 2 (after 0.2.0) | A zip archive: `backup.json` first, then `media/<file name>` | Files, stored uncompressed; JSON fields name them (`photoFile`, `videoFile`, `imageFile`) |
+| 2 (0.3.0 on) | A zip archive: `backup.json` first, then `media/<file name>` | Files, stored uncompressed; JSON fields name them (`photoFile`, `videoFile`, `imageFile`) |
 | 1 (0.1.0, 0.2.0) | The JSON on its own | Base64 JPEG in `image` fields; no videos |
 
 `open()` tells the two apart by the zip magic bytes, so both import. An archive's media are unpacked

@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-10
+
 ### Added
 
 - **Accent colour.** Pick teal, blue, violet or pink in Settings → Appearance. It colours buttons,
@@ -139,6 +141,7 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.2.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.3.0...dev
+[0.3.0]: https://github.com/hardtekpt/crux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hardtekpt/crux/releases/tag/v0.1.0
