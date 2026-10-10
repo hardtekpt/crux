@@ -9,7 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 /**
  * Schema 21 drops problems as a separate idea: every log belongs to a climb (a `problems` row,
  * which no longer needs a place). Sends are counted on each log, and logs without a climb get
- * one, merged by name and place (see [ClimbLinks]).
+ * one, merged by name and place (see [ClimbLinks]). A flash logged after earlier goes on the
+ * same climb becomes the redpoint it was.
  */
 class ClimbsMigration : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
@@ -17,6 +18,7 @@ class ClimbsMigration : AutoMigrationSpec {
         // A climb's facility is its wall's.
         db.execSQL("UPDATE problems SET sectionId = (SELECT sectionId FROM areas WHERE areas.id = problems.areaId) WHERE areaId IS NOT NULL")
         ClimbLinks.linkUnlinked(db, System.currentTimeMillis())
+        ClimbLinks.settleStyles(db)
     }
 }
 

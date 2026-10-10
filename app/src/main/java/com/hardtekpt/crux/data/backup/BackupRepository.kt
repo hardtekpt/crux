@@ -827,6 +827,7 @@ class BackupRepository(
             }
             // Every log belongs to a climb: the rest join one by name and place, or start one.
             com.hardtekpt.crux.data.local.ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            com.hardtekpt.crux.data.local.ClimbLinks.settleStyles(db.openHelper.writableDatabase)
         }
 
         /** The climb's photo and video from the backup, in place of any it has. Without them it keeps its own. */

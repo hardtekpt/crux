@@ -229,9 +229,12 @@ class MigrationTest {
             close()
         }
         val db = helper.runMigrationsAndValidate(DB, 21, true)
-        val rows = db.query("SELECT id, problemId, sends, name FROM climbs ORDER BY id").use { c ->
-            buildList { while (c.moveToNext()) add(listOf(c.getLong(0), c.getLong(1), c.getInt(2).toLong(), c.getString(3))) }
+        val rows = db.query("SELECT id, problemId, sends, name, style FROM climbs ORDER BY id").use { c ->
+            buildList { while (c.moveToNext()) add(listOf(c.getLong(0), c.getLong(1), c.getInt(2).toLong(), c.getString(3), c.getString(4))) }
         }
+        // The second cheesecake was "flashed" after a go on it: a redpoint.
+        assertEquals("REDPOINT", rows[2][4])
+        assertEquals("ONSIGHT", rows[4][4])
         // Every log has a climb; the problem's log keeps it; the two cheesecakes share one.
         assertEquals(1L, rows[0][1])
         assertEquals(rows[1][1], rows[2][1])
