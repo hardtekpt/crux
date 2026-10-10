@@ -10,6 +10,8 @@ import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.Project
@@ -79,7 +81,6 @@ class HomeViewModel @Inject constructor(
     private data class Inputs(
         val templates: List<WorkoutTemplate>,
         val climbs: List<Climb>,
-        val bests: List<PersonalBest>,
         val weights: List<Measurement>,
         val scales: GradeScales,
         val projects: List<Project> = emptyList(),
@@ -88,10 +89,9 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         templateRepository.observeTemplates(),
         climbRepository.observeClimbs(),
-        climbRepository.observePersonalBests(),
         bodyRepository.observeWeights(),
         preferences.gradeScales,
-    ) { templates, climbs, bests, weights, scales -> Inputs(templates, climbs, bests, weights, scales) }
+    ) { templates, climbs, weights, scales -> Inputs(templates, climbs, weights, scales) }
         .combine(placeRepository.observeProjects()) { inputs, projects -> inputs.copy(projects = projects) }
         .map(::buildState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
@@ -128,7 +128,7 @@ class HomeViewModel @Inject constructor(
                 sends = weekClimbs.count { it.style.isSend },
                 daysClimbed = weekClimbs.map { it.date }.distinct().size,
             ),
-            latestBest = inputs.bests.maxWithOrNull(compareBy<PersonalBest> { it.date }.thenBy { it.gradeIndex }),
+            latestBest = newestHardestSend(inputs.climbs),
             weight = inputs.weights.weightSummary(),
             weights = inputs.weights,
             recentClimbs = inputs.climbs.take(RECENT_LIMIT),
@@ -188,5 +188,37 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val RECENT_LIMIT = 6
+    }
+}
+
+/**
+ * The newest send that was harder than every send before it, in any style: a 7A redpoint
+ * stays the latest best until something harder goes, whatever was flashed since. Grades are
+ * compared only within a discipline and scale (and local grades within their place).
+ */
+fun newestHardestSend(climbs: List<Climb>): PersonalBest? {
+    val hardest = mutableMapOf<Triple<Discipline, GradeScale, Long?>, Int>()
+    var newest: Climb? = null
+    climbs.filter { it.style.isSend }.sortedWith(compareBy<Climb> { it.date }.thenBy { it.id }).forEach { climb ->
+        val key = Triple(climb.discipline, climb.gradeScale, climb.placeId.takeIf { climb.gradeScale.isLocal })
+        val before = hardest[key]
+        if (before == null || climb.gradeIndex > before) {
+            hardest[key] = climb.gradeIndex
+            newest = climb
+        }
+    }
+    return newest?.let {
+        PersonalBest(
+            discipline = it.discipline,
+            style = it.style,
+            gradeScale = it.gradeScale,
+            gradeIndex = it.gradeIndex,
+            name = it.name,
+            place = it.place,
+            date = it.date,
+            placeId = it.placeId,
+            gradeLabel = it.gradeLabel,
+            gradeColour = it.gradeColour,
+        )
     }
 }

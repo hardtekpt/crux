@@ -23,6 +23,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Latest best** on Home is your newest hardest send: the latest send harder than all before it,
+  in any style, so an easier flash no longer replaces a harder redpoint.
 - **Log a go on a tried problem** starts as an attempt; Flash and Onsight aren't offered for it.
 - **A session's goes on the same problem** show as one entry with the goes added up, in the live
   session, the Journal and the session summary.
