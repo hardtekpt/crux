@@ -10,6 +10,8 @@ import com.hardtekpt.crux.data.dashboard.DashboardRepository
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Measurement
 import com.hardtekpt.crux.data.model.PersonalBest
 import com.hardtekpt.crux.data.model.Project
@@ -51,6 +53,12 @@ data class HomeUiState(
     val recentClimbs: List<Climb> = emptyList(),
     val charts: ProgressCharts = ProgressCharts(),
     val projects: List<Project> = emptyList(),
+    /** Climbs per day, for the consistency grid. */
+    val activity: Map<LocalDate, Int> = emptyMap(),
+    /** Weeks in a row, up to this one, with a day on the wall; and the longest run. */
+    val weekStreak: Int = 0,
+    val bestWeekStreak: Int = 0,
+    val daysLast30: Int = 0,
 )
 
 /** The layout being shown, and while editing, the working copy. */
@@ -73,7 +81,6 @@ class HomeViewModel @Inject constructor(
     private data class Inputs(
         val templates: List<WorkoutTemplate>,
         val climbs: List<Climb>,
-        val bests: List<PersonalBest>,
         val weights: List<Measurement>,
         val scales: GradeScales,
         val projects: List<Project> = emptyList(),
@@ -82,13 +89,15 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         templateRepository.observeTemplates(),
         climbRepository.observeClimbs(),
-        climbRepository.observePersonalBests(),
         bodyRepository.observeWeights(),
         preferences.gradeScales,
-    ) { templates, climbs, bests, weights, scales -> Inputs(templates, climbs, bests, weights, scales) }
+    ) { templates, climbs, weights, scales -> Inputs(templates, climbs, weights, scales) }
         .combine(placeRepository.observeProjects()) { inputs, projects -> inputs.copy(projects = projects) }
         .map(::buildState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
+
+    /** "+1 go" on the Projects widget. */
+    val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbRepository, placeRepository, clock), viewModelScope)
 
     val demoMode: StateFlow<Boolean> = preferences.demoMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -107,6 +116,8 @@ class HomeViewModel @Inject constructor(
 
     private fun buildState(inputs: Inputs): HomeUiState {
         val weekClimbs = inputs.climbs.filter { !it.date.isBefore(weekStart) }
+        val climbDays = inputs.climbs.groupingBy { it.date }.eachCount()
+        val (streak, bestStreak) = com.hardtekpt.crux.ui.you.weekStreaks(climbDays.keys, today)
         return HomeUiState(
             isLoading = false,
             today = today,
@@ -117,12 +128,16 @@ class HomeViewModel @Inject constructor(
                 sends = weekClimbs.count { it.style.isSend },
                 daysClimbed = weekClimbs.map { it.date }.distinct().size,
             ),
-            latestBest = inputs.bests.maxWithOrNull(compareBy<PersonalBest> { it.date }.thenBy { it.gradeIndex }),
+            latestBest = newestHardestSend(inputs.climbs),
             weight = inputs.weights.weightSummary(),
             weights = inputs.weights,
             recentClimbs = inputs.climbs.take(RECENT_LIMIT),
             charts = progressCharts(inputs.climbs, inputs.scales, today),
             projects = inputs.projects,
+            activity = climbDays,
+            weekStreak = streak,
+            bestWeekStreak = bestStreak,
+            daysLast30 = climbDays.keys.count { !it.isBefore(today.minusDays(29)) && !it.isAfter(today) },
         )
     }
 
@@ -173,5 +188,37 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val RECENT_LIMIT = 6
+    }
+}
+
+/**
+ * The newest send that was harder than every send before it, in any style: a 7A redpoint
+ * stays the latest best until something harder goes, whatever was flashed since. Grades are
+ * compared only within a discipline and scale (and local grades within their place).
+ */
+fun newestHardestSend(climbs: List<Climb>): PersonalBest? {
+    val hardest = mutableMapOf<Triple<Discipline, GradeScale, Long?>, Int>()
+    var newest: Climb? = null
+    climbs.filter { it.style.isSend }.sortedWith(compareBy<Climb> { it.date }.thenBy { it.id }).forEach { climb ->
+        val key = Triple(climb.discipline, climb.gradeScale, climb.placeId.takeIf { climb.gradeScale.isLocal })
+        val before = hardest[key]
+        if (before == null || climb.gradeIndex > before) {
+            hardest[key] = climb.gradeIndex
+            newest = climb
+        }
+    }
+    return newest?.let {
+        PersonalBest(
+            discipline = it.discipline,
+            style = it.style,
+            gradeScale = it.gradeScale,
+            gradeIndex = it.gradeIndex,
+            name = it.name,
+            place = it.place,
+            date = it.date,
+            placeId = it.placeId,
+            gradeLabel = it.gradeLabel,
+            gradeColour = it.gradeColour,
+        )
     }
 }

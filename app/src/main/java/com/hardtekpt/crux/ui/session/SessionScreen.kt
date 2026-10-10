@@ -136,7 +136,7 @@ class SessionViewModel @Inject constructor(
     private val sessions: SessionRepository,
     exercises: ExerciseRepository,
     private val places: PlaceRepository,
-    preferences: UserPreferencesRepository,
+    private val preferences: UserPreferencesRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
@@ -153,6 +153,14 @@ class SessionViewModel @Inject constructor(
 
     val timerSounds: StateFlow<Boolean> = preferences.timerSounds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    /** The timer band as one slim line; remembered between sessions. */
+    val timerCompact: StateFlow<Boolean> = preferences.timerCompact
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleTimerCompact() {
+        viewModelScope.launch { preferences.setTimerCompact(!timerCompact.value) }
+    }
 
     /** The exercise on screen; null follows the first one with sets still to do. */
     private val _currentItem = MutableStateFlow<Long?>(null)
@@ -381,6 +389,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
     val timer by viewModel.timer.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
+    val compactTimer by viewModel.timerCompact.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
     viewModel.currentItem.collectAsStateWithLifecycle()
     // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
@@ -498,6 +507,8 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 run = runningTimer.run,
                 nowMillis = now,
                 drainNowMillis = { drainNow },
+                compact = compactTimer,
+                onToggleCompact = viewModel::toggleTimerCompact,
                 onPause = viewModel::pauseTimer,
                 onResume = viewModel::resumeTimer,
                 onStop = viewModel::stopTimer,
@@ -509,6 +520,8 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 drainNowMillis = { drainNow },
                 next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
                 segments = emptyList(),
+                compact = compactTimer,
+                onToggleCompact = viewModel::toggleTimerCompact,
                 onAdd = { viewModel.addRest(30) },
                 onSkip = viewModel::endRest,
             )
@@ -542,10 +555,10 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = space.s2))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        when (current.climbs.size) {
+                        when (current.climbGroups.size) {
                             0 -> "No climbs logged"
                             1 -> "1 climb logged"
-                            else -> "${current.climbs.size} climbs logged"
+                            else -> "${current.climbGroups.size} climbs logged"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
@@ -560,18 +573,18 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         modifier = Modifier.testTag("session_log_climb"),
                     )
                 }
-                current.climbs.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
+                current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
             } else {
                 // A climbing day: the tally, the climbs, Log climb.
-                ClimbTally(current.climbs)
-                if (current.climbs.isEmpty()) {
+                ClimbTally(current.climbGroups)
+                if (current.climbGroups.isEmpty()) {
                     Text(
                         "Climbs you log now land in this session.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
                     )
                 } else {
-                    Column { current.climbs.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
+                    Column { current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
                 }
                 CruxButton(
                     "Log climb",
@@ -1030,8 +1043,8 @@ private fun FinishSheet(session: Session, nowMillis: Long, onSave: (Int?, String
             Text(clockLabel(session.durationMillis(nowMillis)), style = CruxTheme.type.metricMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
                 if (session.items.isNotEmpty()) TallyFigure("${session.setsDone}/${session.setsPlanned}", "sets done", Modifier.weight(1f))
-                TallyFigure(session.climbs.size.toString(), if (session.climbs.size == 1) "climb" else "climbs", Modifier.weight(1f))
-                TallyFigure(session.climbs.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
+                TallyFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs", Modifier.weight(1f))
+                TallyFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
             }
             EffortScale(effort, { effort = it })
             CruxTextField(label = "Notes", value = notes, onValueChange = {

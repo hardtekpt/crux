@@ -13,23 +13,24 @@ Grades are never converted. A climb keeps the scale it was logged in. See [Grade
 They're safe. Demo mode shows a separate set of sample data. Turn it off in *Settings → Your data*
 and your own data is back, untouched.
 
-**Why isn't a problem showing in the Log climb picker?**
-It's probably retired (taken down), or its wall was reset. Retired problems are hidden from pickers
-and projects but stay in your history. Open the problem and turn off *Retired* if it's back up.
+**Why isn't a climb showing in the name suggestions?**
+Suggestions show the climbs at the place you picked (or, with no place, the climbs with none).
+Pick its place first, then start typing its name.
 
 **How do I mark something as a project?**
-You don't: a problem you've tried and not sent is a project automatically. See
+You don't: a climb you've tried and not sent is a project automatically. See
 [Places → Projects](places.md#projects).
 
 **Why don't my session sets show up as personal records?**
 Records come from results you log under *You → Personal records*. Sessions don't feed records yet.
 
 **Are my videos backed up?**
-Not in Crux's backup file: they're too large. Photos are. Videos do move with Android's
-phone-to-phone transfer. See [Settings and your data](settings-and-data.md#backups).
+Yes, with your photos, unless you switch them off under *Settings → Backups → Photos and videos*.
+They can make the backup file large. See [Settings and your data](settings-and-data.md#backups).
 
 **Can I import the same backup twice?**
-Yes. Importing only adds what isn't there yet.
+Yes. Crux asks about everything that's already there: skip it, replace it, or keep both. Skip all
+of it and nothing changes.
 
 **An update says something about a database copy. What is that?**
 Before an update changes how data is stored, Crux copies your database on the phone first, so

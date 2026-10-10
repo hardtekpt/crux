@@ -20,6 +20,8 @@ data class Climb(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
+    /** Of [attempts], how many were sends. */
+    val sends: Int = if (style.isSend) 1 else 0,
     /** Local grades only: the label and tape colour as logged. */
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
@@ -32,6 +34,22 @@ data class Climb(
     val sessionId: Long? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
+}
+
+/**
+ * Goes on the same problem as one entry, in the order the problems were first climbed: the
+ * goes added up, sent if any of them was (a redpoint, after more than one), with the newest
+ * go's details. Climbs that aren't on a saved problem stay as they are.
+ */
+fun List<Climb>.groupedByProblem(): List<Climb> = groupBy { climb -> climb.problemId?.let { "problem $it" } ?: "climb ${climb.id}" }.values.map { goes ->
+    if (goes.size == 1) return@map goes.single()
+    val latest = goes.maxBy { it.id }
+    val send = goes.firstOrNull { it.style.isSend }
+    latest.copy(
+        id = send?.id ?: latest.id,
+        style = if (send == null) AscentStyle.ATTEMPT else AscentStyle.REDPOINT,
+        attempts = goes.sumOf { it.attempts },
+    )
 }
 
 /** What the climber fills in on the Log climb form. */
@@ -56,6 +74,8 @@ data class NewClimb(
     val gradeColour: Long? = null,
     val sectionId: Long? = null,
     val sessionId: Long? = null,
+    /** Of [attempts], how many were sends; the rest were falls. */
+    val sends: Int = if (style.isSend) 1 else 0,
 )
 
 data class PersonalBest(

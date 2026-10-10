@@ -33,7 +33,7 @@ class ChartDataTest {
         val slices = (1..7).map { SliceDatum("S$it", it.toDouble()) }
         val folded = foldSlices(slices)
 
-        assertEquals(CategoricalSlots, folded.size)
+        assertEquals(CATEGORICAL_SLOTS, folded.size)
         assertEquals("Other", folded.last().label)
         assertEquals(1.0 + 2 + 3, folded.last().value, 0.0)
     }

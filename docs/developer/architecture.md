@@ -128,13 +128,19 @@ ticked, so they stay right when the screen is off or the app is in the backgroun
   they're **never converted**. Local grades also store the label or tape colour. Bests are per
   scale, and for local scales per place. The grade converter (`GradeConversion`) is a reference
   tool only.
-- **Places → sections → areas → problems.** A place has one or more sections (facilities: gym,
-  crag or board), each with its own grade scales. Walls (areas) and problems hang off sections.
-  Climbs link to a place and optionally a section, wall and problem. A climb copies its problem's
-  grade but stays editable.
-- **Projects are derived, not flagged**: a problem that isn't retired, has goes, and has no send.
-- **Retired** means taken down: hidden from pickers and projects, history kept. Resetting a wall
-  retires its problems.
+- **Places → sections → areas.** A place has one or more sections (facilities: gym, crag or
+  board), each with its own grade scales. Walls (areas) hang off sections.
+- **Climbs and logs** (schema 21). A *climb* (a `problems` row, `Problem` in code) is what's tried:
+  name, discipline, grade, and optionally a place, section and wall. A *log* (a `climbs` row,
+  `Climb` in code) is one day's goes on it: `attempts`, `sends`, the `style` worked out from them,
+  effort, notes, media, session. Every log has a climb: `ClimbLinks.linkUnlinked` gives a log
+  without one the climb of the same name at the same place (and discipline), or a new climb, named
+  from the grade and where it was when the log has no name. Editing a climb rewrites its logs'
+  name, grade and place (`PlaceDao.syncLogs`); deleting the last log deletes the climb. A climb has
+  no page of its own: opening it opens Log climb with `problemId`, which lists its other logs.
+- **Projects are derived, not flagged**: a climb with goes and no send.
+- **Nothing is hidden or removed automatically.** The wall reset is gone; `problems.retired` and
+  `areas.resetEpochDay` are legacy columns, still backed up, but nothing reads them.
 - **Units**: stored in kg and cm. Imperial only changes what's shown.
 - **Media**: photos are scaled to 2048 px JPEGs in `files/area_images`, and videos are copied as
   they are. The database stores only file names.
@@ -143,9 +149,9 @@ ticked, so they stay right when the screen is off or the app is in the backgroun
 
 ## Backups
 
-See [Backup format](backup-format.md). In short: a self-describing JSON file with optional sections.
-Records refer to each other by name, never database id. Importing only adds. Photos are embedded as
-base64, videos aren't.
+See [Backup format](backup-format.md). In short: a zip archive with a self-describing JSON file of
+optional sections, and the photos and videos it names. Records refer to each other by name, never
+database id. Records already on the phone are listed first, and the climber decides each one.
 
 ## Reliability
 

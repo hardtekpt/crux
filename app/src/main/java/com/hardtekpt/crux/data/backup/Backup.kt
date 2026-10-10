@@ -1,21 +1,5 @@
 package com.hardtekpt.crux.data.backup
 
-import androidx.room.withTransaction
-import com.hardtekpt.crux.data.images.AreaImageStore
-import com.hardtekpt.crux.data.local.AreaEntity
-import com.hardtekpt.crux.data.local.BodyMeasurementEntity
-import com.hardtekpt.crux.data.local.ClimbEntity
-import com.hardtekpt.crux.data.local.ClimbMediaEntity
-import com.hardtekpt.crux.data.local.CruxDatabase
-import com.hardtekpt.crux.data.local.CruxDatabases
-import com.hardtekpt.crux.data.local.ExerciseEntity
-import com.hardtekpt.crux.data.local.MediaKind
-import com.hardtekpt.crux.data.local.PlaceEntity
-import com.hardtekpt.crux.data.local.ProblemEntity
-import com.hardtekpt.crux.data.local.SectionEntity
-import com.hardtekpt.crux.data.local.TemplateBlockEntity
-import com.hardtekpt.crux.data.local.TemplateExerciseEntity
-import com.hardtekpt.crux.data.local.WorkoutTemplateEntity
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.ExerciseCategory
@@ -25,30 +9,36 @@ import com.hardtekpt.crux.data.model.MeasurementType
 import com.hardtekpt.crux.data.model.MetricType
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.model.Venue
-import com.hardtekpt.crux.data.model.gradeLabel
-import com.hardtekpt.crux.data.parseTypes
-import java.time.Clock
-import java.time.Instant
-import java.util.Base64
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.hardtekpt.crux.data.prefs.ThemeMode
+import com.hardtekpt.crux.data.prefs.UnitSystem
+import java.io.Closeable
+import java.io.File
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 /** What a backup can carry. Each can be switched on or off for export and import. */
-enum class BackupSection(val label: String, val description: String, val available: Boolean = true) {
-    EXERCISES("Exercise list", "Your exercise library"),
-    PLANS("Plan list", "Session plans, with the exercises they use"),
-    JOURNAL("Journal", "Every climb you logged, with its photo"),
-    PLACES("Places", "Gyms, crags and boards, with their walls, wall images and problems"),
-    BODY("Body stats", "Weigh-ins, body stats and circumferences"),
-    RECORDS("Personal records", "Results logged on exercises"),
-    NOTES("Notes", "Everything in your notes"),
-    SESSIONS("Session history", "Arrives with the session logger", available = false),
+enum class BackupSection(val label: String, val description: String, val noun: String) {
+    EXERCISES("Exercise list", "Your exercise library", "exercises"),
+    PLANS("Plan list", "Session plans, with the exercises they use", "plans"),
+    JOURNAL("Journal", "Every climb you logged, with its photo and video", "climbs"),
+    SESSIONS("Session history", "Finished sessions, with every set you logged", "sessions"),
+    PLACES("Places", "Gyms, crags and boards, with their walls, wall images and climbs", "places"),
+    BODY("Body stats", "Weigh-ins, body stats and circumferences", "body stats"),
+    RECORDS("Personal records", "Results logged on exercises", "records"),
+    NOTES("Notes", "Everything in your notes", "notes"),
+    SETTINGS("Settings", "Grades, theme, units, timer and your Home layout", "settings"),
+}
+
+/** Which media go into a backup, and come out of one. Both are on unless the climber says otherwise. */
+data class BackupMedia(val photos: Boolean = true, val videos: Boolean = true) {
+    companion object {
+        val NONE = BackupMedia(photos = false, videos = false)
+    }
 }
 
 // The file format. Plain names and enum names, no database ids, so a backup imports cleanly
 // into any install and stays readable. `version` lets later formats read older files.
+// Version 1 was this JSON on its own, with photos inside it as base64. Version 2 is a zip
+// archive: this JSON as `backup.json`, and the photos and videos it names under `media/`.
 
 @Serializable
 data class BackupFile(
@@ -62,26 +52,32 @@ data class BackupFile(
     val bodyMeasurements: List<MeasurementDto>? = null,
     val records: List<RecordDto>? = null,
     val notes: List<NoteDto>? = null,
-    /** Reserved for the session logger; always null for now. */
-    val sessions: List<String>? = null,
+    /** Finished sessions. Version 1 reserved the key and always left it null. */
+    val sessions: List<SessionDto>? = null,
+    val settings: SettingsDto? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
         BackupSection.EXERCISES -> exercises?.size
         BackupSection.PLANS -> plans?.size
         BackupSection.JOURNAL -> climbs?.size
+        BackupSection.SESSIONS -> sessions?.size
         BackupSection.PLACES -> places?.size
         BackupSection.BODY -> bodyMeasurements?.size
         BackupSection.RECORDS -> records?.size
         BackupSection.NOTES -> notes?.size
-        BackupSection.SESSIONS -> sessions?.size
+        BackupSection.SETTINGS -> settings?.let { 1 }
     }
 
     companion object {
         const val FORMAT = "crux-backup"
-        const val VERSION = 1
+        const val VERSION = 2
     }
 }
+
+/** Just enough of a file to tell whether this app can read the rest. */
+@Serializable
+internal data class BackupHeader(val format: String? = null, val version: Int = 1)
 
 @Serializable
 data class ExerciseDto(
@@ -91,6 +87,8 @@ data class ExerciseDto(
     val notes: String? = null,
     /** What plans and sessions start it at. Older backups omit it. */
     val defaults: ExerciseDefaultsDto? = null,
+    /** When it was added, epoch millis. Older backups omit it; it becomes the import time. */
+    val createdAt: Long? = null,
 )
 
 /** An exercise's defaults; for interval exercises, also the timer's preparation. */
@@ -132,8 +130,10 @@ data class ClimbDto(
     val attempts: Int,
     val venue: Venue,
     val date: String,
+    /** When it was logged, epoch millis. Also what tells one climb from another on import. */
     val loggedAt: Long,
     val name: String? = null,
+    /** The saved place's name now, or the name typed when it was logged. */
     val place: String? = null,
     val notes: String? = null,
     /** Set when the climb is linked to a saved place; with [place] it finds that place again. */
@@ -145,10 +145,19 @@ data class ClimbDto(
     /** Local grades: the position in the place's scale and its tape colour; [grade] holds the label. */
     val gradeIndex: Int? = null,
     val gradeColour: Long? = null,
-    /** The climb's photo as base64 JPEG. Older backups omit it. */
+    /** Version 1: the climb's photo as base64 JPEG. Older backups omit it. */
     val image: String? = null,
     /** The name of the place's section it was in. Older backups omit it. */
     val section: String? = null,
+    /** The place name as typed when it was logged, kept if the place is renamed. Older backups omit it. */
+    val loggedPlace: String? = null,
+    /** The session it was logged in, by the session's [SessionDto.startedAt]. */
+    val session: Long? = null,
+    /** Of [attempts], how many were sends. Older backups omit it: one for a send, none for an attempt. */
+    val sends: Int? = null,
+    /** Version 2: the photo and video, by their file names under `media/` in the archive. */
+    val photoFile: String? = null,
+    val videoFile: String? = null,
 )
 
 @Serializable
@@ -156,12 +165,14 @@ data class AreaDto(
     val name: String,
     val angle: Int? = null,
     val resetDate: String? = null,
-    /** The wall's photo or map as base64 JPEG. Older backups omit it. */
+    /** Version 1: the wall's photo or map as base64 JPEG. Older backups omit it. */
     val image: String? = null,
     /** Which of the place's kinds the area is; older backups omit it (the main kind). */
     val type: PlaceType? = null,
     /** The name of the section it's in; older backups omit it. */
     val section: String? = null,
+    /** Version 2: the wall's photo or map, by its file name under `media/` in the archive. */
+    val imageFile: String? = null,
 )
 
 /** One named part of a place. */
@@ -188,6 +199,8 @@ data class ProblemDto(
     val notes: String? = null,
     val gradeIndex: Int? = null,
     val gradeColour: Long? = null,
+    /** When it was added, epoch millis. Older backups omit it. */
+    val createdAt: Long? = null,
 )
 
 @Serializable
@@ -210,6 +223,8 @@ data class PlaceDto(
     val extraTypes: List<PlaceType> = emptyList(),
     /** The place's named parts, in order; older backups omit it and get one per kind. */
     val sections: List<SectionDto> = emptyList(),
+    /** When it was added, epoch millis. Older backups omit it. */
+    val createdAt: Long? = null,
 )
 
 @Serializable
@@ -229,506 +244,105 @@ data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, v
 @Serializable
 data class MeasurementDto(val type: MeasurementType, val value: Double, val date: String, val loggedAt: Long)
 
-/** How many records an import added and how many it skipped as already present. */
-data class ImportResult(val added: Map<BackupSection, Int>, val skipped: Map<BackupSection, Int>)
+/** A finished session. [startedAt] tells one from another, and links its climbs to it. */
+@Serializable
+data class SessionDto(
+    val name: String,
+    val startedAt: Long,
+    val endedAt: Long? = null,
+    /** The plan it was started from, by name, if that plan still existed. */
+    val plan: String? = null,
+    val place: String? = null,
+    val placeType: PlaceType? = null,
+    val section: String? = null,
+    val effort: Int? = null,
+    val notes: String? = null,
+    val items: List<SessionItemDto> = emptyList(),
+)
 
-class BackupFormatException(message: String) : Exception(message)
+/** One exercise in a session: its target, and what was done. */
+@Serializable
+data class SessionItemDto(
+    val exercise: ExerciseDto,
+    /** The plan block it came from; empty for exercises added during the session. */
+    val block: String = "",
+    val sets: Int,
+    val reps: Int,
+    val seconds: Int,
+    val loadKg: Double,
+    val restSeconds: Int,
+    val repRestSeconds: Int = 0,
+    val done: List<SessionSetDto> = emptyList(),
+)
 
-@Singleton
-class BackupRepository(
-    /** The data set to back up or restore into: whichever is active. */
-    private val database: suspend () -> CruxDatabase,
-    private val clock: Clock,
-    /** Wall images travel inside the file; without a store they are left out. */
-    private val images: AreaImageStore? = null,
-) {
-    @Inject
-    constructor(dbs: CruxDatabases, clock: Clock, images: AreaImageStore) : this({ dbs.current() }, clock, images)
+@Serializable
+data class SessionSetDto(
+    /** 0-based set number within the exercise. */
+    val set: Int,
+    val reps: Int? = null,
+    val seconds: Int? = null,
+    val loadKg: Double? = null,
+    val skipped: Boolean = false,
+    val completedAt: Long,
+)
 
-    constructor(db: CruxDatabase, clock: Clock) : this({ db }, clock)
+/** App settings. Each is optional, so a later app can add some without breaking older files. */
+@Serializable
+data class SettingsDto(
+    val theme: ThemeMode? = null,
+    /** A name, not an enum, so an accent a later app adds doesn't break the file. */
+    val accent: String? = null,
+    /** A name too, like [accent]. */
+    val textSize: String? = null,
+    val units: UnitSystem? = null,
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    val timerSounds: Boolean? = null,
+    val timerCompact: Boolean? = null,
+    /** The Home layout, in order. Names, not enums, so widgets a later app drops don't break the file. */
+    val dashboard: List<WidgetDto>? = null,
+)
 
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+@Serializable
+data class WidgetDto(val type: String, val size: String)
 
-    suspend fun export(sections: Set<BackupSection>): String {
-        val db = database()
-        val exercises = db.exerciseDao().getAll()
-        val byId = exercises.associateBy { it.id }
-        val file = BackupFile(
-            exportedAt = Instant.now(clock).toString(),
-            exercises = if (BackupSection.EXERCISES in sections) exercises.map { it.toDto() } else null,
-            plans = if (BackupSection.PLANS in sections) {
-                db.templateDao().getAll().map { plan ->
-                    PlanDto(
-                        name = plan.template.name,
-                        description = plan.template.description,
-                        blocks = plan.blocks.sortedBy { it.block.position }.map { block ->
-                            PlanBlockDto(
-                                name = block.block.name,
-                                items = block.exercises.sortedBy { it.item.position }.map {
-                                    PlanItemDto(
-                                        exercise = (byId[it.item.exerciseId] ?: it.exercise).toDto(),
-                                        sets = it.item.sets,
-                                        reps = it.item.reps,
-                                        seconds = it.item.seconds,
-                                        loadKg = it.item.loadKg,
-                                        restSeconds = it.item.restSeconds,
-                                        repRestSeconds = it.item.repRestSeconds,
-                                    )
-                                },
-                            )
-                        },
-                    )
-                }
-            } else {
-                null
-            },
-            climbs = if (BackupSection.JOURNAL in sections) {
-                val places = db.placeDao().getPlaces().associateBy { it.id }
-                val sectionNames = db.placeDao().getAllSections().associate { it.id to it.name }
-                val areas = db.placeDao().getAllAreas().associateBy { it.id }
-                val problems = db.placeDao().getAllProblems().associateBy { it.id }
-                val photos = db.climbMediaDao().getAll().filter { it.kind == MediaKind.IMAGE }.associate { it.climbId to it.path }
-                db.climbDao().getAll().map { climb ->
-                    val place = climb.placeId?.let(places::get)
-                    climb.toDto().copy(
-                        place = place?.name ?: climb.place,
-                        placeType = place?.type,
-                        area = climb.areaId?.let(areas::get)?.name,
-                        section = climb.sectionId?.let(sectionNames::get),
-                        problem = climb.problemId?.let(problems::get)?.name,
-                        angle = climb.angle,
-                        effort = climb.effort,
-                        image = photos[climb.id]?.let { images?.readBytes(it) }?.let { Base64.getEncoder().encodeToString(it) },
-                    )
-                }
-            } else {
-                null
-            },
-            places = if (BackupSection.PLACES in sections) {
-                val areas = db.placeDao().getAllAreas().groupBy { it.placeId }
-                val problems = db.placeDao().getAllProblems().groupBy { it.placeId }
-                val sections = db.placeDao().getAllSections().groupBy { it.placeId }
-                db.placeDao().getPlaces().map { place ->
-                    val placeSections = sections[place.id].orEmpty().sortedWith(compareBy({ it.position }, { it.id }))
-                    val sectionNames = placeSections.associate { it.id to it.name }
-                    val placeAreas = areas[place.id].orEmpty().sortedBy { it.position }
-                    val areaNames = placeAreas.associate { it.id to it.name }
-                    place.toDto(
-                        areas = placeAreas.map { area ->
-                            area.toDto().copy(
-                                image = area.imagePath?.let { images?.readBytes(it) }?.let { Base64.getEncoder().encodeToString(it) },
-                                section = area.sectionId?.let(sectionNames::get),
-                            )
-                        },
-                        problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
-                    ).copy(sections = placeSections.map { SectionDto(it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) })
-                }
-            } else {
-                null
-            },
-            bodyMeasurements = if (BackupSection.BODY in sections) db.bodyMeasurementDao().getAll().map { it.toDto() } else null,
-            records = if (BackupSection.RECORDS in sections) {
-                db.exerciseRecordDao().getAll().mapNotNull { r ->
-                    byId[r.exerciseId]?.let { ex ->
-                        RecordDto(
-                            ex.toDto(),
-                            java.time.LocalDate.ofEpochDay(r.dateEpochDay).toString(),
-                            r.reps,
-                            r.seconds,
-                            r.loadKg,
-                            r.notes,
-                            r.createdAtMillis,
-                        )
-                    }
-                }
-            } else {
-                null
-            },
-            notes = if (BackupSection.NOTES in sections) {
-                db.noteDao().getAll().map { NoteDto(it.text, it.createdAtMillis, it.updatedAtMillis, it.pinned, it.tag) }
-            } else {
-                null
-            },
-        )
-        return json.encodeToString(file)
-    }
+/**
+ * A backup read from a file. Its photos and videos wait in [mediaDir] until it is imported;
+ * [close] removes them.
+ */
+class OpenedBackup(val file: BackupFile, private val mediaDir: File? = null) : Closeable {
+    /** A media file the backup holds, if it holds it. */
+    fun media(name: String?): File? = name?.let { mediaDir?.resolve(it) }?.takeIf { it.isFile }
 
-    /** Reads a backup file, refusing anything that is not one. */
-    fun parse(text: String): BackupFile {
-        val file = runCatching { json.decodeFromString<BackupFile>(text) }
-            .getOrElse { throw BackupFormatException("This file is not a Crux backup.") }
-        if (file.format != BackupFile.FORMAT) throw BackupFormatException("This file is not a Crux backup.")
-        if (file.version > BackupFile.VERSION) {
-            throw BackupFormatException("This backup comes from a newer version of Crux. Update the app to import it.")
-        }
-        return file
-    }
-
-    /**
-     * Adds what the file holds for the chosen sections. Nothing is deleted: records that are
-     * already here (same exercise or plan name, same climb, same weigh-in) are skipped.
-     */
-    suspend fun import(file: BackupFile, sections: Set<BackupSection>): ImportResult {
-        val db = database()
-        return db.withTransaction { importInto(db, file, sections) }
-    }
-
-    private suspend fun importInto(db: CruxDatabase, file: BackupFile, sections: Set<BackupSection>): ImportResult {
-        val added = mutableMapOf<BackupSection, Int>()
-        val skipped = mutableMapOf<BackupSection, Int>()
-        val now = clock.millis()
-        val exerciseDao = db.exerciseDao()
-        val existing = exerciseDao.getAll().associateBy { it.name.lowercase() }.toMutableMap()
-
-        suspend fun exerciseId(dto: ExerciseDto, countAs: BackupSection?): Long {
-            existing[dto.name.lowercase()]?.let {
-                if (countAs != null) skipped.merge(countAs, 1, Int::plus)
-                return it.id
-            }
-            val entity = ExerciseEntity(
-                name = dto.name.trim(),
-                category = dto.category,
-                metric = dto.metric,
-                notes = dto.notes,
-                createdAtMillis = now,
-            ).withDefaults(
-                dto.defaults?.let { com.hardtekpt.crux.data.model.ExerciseTarget(it.sets, it.reps, it.seconds, it.loadKg, it.restSeconds, it.repRestSeconds) },
-                dto.defaults?.prepSeconds,
-            )
-            val id = exerciseDao.insert(entity)
-            existing[dto.name.lowercase()] = entity.copy(id = id)
-            if (countAs != null) added.merge(countAs, 1, Int::plus)
-            return id
-        }
-
-        if (BackupSection.EXERCISES in sections) {
-            file.exercises?.forEach { exerciseId(it, BackupSection.EXERCISES) }
-        }
-
-        if (BackupSection.PLANS in sections) {
-            val templateDao = db.templateDao()
-            val planNames = templateDao.getAll().map { it.template.name.lowercase() }.toMutableSet()
-            file.plans?.forEach { plan ->
-                if (plan.name.lowercase() in planNames) {
-                    skipped.merge(BackupSection.PLANS, 1, Int::plus)
-                    return@forEach
-                }
-                val templateId = templateDao.insertTemplate(
-                    WorkoutTemplateEntity(name = plan.name, description = plan.description, position = templateDao.nextPosition()),
-                )
-                plan.blocks.forEachIndexed { blockPosition, block ->
-                    val blockId = templateDao.insertBlock(
-                        TemplateBlockEntity(templateId = templateId, position = blockPosition, name = block.name),
-                    )
-                    templateDao.insertExercises(
-                        block.items.mapIndexed { position, item ->
-                            TemplateExerciseEntity(
-                                blockId = blockId,
-                                // A plan brings the exercises it needs, even when the library is not imported.
-                                exerciseId = exerciseId(item.exercise, countAs = null),
-                                position = position,
-                                sets = item.sets,
-                                reps = item.reps,
-                                seconds = item.seconds,
-                                loadKg = item.loadKg,
-                                restSeconds = item.restSeconds,
-                                repRestSeconds = item.repRestSeconds,
-                            )
-                        },
-                    )
-                }
-                planNames += plan.name.lowercase()
-                added.merge(BackupSection.PLANS, 1, Int::plus)
-            }
-        }
-
-        // Places go in before the journal so imported climbs can link to them.
-        val placeDao = db.placeDao()
-        if (BackupSection.PLACES in sections) {
-            val known = placeDao.getPlaces().associateBy { it.type to it.name.lowercase() }
-            file.places?.forEach { dto ->
-                if ((dto.type to dto.name.lowercase()) in known) {
-                    skipped.merge(BackupSection.PLACES, 1, Int::plus)
-                    return@forEach
-                }
-                val placeId = placeDao.insertPlace(
-                    PlaceEntity(
-                        name = dto.name.trim(),
-                        type = dto.type,
-                        location = dto.location,
-                        defaultAngle = dto.defaultAngle,
-                        notes = dto.notes,
-                        createdAtMillis = now,
-                        favourite = dto.favourite,
-                        latitude = dto.latitude,
-                        longitude = dto.longitude,
-                        address = dto.address,
-                        extraTypes = dto.extraTypes.filter { it != dto.type }.joinToString(",") { it.name },
-                    ),
-                )
-                // Sections: as backed up, or one per kind for older backups.
-                val sectionDtos = dto.sections.ifEmpty {
-                    (listOf(dto.type) + dto.extraTypes.filter { it != dto.type }).distinct().map { SectionDto(it, it.label) }
-                }
-                // Grades: each part's own, or the whole place's from backups made before schema 20.
-                val oldGrades = dto.sections.none { it.boulderScale != null || it.routeScale != null }
-                val sectionIds = sectionDtos.mapIndexed { position, section ->
-                    val boulder = if (oldGrades) dto.boulderScale else section.boulderScale
-                    val route = (if (oldGrades) dto.routeScale else section.routeScale).takeIf { section.type != PlaceType.BOARD }
-                    val local = (if (oldGrades) dto.localScale else section.localScale).takeIf { boulder?.isLocal == true || route?.isLocal == true }
-                    section to placeDao.insertSection(
-                        SectionEntity(
-                            placeId = placeId,
-                            type = section.type,
-                            name = section.name,
-                            position = position,
-                            boulderScale = boulder,
-                            routeScale = route,
-                            localScale = local?.encode(),
-                        ),
-                    )
-                }
-                fun sectionFor(name: String?, type: PlaceType?): Long? =
-                    sectionIds.firstOrNull { (section, _) -> name != null && section.name.equals(name, ignoreCase = true) }?.second
-                        ?: sectionIds.firstOrNull { (section, _) -> section.type == (type ?: dto.type) }?.second
-                        ?: sectionIds.firstOrNull()?.second
-                val areaIds = dto.areas.mapIndexed { position, area ->
-                    area.name.lowercase() to placeDao.insertArea(
-                        AreaEntity(
-                            placeId = placeId,
-                            name = area.name,
-                            angle = area.angle,
-                            resetEpochDay = area.resetDate?.let { java.time.LocalDate.parse(it).toEpochDay() },
-                            position = position,
-                            imagePath = area.image?.let { encoded ->
-                                runCatching { Base64.getDecoder().decode(encoded) }.getOrNull()?.let { images?.importBytes(it) }
-                            },
-                            type = area.type?.takeIf { it != dto.type },
-                            sectionId = sectionFor(area.section, area.type),
-                        ),
-                    )
-                }.toMap()
-                dto.problems.forEach { problem ->
-                    val index = if (problem.gradeScale.isLocal) problem.gradeIndex ?: 0 else problem.gradeScale.grades.indexOf(problem.grade)
-                    if (index < 0) return@forEach
-                    placeDao.insertProblem(
-                        ProblemEntity(
-                            placeId = placeId,
-                            areaId = problem.area?.lowercase()?.let(areaIds::get),
-                            name = problem.name,
-                            discipline = problem.discipline,
-                            gradeScale = problem.gradeScale,
-                            gradeIndex = index,
-                            tape = problem.tape,
-                            setEpochDay = problem.setDate?.let { java.time.LocalDate.parse(it).toEpochDay() },
-                            retired = problem.retired,
-                            notes = problem.notes,
-                            createdAtMillis = now,
-                            gradeLabel = problem.grade.takeIf { problem.gradeScale.isLocal },
-                            gradeColour = problem.gradeColour,
-                        ),
-                    )
-                }
-                added.merge(BackupSection.PLACES, 1, Int::plus)
-            }
-        }
-
-        if (BackupSection.JOURNAL in sections) {
-            // Climbs relink by name to whichever saved places, walls and problems exist now.
-            val places = placeDao.getPlaces().associateBy { it.type to it.name.lowercase() }
-            val areas = placeDao.getAllAreas().groupBy { it.placeId }
-            val problems = placeDao.getAllProblems().groupBy { it.placeId }
-            val sections = placeDao.getAllSections().groupBy { it.placeId }
-            val climbDao = db.climbDao()
-            val seen = climbDao.getAll().map { it.toDto().identity() }.toMutableSet()
-            file.climbs?.forEach { dto ->
-                val index = if (dto.gradeScale.isLocal) dto.gradeIndex ?: 0 else dto.gradeScale.grades.indexOf(dto.grade)
-                if (index < 0 || dto.identity() in seen) {
-                    skipped.merge(BackupSection.JOURNAL, 1, Int::plus)
-                    return@forEach
-                }
-                val place = dto.placeType?.let { type -> dto.place?.let { places[type to it.lowercase()] } }
-                val climbId = climbDao.insert(
-                    ClimbEntity(
-                        discipline = dto.discipline,
-                        gradeScale = dto.gradeScale,
-                        gradeIndex = index,
-                        style = dto.style,
-                        attempts = dto.attempts,
-                        venue = dto.venue,
-                        dateEpochDay = java.time.LocalDate.parse(dto.date).toEpochDay(),
-                        createdAtMillis = dto.loggedAt,
-                        name = dto.name,
-                        place = dto.place,
-                        notes = dto.notes,
-                        placeId = place?.id,
-                        sectionId = place?.let { p ->
-                            val here = sections[p.id].orEmpty()
-                            here.firstOrNull { dto.section != null && it.name.equals(dto.section, ignoreCase = true) }?.id
-                                ?: here.firstOrNull { it.type.venue == dto.venue }?.id
-                        },
-                        areaId = dto.area?.let { name -> areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
-                        problemId = dto.problem?.let { name -> problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
-                        angle = dto.angle,
-                        effort = dto.effort,
-                        gradeLabel = dto.grade.takeIf { dto.gradeScale.isLocal },
-                        gradeColour = dto.gradeColour,
-                    ),
-                )
-                dto.image
-                    ?.let { encoded -> runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() }
-                    ?.let { images?.importBytes(it) }
-                    ?.let { path -> db.climbMediaDao().insert(ClimbMediaEntity(climbId = climbId, kind = MediaKind.IMAGE, path = path, createdAtMillis = now)) }
-                seen += dto.identity()
-                added.merge(BackupSection.JOURNAL, 1, Int::plus)
-            }
-        }
-
-        if (BackupSection.BODY in sections) {
-            val dao = db.bodyMeasurementDao()
-            val seen = dao.getAll().map { it.toDto().copy(loggedAt = 0) }.toMutableSet()
-            file.bodyMeasurements?.forEach { dto ->
-                val key = dto.copy(loggedAt = 0)
-                if (key in seen) {
-                    skipped.merge(BackupSection.BODY, 1, Int::plus)
-                    return@forEach
-                }
-                dao.insert(
-                    BodyMeasurementEntity(
-                        type = dto.type,
-                        value = dto.value,
-                        dateEpochDay = java.time.LocalDate.parse(dto.date).toEpochDay(),
-                        createdAtMillis = dto.loggedAt,
-                    ),
-                )
-                seen += key
-                added.merge(BackupSection.BODY, 1, Int::plus)
-            }
-        }
-        if (BackupSection.RECORDS in sections) {
-            val dao = db.exerciseRecordDao()
-            val seen = dao.getAll().map { it.exerciseId to it.createdAtMillis }.toMutableSet()
-            file.records?.forEach { dto ->
-                // The exercise comes along if the library doesn't have it yet.
-                val exerciseId = exerciseId(dto.exercise, countAs = null)
-                if ((exerciseId to dto.loggedAt) in seen) {
-                    skipped.merge(BackupSection.RECORDS, 1, Int::plus)
-                    return@forEach
-                }
-                dao.insert(
-                    com.hardtekpt.crux.data.ExerciseRecordEntity(
-                        exerciseId = exerciseId,
-                        dateEpochDay = java.time.LocalDate.parse(dto.date).toEpochDay(),
-                        reps = dto.reps,
-                        seconds = dto.seconds,
-                        loadKg = dto.loadKg,
-                        notes = dto.notes,
-                        createdAtMillis = dto.loggedAt,
-                    ),
-                )
-                seen += exerciseId to dto.loggedAt
-                added.merge(BackupSection.RECORDS, 1, Int::plus)
-            }
-        }
-
-        if (BackupSection.NOTES in sections) {
-            val dao = db.noteDao()
-            val seen = dao.getAll().map { it.createdAtMillis to it.text }.toMutableSet()
-            file.notes?.forEach { dto ->
-                if ((dto.createdAt to dto.text) in seen) {
-                    skipped.merge(BackupSection.NOTES, 1, Int::plus)
-                    return@forEach
-                }
-                dao.insert(
-                    com.hardtekpt.crux.data.NoteEntity(
-                        text = dto.text,
-                        createdAtMillis = dto.createdAt,
-                        updatedAtMillis = dto.updatedAt,
-                        pinned = dto.pinned,
-                        tag = dto.tag,
-                    ),
-                )
-                seen += dto.createdAt to dto.text
-                added.merge(BackupSection.NOTES, 1, Int::plus)
-            }
-        }
-        return ImportResult(added, skipped)
+    override fun close() {
+        mediaDir?.deleteRecursively()
     }
 }
 
-private fun ExerciseEntity.toDto() = ExerciseDto(
-    name,
-    category,
-    metric,
-    notes,
-    defaults?.let { ExerciseDefaultsDto(it.sets, it.reps, it.seconds, it.loadKg, it.restSeconds, it.repRestSeconds, prepSeconds) },
+/** What to do with a record from a backup that is already here. */
+enum class Resolution(val label: String, val description: String) {
+    SKIP("Skip", "Keep what's in Crux"),
+    REPLACE("Replace", "Use the backup's version"),
+    KEEP_BOTH("Keep both", "Add the backup's as a copy"),
+}
+
+/** Names one record in one section of a backup. */
+data class ConflictKey(val section: BackupSection, val key: String)
+
+/** A record in the backup that is already here, described both ways for the climber to choose. */
+data class ImportConflict(val id: ConflictKey, val title: String, val existing: String, val incoming: String, val identical: Boolean) {
+    val section: BackupSection get() = id.section
+}
+
+/** What an import did, per section. */
+data class ImportResult(
+    val added: Map<BackupSection, Int>,
+    val skipped: Map<BackupSection, Int>,
+    val replaced: Map<BackupSection, Int> = emptyMap(),
+    /** Records kept alongside what was already here. */
+    val copied: Map<BackupSection, Int> = emptyMap(),
+    /** Records the file holds but this app can't read, such as a grade no scale has. */
+    val unreadable: Int = 0,
 )
 
-private fun ClimbEntity.toDto() = ClimbDto(
-    discipline = discipline,
-    gradeScale = gradeScale,
-    grade = gradeLabel(gradeScale, gradeIndex, gradeLabel),
-    style = style,
-    attempts = attempts,
-    venue = venue,
-    date = java.time.LocalDate.ofEpochDay(dateEpochDay).toString(),
-    loggedAt = createdAtMillis,
-    name = name,
-    place = place,
-    notes = notes,
-    gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
-    gradeColour = gradeColour,
-)
-
-/** Two climbs are the same entry when everything but notes and saved-place links matches. */
-private fun ClimbDto.identity() = copy(notes = null, placeType = null, area = null, problem = null, angle = null, effort = null, image = null, section = null)
-
-private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) = PlaceDto(
-    name = name,
-    type = type,
-    location = location,
-    boulderScale = boulderScale,
-    routeScale = routeScale,
-    defaultAngle = defaultAngle,
-    notes = notes,
-    areas = areas,
-    problems = problems,
-    localScale = LocalScale.decode(localScale),
-    favourite = favourite,
-    latitude = latitude,
-    longitude = longitude,
-    address = address,
-    extraTypes = PlaceEntity.parseTypes(extraTypes),
-)
-
-private fun AreaEntity.toDto() = AreaDto(
-    name = name,
-    type = type,
-    angle = angle,
-    resetDate = resetEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
-)
-
-private fun ProblemEntity.toDto(area: String?) = ProblemDto(
-    name = name,
-    discipline = discipline,
-    gradeScale = gradeScale,
-    grade = gradeLabel(gradeScale, gradeIndex, gradeLabel),
-    area = area,
-    tape = tape,
-    setDate = setEpochDay?.let { java.time.LocalDate.ofEpochDay(it).toString() },
-    retired = retired,
-    notes = notes,
-    gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
-    gradeColour = gradeColour,
-)
-
-private fun BodyMeasurementEntity.toDto() = MeasurementDto(
-    type = type,
-    value = value,
-    date = java.time.LocalDate.ofEpochDay(dateEpochDay).toString(),
-    loggedAt = createdAtMillis,
-)
+class BackupFormatException(message: String) : Exception(message)

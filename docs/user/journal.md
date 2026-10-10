@@ -25,26 +25,36 @@ for an attempt. Tap a climb to edit it. Tap a session for its summary.
 
 Open **+ → Log climb**, tap **Log here** on a place page, or **Log climb** inside a session.
 
-1. **Where?** (optional): pick a place, then a facility or wall, then a problem. Your favourite
-   places are quick picks at the top, and you can add a new place from here. Picking a problem
-   copies its grade, which you can still change. *Save this climb as a new problem* turns a one-off
-   climb into a problem on that wall.
+A **climb** is the boulder or route you try; each time you log goes on it is a **log** in your
+Journal. Coming back to a climb adds another log to it.
+
+1. **Where?** (optional): pick a place, then a facility or wall. Your favourite places are quick
+   picks at the top, and you can add a new place from here. A new log starts where your last one
+   was: the same place, facility and wall. The **calendar** button beside it reads *Today*; tap it
+   to pick an earlier day, and it turns amber and shows that day.
 2. **Boulder** or **Route**.
-3. **Grade**: swipe the grade strip. It uses your scale from Settings, or the place's own grades
-   (numbers or colour tapes) when the place has them.
-4. **Style**: *Flash* or *Onsight* (first go), *Redpoint* (sent after trying), or *Attempt* (not
-   sent).
-5. **Attempts**: how many goes it took. Flash and onsight mean one.
-6. **How hard it felt** (optional): 1 to 10.
-7. **Day**: today is selected; swipe back through the last two weeks, or open the calendar for an
-   older day.
-8. **Angle** for boards, plus **Name**, **Notes**, a **photo** and a **video** (all optional).
+3. **Grade**: swipe the grade strip. It uses your scale from Settings, or the grades of the
+   facility you picked (numbers or colour tapes) when it has its own.
+4. **Goes**: tap **+ Fell** for each go that didn't top out and **+ Sent** for each send, in the
+   order you climbed. The dots show them in order, and **Undo** takes the last one back. The form
+   starts on one send, so a flash needs no taps; the first tap replaces it. Crux works out the
+   style: no send is an *Attempt*, a send on the very first go is a *Flash*, and any other send is
+   a *Redpoint*. On a climb you've tried before, the counts on the pads are the climb's in all, the
+   earlier goes show faded before today's, and any send is a redpoint, whatever day the earlier
+   goes were on. For a route sent first go, **No beta** marks it an *Onsight*.
+5. **How hard it felt** (optional): Easy, Steady, Moderate, Hard or Limit. Tap the picked word
+   again to clear it.
+6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
+   like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
+   or typing its exact name, adds today's goes to it. Any other name starts a new climb.
+7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
+8. **Angle** for boards is set under *Where?*.
 9. **Log climb**.
 
 Photos are copied into Crux and scaled to at most 2048 px, so they survive the original being
 deleted. Videos are copied as they are.
 
-To change a climb, tap it in the Journal. To remove it, use **Delete**; it disappears from your
+To change a log, tap it in the Journal. To remove it, use **Delete**; it disappears from your
 journal, bests and charts.
 
 ## Notes

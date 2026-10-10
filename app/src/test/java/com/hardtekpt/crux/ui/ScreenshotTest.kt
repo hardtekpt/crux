@@ -34,6 +34,7 @@ import com.hardtekpt.crux.data.images.AreaImageStore
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
 import com.hardtekpt.crux.data.local.DatabaseFactory
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.data.seed.StarterData
 import com.hardtekpt.crux.data.seed.StarterDataSeeder
@@ -49,6 +50,8 @@ import com.hardtekpt.crux.ui.progress.ProgressContent
 import com.hardtekpt.crux.ui.progress.ProgressViewModel
 import com.hardtekpt.crux.ui.session.SessionScreen
 import com.hardtekpt.crux.ui.session.SessionViewModel
+import com.hardtekpt.crux.ui.settings.BackupContent
+import com.hardtekpt.crux.ui.settings.BackupUiState
 import com.hardtekpt.crux.ui.settings.SettingsContent
 import com.hardtekpt.crux.ui.settings.SettingsUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -109,18 +112,44 @@ class ScreenshotTest {
     fun close() = db.close()
 
     @Test
-    fun home() {
+    fun home() = home("home")
+
+    private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
         val vm = HomeViewModel(climbs, body, OfflineTemplateRepository(dbs), places, preferences, DashboardRepository(dataStore), FIXED_CLOCK)
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
-        bothThemes("home") { HomeContent(uiState = state, dashboard = dashboard) }
+        bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
     }
+
+    // Home in each accent but the brand's teal, which every other screenshot shows.
+    @Test
+    fun homeBlue() = home("home_blue", accent = Accent.BLUE)
+
+    @Test
+    fun homeViolet() = home("home_violet", accent = Accent.VIOLET)
+
+    @Test
+    fun homePink() = home("home_pink", accent = Accent.PINK)
 
     @Test
     fun journal() {
         val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
         val state = loaded(JournalViewModel(climbs, records, notes, sessions, FIXED_CLOCK).uiState) { !it.isLoading }
         bothThemes("journal") { JournalContent(uiState = state) }
+    }
+
+    @Test
+    fun daysOnWall() {
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val state = loaded(com.hardtekpt.crux.ui.journal.DaysOnWallViewModel(climbs, records, notes, sessions, FIXED_CLOCK).uiState) { !it.isLoading }
+        bothThemes("days_on_wall") { com.hardtekpt.crux.ui.journal.DaysOnWallContent(state) }
+    }
+
+    @Test
+    fun weekClimbs() {
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val state = loaded(com.hardtekpt.crux.ui.journal.WeekClimbsViewModel(climbs, records, notes, sessions, FIXED_CLOCK).uiState) { !it.isLoading }
+        bothThemes("week_climbs") { com.hardtekpt.crux.ui.journal.WeekClimbsContent(state) }
     }
 
     @Test
@@ -136,9 +165,14 @@ class ScreenshotTest {
     }
 
     @Test
-    fun settings() = bothThemes("settings") {
+    fun settings() = settings("settings")
+
+    private fun settings(name: String, dark: List<Boolean> = BOTH) = bothThemes(name, dark = dark) {
         SettingsContent(uiState = SettingsUiState(), onBack = {}, onGradeScale = {}, onThemeMode = {})
     }
+
+    @Test
+    fun backups() = bothThemes("backups") { BackupContent(state = BackupUiState(), onBack = {}) }
 
     @Test
     fun train() {
@@ -147,7 +181,9 @@ class ScreenshotTest {
     }
 
     @Test
-    fun session() {
+    fun session() = session("session")
+
+    private fun session(name: String, dark: List<Boolean> = BOTH) {
         val sessions = sessions()
         val sessionId = runBlocking {
             val plan = OfflineTemplateRepository(dbs).observeTemplates().first().first()
@@ -159,14 +195,33 @@ class ScreenshotTest {
             id
         }
         val vm = SessionViewModel(SavedStateHandle(mapOf("sessionId" to sessionId)), sessions, exercises, places, preferences, FIXED_CLOCK)
-        bothThemes("session", readyText = "Max hangs") { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
+        bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
     }
 
     @Test
-    fun logClimb() {
+    fun logClimb() = logClimb("logclimb")
+
+    private fun logClimb(name: String, dark: List<Boolean> = BOTH) {
         val vm = LogClimbViewModel(SavedStateHandle(), climbs, places, FIXED_CLOCK, preferences, FakeImageFiles(), sessions())
-        bothThemes("logclimb", readyText = "Log climb") { LogClimbScreen(onDone = {}, viewModel = vm) }
+        bothThemes(name, readyText = "Log climb", dark = dark) { LogClimbScreen(onDone = {}, viewModel = vm) }
     }
+
+    // The largest text size on top of a large phone font, so clipped or overlapping text shows up.
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun homeLargestText() = home("home_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun logClimbLargestText() = logClimb("logclimb_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun sessionLargestText() = session("session_text_largest", dark = DARK)
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun settingsLargestText() = settings("settings_text_largest", dark = DARK)
 
     @Test
     fun place() {
@@ -174,7 +229,7 @@ class ScreenshotTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val vm = PlaceDetailViewModel(SavedStateHandle(mapOf("placeId" to placeId)), places, AreaImageStore(context), climbs)
         bothThemes("place", readyText = "Block Lab") {
-            PlaceDetailScreen(onBack = {}, onEdit = {}, onOpenProblem = {}, onNewProblem = {}, onLogHere = { _, _ -> }, viewModel = vm)
+            PlaceDetailScreen(onBack = {}, onEdit = {}, onOpenProblem = {}, onLogHere = { _, _ -> }, viewModel = vm)
         }
     }
 
@@ -185,19 +240,25 @@ class ScreenshotTest {
     /** The view model's state once it has loaded, so the screenshot never catches a half-filled screen. */
     private fun <T> loaded(state: Flow<T>, isLoaded: (T) -> Boolean): T = runBlocking { withTimeout(10_000) { state.first(isLoaded) } }
 
-    /** Renders [content] dark (the app's default) and light. */
-    private fun bothThemes(name: String, readyText: String? = null, content: @Composable () -> Unit) {
-        var dark by mutableStateOf(true)
+    /** Renders [content] dark (the app's default) and light, or only the modes in [dark]. */
+    private fun bothThemes(
+        name: String,
+        readyText: String? = null,
+        dark: List<Boolean> = BOTH,
+        accent: Accent = Accent.TEAL,
+        content: @Composable () -> Unit,
+    ) {
+        var isDark by mutableStateOf(dark.first())
         compose.setContent {
             // "Today" is the fixed test day everywhere, so the goldens don't change from day to day.
             CompositionLocalProvider(LocalClock provides FIXED_CLOCK) {
-                CruxTheme(darkTheme = dark) {
+                CruxTheme(darkTheme = isDark, accent = accent) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
                 }
             }
         }
-        listOf(true, false).forEach { theme ->
-            dark = theme
+        dark.forEach { theme ->
+            isDark = theme
             // Screens that load their own data: wait until it's on screen.
             readyText?.let { text ->
                 compose.waitUntil(10_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
@@ -211,6 +272,11 @@ class ScreenshotTest {
     }
 
     private companion object {
+        val BOTH = listOf(true, false)
+        val DARK = listOf(true)
+
+        /** Largest (1.3×) on a phone already set to 1.3×. */
+        const val LARGEST_TEXT = 1.69f
         const val STORE_SCREENSHOTS = "../fastlane/metadata/android/en-US/images/phoneScreenshots"
         val STORE_ORDER = mapOf(
             "home" to 1,

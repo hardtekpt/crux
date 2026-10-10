@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +51,9 @@ import com.hardtekpt.crux.ui.journal.JournalActions
 import com.hardtekpt.crux.ui.journal.JournalScreen
 import com.hardtekpt.crux.ui.journal.LogClimbScreen
 import com.hardtekpt.crux.ui.navigation.AboutRoute
+import com.hardtekpt.crux.ui.navigation.BackupsRoute
 import com.hardtekpt.crux.ui.navigation.CircumferencesRoute
+import com.hardtekpt.crux.ui.navigation.DaysOnWallRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseRecordsRoute
 import com.hardtekpt.crux.ui.navigation.FloatingNavBar
@@ -69,8 +72,6 @@ import com.hardtekpt.crux.ui.navigation.PlaceDetailRoute
 import com.hardtekpt.crux.ui.navigation.PlaceEditorRoute
 import com.hardtekpt.crux.ui.navigation.PlacesRoute
 import com.hardtekpt.crux.ui.navigation.PlanEditorRoute
-import com.hardtekpt.crux.ui.navigation.ProblemDetailRoute
-import com.hardtekpt.crux.ui.navigation.ProblemEditorRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
 import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
@@ -81,6 +82,7 @@ import com.hardtekpt.crux.ui.navigation.TemplateDetailRoute
 import com.hardtekpt.crux.ui.navigation.TopLevelDestination
 import com.hardtekpt.crux.ui.navigation.TrainGraph
 import com.hardtekpt.crux.ui.navigation.TrainRoute
+import com.hardtekpt.crux.ui.navigation.WeekClimbsRoute
 import com.hardtekpt.crux.ui.navigation.YouGraph
 import com.hardtekpt.crux.ui.navigation.YouRoute
 import com.hardtekpt.crux.ui.navigation.cruxEnter
@@ -92,12 +94,11 @@ import com.hardtekpt.crux.ui.navigation.cruxPredictivePopExit
 import com.hardtekpt.crux.ui.navigation.navBarClearance
 import com.hardtekpt.crux.ui.places.PlaceDetailScreen
 import com.hardtekpt.crux.ui.places.PlaceEditorScreen
-import com.hardtekpt.crux.ui.places.ProblemDetailScreen
-import com.hardtekpt.crux.ui.places.ProblemEditorScreen
 import com.hardtekpt.crux.ui.progress.ProgressScreen
 import com.hardtekpt.crux.ui.quicklog.QuickLogAction
 import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
 import com.hardtekpt.crux.ui.settings.AboutScreen
+import com.hardtekpt.crux.ui.settings.BackupScreen
 import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.train.ExerciseEditorScreen
@@ -136,13 +137,17 @@ fun CruxApp() {
         PlanEditorRoute::class,
         ExerciseEditorRoute::class,
         PlaceEditorRoute::class,
-        ProblemEditorRoute::class,
         NoteEditorRoute::class,
         RecordEditorRoute::class,
     )
-    val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
+    // The current screen's tab; a page outside the tabs, like a problem, keeps the tab it was
+    // opened from lit.
+    val currentTab = TopLevelDestination.entries.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
     }
+    var lastTab by remember { mutableStateOf(currentTab) }
+    if (currentTab != null && currentTab != lastTab) lastTab = currentTab
+    val selectedTab = currentTab ?: lastTab
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     // Content runs edge to edge and scrolls under the floating bar; screens pad their
@@ -171,8 +176,33 @@ fun CruxApp() {
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
-                            onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
                             onStartPlan = { startSession(it) },
+                            onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
+                            onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
+                            onOpenMeasurements = { navController.navigate(MeasurementsRoute) },
+                        )
+                    }
+                    page<WeekClimbsRoute> {
+                        com.hardtekpt.crux.ui.journal.WeekClimbsScreen(
+                            onBack = navController::popBackStack,
+                            actions = JournalActions(
+                                openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                                openNote = { navController.navigate(NoteEditorRoute(it)) },
+                                openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                                openSession = { navController.navigate(SessionSummaryRoute(it)) },
+                            ),
+                        )
+                    }
+                    page<DaysOnWallRoute> {
+                        com.hardtekpt.crux.ui.journal.DaysOnWallScreen(
+                            onBack = navController::popBackStack,
+                            actions = JournalActions(
+                                openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                                openNote = { navController.navigate(NoteEditorRoute(it)) },
+                                openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                                openSession = { navController.navigate(SessionSummaryRoute(it)) },
+                            ),
                         )
                     }
                 }
@@ -214,7 +244,7 @@ fun CruxApp() {
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) }) }
+                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) }) }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {
@@ -232,8 +262,15 @@ fun CruxApp() {
                             ),
                         )
                     }
-                    page<SettingsRoute> { SettingsScreen(onBack = navController::popBackStack, openAbout = { navController.navigate(AboutRoute) }) }
+                    page<SettingsRoute> {
+                        SettingsScreen(
+                            onBack = navController::popBackStack,
+                            openAbout = { navController.navigate(AboutRoute) },
+                            openBackups = { navController.navigate(BackupsRoute) },
+                        )
+                    }
                     page<AboutRoute> { AboutScreen(onBack = navController::popBackStack) }
+                    page<BackupsRoute> { BackupScreen(onBack = navController::popBackStack) }
                     page<MeasurementsRoute> {
                         MeasurementsScreen(onBack = navController::popBackStack, onLogWeight = { navController.navigate(LogWeightRoute) })
                     }
@@ -250,8 +287,7 @@ fun CruxApp() {
                         PlaceDetailScreen(
                             onBack = navController::popBackStack,
                             onEdit = { navController.navigate(PlaceEditorRoute(it)) },
-                            onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
-                            onNewProblem = { navController.navigate(ProblemEditorRoute(placeId = it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
                             onLogHere = { placeId, sectionId -> navController.navigate(LogClimbRoute(placeId = placeId, sectionId = sectionId ?: 0)) },
                         )
                     }
@@ -270,28 +306,6 @@ fun CruxApp() {
                                     }
 
                                     else -> navController.popBackStack()
-                                }
-                            },
-                        )
-                    }
-                    page<ProblemDetailRoute> {
-                        ProblemDetailScreen(
-                            onBack = navController::popBackStack,
-                            onEdit = { placeId, problemId -> navController.navigate(ProblemEditorRoute(placeId, problemId)) },
-                            onLogGo = { navController.navigate(LogClimbRoute(problemId = it)) },
-                            onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
-                        )
-                    }
-                    page<ProblemEditorRoute> {
-                        ProblemEditorScreen(
-                            onDone = { deleted ->
-                                // Deleting from the editor also leaves the problem's own page.
-                                val fromDetail = navController.previousBackStackEntry?.destination
-                                    ?.hasRoute(ProblemDetailRoute::class) == true
-                                if (deleted && fromDetail) {
-                                    navController.popBackStack<ProblemDetailRoute>(inclusive = true)
-                                } else {
-                                    navController.popBackStack()
                                 }
                             },
                         )
@@ -317,7 +331,9 @@ fun CruxApp() {
                         onFinished = navController::popBackStack,
                     )
                 }
-                page<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
+                page<LogClimbRoute> {
+                    LogClimbScreen(onDone = navController::popBackStack, onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) })
+                }
                 page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
                 page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }
                 page<RecordEditorRoute> { RecordEditorScreen(onDone = navController::popBackStack) }

@@ -72,15 +72,14 @@ class PlaceRepositoryTest {
     }
 
     @Test
-    fun `resetting a wall retires its problems and deleting a place keeps the climbs`() = runTest {
+    fun `deleting a place keeps every climb and log`() = runTest {
         val repo = repository()
         val cave = db.placeDao().getAllAreas().single { it.name == "Cave" }
-        repo.resetArea(cave.id)
-        assertTrue(db.placeDao().getAllProblems().filter { it.areaId == cave.id }.all { it.retired })
-
         val climbsBefore = db.climbDao().count()
+        val problemsBefore = db.placeDao().getAllProblems().size
         repo.deletePlace(cave.placeId)
         assertEquals(climbsBefore, db.climbDao().count())
+        assertEquals(problemsBefore, db.placeDao().getAllProblems().size)
         assertTrue(db.climbDao().getAll().none { it.placeId == cave.placeId })
         assertNull(repo.getPlace(cave.placeId))
     }

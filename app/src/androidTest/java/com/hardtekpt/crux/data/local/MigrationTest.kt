@@ -209,6 +209,45 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate20To21GivesEveryLogAClimb() {
+        helper.createDatabase(DB, 20).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Block Lab', 'GYM', 0, 0, '')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Gym', 0)")
+            execSQL(
+                "INSERT INTO problems (id, placeId, areaId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) " +
+                    "VALUES (1, 1, NULL, 'Seventh seal', 'BOULDER', 'FONT', 10, 0, 0)",
+            )
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, venue, dateEpochDay, createdAtMillis, placeId, problemId, name) VALUES "
+            // On a problem; two named alike at the place (one sent); one with no name; one with no place.
+            execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'REDPOINT', 3, 'GYM', 20000, 1, 1, 1, 'Seventh seal')")
+            execSQL(climb + "(2, 'BOULDER', 'FONT', 9, 'ATTEMPT', 2, 'GYM', 20000, 2, 1, NULL, 'Cheesecake')")
+            execSQL(climb + "(3, 'BOULDER', 'FONT', 9, 'FLASH', 1, 'GYM', 20002, 3, 1, NULL, 'cheesecake')")
+            execSQL(climb + "(4, 'BOULDER', 'FONT', 8, 'ATTEMPT', 1, 'GYM', 20003, 4, 1, NULL, NULL)")
+            execSQL(climb + "(5, 'ROUTE', 'FRENCH', 12, 'ONSIGHT', 1, 'CRAG', 20004, 5, NULL, NULL, 'Pilastro')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 21, true)
+        val rows = db.query("SELECT id, problemId, sends, name, style FROM climbs ORDER BY id").use { c ->
+            buildList { while (c.moveToNext()) add(listOf(c.getLong(0), c.getLong(1), c.getInt(2).toLong(), c.getString(3), c.getString(4))) }
+        }
+        // The second cheesecake was "flashed" after a go on it: a redpoint.
+        assertEquals("REDPOINT", rows[2][4])
+        assertEquals("ONSIGHT", rows[4][4])
+        // Every log has a climb; the problem's log keeps it; the two cheesecakes share one.
+        assertEquals(1L, rows[0][1])
+        assertEquals(rows[1][1], rows[2][1])
+        assertEquals(listOf(1L, 0L, 1L, 0L, 1L), rows.map { it[2] })
+        // The unnamed one is named for its grade and place.
+        assertEquals("6B+ · Block Lab", rows[3][3])
+        db.query("SELECT COUNT(*), SUM(placeId IS NULL) FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals(4, c.getInt(0))
+            assertEquals(1, c.getInt(1))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

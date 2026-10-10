@@ -6,6 +6,67 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-10
+
+### Added
+
+- **Accent colour.** Pick teal, blue, violet or pink in Settings → Appearance. It colours buttons,
+  selected options and highlights, in dark and light.
+- **Text size.** Make the text in Crux smaller or larger in Settings → Appearance, on top of your
+  phone's own font size.
+- **Compact timer.** The rest and interval timer band can shrink to one slim line, and stays that
+  way until you open it up again.
+- **Consistency widget** for Home: the grid of climbing days from the You page, with your week
+  streak and days in the last 30.
+- **Everything in backups.** Session history (every set, and the climbs logged in it), your
+  settings and Home layout, and climb videos now go into backups too. Backups are now `.zip` files;
+  the `.json` backups you already have still import.
+- **Photos and videos switches** for backups, so you can leave them out to keep the file small.
+- **Climbs this week page**, from the Home widget: the week's climbs, sends, days and hardest send,
+  then every climb by day. The arrows go back through earlier weeks.
+- **Days on the wall page**, from the Home widget: this week, month and year, your week streak,
+  and a month calendar of your climbing days. Tap a day to see its journal.
+- **+1 go** on projects in Home and Progress: one tap logs a fall on the climb today, with Undo.
+
+### Changed
+
+- **Climbs instead of problems.** Every climb you log is a climb you can come back to: logging
+  goes on it again adds another log. Climbs are always named, by you or by Crux from the grade
+  and wall, need no place, and any climb you've tried and not sent is a project. Saved problems,
+  and the climbs you've already logged, become climbs when you update; same-named climbs at a
+  place are merged.
+- **Log climb, simpler.** Tap **+ Fell** and **+ Sent** for each go, in order; Crux works out
+  attempt, flash, onsight (route, no beta) or redpoint. How hard it felt is five words. The day is
+  a calendar button beside the place, amber when it isn't today. Name suggestions continue a
+  climb; note, photo and video are chips until used.
+- **No more wall resets.** Crux never hides or removes a climb on its own: climbs taken down by an
+  earlier reset are back in your projects and suggestions.
+- **Tapping a climb or project opens Log climb on it**, ready for more goes, with its earlier logs
+  listed at the bottom. There's no separate climb page to edit any more.
+
+- **The Bodyweight and Weight trend widgets** open Measurements instead of the You page.
+- **Latest best** on Home is your newest hardest send: the latest send harder than all before it,
+  in any style, so an easier flash no longer replaces a harder redpoint.
+- **A session's logs on the same climb** show as one entry with the goes added up, in the live
+  session, the Journal and the session summary.
+- **Backups page.** Export, the photo and video switches and import moved from the Settings list to
+  their own page, *Settings → Backups*.
+- **Import asks about duplicates.** When something in a backup is already in Crux, you see both and
+  choose: skip it, replace it with the backup's, or keep both. One answer can cover the rest of a
+  section. Replacing a place brings in the walls and climbs it's missing.
+
+### Fixed
+
+- **Large text in Log climb**: with a big font size on your phone, the day button and the "how
+  hard it felt" words no longer get cut off.
+- **Goes on a climb add up across days**: the go pads count the climb's falls and sends in all, its
+  earlier goes show before today's, and a send after earlier goes is a redpoint, whatever their day.
+- **The Journal's day tally** counts a session's logs on one climb once, like the session card.
+- **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
+  import twice.
+- **Log climb remembers where you were.** A new climb starts at the last climb's place, facility
+  (gym, board) and wall, instead of going back to the place's first facility with no wall.
+
 ## [0.2.0] - 2026-10-07
 
 ### Added
@@ -80,6 +141,7 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.2.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.3.0...dev
+[0.3.0]: https://github.com/hardtekpt/crux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hardtekpt/crux/releases/tag/v0.1.0

@@ -95,18 +95,24 @@ data class AreaEntity(
     val sectionId: Long? = null,
 )
 
-/** A problem or route at a place, optionally on one of its areas. */
+/**
+ * A climb: the boulder or route you try, with its name and grade, and where it is if anywhere
+ * (a place, one of its facilities, a wall). Its logs are the rows in `climbs` that point here.
+ * The table keeps its old name, `problems`; since schema 21 a climb needs no place, and deleting
+ * the place keeps the climb.
+ */
 @Entity(
     tableName = "problems",
     foreignKeys = [
-        ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = AreaEntity::class, parentColumns = ["id"], childColumns = ["areaId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = SectionEntity::class, parentColumns = ["id"], childColumns = ["sectionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("placeId"), Index("areaId")],
+    indices = [Index("placeId"), Index("areaId"), Index("sectionId")],
 )
 data class ProblemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val placeId: Long,
+    val placeId: Long? = null,
     val areaId: Long? = null,
     val name: String,
     val discipline: Discipline,
@@ -115,12 +121,15 @@ data class ProblemEntity(
     /** Index into the design system's tape colours (red … purple), if the climber tagged one. */
     val tape: Int? = null,
     val setEpochDay: Long? = null,
+    /** Set by the old wall reset (before schema 21's app); no longer used, kept so nothing is lost. */
     @ColumnInfo(defaultValue = "0") val retired: Boolean = false,
     val notes: String? = null,
     val createdAtMillis: Long,
     /** For local grades: the label and tape colour when it was set (schema 9). */
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
+    /** The facility it's in (schema 21); the wall's when it has one. */
+    val sectionId: Long? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */
@@ -165,8 +174,8 @@ interface PlaceDao {
     @Update
     suspend fun updatePlace(place: PlaceEntity)
 
-    /** Climbs keep their typed place name; only the link goes. */
-    @Query("UPDATE climbs SET placeId = NULL, areaId = NULL, problemId = NULL WHERE placeId = :id")
+    /** Logs keep their typed place name and their climb; only the link to the place goes. */
+    @Query("UPDATE climbs SET placeId = NULL, areaId = NULL, sectionId = NULL WHERE placeId = :id")
     suspend fun unlinkClimbsFromPlace(id: Long)
 
     @Query("DELETE FROM places WHERE id = :id")
@@ -220,11 +229,7 @@ interface PlaceDao {
     @Query("DELETE FROM areas WHERE id = :id")
     suspend fun deleteArea(id: Long)
 
-    /** A reset retires everything still up on the wall. */
-    @Query("UPDATE problems SET retired = 1 WHERE areaId = :areaId AND retired = 0")
-    suspend fun retireProblemsOnArea(areaId: Long)
-
-    @Query("SELECT * FROM problems WHERE placeId = :placeId ORDER BY retired, gradeIndex DESC, name COLLATE NOCASE")
+    @Query("SELECT * FROM problems WHERE placeId = :placeId ORDER BY gradeIndex DESC, name COLLATE NOCASE")
     fun observeProblems(placeId: Long): Flow<List<ProblemEntity>>
 
     @Query("SELECT * FROM problems ORDER BY placeId")
@@ -245,8 +250,34 @@ interface PlaceDao {
     @Update
     suspend fun updateProblem(problem: ProblemEntity)
 
-    @Query("UPDATE climbs SET problemId = NULL WHERE problemId = :id")
-    suspend fun unlinkClimbsFromProblem(id: Long)
+    /** A climb's logs follow its name, grade and where it is. */
+    @Query(
+        """
+        UPDATE climbs SET name = :name, discipline = :discipline, gradeScale = :gradeScale, gradeIndex = :gradeIndex,
+            gradeLabel = :gradeLabel, gradeColour = :gradeColour, placeId = :placeId, sectionId = :sectionId, areaId = :areaId,
+            place = COALESCE(:placeName, place)
+        WHERE problemId = :id
+        """,
+    )
+    suspend fun syncLogs(
+        id: Long,
+        name: String,
+        discipline: Discipline,
+        gradeScale: GradeScale,
+        gradeIndex: Int,
+        gradeLabel: String?,
+        gradeColour: Long?,
+        placeId: Long?,
+        sectionId: Long?,
+        areaId: Long?,
+        placeName: String?,
+    )
+
+    @Query("DELETE FROM climbs WHERE problemId = :id")
+    suspend fun deleteLogsOfProblem(id: Long)
+
+    @Query("SELECT * FROM problems WHERE (:placeId IS NULL AND placeId IS NULL) OR placeId = :placeId ORDER BY name COLLATE NOCASE")
+    suspend fun getClimbsAt(placeId: Long?): List<ProblemEntity>
 
     @Query("DELETE FROM problems WHERE id = :id")
     suspend fun deleteProblem(id: Long)

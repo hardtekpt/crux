@@ -17,7 +17,9 @@
   and a fixed clock (`FIXED_CLOCK`, Monday 5 October 2026).
 - **Repositories** on in-memory Room under Robolectric (`RepositoriesTest`, `PlaceRepositoryTest`),
   including demo-mode isolation.
-- **Backups**: round-trips, photos byte for byte, and importing a real v0.1.0 file.
+- **Backups**: round-trips of every section (sessions and settings too), photos and videos byte for
+  byte, the media switches, each duplicate choice, and importing real v0.1.0 and v0.2.0 files.
+  `BackupViewModelTest` walks the duplicate questions.
 - **Database safety**: `DatabaseSnapshotsTest` (copies before migrations), `SchemaExportTest`
   (every schema version has its exported JSON).
 - **Compose components** (Robolectric): the input kit, list rows, and so on.
@@ -38,6 +40,9 @@ Pixel 7 size. Goldens:
 - Dark Home, Journal, Progress, You, Train, Session, Log climb and Place are the **store
   screenshots**: `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 - Everything else (light themes, Settings) is in `app/src/test/screenshots/`.
+- `*_text_largest_dark` render Home, Log climb, Session and Settings with 1.69× text
+  (`@Config(fontScale = …)`), to catch text that clips or overlaps when the font is large.
+- `home_{blue,violet,pink}_{dark,light}` show Home in each accent other than teal.
 - `StoreGraphicsTest` draws the store icon and feature graphic from the launcher icon.
 
 Comparison is **exact**: removing one letter changes about 200 pixels, so any tolerance would hide
@@ -92,5 +97,5 @@ CI uploads the report as the `coverage` artifact. There's no threshold yet.
 | ViewModel logic | A JVM test with fakes |
 | Repository or DAO query | A Robolectric test on in-memory Room |
 | Schema | Migration step test if data moves; see [Database](database.md) |
-| Backup format | Round-trip, and the v0.1.0 fixture must still import |
+| Backup format | Round-trip, and the v0.1.0 and v0.2.0 fixtures must still import |
 | Visible UI | Re-recorded screenshots; a `MainActivityTest` flow for new interactions |

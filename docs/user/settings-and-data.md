@@ -7,10 +7,14 @@ Open Settings from the gear on the **You** tab.
 ## Settings
 
 - **Grades**: the scale new climbs are logged in, per discipline. See [Grades](grades.md).
-- **Appearance**: Dark (the default), Light, or System.
+- **Appearance**: Dark (the default), Light, or System, and the accent colour: Teal (the
+  default), Blue, Violet or Pink. The accent colours buttons, selected options and highlights;
+  the amber for goes and the green for sends stay the same in every accent. **Text size** makes
+  the text in Crux smaller or larger (Small, Default, Large, Largest) on top of your phone's own
+  font size. Crux reopens on the same page to apply it.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
-- **Your data**: demo mode, and backups.
+- **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
 - **About**: version, licence, source code, and the open-source libraries Crux uses.
 
@@ -22,20 +26,38 @@ untouched until you turn demo mode off.
 
 ## Backups
 
-*Settings → Backup* saves your data to a file you keep, and brings a backup back in.
+*Settings → Backups* saves your data to a file you keep, and brings a backup back in.
 
-- **Export**: choose sections (exercise list, plan list, journal, places, body stats, personal
-  records, notes), then pick where to save the `.json` file: your phone, a cloud drive, anywhere
-  your file picker offers.
+<img src="../../app/src/test/screenshots/backups_dark.png" width="300" alt="Backups: what to include, photos and videos, and import">
+
+- **Export**: choose sections (exercise list, plan list, journal, session history, places, body
+  stats, personal records, notes, settings), then pick where to save the `.zip` file: your phone,
+  a cloud drive, anywhere your file picker offers.
 - **Import**: pick a backup file. Crux shows what's in it, and you choose what to bring in.
-  **Importing only adds**: things already there are skipped, and nothing is deleted. You can
-  import the same file twice safely.
+  *Settings* starts switched off, because importing them replaces your grades, theme, units, timer
+  and Home layout.
 
-**Photos** (climb photos, wall images) are inside the backup file. **Videos are not**, because
-they're too large. Session history isn't in backups yet.
+**When something in the backup is already in Crux**, Crux asks about each one before importing
+anything. It shows what's in Crux and what's in the backup, and says when they're the same. For
+each one you choose:
 
-Backups from older versions of Crux keep importing into newer ones. A backup from a *newer*
-version than the app is refused, with a message to update the app first.
+- **Skip**: keep what's in Crux.
+- **Replace**: use the backup's version. A place keeps its own walls and climbs, and the backup's
+  are updated or added by name.
+- **Keep both**: add the backup's as a copy. A named copy gets a number, like "Max hangs (2)".
+
+Tick *Do the same for the other …* to answer once for the rest of that section, such as every
+climb. *Cancel import* stops before anything changes. Exercises, plans and places count as already
+here when they have the same name; climbs, sessions, notes, records and body stats when they were
+logged at the same moment.
+
+**Photos and videos** go into the backup unless you switch them off under *Photos and videos* on the
+Backups page. The switches apply to imports too: with videos off, a backup's videos are left out.
+Videos can make a backup large.
+
+Backups from older versions of Crux keep importing into newer ones, the `.json` files they made
+included. A backup from a *newer* version than the app is refused, with a message to update the
+app first.
 
 ## Android's own backup
 

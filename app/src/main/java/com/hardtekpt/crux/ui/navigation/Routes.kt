@@ -22,6 +22,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object HomeRoute
 
+@Serializable data object DaysOnWallRoute
+
+@Serializable data object WeekClimbsRoute
+
 @Serializable data object TrainRoute
 
 @Serializable data class TemplateDetailRoute(val templateId: Long)
@@ -36,10 +40,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class PlaceEditorRoute(val placeId: Long = 0)
 
-@Serializable data class ProblemDetailRoute(val problemId: Long)
-
-@Serializable data class ProblemEditorRoute(val placeId: Long, val problemId: Long = 0)
-
 @Serializable data object ProgressRoute
 
 @Serializable data object YouRoute
@@ -47,6 +47,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsRoute
 
 @Serializable data object AboutRoute
+
+@Serializable data object BackupsRoute
 
 @Serializable data object MeasurementsRoute
 

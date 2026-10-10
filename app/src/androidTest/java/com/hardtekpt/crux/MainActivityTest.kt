@@ -69,7 +69,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
 
         composeRule.waitForTag("screen_Home")
-        composeRule.onNodeWithTag("week_climbs").assertTextEquals("1")
+        composeRule.onNodeWithTag("week_climbs", useUnmergedTree = true).assertTextEquals("1")
         // The tile is tappable, so its text merges into one node; read the figure from the unmerged tree.
         composeRule.onNodeWithTag("home_list")
             .performScrollToNode(hasText("Latest best", substring = true, ignoreCase = true))
@@ -165,6 +165,32 @@ class MainActivityTest {
     }
 
     @Test
+    fun bodyweightWidgetOpensMeasurements() {
+        composeRule.waitForTag("widget_bodyweight")
+        composeRule.onNodeWithTag("widget_bodyweight").performScrollTo().performClick()
+        composeRule.waitForTag("screen_Measurements")
+    }
+
+    @Test
+    fun climbsThisWeekOpenFromHome() {
+        composeRule.waitForTag("widget_week_climbs")
+        composeRule.onNodeWithTag("widget_week_climbs").performClick()
+        composeRule.waitForTag("screen_WeekClimbs")
+        composeRule.onNodeWithTag("week_figures").assertIsDisplayed()
+        composeRule.onNodeWithTag("week_range").assertIsDisplayed()
+    }
+
+    @Test
+    fun daysOnTheWallOpenFromHomeWithACalendar() {
+        composeRule.waitForTag("widget_days_on_wall")
+        composeRule.onNodeWithTag("widget_days_on_wall").performClick()
+        composeRule.waitForTag("screen_DaysOnWall")
+        composeRule.onNodeWithTag("days_figures").assertIsDisplayed()
+        composeRule.onNodeWithTag("calendar_day_${java.time.LocalDate.now()}").performClick()
+        composeRule.onNodeWithTag("days_selected").assertIsDisplayed()
+    }
+
+    @Test
     fun aSessionWithoutAPlanLogsClimbsAndLandsInTheJournal() {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_StartWorkout").performClick()
@@ -200,6 +226,9 @@ class MainActivityTest {
         composeRule.waitForTag("timer_start")
         composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
         composeRule.waitForTag("timer_band")
+        // Compact, it keeps its controls on one line, and stays compact until opened up again.
+        composeRule.onNodeWithTag("timer_compact").performClick()
+        composeRule.waitForTag("timer_counts")
         composeRule.onNodeWithTag("timer_pause").performClick()
         composeRule.waitForTag("timer_stop")
         composeRule.onNodeWithTag("timer_stop").performClick()
@@ -351,7 +380,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun placesHoldProblemsAndGoesOnThemBecomeProjects() {
+    fun anUnsentClimbIsAProjectUntilMoreGoesSendIt() {
         composeRule.onNodeWithTag("nav_You").performClick()
         openFromProfileMenu("menu_places", "screen_Places")
         composeRule.waitForTag("new_place")
@@ -361,32 +390,38 @@ class MainActivityTest {
         composeRule.onNodeWithTag("place_favourite").performClick()
         composeRule.onNodeWithTag("save_place").performClick()
 
+        // Log two falls on a named climb here: it's a project.
         composeRule.waitForTag("screen_PlaceDetail")
-        composeRule.onNodeWithTag("add_problem").performClick()
-        composeRule.waitForTag("screen_ProblemEditor")
-        composeRule.textFieldIn("field_problem_name").performTextInput("Pink crimps")
-        composeRule.onNodeWithTag("save_problem").performClick()
-
-        composeRule.waitForTag("problem_row")
-        composeRule.onNodeWithTag("problem_row").performClick()
-        composeRule.waitForTag("screen_ProblemDetail")
-        composeRule.onNodeWithTag("log_go").performClick()
+        composeRule.onNodeWithTag("log_here").performClick()
         composeRule.waitForTag("screen_LogClimb")
-        composeRule.waitUntil(5_000) {
-            composeRule.onAllNodes(hasTestTag("where_summary") and hasText("Pink crimps", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNodeWithTag("style_ATTEMPT").performScrollTo().performClick()
-        composeRule.onNodeWithTag("effort_7").performScrollTo().performClick()
-        composeRule.onNodeWithTag("effort_value").assertTextEquals("7")
+        composeRule.onNodeWithTag("go_fell").performScrollTo().performClick()
+        composeRule.onNodeWithTag("go_fell").performClick()
+        composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Attempt")
+        composeRule.onNodeWithTag("effort_Hard").performScrollTo().performClick()
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Pink crimps")
         composeRule.onNodeWithTag("save_climb").performClick()
 
-        composeRule.waitForTag("screen_ProblemDetail")
-        composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("1") }.isSuccess
-        }
+        // The place lists it; tapping it opens Log climb on it, with its earlier log below.
+        composeRule.waitForTag("problem_row")
+        composeRule.onNodeWithTag("problem_row").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitForTag("earlier_logs")
+        composeRule.onNodeWithTag("back").performClick()
+        composeRule.waitForTag("screen_PlaceDetail")
 
+        // From Projects, come back and send it first go: a redpoint, and no longer a project.
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("project_row")
+        composeRule.onNodeWithTag("project_row").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Redpoint") }.isSuccess
+        }
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Progress")
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("project_row").fetchSemanticsNodes().isEmpty() }
 
         // The favourite shows as a quick pick on a new log.
         composeRule.onNodeWithTag("log_fab").performClick()

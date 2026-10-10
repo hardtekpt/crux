@@ -65,8 +65,17 @@ class AreaImageStore @Inject constructor(@ApplicationContext private val context
         name
     }
 
-    suspend fun readBytes(name: String): ByteArray? = withContext(Dispatchers.IO) {
-        file(name).takeIf { it.exists() }?.readBytes()
+    /** Restores a video from a backup as it is; returns its new file name. */
+    suspend fun importVideoFile(source: File): String = withContext(Dispatchers.IO) {
+        val name = newName(VIDEO_EXT)
+        source.copyTo(file(name))
+        name
+    }
+
+    /** An empty folder in the cache for a backup's photos and videos while it is being imported. */
+    fun newStagingDir(): File = File(context.cacheDir, STAGING_DIR).apply {
+        deleteRecursively()
+        mkdirs()
     }
 
     override suspend fun delete(name: String?) {
@@ -109,6 +118,7 @@ class AreaImageStore @Inject constructor(@ApplicationContext private val context
     companion object {
         const val DIR = "area_images"
         const val CAPTURE_DIR = "camera"
+        const val STAGING_DIR = "backup-import"
         const val MAX_SIDE = 2048
         const val QUALITY = 85
         const val VIDEO_EXT = ".mp4"

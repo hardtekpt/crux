@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Update
 import com.hardtekpt.crux.data.model.MeasurementType
 import kotlinx.coroutines.flow.Flow
 
@@ -41,4 +42,7 @@ interface BodyMeasurementDao {
 
     @Insert
     suspend fun insertAll(measurements: List<BodyMeasurementEntity>)
+
+    @Update
+    suspend fun update(measurement: BodyMeasurementEntity)
 }

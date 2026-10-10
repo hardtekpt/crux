@@ -43,6 +43,9 @@ interface ClimbDao {
     @Query("SELECT * FROM climbs WHERE id = :id")
     suspend fun get(id: Long): ClimbEntity?
 
+    @Query("SELECT COUNT(*) FROM climbs WHERE problemId = :problemId")
+    suspend fun countForProblem(problemId: Long): Int
+
     @Query("SELECT * FROM climbs WHERE problemId = :problemId ORDER BY dateEpochDay DESC, createdAtMillis DESC")
     fun observeForProblem(problemId: Long): Flow<List<ClimbEntity>>
 

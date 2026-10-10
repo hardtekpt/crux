@@ -63,7 +63,14 @@ data class WidgetActions(
     val openProgress: () -> Unit = {},
     val openYou: () -> Unit = {},
     val openProblem: (Long) -> Unit = {},
+    val openDaysOnWall: () -> Unit = {},
+    val openWeekClimbs: () -> Unit = {},
+    val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
+    /** "+1 go" on a project, and the one just logged, which can be undone. */
+    val logGo: ((Long) -> Unit)? = null,
+    val undoGo: () -> Unit = {},
+    val lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -78,7 +85,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
             value = state.figure(state.week.climbs),
             delta = "${state.week.sends} sent",
             direction = if (state.week.sends > 0) TrendDirection.Wanted else TrendDirection.Neutral,
-            modifier = modifier,
+            modifier = modifier.clickable(onClick = actions.openWeekClimbs).testTag("widget_week_climbs"),
             valueModifier = Modifier.testTag("week_climbs"),
         )
 
@@ -86,7 +93,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
             label = "Days on the wall",
             value = state.figure(state.week.daysClimbed),
             delta = "since Monday",
-            modifier = modifier,
+            modifier = modifier.clickable(onClick = actions.openDaysOnWall).testTag("widget_days_on_wall"),
         )
 
         WidgetType.LATEST_BEST -> {
@@ -108,7 +115,12 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.BODYWEIGHT -> {
             val weight = state.weight
             if (weight == null) {
-                StatTile(label = "Bodyweight", value = "–", delta = "log a weigh-in", modifier = modifier)
+                StatTile(
+                    label = "Bodyweight",
+                    value = "–",
+                    delta = "log a weigh-in",
+                    modifier = modifier.clickable(onClick = actions.openMeasurements).testTag("widget_bodyweight"),
+                )
             } else {
                 val units = LocalUnits.current
                 StatTile(
@@ -117,13 +129,13 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
                     unit = units.weightUnit(),
                     delta = weight.change?.let { "${units.weightChange(it)} · ${weight.window}" }
                         ?: "weighed ${weight.latest.date.shortLabel()}",
-                    modifier = modifier.clickable(onClick = actions.openYou),
+                    modifier = modifier.clickable(onClick = actions.openMeasurements).testTag("widget_bodyweight"),
                     valueModifier = Modifier.testTag("bodyweight"),
                 )
             }
         }
 
-        WidgetType.WEIGHT_TREND -> WeightTrendWidget(state, large, modifier)
+        WidgetType.WEIGHT_TREND -> WeightTrendWidget(state, large, modifier.clickable(onClick = actions.openMeasurements).testTag("widget_weight_trend"))
 
         WidgetType.WEEKLY_SENDS -> {
             val weeks = if (large) state.charts.weeklySends else state.charts.weeklySends.takeLast(5)
@@ -152,7 +164,9 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
 
         WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
 
-        WidgetType.PROJECTS -> ProjectsWidget(state, large, actions.openProblem, actions.openProgress, modifier)
+        WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
+
+        WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
     }
 }
 
@@ -262,7 +276,8 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
 }
 
 @Composable
-private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, onOpenProgress: () -> Unit, modifier: Modifier) {
+private fun ProjectsWidget(state: HomeUiState, large: Boolean, actions: WidgetActions, modifier: Modifier) {
+    val onOpenProgress = actions.openProgress
     val projects = state.projects.take(if (large) 6 else 3)
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -272,14 +287,14 @@ private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) ->
             }
         }
         if (!state.isLoading && projects.isEmpty()) {
-            EmptyWidgetText("No open projects. Log a go on a saved problem and it stays here until you send it.")
+            EmptyWidgetText("No open projects. A climb you've tried and not sent stays here until you send it.")
         }
         Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
             projects.forEachIndexed { index, project ->
                 if (index > 0) {
                     androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 }
-                ProjectLine(project, state.today, onOpen)
+                ProjectLine(project, state.today, actions)
             }
         }
     }
@@ -346,7 +361,8 @@ private fun ClimbLine(climb: com.hardtekpt.crux.data.model.Climb, today: LocalDa
  * where it is, and on the right how many goes it has taken so far.
  */
 @Composable
-private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Unit) {
+private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActions) {
+    val onOpen = actions.openProblem
     val colors = MaterialTheme.colorScheme
     val stats = project.stats
     val tape = project.problem.tape?.let { CruxTheme.colors.tape[it.coerceIn(CruxTheme.colors.tape.indices)] } ?: colors.outline
@@ -371,7 +387,7 @@ private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Un
         Column(Modifier.weight(1f)) {
             Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(project.placeName, project.areaName).joinToString(" · "),
+                listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { "No place" },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,
@@ -394,6 +410,7 @@ private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Un
                 maxLines = 1,
             )
         }
+        actions.logGo?.let { log -> com.hardtekpt.crux.ui.places.QuickGoButton(project.problem.id, actions.lastGo, log, actions.undoGo) }
     }
 }
 
@@ -408,3 +425,26 @@ private fun EmptyWidgetText(text: String) {
 }
 
 private fun HomeUiState.figure(value: Int) = if (isLoading) "–" else value.toString()
+
+/**
+ * Consistency, as on the You page: a square per day over the last weeks, today at the right.
+ * Wide, the streak and the last 30 days sit in the title line; large, as three figures.
+ */
+@Composable
+private fun ConsistencyWidget(state: HomeUiState, large: Boolean, onOpen: () -> Unit, modifier: Modifier) {
+    val streak = if (state.weekStreak == 1) "1 week streak" else "${state.weekStreak} week streak"
+    ChartCard(
+        title = "Consistency",
+        trailing = if (large) null else "$streak · ${state.daysLast30} days in 30",
+        modifier = modifier.clickable(onClick = onOpen).testTag("widget_consistency"),
+    ) {
+        com.hardtekpt.crux.ui.you.ConsistencyGrid(state.activity, state.today)
+        if (large) {
+            Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s3)) {
+                com.hardtekpt.crux.ui.you.ProfileStat("${state.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = state.weekStreak > 0)
+                com.hardtekpt.crux.ui.you.ProfileStat("${state.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
+                com.hardtekpt.crux.ui.you.ProfileStat(state.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
+            }
+        }
+    }
+}

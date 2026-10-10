@@ -39,7 +39,7 @@ tracking: your data stays on your phone.
     <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_you.png" alt="Climber profile"></td>
   </tr>
   <tr>
-    <td align="center"><b>Places</b><br>walls, problems, projects</td>
+    <td align="center"><b>Places</b><br>walls, climbs, projects</td>
     <td align="center"><b>Progress</b><br>bests, pyramids, charts</td>
     <td align="center"><b>Train</b><br>plans and exercises</td>
     <td align="center"><b>You</b><br>records, consistency, body</td>
@@ -70,9 +70,9 @@ tests, so they always match the current version.
 **Climb**
 - Log a climb in seconds: grade, style (flash, onsight, redpoint, attempt), goes, how hard it felt,
   the day, a photo and a video.
-- **Places**: gyms, crags and boards with their facilities, walls and problems, an OpenStreetMap
+- **Places**: gyms, crags and boards with their facilities, walls and climbs, an OpenStreetMap
   pin, and the gym's own grades (numbers or colour tapes).
-- **Projects** found for you: problems you've tried and not sent yet.
+- **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 
 **Track**
@@ -83,9 +83,11 @@ tests, so they always match the current version.
 - **Home**: a dashboard of widgets you add, resize and arrange.
 
 **Your data**
-- Everything on your phone. Backups to a JSON file you keep (photos included); importing only adds.
+- Everything on your phone. Backups to a file you keep, with photos, videos, session history and
+  settings; on import, Crux asks about anything already there.
 - Demo mode with sample data, kept apart from yours.
-- Metric or imperial, dark or light. Crash reports stay on the phone unless you share them.
+- Metric or imperial, dark or light, in teal, blue, violet or pink, with larger or smaller text.
+  Crash reports stay on the phone unless you share them.
 
 See the **[user guide](docs/README.md#user-guide)** for every feature, and
 **[use cases](docs/user/use-cases.md)** for how they fit into a climbing week.
@@ -178,7 +180,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Roadmap
 
-- Session history in backups, and personal records from session sets.
+- Personal records from session sets.
 - An F-Droid listing, then Google Play.
 - Training reminders.
 

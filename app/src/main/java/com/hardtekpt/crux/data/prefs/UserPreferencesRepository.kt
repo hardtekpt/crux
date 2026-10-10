@@ -15,6 +15,17 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
+/** The app's accent colour. Teal is the brand; the others are tuned to match it (ui/theme/Color.kt). */
+enum class Accent(val label: String) { TEAL("Teal"), BLUE("Blue"), VIOLET("Violet"), PINK("Pink") }
+
+/** Text size in Crux, multiplying the phone's own font size. */
+enum class TextSize(val label: String, val scale: Float) {
+    SMALL("Small", 0.9f),
+    DEFAULT("Default", 1f),
+    LARGE("Large", 1.15f),
+    LARGEST("Largest", 1.3f),
+}
+
 /** How weights and lengths are shown. Data is always stored in kg and cm. */
 enum class UnitSystem(val label: String) { METRIC("Metric"), IMPERIAL("Imperial") }
 
@@ -36,6 +47,22 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = mode.name }
+    }
+
+    val accent: Flow<Accent> = dataStore.data.map { prefs ->
+        prefs[ACCENT]?.let { name -> Accent.entries.firstOrNull { it.name == name } } ?: Accent.TEAL
+    }
+
+    suspend fun setAccent(accent: Accent) {
+        dataStore.edit { it[ACCENT] = accent.name }
+    }
+
+    val textSize: Flow<TextSize> = dataStore.data.map { prefs ->
+        prefs[TEXT_SIZE]?.let { name -> TextSize.entries.firstOrNull { it.name == name } } ?: TextSize.DEFAULT
+    }
+
+    suspend fun setTextSize(size: TextSize) {
+        dataStore.edit { it[TEXT_SIZE] = size.name }
     }
 
     val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
@@ -68,10 +95,42 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[TIMER_SOUNDS] = enabled }
     }
 
+    /** The live session's timer band shown as one slim line. */
+    val timerCompact: Flow<Boolean> = dataStore.data.map { it[TIMER_COMPACT] ?: false }
+
+    suspend fun setTimerCompact(compact: Boolean) {
+        dataStore.edit { it[TIMER_COMPACT] = compact }
+    }
+
+    /** Whether backups carry photos (climb photos, wall images) and climb videos. */
+    val backupPhotos: Flow<Boolean> = dataStore.data.map { it[BACKUP_PHOTOS] ?: true }
+
+    suspend fun setBackupPhotos(enabled: Boolean) {
+        dataStore.edit { it[BACKUP_PHOTOS] = enabled }
+    }
+
+    val backupVideos: Flow<Boolean> = dataStore.data.map { it[BACKUP_VIDEOS] ?: true }
+
+    suspend fun setBackupVideos(enabled: Boolean) {
+        dataStore.edit { it[BACKUP_VIDEOS] = enabled }
+    }
+
     val lastPlaceId: Flow<Long?> = dataStore.data.map { it[LAST_PLACE] }
 
     suspend fun setLastPlaceId(id: Long?) {
         dataStore.edit { if (id == null) it.remove(LAST_PLACE) else it[LAST_PLACE] = id }
+    }
+
+    /** Where in the last place the last climb was: its facility and wall. */
+    val lastSpot: Flow<Pair<Long?, Long?>> = dataStore.data.map { it[LAST_SECTION] to it[LAST_AREA] }
+
+    /** Remembers the place, facility and wall of the last climb logged. */
+    suspend fun setLastSpot(placeId: Long?, sectionId: Long?, areaId: Long?) {
+        dataStore.edit { prefs ->
+            if (placeId == null) prefs.remove(LAST_PLACE) else prefs[LAST_PLACE] = placeId
+            if (sectionId == null) prefs.remove(LAST_SECTION) else prefs[LAST_SECTION] = sectionId
+            if (areaId == null) prefs.remove(LAST_AREA) else prefs[LAST_AREA] = areaId
+        }
     }
 
     val gradeScales: Flow<GradeScales> = dataStore.data.map { prefs ->
@@ -89,11 +148,18 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val ACCENT = stringPreferencesKey("accent")
+        val TEXT_SIZE = stringPreferencesKey("text_size")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")
+        val LAST_SECTION = longPreferencesKey("last_section_id")
+        val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
+        val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
+        val BACKUP_PHOTOS = booleanPreferencesKey("backup_photos")
+        val BACKUP_VIDEOS = booleanPreferencesKey("backup_videos")
         val BOULDER_SCALE = stringPreferencesKey("boulder_grade_scale")
         val ROUTE_SCALE = stringPreferencesKey("route_grade_scale")
 

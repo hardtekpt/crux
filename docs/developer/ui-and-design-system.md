@@ -9,14 +9,34 @@ dark is the default theme, and light and system are options.
 
 | Token set | Where | What |
 | --- | --- | --- |
-| Colours | `Color.kt` | Material colour schemes for dark and light, plus `CruxColors` (extended colours such as send/attempt, chart and timer phase colours) |
+| Colours | `Color.kt` | Material colour schemes for dark and light, plus `CruxColors`: success (sent), route tape, chart series, timer phases, the board accent and the climber card's stripe |
 | Typography | `Type.kt` | **Archivo** (variable, 400–800) for text, **JetBrains Mono** for numbers, labels and "code" style (`CruxTheme.type.code`) |
 | Spacing | `Dimens.kt` → `CruxSpace` | `s0`…`s16`: 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 dp |
 | Sizes | `CruxSize` | `touchTarget` (48 dp), border widths, and so on |
 | Shapes | `CruxShape`, `CruxShapes` | Rounded corners for cards, rows and buttons |
 
+**Accents.** The climber picks an accent (`Accent` in `data/prefs`: Teal, Blue, Violet, Pink), and
+`CruxTheme(darkTheme, accent)` builds the scheme with `cruxColorScheme`. An accent sets the
+primary roles and tints the surfaces and `outlineVariant` slightly towards itself; everything else
+(text, outline, secondary amber, success, danger, tape, charts, timer phases) is the same in every
+accent. Teal is the brand palette. The others are teal's tones turned to their hue in OKLCH, at
+the same lightness and the same share of the chroma that hue allows. `AccentContrastTest` checks
+every accent in both modes. Don't add an amber, green or red accent: those colours already mean a
+go, a send and danger. `CruxTheme.isDark` says which mode is in use.
+
 Use them through `CruxTheme.space`, `CruxTheme.size`, `CruxTheme.type`, `CruxTheme.colors` and
 `MaterialTheme`. Don't hard-code colours or spacing in screens.
+
+Text is in `sp`, so it follows the phone's font size. Keep it from clipping when the font is large:
+let containers that hold text grow (`heightIn(min = …)`, `widthIn(min = …)` rather than a fixed
+size), give single-line labels `maxLines` with an ellipsis, or let a short word shrink to fit
+(`autoSize`). The `*_text_largest` screenshots show the main screens at 1.69× text.
+
+**Text size.** The climber's text size (`TextSize` in `data/prefs`) multiplies the phone's font
+scale. `MainActivity.attachBaseContext` applies it as a configuration override, and the Activity
+recreates itself when the setting changes. It can't be a `LocalDensity` override in `CruxTheme`:
+dialogs, bottom sheets and menus get windows of their own, which read the configuration and not
+the composition's density.
 
 ## Components
 

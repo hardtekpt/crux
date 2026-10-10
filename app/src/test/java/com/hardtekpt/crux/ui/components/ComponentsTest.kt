@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
@@ -17,6 +19,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.hardtekpt.crux.data.model.Discipline
+import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.ui.home.HomeContent
 import com.hardtekpt.crux.ui.home.HomeUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -43,6 +46,18 @@ class ComponentsTest {
         composeRule.onNodeWithTag("stepper_value").assertTextEquals("3")
         composeRule.onNodeWithTag("stepper_plus").assertIsNotEnabled()
         composeRule.onNodeWithTag("stepper_minus").assertIsEnabled()
+    }
+
+    @Test
+    fun swatchPickerSelectsTheTappedColour() {
+        composeRule.setContent {
+            var selected by remember { mutableStateOf(Accent.TEAL) }
+            CruxTheme { CruxSwatchPicker(Accent.entries, selected, { Color.Gray }, { it.label }, { selected = it }) }
+        }
+        composeRule.onNodeWithTag("swatch_Teal").assertIsSelected()
+        composeRule.onNodeWithTag("swatch_Pink").performClick()
+        composeRule.onNodeWithTag("swatch_Pink").assertIsSelected()
+        composeRule.onNodeWithTag("swatch_Teal").assertIsNotSelected()
     }
 
     @Test
@@ -114,7 +129,7 @@ class ComponentsTest {
     @Test
     fun emptyHomeNamesTheFirstAction() {
         composeRule.setContent { CruxTheme { HomeContent(HomeUiState(isLoading = false)) } }
-        composeRule.onNodeWithTag("week_climbs").assertTextEquals("0")
+        composeRule.onNodeWithTag("week_climbs", useUnmergedTree = true).assertTextEquals("0")
         composeRule.onNodeWithTag("home_list")
             .performScrollToNode(hasText("No climbs logged yet", substring = true))
         composeRule.onNodeWithText("No climbs logged yet", substring = true).assertExists()

@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -71,9 +73,6 @@ data class WhereActions(
     val selectPlace: (Long?) -> Unit,
     val createPlace: (String, PlaceType) -> Unit,
     val selectArea: (Long?) -> Unit,
-    val pickProblem: (Problem) -> Unit,
-    val clearProblem: () -> Unit,
-    val setSaveAsProblem: (Boolean) -> Unit,
     val setAngle: (Int) -> Unit,
     val setVenue: (Venue) -> Unit,
     val setPlaceText: (String) -> Unit,
@@ -87,25 +86,23 @@ private fun Place.sectionFor(draft: LogClimbDraft) = sections.firstOrNull { it.i
 /** The kind of climbing the draft is at, within [this] place. */
 private fun Place.typeFor(draft: LogClimbDraft): PlaceType = sectionFor(draft)?.type ?: types.firstOrNull { it.venue == draft.venue } ?: type
 
-private enum class WhereStep { PLACE, AREA, PROBLEM }
+private enum class WhereStep { PLACE, AREA }
 
 /**
- * Where the climb was, as one read-only line ("Block Lab · Cave · Pink crimps 6B+"). Tapping
- * it opens a sheet that walks through place, then area, then problem; any step can be
- * skipped or the sheet closed early, and the line updates to match.
+ * Where the climb was, as one read-only line ("Block Lab · Kilter · Benchmarks · 40°"), with
+ * [trailing] (the day button) beside it. Tapping the line opens a sheet that walks through the
+ * place, then its facility and wall; any step can be skipped or the sheet closed early.
  */
 @Composable
-fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions) {
+fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions, trailing: @Composable () -> Unit = {}) {
     var open by rememberSaveable { mutableStateOf(false) }
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     val area = place?.let { detail.areas.firstOrNull { it.id == draft.areaId } }
-    val problem = place?.let { detail.problems.firstOrNull { it.problem.id == draft.problemId } }
 
     val summary = listOfNotNull(
         place?.name ?: draft.place.takeIf { it.isNotBlank() },
         place?.takeIf { it.hasSeveralTypes }?.sectionFor(draft)?.name,
         area?.name,
-        problem?.let { "${it.problem.name} ${it.problem.grade}" } ?: "new problem".takeIf { draft.saveAsProblem && place != null },
         draft.angle?.takeIf { place != null && draft.venue == Venue.BOARD }?.let { "$it°" },
     ).joinToString(" · ")
 
@@ -129,12 +126,17 @@ fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: Place
             }
         }
     }
-    WhereRow(
-        summary = summary.ifBlank { null },
-        kind = place?.typeFor(draft)?.label ?: draft.venue.label,
-        icon = place?.let { placeIcon(it.typeFor(draft)) } ?: Icons.Rounded.EditLocationAlt,
-        onClick = { open = true },
-    )
+    Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+        Box(Modifier.weight(1f)) {
+            WhereRow(
+                summary = summary.ifBlank { null },
+                kind = place?.typeFor(draft)?.label ?: draft.venue.label,
+                icon = place?.let { placeIcon(it.typeFor(draft)) } ?: Icons.Rounded.EditLocationAlt,
+                onClick = { open = true },
+            )
+        }
+        trailing()
+    }
     if (open) {
         WhereSheet(draft, places, detail, actions, onClose = { open = false })
     }
@@ -167,7 +169,7 @@ private fun WhereRow(summary: String?, kind: String, icon: ImageVector, onClick:
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (summary != null) kind else "$kind · optional: place, area and problem",
+                if (summary != null) kind else "$kind · optional: place, facility and wall",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )
@@ -181,21 +183,16 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     var step by rememberSaveable { mutableStateOf(WhereStep.PLACE) }
     var creatingPlace by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    val problemNoun = if (draft.venue == Venue.CRAG || draft.discipline == Discipline.ROUTE) "route" else "problem"
-    // With no place the later steps have nothing to show.
+    // With no place the later step has nothing to show.
     val current = if (place == null) WhereStep.PLACE else step
+    // After the wall, the sheet has done its job.
     val next = {
-        step = when (current) {
-            WhereStep.PLACE -> if (detail?.areas?.isNotEmpty() == true || place?.hasSeveralTypes == true) WhereStep.AREA else WhereStep.PROBLEM
-            WhereStep.AREA, WhereStep.PROBLEM -> WhereStep.PROBLEM
-        }
+        if (current == WhereStep.PLACE && (detail?.areas?.isNotEmpty() == true || place?.hasSeveralTypes == true)) step = WhereStep.AREA else onClose()
     }
     val stepLabel = { s: WhereStep ->
         when (s) {
             WhereStep.PLACE -> "Place"
             WhereStep.AREA -> place?.let { if (it.hasSeveralTypes) "Area" else it.type.areaLabel } ?: "Area"
-            WhereStep.PROBLEM -> problemNoun.replaceFirstChar { it.uppercase() }
         }
     }
 
@@ -236,16 +233,6 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                     )
                 }
             }
-            if (current == WhereStep.PROBLEM && place != null) {
-                CruxTextField(
-                    label = "Search by name or grade",
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier
-                        .padding(bottom = CruxTheme.space.s2)
-                        .testTag("problem_search"),
-                )
-            }
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                 contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
@@ -269,12 +256,10 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                 when (current) {
                     // The new place's walls may not have loaded yet, so decide from its summary.
                     WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = { picked ->
-                        step = if (picked.walls > 0 || picked.place.hasSeveralTypes) WhereStep.AREA else WhereStep.PROBLEM
+                        if (picked.walls > 0 || picked.place.hasSeveralTypes) step = WhereStep.AREA else onClose()
                     }, onNew = { creatingPlace = true })
 
-                    WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = next)
-
-                    WhereStep.PROBLEM -> if (detail != null) problemStep(draft, detail, query, problemNoun, actions, onPicked = onClose)
+                    WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = onClose)
                 }
                 if (place == null) {
                     item(key = "venue") {
@@ -305,7 +290,7 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                         }
                     }
                 }
-                if (current != WhereStep.PROBLEM && place != null) {
+                if (place != null) {
                     item(key = "skip") {
                         CruxButton("Skip", next, variant = CruxButtonVariant.Text, modifier = Modifier.testTag("where_skip"))
                     }
@@ -373,66 +358,6 @@ private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, ac
     }
 }
 
-private fun LazyListScope.problemStep(draft: LogClimbDraft, detail: PlaceDetail, query: String, noun: String, actions: WhereActions, onPicked: () -> Unit) {
-    // At a mixed place, only problems on this kind's walls (or on no wall).
-    val section = detail.place.sectionFor(draft)
-    val areaSection = detail.areas.associate { it.id to detail.place.sectionOf(it)?.id }
-    val matches = detail.problems
-        .filter { !it.problem.retired }
-        .filter { draft.areaId == null || it.problem.areaId == draft.areaId }
-        .filter { p -> p.problem.areaId == null || section == null || areaSection[p.problem.areaId] == section.id }
-        .filter { query.isBlank() || it.problem.name.contains(query.trim(), ignoreCase = true) || it.problem.grade.equals(query.trim(), true) }
-    if (query.isBlank()) {
-        item(key = "problem_none") {
-            PickRow("No $noun", selected = draft.problemId == null && !draft.saveAsProblem, tag = "problem_none") {
-                actions.clearProblem()
-                actions.setSaveAsProblem(false)
-                onPicked()
-            }
-        }
-        item(key = "problem_new") {
-            PickRow(
-                title = "Save this climb as a new $noun",
-                supporting = "Uses the name and grade you log",
-                icon = Icons.Rounded.Add,
-                selected = draft.saveAsProblem,
-                tag = "save_as_problem",
-            ) {
-                actions.clearProblem()
-                actions.setSaveAsProblem(true)
-                onPicked()
-            }
-        }
-    }
-    if (matches.isEmpty()) {
-        item(key = "problem_empty") {
-            Text(
-                if (detail.problems.isEmpty()) "Nothing saved here yet." else "Nothing matches.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-    items(matches, key = { "problem_${it.problem.id}" }) { item ->
-        CruxListRow(
-            title = item.problem.name,
-            supporting = problemLine(item, detail),
-            leading = {
-                Box(contentAlignment = Alignment.TopEnd) {
-                    GradeBadge(item.problem.grade, GradeState.Attempted)
-                    item.problem.tape?.let { TapeDot(it) }
-                }
-            },
-            selected = draft.problemId == item.problem.id,
-            onClick = {
-                actions.pickProblem(item.problem)
-                onPicked()
-            },
-            modifier = Modifier.testTag("pick_${item.problem.name}"),
-        )
-    }
-}
-
 @Composable
 private fun PickRow(title: String, selected: Boolean, tag: String, supporting: String? = null, icon: ImageVector? = null, onClick: () -> Unit) {
     CruxListRow(
@@ -446,12 +371,12 @@ private fun PickRow(title: String, selected: Boolean, tag: String, supporting: S
     )
 }
 
-/** `Cave · 3 sessions · 12 goes · sent 3 Oct`, or `project · 8 goes`. */
+/** `Cave · 12 goes · sent 3 Oct`, or `project · 8 goes`. */
 internal fun problemLine(item: ProblemWithStats, detail: PlaceDetail?): String {
     val area = item.problem.areaId?.let { id -> detail?.areas?.firstOrNull { it.id == id }?.name }
     val stats = item.stats
     val progress = when {
-        stats == null -> "not tried yet"
+        stats == null -> "no goes yet"
         stats.sent -> "${goes(stats.attempts)} · sent ${stats.firstSend!!.shortLabel()}"
         else -> "project · ${goes(stats.attempts)}"
     }
@@ -494,7 +419,7 @@ private fun NewPlaceDialog(onCreate: (String, PlaceType) -> Unit, onDismiss: () 
     )
 }
 
-/** A small dot in the problem's tape colour. */
+/** A small dot in the climb's tape colour. */
 @Composable
 fun TapeDot(tape: Int, modifier: Modifier = Modifier) {
     val colors = CruxTheme.colors.tape

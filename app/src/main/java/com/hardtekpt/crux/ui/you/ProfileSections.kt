@@ -30,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -112,7 +111,6 @@ fun ClimberCard(
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(20.dp)
-    val tape = listOf(Color(0xFFF2C94C), Color(0xFF4CAF50), Color(0xFF2F80ED), Color(0xFF9B51E0), Color(0xFFEB5757))
     Row(
         modifier
             .fillMaxWidth()
@@ -123,7 +121,7 @@ fun ClimberCard(
             .testTag("climber_card"),
     ) {
         Column(Modifier.width(10.dp).fillMaxHeight()) {
-            tape.forEach { Box(Modifier.weight(1f).fillMaxWidth().background(it)) }
+            CruxTheme.colors.profileTape.forEach { Box(Modifier.weight(1f).fillMaxWidth().background(it)) }
         }
         Column(
             Modifier.padding(CruxTheme.space.s4),

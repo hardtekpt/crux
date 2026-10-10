@@ -2,16 +2,21 @@ package com.hardtekpt.crux.ui.components.input
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -126,6 +132,53 @@ fun EffortScale(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier =
                         )
                         .border(CruxTheme.size.borderHairline, if (filled) colors.primary else colors.outlineVariant, shape)
                         .testTag("effort_$segment"),
+                )
+            }
+        }
+    }
+}
+
+/** The words a log offers for how hard it felt, and the 1 to 10 value each one saves. */
+private val EFFORT_WORDS = listOf(2 to "Easy", 4 to "Steady", 6 to "Moderate", 8 to "Hard", 10 to "Limit")
+
+/**
+ * How hard it felt as five words, one tap: quick to answer between goes. Saves the same 1 to 10
+ * scale (2, 4, 6, 8, 10), so older values show on the nearest word. Tapping the picked word
+ * again clears it.
+ */
+@Composable
+fun EffortWords(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier = Modifier, title: String = "How hard it felt") {
+    val colors = MaterialTheme.colorScheme
+    val picked = value?.let { v -> EFFORT_WORDS.minBy { kotlin.math.abs(it.first - v) }.first }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Eyebrow(title, Modifier.weight(1f))
+            Text("Optional", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).testTag("effort")) {
+            EFFORT_WORDS.forEach { (score, word) ->
+                val on = picked == score
+                val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                val style = MaterialTheme.typography.labelMedium
+                Text(
+                    word,
+                    style = style,
+                    color = if (on) colors.onSecondaryContainer else colors.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    maxLines = 1,
+                    // Large text sizes shrink the longer words to fit rather than cut them off.
+                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize),
+                    modifier = Modifier
+                        .weight(1f)
+                        // As tall as the row, so a shrunk word keeps its chip the height of the others.
+                        .fillMaxHeight()
+                        .clip(shape)
+                        .background(if (on) colors.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent, shape)
+                        .border(CruxTheme.size.borderHairline, if (on) colors.secondary else colors.outlineVariant, shape)
+                        .clickable(onClickLabel = if (on) "Clear" else word) { onValueChange(if (on) null else score) }
+                        .padding(vertical = 9.dp)
+                        .wrapContentHeight()
+                        .testTag("effort_$word"),
                 )
             }
         }

@@ -81,7 +81,8 @@ class FakeClimbRepository : ClimbRepository {
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId, sessionId = sessionId,
+        placeId, areaId, problemId, angle, effort, sends = sends, gradeLabel = gradeLabel, gradeColour = gradeColour,
+        sectionId = sectionId, sessionId = sessionId,
     )
 }
 
@@ -132,6 +133,8 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
     override suspend fun getPlace(id: Long): Place? = places.value.find { it.id == id }
     override suspend fun getProblem(id: Long): Problem? = problems.value.find { it.id == id }
 
+    override suspend fun climbsAt(placeId: Long?): List<Problem> = problems.value.filter { it.placeId == placeId && !it.retired }
+
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
         val old = places.value.find { it.id == id }?.sections.orEmpty()
@@ -172,11 +175,6 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.map { if (it.areaId == id) it.copy(areaId = null) else it }
     }
 
-    override suspend fun resetArea(id: Long) {
-        areas.value = areas.value.map { if (it.id == id) it.copy(resetDate = LocalDate.now(FIXED_CLOCK)) else it }
-        problems.value = problems.value.map { if (it.areaId == id) it.copy(retired = true) else it }
-    }
-
     override suspend fun saveProblem(input: ProblemInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++
         val old = problems.value.find { it.id == id }
@@ -187,10 +185,6 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         )
         problems.value = problems.value.filterNot { it.id == id } + problem
         return id
-    }
-
-    override suspend fun setRetired(problemId: Long, retired: Boolean) {
-        problems.value = problems.value.map { if (it.id == problemId) it.copy(retired = retired) else it }
     }
 
     override suspend fun deleteProblem(id: Long) {
