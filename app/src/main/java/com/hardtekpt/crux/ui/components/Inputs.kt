@@ -21,6 +21,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -59,6 +60,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.ui.components.input.rememberTicker
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import kotlinx.coroutines.coroutineScope
@@ -180,7 +182,11 @@ fun <T> CruxSegmentedButtons(options: List<T>, selected: T, label: (T) -> String
                     inactiveBorderColor = colors.outline,
                 ),
                 icon = {},
-                label = { Text(label(option), style = MaterialTheme.typography.labelLarge, maxLines = 1) },
+                // Large text sizes shrink a long label to fit rather than cut it off.
+                label = {
+                    val style = MaterialTheme.typography.labelLarge
+                    Text(label(option), style = style, maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize))
+                },
                 modifier = Modifier.testTag("segment_${label(option)}"),
             )
         }

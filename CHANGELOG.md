@@ -10,6 +10,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 - **Accent colour.** Pick teal, blue, violet or pink in Settings → Appearance. It colours buttons,
   selected options and highlights, in dark and light.
+- **Text size.** Make the text in Crux smaller or larger in Settings → Appearance, on top of your
+  phone's own font size.
 - **Compact timer.** The rest and interval timer band can shrink to one slim line, and stays that
   way until you open it up again.
 - **Consistency widget** for Home: the grid of climbing days from the You page, with your week

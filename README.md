@@ -86,7 +86,8 @@ tests, so they always match the current version.
 - Everything on your phone. Backups to a file you keep, with photos, videos, session history and
   settings; on import, Crux asks about anything already there.
 - Demo mode with sample data, kept apart from yours.
-- Metric or imperial, dark or light, in teal, blue, violet or pink. Crash reports stay on the phone unless you share them.
+- Metric or imperial, dark or light, in teal, blue, violet or pink, with larger or smaller text.
+  Crash reports stay on the phone unless you share them.
 
 See the **[user guide](docs/README.md#user-guide)** for every feature, and
 **[use cases](docs/user/use-cases.md)** for how they fit into a climbing week.

@@ -24,6 +24,7 @@ import com.hardtekpt.crux.data.local.SessionStatus
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.PlaceType
 import com.hardtekpt.crux.data.prefs.Accent
+import com.hardtekpt.crux.data.prefs.TextSize
 import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
@@ -388,6 +389,7 @@ class BackupRepositoryTest {
         val source = Settings("source")
         source.preferences.setThemeMode(ThemeMode.LIGHT)
         source.preferences.setAccent(Accent.VIOLET)
+        source.preferences.setTextSize(TextSize.LARGE)
         source.preferences.setUnits(UnitSystem.IMPERIAL)
         source.preferences.setGradeScale(GradeScale.V_SCALE)
         source.preferences.setTimerCompact(true)
@@ -403,6 +405,7 @@ class BackupRepositoryTest {
         assertEquals(1, result.added[BackupSection.SETTINGS])
         assertEquals(ThemeMode.LIGHT, target.preferences.themeMode.first())
         assertEquals(Accent.VIOLET, target.preferences.accent.first())
+        assertEquals(TextSize.LARGE, target.preferences.textSize.first())
         assertEquals(UnitSystem.IMPERIAL, target.preferences.units.first())
         assertEquals(GradeScale.V_SCALE, target.preferences.gradeScales.first().boulder)
         assertTrue(target.preferences.timerCompact.first())
@@ -411,14 +414,16 @@ class BackupRepositoryTest {
     }
 
     @Test
-    fun `an accent this version doesn't know keeps the current one`() = runTest(mainDispatcherRule.testDispatcher) {
+    fun `an accent or text size this version doesn't know keeps the current one`() = runTest(mainDispatcherRule.testDispatcher) {
         val preferences = UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(File(tmp.root, "accent.preferences_pb")))
         val settings = BackupSettings(preferences, DashboardRepository(mainDispatcherRule.preferencesDataStore(File(tmp.root, "dash.preferences_pb"))))
         preferences.setAccent(Accent.PINK)
+        preferences.setTextSize(TextSize.SMALL)
 
-        settings.write(SettingsDto(accent = "NEON", units = UnitSystem.IMPERIAL))
+        settings.write(SettingsDto(accent = "NEON", textSize = "HUGE", units = UnitSystem.IMPERIAL))
 
         assertEquals(Accent.PINK, preferences.accent.first())
+        assertEquals(TextSize.SMALL, preferences.textSize.first())
         assertEquals(UnitSystem.IMPERIAL, preferences.units.first())
     }
 

@@ -18,6 +18,14 @@ enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("
 /** The app's accent colour. Teal is the brand; the others are tuned to match it (ui/theme/Color.kt). */
 enum class Accent(val label: String) { TEAL("Teal"), BLUE("Blue"), VIOLET("Violet"), PINK("Pink") }
 
+/** Text size in Crux, multiplying the phone's own font size. */
+enum class TextSize(val label: String, val scale: Float) {
+    SMALL("Small", 0.9f),
+    DEFAULT("Default", 1f),
+    LARGE("Large", 1.15f),
+    LARGEST("Largest", 1.3f),
+}
+
 /** How weights and lengths are shown. Data is always stored in kg and cm. */
 enum class UnitSystem(val label: String) { METRIC("Metric"), IMPERIAL("Imperial") }
 
@@ -47,6 +55,14 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     suspend fun setAccent(accent: Accent) {
         dataStore.edit { it[ACCENT] = accent.name }
+    }
+
+    val textSize: Flow<TextSize> = dataStore.data.map { prefs ->
+        prefs[TEXT_SIZE]?.let { name -> TextSize.entries.firstOrNull { it.name == name } } ?: TextSize.DEFAULT
+    }
+
+    suspend fun setTextSize(size: TextSize) {
+        dataStore.edit { it[TEXT_SIZE] = size.name }
     }
 
     val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
@@ -133,6 +149,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
     private companion object {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ACCENT = stringPreferencesKey("accent")
+        val TEXT_SIZE = stringPreferencesKey("text_size")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")

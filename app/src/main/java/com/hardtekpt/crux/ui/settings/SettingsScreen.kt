@@ -27,6 +27,7 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.prefs.Accent
 import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.data.prefs.TextSize
 import com.hardtekpt.crux.data.prefs.ThemeMode
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
@@ -51,6 +52,7 @@ data class SettingsUiState(
     val scales: GradeScales = GradeScales(),
     val themeMode: ThemeMode = ThemeMode.DARK,
     val accent: Accent = Accent.TEAL,
+    val textSize: TextSize = TextSize.DEFAULT,
     val demoMode: Boolean = false,
     val units: UnitSystem = UnitSystem.METRIC,
     val timerSounds: Boolean = true,
@@ -60,11 +62,11 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(private val preferences: UserPreferencesRepository) : ViewModel() {
     val uiState: StateFlow<SettingsUiState> = combine(
         preferences.gradeScales,
-        combine(preferences.themeMode, preferences.accent, ::Pair),
+        combine(preferences.themeMode, preferences.accent, preferences.textSize, ::Triple),
         preferences.demoMode,
         preferences.units,
         preferences.timerSounds,
-    ) { scales, (theme, accent), demo, units, sounds -> SettingsUiState(scales, theme, accent, demo, units, sounds) }
+    ) { scales, (theme, accent, textSize), demo, units, sounds -> SettingsUiState(scales, theme, accent, textSize, demo, units, sounds) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
@@ -81,6 +83,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 
     fun setAccent(accent: Accent) {
         viewModelScope.launch { preferences.setAccent(accent) }
+    }
+
+    fun setTextSize(size: TextSize) {
+        viewModelScope.launch { preferences.setTextSize(size) }
     }
 
     fun setTimerSounds(enabled: Boolean) {
@@ -108,6 +114,7 @@ fun SettingsScreen(
         onGradeScale = viewModel::setGradeScale,
         onThemeMode = viewModel::setThemeMode,
         onAccent = viewModel::setAccent,
+        onTextSize = viewModel::setTextSize,
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         onTimerSounds = viewModel::setTimerSounds,
@@ -131,6 +138,7 @@ fun SettingsContent(
     onAbout: () -> Unit = {},
     onTimerSounds: (Boolean) -> Unit = {},
     onAccent: (Accent) -> Unit = {},
+    onTextSize: (TextSize) -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -194,6 +202,19 @@ fun SettingsContent(
                     label = { it.label },
                     onSelect = onAccent,
                     tag = { "accent_${it.name}" },
+                )
+                Text("Text size", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = space.s4))
+                Text(
+                    "On top of your phone's own font size",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = space.s2),
+                )
+                CruxSegmentedButtons(
+                    options = TextSize.entries,
+                    selected = uiState.textSize,
+                    label = { it.label },
+                    onSelect = onTextSize,
                 )
             }
 

@@ -292,6 +292,8 @@ data class SettingsDto(
     val theme: ThemeMode? = null,
     /** A name, not an enum, so an accent a later app adds doesn't break the file. */
     val accent: String? = null,
+    /** A name too, like [accent]. */
+    val textSize: String? = null,
     val units: UnitSystem? = null,
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,

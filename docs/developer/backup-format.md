@@ -62,11 +62,11 @@ backup never sits in memory whole.
 | `bodyMeasurements` | Body stats | `MeasurementDto`: `type`, `value` (kg/cm), `date`, `loggedAt` | Same type, date and `loggedAt` |
 | `records` | Personal records | `RecordDto`: embedded `exercise`, `date`, `reps`, `seconds`, `loadKg`, `notes`, `loggedAt` | Same exercise name and `loggedAt` |
 | `notes` | Notes | `NoteDto`: `text`, `createdAt`, `updatedAt`, `pinned`, `tag` | Same `createdAt` |
-| `settings` | Settings | `SettingsDto`: `theme`, `accent` (a name), `units`, `boulderScale`, `routeScale`, `timerSounds`, `timerCompact`, `dashboard[]` (`type`, `size` as names) | — (always replaces) |
+| `settings` | Settings | `SettingsDto`: `theme`, `accent` and `textSize` (names), `units`, `boulderScale`, `routeScale`, `timerSounds`, `timerCompact`, `dashboard[]` (`type`, `size` as names) | — (always replaces) |
 
 Names match ignoring case and surrounding spaces. Dates are ISO `yyyy-MM-dd`. `loggedAt`,
 `createdAt`, `updatedAt`, `startedAt` and `completedAt` are epoch milliseconds. Enums are written
-by name, except the dashboard's widget names and the accent, which are strings so a widget or accent
+by name, except the dashboard's widget names, the accent and the text size, which are strings so a widget or accent
 one app version has and another doesn't can't break the file.
 
 Settings leave out what only means something on one install: the last place, facility and wall

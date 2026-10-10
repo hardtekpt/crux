@@ -32,6 +32,12 @@ let containers that hold text grow (`heightIn(min = …)`, `widthIn(min = …)` 
 size), give single-line labels `maxLines` with an ellipsis, or let a short word shrink to fit
 (`autoSize`). The `*_text_largest` screenshots show the main screens at 1.69× text.
 
+**Text size.** The climber's text size (`TextSize` in `data/prefs`) multiplies the phone's font
+scale. `MainActivity.attachBaseContext` applies it as a configuration override, and the Activity
+recreates itself when the setting changes. It can't be a `LocalDensity` override in `CruxTheme`:
+dialogs, bottom sheets and menus get windows of their own, which read the configuration and not
+the composition's density.
+
 ## Components
 
 [`ui/components/`](../../app/src/main/java/com/hardtekpt/crux/ui/components):
