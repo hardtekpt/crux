@@ -81,6 +81,7 @@ fun HomeScreen(
     onOpenYou: () -> Unit,
     onOpenProblem: (Long) -> Unit = {},
     onStartPlan: (Long) -> Unit = {},
+    onOpenDaysOnWall: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,7 +98,8 @@ fun HomeScreen(
             onOpenProgress,
             onOpenYou,
             onOpenProblem,
-            onStartPlan,
+            openDaysOnWall = onOpenDaysOnWall,
+            startPlan = onStartPlan,
             logGo = viewModel.quickGo::log,
             undoGo = viewModel.quickGo::undo,
             lastGo = lastGo,

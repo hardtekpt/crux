@@ -35,7 +35,9 @@ Open **+ → Log climb**, tap **Log here** on a place page, or **Log climb** ins
    facility you picked (numbers or colour tapes) when it has its own.
 4. **Style**: *Flash* or *Onsight* (first go), *Redpoint* (sent after trying), or *Attempt* (not
    sent).
-5. **Attempts**: how many goes it took. Flash and onsight mean one.
+5. **Attempts**: how many goes it took. Flash and onsight mean one. On a problem you've tried before,
+   this is **Goes this time**, with how many you had before and the total, and a redpoint can be
+   your first go of the day.
 6. **How hard it felt** (optional): 1 to 10.
 7. **Day**: today is selected; swipe back through the last two weeks, or open the calendar for an
    older day.

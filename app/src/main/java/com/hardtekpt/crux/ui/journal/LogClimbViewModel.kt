@@ -85,6 +85,8 @@ data class LogClimbDraft(
     val saveAsProblem: Boolean = false,
     /** The picked problem has goes logged already, so it can't be flashed or onsighted. */
     val triedBefore: Boolean = false,
+    /** Goes logged on the picked problem before this one, so the form can show the total. */
+    val earlierGoes: Int = 0,
     val dateError: String? = null,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
@@ -96,6 +98,9 @@ data class LogClimbDraft(
     val system: GradeSystem get() = GradeSystem(gradeScale, local.takeIf { gradeScale.isLocal })
     val styles: List<AscentStyle> get() = AscentStyle.forDiscipline(discipline).filter { !(triedBefore && problemId != null) || !it.singleAttempt }
     val attemptsLocked: Boolean get() = style.singleAttempt
+
+    /** Goes on the picked problem before this climb, when there are any. */
+    val goesBefore: Int get() = if (problemId != null) earlierGoes else 0
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -170,6 +175,7 @@ class LogClimbViewModel @Inject constructor(
                     savedVideoPath = climb.videoPath,
                 )
             }
+            climb.problemId?.let { refreshEarlierGoes(it, climb) }
             // Local grades need the place's list to show the strip.
             climb.placeId?.let { placeRepository.getPlace(it) }?.section(climb.sectionId)?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
             return
@@ -312,7 +318,22 @@ class LogClimbViewModel @Inject constructor(
         viewModelScope.launch {
             val tried = climbRepository.observeClimbsForProblem(problem.id).first().any { it.id != _draft.value.climbId }
             if (_draft.value.problemId == problem.id && tried != _draft.value.triedBefore) applyProblem(problem, tried)
+            refreshEarlierGoes(problem.id, null)
         }
+    }
+
+    /**
+     * Adds up the goes on a problem before this climb: for an edit, those logged earlier (by day,
+     * then order); for a new climb, all of them.
+     */
+    private suspend fun refreshEarlierGoes(problemId: Long, climb: com.hardtekpt.crux.data.model.Climb?) {
+        val goes = climbRepository.observeClimbsForProblem(problemId).first().filter { it.id != climb?.id }
+        val earlier = if (climb == null) {
+            goes
+        } else {
+            goes.filter { it.date < climb.date || (it.date == climb.date && it.id < climb.id) }
+        }
+        _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = earlier.sumOf { g -> g.attempts }) else it }
     }
 
     /** A problem already tried starts as another attempt; a new one as a flash. */
@@ -339,7 +360,7 @@ class LogClimbViewModel @Inject constructor(
         )
     }
 
-    fun clearProblem() = _draft.update { it.copy(problemId = null, triedBefore = false) }
+    fun clearProblem() = _draft.update { it.copy(problemId = null, triedBefore = false, earlierGoes = 0) }
 
     fun setSaveAsProblem(save: Boolean) = _draft.update { it.copy(saveAsProblem = save) }
 
@@ -363,7 +384,10 @@ class LogClimbViewModel @Inject constructor(
         // Flash and onsight are one attempt by definition; a redpoint took at least two.
         val attempts = when {
             style.singleAttempt -> 1
-            style == AscentStyle.REDPOINT -> maxOf(it.attempts, 2)
+
+            // A redpoint took more than one go: today, or on the problem's earlier days.
+            style == AscentStyle.REDPOINT -> maxOf(it.attempts, if (it.goesBefore > 0) 1 else 2)
+
             else -> it.attempts
         }
         it.copy(style = style, attempts = attempts)

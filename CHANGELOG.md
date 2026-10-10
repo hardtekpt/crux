@@ -16,6 +16,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   settings and Home layout, and climb videos now go into backups too. Backups are now `.zip` files;
   the `.json` backups you already have still import.
 - **Photos and videos switches** for backups, so you can leave them out to keep the file small.
+- **Days on the wall page**, from the Home widget: this week, month and year, your week streak,
+  and a month calendar of your climbing days. Tap a day to see its journal.
 - **+1 go** on projects in Home and Progress: one tap logs an attempt on the problem today, with
   Undo.
 
@@ -32,6 +34,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
+- **Goes on a project add up.** Logging or editing a climb on a problem you've tried before shows
+  this time's goes, the earlier ones and the total; a redpoint no longer has to be two goes that
+  day.
+- **The Journal's day tally** counts goes on one problem in a session once, like the session card.
+- **A problem opened from Progress or Home** keeps that tab lit, not You.
 - **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
   import twice.
 - **Log climb remembers where you were.** A new climb starts at the last climb's place, facility

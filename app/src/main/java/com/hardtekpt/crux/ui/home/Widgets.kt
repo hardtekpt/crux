@@ -63,6 +63,7 @@ data class WidgetActions(
     val openProgress: () -> Unit = {},
     val openYou: () -> Unit = {},
     val openProblem: (Long) -> Unit = {},
+    val openDaysOnWall: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
     /** "+1 go" on a project, and the one just logged, which can be undone. */
     val logGo: ((Long) -> Unit)? = null,
@@ -90,7 +91,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
             label = "Days on the wall",
             value = state.figure(state.week.daysClimbed),
             delta = "since Monday",
-            modifier = modifier,
+            modifier = modifier.clickable(onClick = actions.openDaysOnWall).testTag("widget_days_on_wall"),
         )
 
         WidgetType.LATEST_BEST -> {

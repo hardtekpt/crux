@@ -226,9 +226,15 @@ fun LogClimbContent(
                     .padding(top = space.s3),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Eyebrow("Attempts")
+                    // On a problem tried before, this climb's goes, and how they add up with the earlier ones.
+                    val before = draft.goesBefore
+                    Eyebrow(if (before > 0) "Goes this time" else "Attempts")
                     Text(
-                        if (draft.attemptsLocked) "${draft.style.label} means first go" else "Including the send",
+                        when {
+                            before > 0 -> "$before before · ${before + draft.attempts} in all"
+                            draft.attemptsLocked -> "${draft.style.label} means first go"
+                            else -> "Including the send"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

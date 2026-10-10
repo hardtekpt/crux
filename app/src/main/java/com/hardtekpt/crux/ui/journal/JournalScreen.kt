@@ -396,9 +396,12 @@ private fun RailLink(modifier: Modifier = Modifier) {
     }
 }
 
-/** Every climb on a day, including those inside its sessions. */
+/**
+ * Every climb on a day, including those inside its sessions, counted the way the session card
+ * shows them: goes on the same problem in a session as one.
+ */
 private fun TimelineDay.climbs(): List<Climb> = entries.filterIsInstance<TimelineEntry.Climbs>().flatMap { it.day.climbs } +
-    entries.filterIsInstance<TimelineEntry.SessionEntry>().flatMap { it.session.climbs }
+    entries.filterIsInstance<TimelineEntry.SessionEntry>().flatMap { it.session.climbGroups }
 
 /** A day's tally: climbs and sends, results, notes, sessions. */
 private fun daySummary(day: TimelineDay): String {
@@ -619,6 +622,21 @@ private fun DayHeader(day: TimelineDay, first: Boolean) {
         Column(Modifier.padding(start = CruxTheme.space.s2, top = CruxTheme.space.s4, bottom = CruxTheme.space.s2)) {
             Text(day.date.dayLabel(), style = MaterialTheme.typography.titleSmall)
             Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** One day's entries as the Journal shows them, for pages that show a single day. */
+@Composable
+internal fun JournalDayEntries(day: TimelineDay, actions: JournalActions) {
+    Column {
+        day.entries.forEach { entry ->
+            when (entry) {
+                is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
+                is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
+                is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
+            }
         }
     }
 }

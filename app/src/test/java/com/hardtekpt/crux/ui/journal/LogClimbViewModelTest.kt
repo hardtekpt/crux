@@ -289,6 +289,10 @@ class LogClimbViewModelTest {
         val draft = withTimeout(5_000) { next.draft.first { it.problemId == problemId && it.triedBefore } }
         assertEquals(AscentStyle.ATTEMPT, draft.style)
         assertFalse(AscentStyle.FLASH in draft.styles)
+        // Its earlier go counts towards the total; a redpoint today can be the first go of the day.
+        assertEquals(1, draft.goesBefore)
+        next.setStyle(AscentStyle.REDPOINT)
+        assertEquals(1, next.draft.value.attempts)
     }
 
     @Test

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +53,7 @@ import com.hardtekpt.crux.ui.journal.LogClimbScreen
 import com.hardtekpt.crux.ui.navigation.AboutRoute
 import com.hardtekpt.crux.ui.navigation.BackupsRoute
 import com.hardtekpt.crux.ui.navigation.CircumferencesRoute
+import com.hardtekpt.crux.ui.navigation.DaysOnWallRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseEditorRoute
 import com.hardtekpt.crux.ui.navigation.ExerciseRecordsRoute
 import com.hardtekpt.crux.ui.navigation.FloatingNavBar
@@ -142,9 +144,14 @@ fun CruxApp() {
         NoteEditorRoute::class,
         RecordEditorRoute::class,
     )
-    val selectedTab = TopLevelDestination.entries.firstOrNull { destination ->
+    // The current screen's tab; a page outside the tabs, like a problem, keeps the tab it was
+    // opened from lit.
+    val currentTab = TopLevelDestination.entries.firstOrNull { destination ->
         currentDestination?.hierarchy?.any { it.hasRoute(destination.graph::class) } == true
     }
+    var lastTab by remember { mutableStateOf(currentTab) }
+    if (currentTab != null && currentTab != lastTab) lastTab = currentTab
+    val selectedTab = currentTab ?: lastTab
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     // Content runs edge to edge and scrolls under the floating bar; screens pad their
@@ -175,6 +182,18 @@ fun CruxApp() {
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
                             onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
                             onStartPlan = { startSession(it) },
+                            onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
+                        )
+                    }
+                    page<DaysOnWallRoute> {
+                        com.hardtekpt.crux.ui.journal.DaysOnWallScreen(
+                            onBack = navController::popBackStack,
+                            actions = JournalActions(
+                                openClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                                openNote = { navController.navigate(NoteEditorRoute(it)) },
+                                openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
+                                openSession = { navController.navigate(SessionSummaryRoute(it)) },
+                            ),
                         )
                     }
                 }
@@ -283,28 +302,6 @@ fun CruxApp() {
                             },
                         )
                     }
-                    page<ProblemDetailRoute> {
-                        ProblemDetailScreen(
-                            onBack = navController::popBackStack,
-                            onEdit = { placeId, problemId -> navController.navigate(ProblemEditorRoute(placeId, problemId)) },
-                            onLogGo = { navController.navigate(LogClimbRoute(problemId = it)) },
-                            onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
-                        )
-                    }
-                    page<ProblemEditorRoute> {
-                        ProblemEditorScreen(
-                            onDone = { deleted ->
-                                // Deleting from the editor also leaves the problem's own page.
-                                val fromDetail = navController.previousBackStackEntry?.destination
-                                    ?.hasRoute(ProblemDetailRoute::class) == true
-                                if (deleted && fromDetail) {
-                                    navController.popBackStack<ProblemDetailRoute>(inclusive = true)
-                                } else {
-                                    navController.popBackStack()
-                                }
-                            },
-                        )
-                    }
                     page<NotesRoute> {
                         NotesScreen(
                             onBack = navController::popBackStack,
@@ -318,6 +315,29 @@ fun CruxApp() {
                             onAdd = { navController.navigate(RecordEditorRoute(it)) },
                         )
                     }
+                }
+                // A problem opens over whichever tab it was tapped in.
+                page<ProblemDetailRoute> {
+                    ProblemDetailScreen(
+                        onBack = navController::popBackStack,
+                        onEdit = { placeId, problemId -> navController.navigate(ProblemEditorRoute(placeId, problemId)) },
+                        onLogGo = { navController.navigate(LogClimbRoute(problemId = it)) },
+                        onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
+                    )
+                }
+                page<ProblemEditorRoute> {
+                    ProblemEditorScreen(
+                        onDone = { deleted ->
+                            // Deleting from the editor also leaves the problem's own page.
+                            val fromDetail = navController.previousBackStackEntry?.destination
+                                ?.hasRoute(ProblemDetailRoute::class) == true
+                            if (deleted && fromDetail) {
+                                navController.popBackStack<ProblemDetailRoute>(inclusive = true)
+                            } else {
+                                navController.popBackStack()
+                            }
+                        },
+                    )
                 }
                 page<SessionRoute> {
                     com.hardtekpt.crux.ui.session.SessionScreen(

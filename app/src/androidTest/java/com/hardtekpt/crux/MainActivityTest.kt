@@ -165,6 +165,16 @@ class MainActivityTest {
     }
 
     @Test
+    fun daysOnTheWallOpenFromHomeWithACalendar() {
+        composeRule.waitForTag("widget_days_on_wall")
+        composeRule.onNodeWithTag("widget_days_on_wall").performClick()
+        composeRule.waitForTag("screen_DaysOnWall")
+        composeRule.onNodeWithTag("days_figures").assertIsDisplayed()
+        composeRule.onNodeWithTag("calendar_day_${java.time.LocalDate.now()}").performClick()
+        composeRule.onNodeWithTag("days_selected").assertIsDisplayed()
+    }
+
+    @Test
     fun aSessionWithoutAPlanLogsClimbsAndLandsInTheJournal() {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_StartWorkout").performClick()
