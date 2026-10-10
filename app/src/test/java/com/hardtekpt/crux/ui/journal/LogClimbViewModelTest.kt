@@ -277,6 +277,21 @@ class LogClimbViewModelTest {
     }
 
     @Test
+    fun `a problem already tried starts as another attempt, without flash`() = runBlocking {
+        val (_, problemId) = boardWithProblem()
+        val first = viewModel("problemId" to problemId)
+        assertEquals(AscentStyle.FLASH, withTimeout(5_000) { first.draft.first { it.problemId == problemId } }.style)
+        first.setStyle(AscentStyle.ATTEMPT)
+        first.save()
+        withTimeout(5_000) { first.draft.first { it.saved } }
+
+        val next = viewModel("problemId" to problemId)
+        val draft = withTimeout(5_000) { next.draft.first { it.problemId == problemId && it.triedBefore } }
+        assertEquals(AscentStyle.ATTEMPT, draft.style)
+        assertFalse(AscentStyle.FLASH in draft.styles)
+    }
+
+    @Test
     fun `each part of a place grades in its own scale`() = runBlocking {
         val placeId = places.savePlace(
             PlaceInput(

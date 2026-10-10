@@ -110,6 +110,9 @@ class ProgressViewModel @Inject constructor(
     preferences: UserPreferencesRepository,
     clock: Clock,
 ) : ViewModel() {
+    /** "+1 go" on the projects list. */
+    val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbRepository, placeRepository, clock), viewModelScope)
+
     val uiState: StateFlow<ProgressUiState> = combine(
         climbRepository.observePersonalBests(),
         climbRepository.observeClimbs(),
@@ -130,12 +133,20 @@ class ProgressViewModel @Inject constructor(
 @Composable
 fun ProgressScreen(onOpenProblem: (Long) -> Unit = {}, viewModel: ProgressViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    ProgressContent(uiState, onOpenProblem = onOpenProblem)
+    val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
+    ProgressContent(uiState, onOpenProblem = onOpenProblem, lastGo = lastGo, onGo = viewModel.quickGo::log, onUndoGo = viewModel.quickGo::undo)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier, onOpenProblem: (Long) -> Unit = {}) {
+fun ProgressContent(
+    uiState: ProgressUiState,
+    modifier: Modifier = Modifier,
+    onOpenProblem: (Long) -> Unit = {},
+    lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
+    onGo: ((Long) -> Unit)? = null,
+    onUndoGo: () -> Unit = {},
+) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     Column(
@@ -181,7 +192,7 @@ fun ProgressContent(uiState: ProgressUiState, modifier: Modifier = Modifier, onO
                     Eyebrow("Projects · ${uiState.projects.size} open", Modifier.padding(top = space.s4, bottom = space.s1))
                 }
                 items(uiState.projects, key = { "project_${it.problem.id}" }) { project ->
-                    ProjectRow(project, onOpenProblem)
+                    ProjectRow(project, onOpenProblem, lastGo = lastGo, onGo = onGo, onUndo = onUndoGo)
                 }
             }
             item(key = "charts") {

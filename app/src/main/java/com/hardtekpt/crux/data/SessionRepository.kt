@@ -9,6 +9,7 @@ import com.hardtekpt.crux.data.local.SessionStatus
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseTarget
+import com.hardtekpt.crux.data.model.groupedByProblem
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -52,6 +53,9 @@ data class Session(
     val climbs: List<Climb>,
 ) {
     val hasPlan: Boolean get() = templateId != null
+
+    /** The climbs to show: goes on the same problem as one entry. */
+    val climbGroups: List<Climb> get() = climbs.sortedBy { it.id }.groupedByProblem()
     val setsPlanned: Int get() = items.sumOf { it.target.sets }
     val setsDone: Int get() = items.sumOf { it.done }
     val setsSkipped: Int get() = items.sumOf { item -> item.sets.count { it.skipped } }

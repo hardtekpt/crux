@@ -96,6 +96,9 @@ class HomeViewModel @Inject constructor(
         .map(::buildState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
+    /** "+1 go" on the Projects widget. */
+    val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbRepository, placeRepository, clock), viewModelScope)
+
     val demoMode: StateFlow<Boolean> = preferences.demoMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 

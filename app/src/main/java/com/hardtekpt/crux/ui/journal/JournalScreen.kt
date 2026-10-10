@@ -724,9 +724,9 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClim
             Text(
                 listOfNotNull(
                     "${session.setsDone} of ${session.setsPlanned} sets".takeIf { session.items.isNotEmpty() },
-                    session.climbs.size.takeIf {
+                    session.climbGroups.size.takeIf {
                         it > 0
-                    }?.let { n -> "$n ${if (n == 1) "climb" else "climbs"} · ${session.climbs.count { it.style.isSend }} sent" },
+                    }?.let { n -> "$n ${if (n == 1) "climb" else "climbs"} · ${session.climbGroups.count { it.style.isSend }} sent" },
                     session.effort?.let { "felt $it/10" },
                 ).joinToString(" · ").ifEmpty { "Nothing logged" },
                 style = MaterialTheme.typography.bodySmall,
@@ -745,9 +745,9 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClim
             }
             session.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             // The climbs logged during it, inside the session.
-            if (session.climbs.isNotEmpty()) {
+            if (session.climbGroups.isNotEmpty()) {
                 HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f), modifier = Modifier.padding(vertical = 2.dp))
-                session.climbs.sortedBy { it.id }.forEach { climb -> TapeRow(climb, onClick = { onOpenClimb(climb.id) }) }
+                session.climbGroups.sortedBy { it.id }.forEach { climb -> TapeRow(climb, onClick = { onOpenClimb(climb.id) }) }
             }
         }
     }

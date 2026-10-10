@@ -555,10 +555,10 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = space.s2))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        when (current.climbs.size) {
+                        when (current.climbGroups.size) {
                             0 -> "No climbs logged"
                             1 -> "1 climb logged"
-                            else -> "${current.climbs.size} climbs logged"
+                            else -> "${current.climbGroups.size} climbs logged"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
@@ -573,18 +573,18 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         modifier = Modifier.testTag("session_log_climb"),
                     )
                 }
-                current.climbs.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
+                current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
             } else {
                 // A climbing day: the tally, the climbs, Log climb.
-                ClimbTally(current.climbs)
-                if (current.climbs.isEmpty()) {
+                ClimbTally(current.climbGroups)
+                if (current.climbGroups.isEmpty()) {
                     Text(
                         "Climbs you log now land in this session.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
                     )
                 } else {
-                    Column { current.climbs.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
+                    Column { current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
                 }
                 CruxButton(
                     "Log climb",
@@ -1043,8 +1043,8 @@ private fun FinishSheet(session: Session, nowMillis: Long, onSave: (Int?, String
             Text(clockLabel(session.durationMillis(nowMillis)), style = CruxTheme.type.metricMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
                 if (session.items.isNotEmpty()) TallyFigure("${session.setsDone}/${session.setsPlanned}", "sets done", Modifier.weight(1f))
-                TallyFigure(session.climbs.size.toString(), if (session.climbs.size == 1) "climb" else "climbs", Modifier.weight(1f))
-                TallyFigure(session.climbs.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
+                TallyFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs", Modifier.weight(1f))
+                TallyFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
             }
             EffortScale(effort, { effort = it })
             CruxTextField(label = "Notes", value = notes, onValueChange = {

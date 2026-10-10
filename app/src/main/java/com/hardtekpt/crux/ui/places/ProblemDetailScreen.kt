@@ -36,6 +36,8 @@ import com.hardtekpt.crux.data.model.PlaceDetail
 import com.hardtekpt.crux.data.model.ProblemWithStats
 import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.ui.components.CruxButton
+import com.hardtekpt.crux.ui.components.CruxButtonSize
+import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -192,7 +194,14 @@ fun ProblemDetailScreen(
 
 /** An open project in a list: grade, where it is, and how many goes so far. */
 @Composable
-fun ProjectRow(project: Project, onOpen: (Long) -> Unit, modifier: Modifier = Modifier) {
+fun ProjectRow(
+    project: Project,
+    onOpen: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+    lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
+    onGo: ((Long) -> Unit)? = null,
+    onUndo: () -> Unit = {},
+) {
     val stats = project.stats
     CruxListRow(
         title = project.problem.name,
@@ -201,8 +210,26 @@ fun ProjectRow(project: Project, onOpen: (Long) -> Unit, modifier: Modifier = Mo
             "${stats.attempts} ${if (stats.attempts == 1) "go" else "goes"} over ${stats.sessions} ${if (stats.sessions == 1) "session" else "sessions"}",
         ).joinToString(" · "),
         leading = { GradeBadge(project.problem.grade, GradeState.Attempted) },
-        trailing = project.problem.tape?.let { tape -> { TapeDot(tape) } },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                project.problem.tape?.let { TapeDot(it) }
+                if (onGo != null) QuickGoButton(project.problem.id, lastGo, onGo, onUndo)
+            }
+        },
         onClick = { onOpen(project.problem.id) },
         modifier = modifier.testTag("project_row"),
     )
+}
+
+/**
+ * "+1 go": logs an attempt on the problem today, straight from a list. For a few seconds after,
+ * it turns into Undo.
+ */
+@Composable
+fun QuickGoButton(problemId: Long, lastGo: com.hardtekpt.crux.data.LoggedGo?, onGo: (Long) -> Unit, onUndo: () -> Unit) {
+    if (lastGo?.problemId == problemId) {
+        CruxButton("Undo", onUndo, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small, modifier = Modifier.testTag("project_undo"))
+    } else {
+        CruxButton("+1 go", { onGo(problemId) }, variant = CruxButtonVariant.Tonal, size = CruxButtonSize.Small, modifier = Modifier.testTag("project_go"))
+    }
 }

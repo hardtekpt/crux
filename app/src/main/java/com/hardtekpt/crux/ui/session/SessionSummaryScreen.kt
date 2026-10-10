@@ -144,15 +144,15 @@ fun SessionSummaryScreen(onBack: () -> Unit, onOpenClimb: (Long) -> Unit, viewMo
             }
             // The headline numbers.
             item(key = "figures") {
-                val sent = current.climbs.count { it.style.isSend }
+                val sent = current.climbGroups.count { it.style.isSend }
                 Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min).testTag("session_summary_figures")) {
                     SummaryFigure(durationLabel(current.durationMillis(current.startedAtMillis)), "long", Modifier.weight(1f))
                     if (current.items.isNotEmpty()) {
                         SummaryFigure("${current.setsDone}/${current.setsPlanned}", "sets done", Modifier.weight(1f))
                     }
                     SummaryFigure(
-                        current.climbs.size.toString(),
-                        if (current.climbs.size == 1) "climb, $sent sent" else "climbs, $sent sent",
+                        current.climbGroups.size.toString(),
+                        if (current.climbGroups.size == 1) "climb, $sent sent" else "climbs, $sent sent",
                         Modifier.weight(1f),
                     )
                     current.effort?.let { SummaryFigure("$it/10", "felt", Modifier.weight(1f)) }
@@ -168,11 +168,11 @@ fun SessionSummaryScreen(onBack: () -> Unit, onOpenClimb: (Long) -> Unit, viewMo
                 item(key = "exercises_label") { Eyebrow("Exercises", Modifier.padding(top = space.s2)) }
                 items(current.items, key = { "item_${it.id}" }) { item -> ExerciseSummary(item, imperial) }
             }
-            if (current.climbs.isNotEmpty()) {
+            if (current.climbGroups.isNotEmpty()) {
                 item(key = "climbs_label") { Eyebrow("Climbs", Modifier.padding(top = space.s2)) }
                 item(key = "climbs") {
                     Panel {
-                        current.climbs.sortedBy { it.id }.forEachIndexed { index, climb ->
+                        current.climbGroups.sortedBy { it.id }.forEachIndexed { index, climb ->
                             if (index > 0) HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
                             ClimbSummaryLine(climb, onClick = { onOpenClimb(climb.id) })
                         }

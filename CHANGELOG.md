@@ -16,9 +16,14 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   settings and Home layout, and climb videos now go into backups too. Backups are now `.zip` files;
   the `.json` backups you already have still import.
 - **Photos and videos switches** for backups, so you can leave them out to keep the file small.
+- **+1 go** on projects in Home and Progress: one tap logs an attempt on the problem today, with
+  Undo.
 
 ### Changed
 
+- **Log a go on a tried problem** starts as an attempt; Flash and Onsight aren't offered for it.
+- **A session's goes on the same problem** show as one entry with the goes added up, in the live
+  session, the Journal and the session summary.
 - **Backups page.** Export, the photo and video switches and import moved from the Settings list to
   their own page, *Settings → Backups*.
 - **Import asks about duplicates.** When something in a backup is already in Crux, you see both and

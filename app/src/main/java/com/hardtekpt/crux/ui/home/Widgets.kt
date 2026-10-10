@@ -64,6 +64,10 @@ data class WidgetActions(
     val openYou: () -> Unit = {},
     val openProblem: (Long) -> Unit = {},
     val startPlan: (Long) -> Unit = {},
+    /** "+1 go" on a project, and the one just logged, which can be undone. */
+    val logGo: ((Long) -> Unit)? = null,
+    val undoGo: () -> Unit = {},
+    val lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -152,7 +156,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
 
         WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
 
-        WidgetType.PROJECTS -> ProjectsWidget(state, large, actions.openProblem, actions.openProgress, modifier)
+        WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
 
         WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
     }
@@ -264,7 +268,8 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
 }
 
 @Composable
-private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, onOpenProgress: () -> Unit, modifier: Modifier) {
+private fun ProjectsWidget(state: HomeUiState, large: Boolean, actions: WidgetActions, modifier: Modifier) {
+    val onOpenProgress = actions.openProgress
     val projects = state.projects.take(if (large) 6 else 3)
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,7 +286,7 @@ private fun ProjectsWidget(state: HomeUiState, large: Boolean, onOpen: (Long) ->
                 if (index > 0) {
                     androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 }
-                ProjectLine(project, state.today, onOpen)
+                ProjectLine(project, state.today, actions)
             }
         }
     }
@@ -348,7 +353,8 @@ private fun ClimbLine(climb: com.hardtekpt.crux.data.model.Climb, today: LocalDa
  * where it is, and on the right how many goes it has taken so far.
  */
 @Composable
-private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Unit) {
+private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActions) {
+    val onOpen = actions.openProblem
     val colors = MaterialTheme.colorScheme
     val stats = project.stats
     val tape = project.problem.tape?.let { CruxTheme.colors.tape[it.coerceIn(CruxTheme.colors.tape.indices)] } ?: colors.outline
@@ -396,6 +402,7 @@ private fun ProjectLine(project: Project, today: LocalDate, onOpen: (Long) -> Un
                 maxLines = 1,
             )
         }
+        actions.logGo?.let { log -> com.hardtekpt.crux.ui.places.QuickGoButton(project.problem.id, actions.lastGo, log, actions.undoGo) }
     }
 }
 

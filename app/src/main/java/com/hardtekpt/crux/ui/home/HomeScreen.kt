@@ -86,11 +86,22 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
     val demoMode by viewModel.demoMode.collectAsStateWithLifecycle()
+    val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
     HomeContent(
         uiState = uiState,
         dashboard = dashboard,
         demoMode = demoMode,
-        actions = WidgetActions(onOpenTemplate, onOpenJournal, onOpenProgress, onOpenYou, onOpenProblem, onStartPlan),
+        actions = WidgetActions(
+            onOpenTemplate,
+            onOpenJournal,
+            onOpenProgress,
+            onOpenYou,
+            onOpenProblem,
+            onStartPlan,
+            logGo = viewModel.quickGo::log,
+            undoGo = viewModel.quickGo::undo,
+            lastGo = lastGo,
+        ),
         editor = DashboardEditor(
             start = viewModel::startEditing,
             finish = viewModel::finishEditing,

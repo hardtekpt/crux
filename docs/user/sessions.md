@@ -33,7 +33,9 @@ session. Only one session runs at a time; starting another ends the first.
   timer of its own. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
   (6 × 7 s on, 3 s off, three cycles, 3 min between).
 - **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
-  session shows your climbs, sends and hardest send so far.
+  session shows your climbs, sends and hardest send so far. Several goes on the same problem show
+  as one entry with the goes added up (a redpoint once one of them is a send), here, in the
+  Journal and in the session's summary.
 
 The arrows at the end of the band make it **compact**: one slim line with the number, what's left
 and the controls, so more of the exercise shows. Tap them again for the large band. Crux remembers

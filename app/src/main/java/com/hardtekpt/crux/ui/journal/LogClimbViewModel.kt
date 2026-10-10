@@ -83,6 +83,8 @@ data class LogClimbDraft(
     val videoFailed: Boolean = false,
     /** Save the named climb as a problem at the picked place. */
     val saveAsProblem: Boolean = false,
+    /** The picked problem has goes logged already, so it can't be flashed or onsighted. */
+    val triedBefore: Boolean = false,
     val dateError: String? = null,
     val nameError: String? = null,
     val confirmDelete: Boolean = false,
@@ -92,7 +94,7 @@ data class LogClimbDraft(
     val isEditing: Boolean get() = climbId != 0L
     val gradeScale: GradeScale get() = scaleOverride?.takeIf { it.discipline == discipline } ?: scales.forDiscipline(discipline)
     val system: GradeSystem get() = GradeSystem(gradeScale, local.takeIf { gradeScale.isLocal })
-    val styles: List<AscentStyle> get() = AscentStyle.forDiscipline(discipline)
+    val styles: List<AscentStyle> get() = AscentStyle.forDiscipline(discipline).filter { !(triedBefore && problemId != null) || !it.singleAttempt }
     val attemptsLocked: Boolean get() = style.singleAttempt
 }
 
@@ -303,9 +305,26 @@ class LogClimbViewModel @Inject constructor(
     }
 
     /** Fills the form from a problem; everything stays editable. */
-    fun pickProblem(problem: Problem) = _draft.update {
-        val style = it.style.takeIf { s -> s in AscentStyle.forDiscipline(problem.discipline) } ?: AscentStyle.FLASH
+    fun pickProblem(problem: Problem) {
+        val known = placeDetail.value?.problems?.firstOrNull { it.problem.id == problem.id }?.let { it.stats != null }
+        applyProblem(problem, known ?: false)
+        // Whether it was tried before, from the climbs themselves (the place may not be loaded yet).
+        viewModelScope.launch {
+            val tried = climbRepository.observeClimbsForProblem(problem.id).first().any { it.id != _draft.value.climbId }
+            if (_draft.value.problemId == problem.id && tried != _draft.value.triedBefore) applyProblem(problem, tried)
+        }
+    }
+
+    /** A problem already tried starts as another attempt; a new one as a flash. */
+    private fun applyProblem(problem: Problem, tried: Boolean) = _draft.update {
+        val allowed = AscentStyle.forDiscipline(problem.discipline).filter { s -> !tried || !s.singleAttempt }
+        val style = when {
+            tried && it.style !in allowed -> AscentStyle.ATTEMPT
+            else -> it.style.takeIf { s -> s in allowed } ?: AscentStyle.FLASH
+        }
         it.copy(
+            triedBefore = tried && !it.isEditing,
+            attempts = if (style.singleAttempt) 1 else it.attempts,
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
             venue = placeDetail.value?.let { d -> d.place.typeOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }).venue } ?: it.venue,
@@ -320,7 +339,7 @@ class LogClimbViewModel @Inject constructor(
         )
     }
 
-    fun clearProblem() = _draft.update { it.copy(problemId = null) }
+    fun clearProblem() = _draft.update { it.copy(problemId = null, triedBefore = false) }
 
     fun setSaveAsProblem(save: Boolean) = _draft.update { it.copy(saveAsProblem = save) }
 

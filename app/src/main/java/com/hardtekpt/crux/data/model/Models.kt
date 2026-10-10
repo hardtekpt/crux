@@ -34,6 +34,22 @@ data class Climb(
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
 
+/**
+ * Goes on the same problem as one entry, in the order the problems were first climbed: the
+ * goes added up, sent if any of them was (a redpoint, after more than one), with the newest
+ * go's details. Climbs that aren't on a saved problem stay as they are.
+ */
+fun List<Climb>.groupedByProblem(): List<Climb> = groupBy { climb -> climb.problemId?.let { "problem $it" } ?: "climb ${climb.id}" }.values.map { goes ->
+    if (goes.size == 1) return@map goes.single()
+    val latest = goes.maxBy { it.id }
+    val send = goes.firstOrNull { it.style.isSend }
+    latest.copy(
+        id = send?.id ?: latest.id,
+        style = if (send == null) AscentStyle.ATTEMPT else AscentStyle.REDPOINT,
+        attempts = goes.sumOf { it.attempts },
+    )
+}
+
 /** What the climber fills in on the Log climb form. */
 data class NewClimb(
     val discipline: Discipline,

@@ -51,3 +51,8 @@ journal.
 You don't mark projects; Crux finds them. A project is a problem that's still up, that you've
 tried and haven't sent yet. Projects show on Home, on Progress, and on each place. Send it, and it
 stops being a project.
+
+To log another go quickly, tap **+1 go** on the project in Home's Projects widget or in Progress.
+It logs an attempt today on that problem, at its place and wall; tap **Undo** in the next few
+seconds if it was a slip. To log a send, or a go with notes, open the project and tap **Log a go**:
+a problem you've tried before starts as an *Attempt*, and *Flash* and *Onsight* aren't offered.
