@@ -25,6 +25,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **The Bodyweight and Weight trend widgets** open Measurements instead of the You page.
 - **Latest best** on Home is your newest hardest send: the latest send harder than all before it,
   in any style, so an easier flash no longer replaces a harder redpoint.
 - **Log a go on a tried problem** starts as an attempt; Flash and Onsight aren't offered for it.

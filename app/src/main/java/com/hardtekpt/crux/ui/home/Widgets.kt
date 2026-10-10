@@ -65,6 +65,7 @@ data class WidgetActions(
     val openProblem: (Long) -> Unit = {},
     val openDaysOnWall: () -> Unit = {},
     val openWeekClimbs: () -> Unit = {},
+    val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
     /** "+1 go" on a project, and the one just logged, which can be undone. */
     val logGo: ((Long) -> Unit)? = null,
@@ -114,7 +115,12 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.BODYWEIGHT -> {
             val weight = state.weight
             if (weight == null) {
-                StatTile(label = "Bodyweight", value = "–", delta = "log a weigh-in", modifier = modifier)
+                StatTile(
+                    label = "Bodyweight",
+                    value = "–",
+                    delta = "log a weigh-in",
+                    modifier = modifier.clickable(onClick = actions.openMeasurements).testTag("widget_bodyweight"),
+                )
             } else {
                 val units = LocalUnits.current
                 StatTile(
@@ -123,13 +129,13 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
                     unit = units.weightUnit(),
                     delta = weight.change?.let { "${units.weightChange(it)} · ${weight.window}" }
                         ?: "weighed ${weight.latest.date.shortLabel()}",
-                    modifier = modifier.clickable(onClick = actions.openYou),
+                    modifier = modifier.clickable(onClick = actions.openMeasurements).testTag("widget_bodyweight"),
                     valueModifier = Modifier.testTag("bodyweight"),
                 )
             }
         }
 
-        WidgetType.WEIGHT_TREND -> WeightTrendWidget(state, large, modifier)
+        WidgetType.WEIGHT_TREND -> WeightTrendWidget(state, large, modifier.clickable(onClick = actions.openMeasurements).testTag("widget_weight_trend"))
 
         WidgetType.WEEKLY_SENDS -> {
             val weeks = if (large) state.charts.weeklySends else state.charts.weeklySends.takeLast(5)

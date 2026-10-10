@@ -165,6 +165,13 @@ class MainActivityTest {
     }
 
     @Test
+    fun bodyweightWidgetOpensMeasurements() {
+        composeRule.waitForTag("widget_bodyweight")
+        composeRule.onNodeWithTag("widget_bodyweight").performScrollTo().performClick()
+        composeRule.waitForTag("screen_Measurements")
+    }
+
+    @Test
     fun climbsThisWeekOpenFromHome() {
         composeRule.waitForTag("widget_week_climbs")
         composeRule.onNodeWithTag("widget_week_climbs").performClick()

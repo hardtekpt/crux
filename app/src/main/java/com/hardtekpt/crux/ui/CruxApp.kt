@@ -185,6 +185,7 @@ fun CruxApp() {
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
                             onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
+                            onOpenMeasurements = { navController.navigate(MeasurementsRoute) },
                         )
                     }
                     page<WeekClimbsRoute> {
