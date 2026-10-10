@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -117,39 +118,44 @@ fun <T> CruxSwatchPicker(
     modifier: Modifier = Modifier,
     tag: (T) -> String = { "swatch_${label(it)}" },
 ) {
-    val colors = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-        options.forEach { option ->
-            val on = option == selected
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .selectable(selected = on, role = Role.RadioButton, onClick = { onSelect(option) })
-                    .widthIn(min = CruxTheme.size.touchTarget + CruxTheme.space.s4)
-                    .padding(CruxTheme.space.s1)
-                    .testTag(tag(option)),
-            ) {
-                // The picked swatch gets a ring with a gap and a check; the colour stays whole.
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(CruxTheme.size.controlHeight)
-                        .border(CruxTheme.size.borderEmphasis, if (on) colors.onSurface else Color.Transparent, CircleShape)
-                        .padding(CruxTheme.space.s1)
-                        .background(color(option), CircleShape),
-                ) {
-                    if (on) Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.surface, modifier = Modifier.size(CruxTheme.size.iconSm))
+    // Rows of four, each swatch a quarter of the width; a short last row stays left-aligned.
+    Column(modifier.fillMaxWidth().selectableGroup(), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+        options.chunked(SWATCHES_PER_ROW).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { option ->
+                    Swatch(option == selected, color(option), label(option), { onSelect(option) }, Modifier.weight(1f).testTag(tag(option)))
                 }
-                Text(
-                    label(option),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (on) colors.onSurface else colors.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                repeat(SWATCHES_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+    }
+}
+
+private const val SWATCHES_PER_ROW = 4
+
+/** One colour: the picked one gets a ring with a gap and a check, so the colour stays whole. */
+@Composable
+private fun Swatch(on: Boolean, color: Color, label: String, onClick: () -> Unit, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .selectable(selected = on, role = Role.RadioButton, onClick = onClick)
+            .padding(CruxTheme.space.s1),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(CruxTheme.size.controlHeight)
+                .border(CruxTheme.size.borderEmphasis, if (on) colors.onSurface else Color.Transparent, CircleShape)
+                .padding(CruxTheme.space.s1)
+                .background(color, CircleShape),
+        ) {
+            if (on) Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.surface, modifier = Modifier.size(CruxTheme.size.iconSm))
+        }
+        Text(label, style = MaterialTheme.typography.labelMedium, color = if (on) colors.onSurface else colors.onSurfaceVariant, maxLines = 1)
     }
 }
 

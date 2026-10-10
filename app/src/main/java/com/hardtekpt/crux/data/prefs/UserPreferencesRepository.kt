@@ -15,8 +15,20 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
-/** The app's accent colour. Teal is the brand; the others are tuned to match it (ui/theme/Color.kt). */
-enum class Accent(val label: String) { TEAL("Teal"), BLUE("Blue"), VIOLET("Violet"), PINK("Pink") }
+/**
+ * The app's accent colour, in the order Settings shows them: round the colour wheel, then the
+ * two quiet ones.
+ * Teal is the brand; the others are tuned to match it (ui/theme/Color.kt).
+ */
+enum class Accent(val label: String) {
+    TEAL("Teal"),
+    BLUE("Blue"),
+    VIOLET("Violet"),
+    MAGENTA("Magenta"),
+    PINK("Pink"),
+    SLATE("Slate"),
+    CHALK("Chalk"),
+}
 
 /** Text size in Crux, multiplying the phone's own font size. */
 enum class TextSize(val label: String, val scale: Float) {

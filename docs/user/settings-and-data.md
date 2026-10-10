@@ -8,7 +8,7 @@ Open Settings from the gear on the **You** tab.
 
 - **Grades**: the scale new climbs are logged in, per discipline. See [Grades](grades.md).
 - **Appearance**: Dark (the default), Light, or System, and the accent colour: Teal (the
-  default), Blue, Violet or Pink. The accent colours buttons, selected options and highlights;
+  default), Blue, Violet, Magenta, Pink, Slate or Chalk. The accent colours buttons, selected options and highlights;
   the amber for goes and the green for sends stay the same in every accent. **Text size** makes
   the text in Crux smaller or larger (Small, Default, Large, Largest) on top of your phone's own
   font size. Crux reopens on the same page to apply it.

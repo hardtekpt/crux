@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Added
+
+- **More accent colours**: Magenta, Slate and Chalk, alongside Teal, Blue, Violet and Pink.
+
 ## [0.3.0] - 2026-10-10
 
 ### Added

@@ -132,6 +132,9 @@ class ScreenshotTest {
     fun homePink() = home("home_pink", accent = Accent.PINK)
 
     @Test
+    fun homeChalk() = home("home_chalk", accent = Accent.CHALK)
+
+    @Test
     fun journal() {
         val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
         val state = loaded(JournalViewModel(climbs, records, notes, sessions, FIXED_CLOCK).uiState) { !it.isLoading }
