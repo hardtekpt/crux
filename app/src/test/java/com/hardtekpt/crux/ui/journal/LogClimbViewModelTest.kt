@@ -120,9 +120,10 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `switching discipline resets the grade and drops styles that do not apply`() {
+    fun `switching discipline resets the grade, and onsight is a route without beta`() {
         viewModel.setDiscipline(Discipline.ROUTE)
-        viewModel.setStyle(AscentStyle.ONSIGHT)
+        viewModel.setNoBeta(true)
+        assertEquals(AscentStyle.ONSIGHT, viewModel.draft.value.style)
         viewModel.setDiscipline(Discipline.BOULDER)
 
         val draft = viewModel.draft.value
@@ -131,16 +132,24 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `flash locks attempts to one and redpoint needs at least two`() {
-        viewModel.setStyle(AscentStyle.ATTEMPT)
-        viewModel.setAttempts(5)
-        viewModel.setStyle(AscentStyle.FLASH)
-        assertEquals(1, viewModel.draft.value.attempts)
-        assertTrue(viewModel.draft.value.attemptsLocked)
+    fun `the style follows the goes`() {
+        // The first tap replaces the default single send.
+        viewModel.addGo(false)
+        assertEquals(listOf(false), viewModel.draft.value.goes)
+        assertEquals(AscentStyle.ATTEMPT, viewModel.draft.value.style)
+        viewModel.addGo(false)
+        viewModel.addGo(true)
+        assertEquals(AscentStyle.REDPOINT, viewModel.draft.value.style)
+        assertEquals(3, viewModel.draft.value.attempts)
+        assertEquals(1, viewModel.draft.value.sends)
 
-        viewModel.setStyle(AscentStyle.REDPOINT)
-        assertEquals(2, viewModel.draft.value.attempts)
-        assertFalse(viewModel.draft.value.attemptsLocked)
+        viewModel.undoGo()
+        viewModel.undoGo()
+        viewModel.undoGo()
+        // Back to the default: one send, a flash.
+        assertEquals(listOf(true), viewModel.draft.value.goes)
+        assertEquals(AscentStyle.FLASH, viewModel.draft.value.style)
+        assertFalse(viewModel.draft.value.goesTouched)
     }
 
     @Test
@@ -190,7 +199,7 @@ class LogClimbViewModelTest {
         assertEquals("Hard moves", draft.name)
         assertEquals(40, draft.angle)
 
-        vm.setStyle(AscentStyle.ATTEMPT)
+        vm.addGo(false)
         vm.save()
         withTimeout(5_000) { vm.draft.first { it.saved } }
 
@@ -202,20 +211,14 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `a new climb can be saved as a problem at the place`() = runBlocking {
-        val (placeId, _) = boardWithProblem()
+    fun `typing the name of a climb there continues it`() = runBlocking {
+        val (placeId, problemId) = boardWithProblem()
         val vm = viewModel("placeId" to placeId)
-        withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
-        vm.setSaveAsProblem(true)
-        vm.save()
-        assertNotNull(vm.draft.value.nameError)
-
-        vm.setName(" Crimp ladder ")
-        vm.save()
-        withTimeout(5_000) { vm.draft.first { it.saved } }
-
-        val problem = places.problems.value.single { it.name == "Crimp ladder" }
-        assertEquals(problem.id, repository.logged.single().problemId)
+        withTimeout(5_000) { vm.placeDetail.first { it?.problems?.isNotEmpty() == true } }
+        vm.setName("hard moves")
+        assertEquals(problemId, vm.draft.value.problemId)
+        vm.setName("Hard moves 2")
+        assertEquals(null, vm.draft.value.problemId)
     }
 
     @Test
@@ -235,11 +238,15 @@ class LogClimbViewModelTest {
         assertEquals(Discipline.ROUTE, draft.discipline)
         assertEquals(14, draft.gradeIndex)
 
-        vm.setAttempts(5)
+        // It opens on its saved goes (two falls, then the send); take the send back.
+        assertEquals(listOf(false, false, true), draft.goes)
+        vm.undoGo()
         vm.save()
         withTimeout(5_000) { vm.draft.first { it.saved } }
         assertEquals(1, repository.climbs.value.size)
-        assertEquals(5, repository.climbs.value.single().attempts)
+        assertEquals(2, repository.climbs.value.single().attempts)
+        assertEquals(0, repository.climbs.value.single().sends)
+        assertEquals(AscentStyle.ATTEMPT, repository.climbs.value.single().style)
 
         val again = viewModel("climbId" to id)
         withTimeout(5_000) { again.draft.first { it.name == "Pilastro" } }
@@ -277,22 +284,20 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `a problem already tried starts as another attempt, without flash`() = runBlocking {
+    fun `a send on a climb tried before is a redpoint, even first go today`() = runBlocking {
         val (_, problemId) = boardWithProblem()
         val first = viewModel("problemId" to problemId)
         assertEquals(AscentStyle.FLASH, withTimeout(5_000) { first.draft.first { it.problemId == problemId } }.style)
-        first.setStyle(AscentStyle.ATTEMPT)
+        first.addGo(false)
         first.save()
         withTimeout(5_000) { first.draft.first { it.saved } }
 
+        // Sent first go today, after a fall last time: a redpoint, not a flash.
         val next = viewModel("problemId" to problemId)
-        val draft = withTimeout(5_000) { next.draft.first { it.problemId == problemId && it.triedBefore } }
-        assertEquals(AscentStyle.ATTEMPT, draft.style)
-        assertFalse(AscentStyle.FLASH in draft.styles)
-        // Its earlier go counts towards the total; a redpoint today can be the first go of the day.
+        val draft = withTimeout(5_000) { next.draft.first { it.problemId == problemId && it.goesBefore > 0 } }
         assertEquals(1, draft.goesBefore)
-        next.setStyle(AscentStyle.REDPOINT)
-        assertEquals(1, next.draft.value.attempts)
+        assertEquals(AscentStyle.REDPOINT, draft.style)
+        assertEquals(1, draft.attempts)
     }
 
     @Test

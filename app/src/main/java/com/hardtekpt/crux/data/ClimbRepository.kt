@@ -2,6 +2,7 @@ package com.hardtekpt.crux.data
 
 import androidx.room.withTransaction
 import com.hardtekpt.crux.data.local.ClimbEntity
+import com.hardtekpt.crux.data.local.ClimbLinks
 import com.hardtekpt.crux.data.local.ClimbMediaEntity
 import com.hardtekpt.crux.data.local.CruxDatabase
 import com.hardtekpt.crux.data.local.CruxDatabases
@@ -57,7 +58,15 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
     override fun observePersonalBests(): Flow<List<PersonalBest>> =
         dbs.observe { it.climbDao().observePersonalBests() }.map { it.map(PersonalBestRow::toModel) }
 
-    override suspend fun logClimb(climb: NewClimb): Long = dbs.current().climbDao().insert(climb.toEntity(clock.millis()))
+    /** Logs it on its climb; without one, on the climb of that name there, or a new climb. */
+    override suspend fun logClimb(climb: NewClimb): Long {
+        val db = dbs.current()
+        return db.withTransaction {
+            val id = db.climbDao().insert(climb.toEntity(clock.millis()))
+            if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            id
+        }
+    }
 
     override suspend fun getClimb(id: Long): Climb? {
         val db = dbs.current()
@@ -80,12 +89,30 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
     }
 
     override suspend fun updateClimb(id: Long, climb: NewClimb) {
-        val dao = dbs.current().climbDao()
-        val existing = dao.get(id) ?: return
-        dao.update(climb.toEntity(existing.createdAtMillis).copy(id = id))
+        val db = dbs.current()
+        db.withTransaction {
+            val dao = db.climbDao()
+            val existing = dao.get(id) ?: return@withTransaction
+            dao.update(climb.toEntity(existing.createdAtMillis).copy(id = id))
+            if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            // Moved to another climb: the one it left goes if nothing else is logged on it.
+            existing.problemId?.takeIf { it != dao.get(id)?.problemId }?.let { dropIfEmpty(db, it) }
+        }
     }
 
-    override suspend fun deleteClimb(id: Long) = dbs.current().climbDao().delete(id)
+    /** Deletes the log; its climb goes too when that was its last log. */
+    override suspend fun deleteClimb(id: Long) {
+        val db = dbs.current()
+        db.withTransaction {
+            val problemId = db.climbDao().get(id)?.problemId
+            db.climbDao().delete(id)
+            problemId?.let { dropIfEmpty(db, it) }
+        }
+    }
+
+    private suspend fun dropIfEmpty(db: CruxDatabase, problemId: Long) {
+        if (db.climbDao().countForProblem(problemId) == 0) db.placeDao().deleteProblem(problemId)
+    }
 
     override fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>> = withMedia { it.climbDao().observeForProblem(problemId) }
 
@@ -98,6 +125,7 @@ private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
     gradeIndex = gradeIndex,
     style = style,
     attempts = attempts,
+    sends = sends.coerceIn(0, attempts),
     venue = venue,
     dateEpochDay = date.toEpochDay(),
     createdAtMillis = createdAtMillis,
@@ -122,6 +150,7 @@ internal fun ClimbEntity.toModel() = Climb(
     gradeIndex = gradeIndex,
     style = style,
     attempts = attempts,
+    sends = sends,
     venue = venue,
     date = LocalDate.ofEpochDay(dateEpochDay),
     name = name,

@@ -20,30 +20,38 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   then every climb by day. The arrows go back through earlier weeks.
 - **Days on the wall page**, from the Home widget: this week, month and year, your week streak,
   and a month calendar of your climbing days. Tap a day to see its journal.
-- **+1 go** on projects in Home and Progress: one tap logs an attempt on the problem today, with
-  Undo.
+- **+1 go** on projects in Home and Progress: one tap logs a fall on the climb today, with Undo.
 
 ### Changed
+
+- **Climbs instead of problems.** Every climb you log is a climb you can come back to: logging
+  goes on it again adds another log. Climbs are always named, by you or by Crux from the grade
+  and wall, need no place, and any climb you've tried and not sent is a project. Saved problems,
+  and the climbs you've already logged, become climbs when you update; same-named climbs at a
+  place are merged.
+- **Log climb, simpler.** Tap **+ Fell** and **+ Sent** for each go, in order; Crux works out
+  attempt, flash, onsight (route, no beta) or redpoint. How hard it felt is five words. The day is
+  a calendar button beside the place, amber when it isn't today. Name suggestions continue a
+  climb; note, photo and video are chips until used.
+- **A climb's page** shows every log, with **Log more goes** and **+1 go**.
 
 - **The Bodyweight and Weight trend widgets** open Measurements instead of the You page.
 - **Latest best** on Home is your newest hardest send: the latest send harder than all before it,
   in any style, so an easier flash no longer replaces a harder redpoint.
-- **Log a go on a tried problem** starts as an attempt; Flash and Onsight aren't offered for it.
-- **A session's goes on the same problem** show as one entry with the goes added up, in the live
+- **A session's logs on the same climb** show as one entry with the goes added up, in the live
   session, the Journal and the session summary.
 - **Backups page.** Export, the photo and video switches and import moved from the Settings list to
   their own page, *Settings → Backups*.
 - **Import asks about duplicates.** When something in a backup is already in Crux, you see both and
   choose: skip it, replace it with the backup's, or keep both. One answer can cover the rest of a
-  section. Replacing a place brings in the walls and problems it's missing.
+  section. Replacing a place brings in the walls and climbs it's missing.
 
 ### Fixed
 
-- **Goes on a project add up.** Logging or editing a climb on a problem you've tried before shows
-  this time's goes, the earlier ones and the total; a redpoint no longer has to be two goes that
-  day.
-- **The Journal's day tally** counts goes on one problem in a session once, like the session card.
-- **A problem opened from Progress or Home** keeps that tab lit, not You.
+- **Goes on a climb add up across days**: a send on your first go today, after earlier tries, is
+  a redpoint, and the form shows your goes in all.
+- **The Journal's day tally** counts a session's logs on one climb once, like the session card.
+- **A climb opened from Progress or Home** keeps that tab lit, not You.
 - **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
   import twice.
 - **Log climb remembers where you were.** A new climb starts at the last climb's place, facility

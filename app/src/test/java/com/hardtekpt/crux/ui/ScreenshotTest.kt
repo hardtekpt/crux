@@ -193,7 +193,7 @@ class ScreenshotTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val vm = PlaceDetailViewModel(SavedStateHandle(mapOf("placeId" to placeId)), places, AreaImageStore(context), climbs)
         bothThemes("place", readyText = "Block Lab") {
-            PlaceDetailScreen(onBack = {}, onEdit = {}, onOpenProblem = {}, onNewProblem = {}, onLogHere = { _, _ -> }, viewModel = vm)
+            PlaceDetailScreen(onBack = {}, onEdit = {}, onOpenProblem = {}, onLogHere = { _, _ -> }, viewModel = vm)
         }
     }
 

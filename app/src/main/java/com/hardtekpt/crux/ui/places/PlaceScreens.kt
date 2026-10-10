@@ -162,7 +162,7 @@ fun LazyListScope.placesList(
             InlineEmptyState(
                 icon = Icons.Rounded.Place,
                 text = if (places.isEmpty()) {
-                    "No places yet. Add your gym, crag or board to log walls and problems there."
+                    "No places yet. Add your gym, crag or board to log your climbs there, wall by wall."
                 } else {
                     "No ${filter?.label?.lowercase()}s yet. Tap ${filter?.label} again to see every place."
                 },
@@ -233,13 +233,12 @@ class PlaceDetailViewModel @Inject constructor(
     }
 }
 
-/** A place's walls and the problems on them, with how you've done on each. */
+/** A place's walls and the climbs on them, with how you've done on each. */
 @Composable
 fun PlaceDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onOpenProblem: (Long) -> Unit,
-    onNewProblem: (Long) -> Unit,
     onLogHere: (placeId: Long, sectionId: Long?) -> Unit,
     viewModel: PlaceDetailViewModel = hiltViewModel(),
 ) {
@@ -334,7 +333,7 @@ fun PlaceDetailScreen(
                     )
                     PlaceFigure(
                         value = live.size,
-                        label = if (live.size == 1) "problem up" else "problems up",
+                        label = if (live.size == 1) "climb" else "climbs",
                         detail = run {
                             val n = current.areas.size
                             val noun = if (current.place.hasSeveralTypes) "area" else current.place.type.areaLabel.lowercase()
@@ -386,12 +385,6 @@ fun PlaceDetailScreen(
                         onClick = { onLogHere(current.place.id, picked?.id) },
                         icon = Icons.Rounded.Add,
                         modifier = Modifier.weight(1f, fill = false).testTag("log_here"),
-                    )
-                    CruxButton(
-                        text = "Add problem",
-                        onClick = { onNewProblem(current.place.id) },
-                        variant = CruxButtonVariant.Outlined,
-                        modifier = Modifier.testTag("add_problem"),
                     )
                 }
             }
@@ -477,7 +470,7 @@ fun PlaceDetailScreen(
                 }
                 if (problems.isNotEmpty()) {
                     item(key = "problems_${area?.id ?: "none"}") {
-                        // A wall's problems as flat lines on one panel.
+                        // A wall's climbs as flat lines on one panel.
                         Column(
                             Modifier
                                 .fillMaxWidth()
@@ -505,7 +498,7 @@ fun PlaceDetailScreen(
                     )
                     if (current.problems.any { it.problem.retired }) {
                         CruxButton(
-                            text = if (showRetired) "Hide retired" else "Show retired",
+                            text = if (showRetired) "Hide taken down" else "Show taken down",
                             onClick = { showRetired = !showRetired },
                             variant = CruxButtonVariant.Text,
                         )
@@ -602,7 +595,7 @@ private fun FacilityTile(
         )
         Text(
             listOfNotNull(
-                "$problems ${if (problems == 1) "problem" else "problems"}",
+                "$problems ${if (problems == 1) "climb" else "climbs"}",
                 scales.joinToString(" / ").takeIf {
                     it.isNotEmpty()
                 },
@@ -613,7 +606,7 @@ private fun FacilityTile(
     }
 }
 
-/** A problem as a flat line: its tape, grade, name and how it's going. */
+/** A climb as a flat line: its tape, grade, name and how it's going. */
 @Composable
 private fun ProblemLine(item: ProblemWithStats, onOpen: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
@@ -635,7 +628,7 @@ private fun ProblemLine(item: ProblemWithStats, onOpen: (Long) -> Unit) {
         Text(item.problem.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
         Column(Modifier.weight(1f)) {
             Text(
-                item.problem.name + if (item.problem.retired) " (retired)" else "",
+                item.problem.name + if (item.problem.retired) " (taken down)" else "",
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -662,7 +655,7 @@ private fun ProblemRow(item: ProblemWithStats, detail: PlaceDetail, onOpen: (Lon
         else -> GradeState.Attempted
     }
     CruxListRow(
-        title = item.problem.name + if (item.problem.retired) " (retired)" else "",
+        title = item.problem.name + if (item.problem.retired) " (taken down)" else "",
         supporting = problemLine(item, detail.copy(areas = emptyList())),
         leading = {
             Box(contentAlignment = Alignment.TopEnd) {
@@ -686,7 +679,7 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onReset: () -> Unit, onDele
                 open = false
                 onEdit()
             })
-            DropdownMenuItem(text = { Text("Reset (retire its problems)") }, onClick = {
+            DropdownMenuItem(text = { Text("Reset (take its climbs down)") }, onClick = {
                 open = false
                 onReset()
             })
@@ -867,7 +860,7 @@ private fun AreaDialog(
     )
 }
 
-/** Small card used on the problem page to sum up progress. */
+/** Small card used on the climb page to sum up progress. */
 @Composable
 internal fun StatLine(label: String, value: String, modifier: Modifier = Modifier) {
     CruxCard(modifier = modifier) {

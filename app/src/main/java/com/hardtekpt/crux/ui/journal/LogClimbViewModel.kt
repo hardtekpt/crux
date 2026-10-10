@@ -53,8 +53,15 @@ data class LogClimbDraft(
     /** The picked place's own grades, used when its scale for this discipline is local. */
     val local: LocalScale? = null,
     val gradeIndex: Int = scales.boulder.defaultIndex,
-    val style: AscentStyle = AscentStyle.FLASH,
-    val attempts: Int = 1,
+    /**
+     * Today's goes in the order climbed: true for a send, false for a fall. Starts as one send,
+     * the common flash; the first tap on a pad replaces it.
+     */
+    val goes: List<Boolean> = listOf(true),
+    /** Whether [goes] came from the climber (a tap, or the saved log) rather than the default. */
+    val goesTouched: Boolean = false,
+    /** Routes: a first-go send without beta, an onsight. */
+    val noBeta: Boolean = false,
     val venue: Venue = Venue.GYM,
     val date: LocalDate,
     val name: String = "",
@@ -81,11 +88,7 @@ data class LogClimbDraft(
     val savedVideoPath: String? = null,
     val addingVideo: Boolean = false,
     val videoFailed: Boolean = false,
-    /** Save the named climb as a problem at the picked place. */
-    val saveAsProblem: Boolean = false,
-    /** The picked problem has goes logged already, so it can't be flashed or onsighted. */
-    val triedBefore: Boolean = false,
-    /** Goes logged on the picked problem before this one, so the form can show the total. */
+    /** Goes logged on the picked climb before this log, so a first-go send can still be a redpoint. */
     val earlierGoes: Int = 0,
     val dateError: String? = null,
     val nameError: String? = null,
@@ -96,11 +99,27 @@ data class LogClimbDraft(
     val isEditing: Boolean get() = climbId != 0L
     val gradeScale: GradeScale get() = scaleOverride?.takeIf { it.discipline == discipline } ?: scales.forDiscipline(discipline)
     val system: GradeSystem get() = GradeSystem(gradeScale, local.takeIf { gradeScale.isLocal })
-    val styles: List<AscentStyle> get() = AscentStyle.forDiscipline(discipline).filter { !(triedBefore && problemId != null) || !it.singleAttempt }
-    val attemptsLocked: Boolean get() = style.singleAttempt
+    val sends: Int get() = goes.count { it }
+    val falls: Int get() = goes.count { !it }
+    val attempts: Int get() = goes.size
 
-    /** Goes on the picked problem before this climb, when there are any. */
+    /** Goes on the picked climb before this log, when there are any. */
     val goesBefore: Int get() = if (problemId != null) earlierGoes else 0
+
+    /**
+     * The style, worked out from the goes: no send is an attempt; a send on the very first go
+     * (today, and none before) is a flash, or an onsight for a route without beta; any other
+     * send is a redpoint.
+     */
+    val style: AscentStyle
+        get() = when {
+            sends == 0 -> AscentStyle.ATTEMPT
+            goesBefore == 0 && goes.first() -> if (noBeta && discipline == Discipline.ROUTE) AscentStyle.ONSIGHT else AscentStyle.FLASH
+            else -> AscentStyle.REDPOINT
+        }
+
+    /** The No beta switch only matters for a route sent first go. */
+    val asksAboutBeta: Boolean get() = discipline == Discipline.ROUTE && sends > 0 && goesBefore == 0 && goes.first()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -124,6 +143,9 @@ class LogClimbViewModel @Inject constructor(
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
 
+    /** Climbs logged with no place, for suggestions when no place is picked. */
+    private val unplaced = MutableStateFlow<List<Problem>>(emptyList())
+
     /** Saved places to pick from, most recently visited first. */
     val places: StateFlow<List<PlaceSummary>> = placeRepository.observePlaces()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -145,6 +167,7 @@ class LogClimbViewModel @Inject constructor(
             }
         }
         viewModelScope.launch { prefill() }
+        refreshUnplaced()
     }
 
     private suspend fun prefill() {
@@ -155,8 +178,9 @@ class LogClimbViewModel @Inject constructor(
                     discipline = climb.discipline,
                     scaleOverride = climb.gradeScale,
                     gradeIndex = climb.gradeIndex,
-                    style = climb.style,
-                    attempts = climb.attempts,
+                    goes = goesOf(climb),
+                    goesTouched = true,
+                    noBeta = climb.style == AscentStyle.ONSIGHT,
                     venue = climb.venue,
                     date = climb.date,
                     name = climb.name.orEmpty(),
@@ -242,11 +266,11 @@ class LogClimbViewModel @Inject constructor(
                     sectionId = place?.sections?.firstOrNull()?.id,
                     areaId = null,
                     problemId = null,
+                    earlierGoes = 0,
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
                     angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
                     local = section?.localScale,
-                    saveAsProblem = false,
                 )
                 if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
             }
@@ -310,21 +334,15 @@ class LogClimbViewModel @Inject constructor(
         return if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
     }
 
-    /** Fills the form from a problem; everything stays editable. */
+    /** Continues a climb: the form takes its name, grade and where it is; everything stays editable. */
     fun pickProblem(problem: Problem) {
-        val known = placeDetail.value?.problems?.firstOrNull { it.problem.id == problem.id }?.let { it.stats != null }
-        applyProblem(problem, known ?: false)
-        // Whether it was tried before, from the climbs themselves (the place may not be loaded yet).
-        viewModelScope.launch {
-            val tried = climbRepository.observeClimbsForProblem(problem.id).first().any { it.id != _draft.value.climbId }
-            if (_draft.value.problemId == problem.id && tried != _draft.value.triedBefore) applyProblem(problem, tried)
-            refreshEarlierGoes(problem.id, null)
-        }
+        applyProblem(problem)
+        viewModelScope.launch { refreshEarlierGoes(problem.id, null) }
     }
 
     /**
-     * Adds up the goes on a problem before this climb: for an edit, those logged earlier (by day,
-     * then order); for a new climb, all of them.
+     * Adds up the goes on a climb before this log: for an edit, those logged earlier (by day,
+     * then order); for a new log, all of them.
      */
     private suspend fun refreshEarlierGoes(problemId: Long, climb: com.hardtekpt.crux.data.model.Climb?) {
         val goes = climbRepository.observeClimbsForProblem(problemId).first().filter { it.id != climb?.id }
@@ -336,33 +354,63 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = earlier.sumOf { g -> g.attempts }) else it }
     }
 
-    /** A problem already tried starts as another attempt; a new one as a flash. */
-    private fun applyProblem(problem: Problem, tried: Boolean) = _draft.update {
-        val allowed = AscentStyle.forDiscipline(problem.discipline).filter { s -> !tried || !s.singleAttempt }
-        val style = when {
-            tried && it.style !in allowed -> AscentStyle.ATTEMPT
-            else -> it.style.takeIf { s -> s in allowed } ?: AscentStyle.FLASH
-        }
+    private fun applyProblem(problem: Problem) = _draft.update {
+        val detail = placeDetail.value?.takeIf { d -> d.place.id == problem.placeId }
+        val area = detail?.areas?.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }
+        val section = detail?.place?.sections?.firstOrNull { s -> s.id == problem.sectionId } ?: detail?.place?.sectionOf(area)
         it.copy(
-            triedBefore = tried && !it.isEditing,
-            attempts = if (style.singleAttempt) 1 else it.attempts,
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
-            venue = placeDetail.value?.let { d -> d.place.typeOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }).venue } ?: it.venue,
-            sectionId =
-                placeDetail.value?.let { d -> d.place.sectionOf(d.areas.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) })?.id } ?: it.sectionId,
+            venue = section?.type?.venue ?: detail?.place?.typeOf(area)?.venue ?: it.venue,
+            sectionId = section?.id ?: it.sectionId,
             discipline = problem.discipline,
             scaleOverride = problem.gradeScale,
             gradeIndex = problem.gradeIndex,
             name = problem.name,
-            style = style,
-            saveAsProblem = false,
         )
     }
 
-    fun clearProblem() = _draft.update { it.copy(problemId = null, triedBefore = false, earlierGoes = 0) }
+    /** Typing a name another climb here already has continues that climb; any other name starts a new one. */
+    private fun matchClimb(name: String) {
+        val draft = _draft.value
+        if (draft.isEditing) return
+        val trimmed = name.trim()
+        val match = candidates().firstOrNull { it.name.equals(trimmed, ignoreCase = true) && it.discipline == draft.discipline }
+        when {
+            match != null && match.id != draft.problemId -> pickProblem(match)
+            match == null && draft.problemId != null -> _draft.update { it.copy(problemId = null, earlierGoes = 0) }
+        }
+    }
 
-    fun setSaveAsProblem(save: Boolean) = _draft.update { it.copy(saveAsProblem = save) }
+    /** The climbs a new log can continue: those at the picked place, or those with no place. */
+    fun candidates(): List<Problem> {
+        val draft = _draft.value
+        return if (draft.placeId == null) {
+            unplaced.value
+        } else {
+            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems?.map { it.problem }?.filter { !it.retired }.orEmpty()
+        }
+    }
+
+    fun refreshUnplaced() {
+        viewModelScope.launch { unplaced.value = placeRepository.climbsAt(null) }
+    }
+
+    /** A fall or a send, in the order climbed. The first tap replaces the default single send. */
+    fun addGo(sent: Boolean) = _draft.update {
+        when {
+            !it.goesTouched -> it.copy(goes = listOf(sent), goesTouched = true)
+            it.goes.size >= ATTEMPTS.last -> it
+            else -> it.copy(goes = it.goes + sent)
+        }
+    }
+
+    /** Takes the last go back; taking back the only one returns to the default single send. */
+    fun undoGo() = _draft.update {
+        if (it.goes.size <= 1) it.copy(goes = listOf(true), goesTouched = false) else it.copy(goes = it.goes.dropLast(1))
+    }
+
+    fun setNoBeta(noBeta: Boolean) = _draft.update { it.copy(noBeta = noBeta) }
 
     fun setEffort(effort: Int?) = _draft.update { it.copy(effort = effort?.coerceIn(1, 10)) }
 
@@ -370,9 +418,8 @@ class LogClimbViewModel @Inject constructor(
 
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
-        val style = draft.style.takeIf { it in AscentStyle.forDiscipline(discipline) } ?: AscentStyle.FLASH
         val override = placeDetail.value?.place?.scaleFor(discipline, draft.sectionId)
-        val next = draft.copy(discipline = discipline, style = style, scaleOverride = override, problemId = null)
+        val next = draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = 0)
         next.copy(gradeIndex = next.system.defaultIndex)
     }
 
@@ -380,26 +427,14 @@ class LogClimbViewModel @Inject constructor(
         it.copy(gradeIndex = index.coerceIn(0, (it.system.labels.size - 1).coerceAtLeast(0)))
     }
 
-    fun setStyle(style: AscentStyle) = _draft.update {
-        // Flash and onsight are one attempt by definition; a redpoint took at least two.
-        val attempts = when {
-            style.singleAttempt -> 1
-
-            // A redpoint took more than one go: today, or on the problem's earlier days.
-            style == AscentStyle.REDPOINT -> maxOf(it.attempts, if (it.goesBefore > 0) 1 else 2)
-
-            else -> it.attempts
-        }
-        it.copy(style = style, attempts = attempts)
-    }
-
-    fun setAttempts(attempts: Int) = _draft.update { it.copy(attempts = attempts.coerceIn(ATTEMPTS)) }
-
     fun setVenue(venue: Venue) = _draft.update { it.copy(venue = venue) }
 
     fun setDate(date: LocalDate) = _draft.update { it.copy(date = date, dateError = null) }
 
-    fun setName(name: String) = _draft.update { it.copy(name = name, nameError = null) }
+    fun setName(name: String) {
+        _draft.update { it.copy(name = name, nameError = null) }
+        matchClimb(name)
+    }
 
     fun setPlace(place: String) = _draft.update { it.copy(place = place.take(MAX_TEXT)) }
 
@@ -473,7 +508,6 @@ class LogClimbViewModel @Inject constructor(
         val dateError = if (draft.date.isAfter(today)) "Pick today or an earlier day" else null
         val nameError = when {
             draft.name.length > MAX_TEXT -> "Keep the name under $MAX_TEXT characters"
-            draft.saveAsProblem && draft.name.isBlank() -> "Name the problem to save it"
             else -> null
         }
         if (dateError != null || nameError != null) {
@@ -483,30 +517,36 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val place = draft.placeId?.let { placeRepository.getPlace(it) }
-            val problemId = draft.problemId ?: if (draft.saveAsProblem && place != null) {
-                placeRepository.saveProblem(
-                    ProblemInput(
-                        placeId = place.id,
-                        areaId = draft.areaId,
-                        name = draft.name.trim(),
-                        discipline = draft.discipline,
-                        gradeScale = draft.gradeScale,
-                        gradeIndex = draft.gradeIndex,
-                        tape = null,
-                        notes = null,
-                        gradeLabel = draft.system.label(draft.gradeIndex),
-                        gradeColour = draft.system.colour(draft.gradeIndex),
-                    ),
-                )
-            } else {
-                null
+            // A picked climb follows the form: its name, grade and where it is.
+            val problemId = draft.problemId
+            if (problemId != null) {
+                val existing = placeRepository.getProblem(problemId)
+                if (existing != null && draft.name.isNotBlank()) {
+                    placeRepository.saveProblem(
+                        ProblemInput(
+                            id = problemId,
+                            placeId = place?.id,
+                            areaId = draft.areaId.takeIf { place != null },
+                            sectionId = draft.sectionId.takeIf { place != null },
+                            name = draft.name.trim(),
+                            discipline = draft.discipline,
+                            gradeScale = draft.gradeScale,
+                            gradeIndex = draft.gradeIndex,
+                            tape = existing.tape,
+                            notes = existing.notes,
+                            gradeLabel = draft.system.label(draft.gradeIndex),
+                            gradeColour = draft.system.colour(draft.gradeIndex),
+                        ),
+                    )
+                }
             }
             val climb = NewClimb(
                 discipline = draft.discipline,
                 gradeScale = draft.gradeScale,
                 gradeIndex = draft.gradeIndex,
                 style = draft.style,
-                attempts = if (draft.style.singleAttempt) 1 else draft.attempts,
+                attempts = draft.attempts,
+                sends = draft.sends,
                 venue = place?.let { p ->
                     p.sections.firstOrNull { s -> s.id == draft.sectionId }?.type?.venue
                         ?: draft.venue.takeIf { v -> p.types.any { t -> t.venue == v } } ?: p.type.venue
@@ -553,4 +593,18 @@ class LogClimbViewModel @Inject constructor(
         const val MAX_TEXT = 60
         const val DEFAULT_ANGLE = 40
     }
+}
+
+/**
+ * A saved log's goes as a trail for the form: a first-go send (flash, onsight) first, then the
+ * falls, then any other sends; otherwise the falls, then the sends.
+ */
+internal fun goesOf(climb: com.hardtekpt.crux.data.model.Climb): List<Boolean> {
+    val sends = climb.sends.coerceIn(0, climb.attempts)
+    val falls = climb.attempts - sends
+    return if (climb.style.singleAttempt && sends > 0) {
+        listOf(true) + List(falls) { false } + List(sends - 1) { true }
+    } else {
+        List(falls) { false } + List(sends) { true }
+    }.ifEmpty { listOf(false) }
 }

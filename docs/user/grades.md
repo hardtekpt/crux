@@ -21,7 +21,7 @@ quite "V6" in a gym, so Crux doesn't pretend otherwise.
 
 Many gyms grade with their own numbers or tape colours. Give a facility at a place **local
 grades** (see [Places](places.md#adding-a-place)): the numbers or colours from easiest to hardest.
-Climbs and problems there use them, your bests are kept per place, and a local grade is never
+Climbs there use them, your bests are kept per place, and a local grade is never
 compared with a grade anywhere else.
 
 ## The grade converter

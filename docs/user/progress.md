@@ -21,5 +21,5 @@ Local grades (a gym's own numbers or colour tapes) are kept per place, in that p
 
 ## Projects
 
-The problems you've tried and not sent yet, most recently tried first, with how many goes and
-where. Tap one to open the problem. See [Places → Projects](places.md#projects).
+The climbs you've tried and not sent yet, most recently tried first, with how many goes and
+where. Tap one to open the climb, or tap **+1 go** to log a fall on it. See [Places → Projects](places.md#projects).

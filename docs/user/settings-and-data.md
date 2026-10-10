@@ -38,7 +38,7 @@ anything. It shows what's in Crux and what's in the backup, and says when they'r
 each one you choose:
 
 - **Skip**: keep what's in Crux.
-- **Replace**: use the backup's version. A place keeps its own walls and problems, and the backup's
+- **Replace**: use the backup's version. A place keeps its own walls and climbs, and the backup's
   are updated or added by name.
 - **Keep both**: add the backup's as a copy. A named copy gets a number, like "Max hangs (2)".
 

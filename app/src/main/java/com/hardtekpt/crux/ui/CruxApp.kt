@@ -293,7 +293,6 @@ fun CruxApp() {
                             onBack = navController::popBackStack,
                             onEdit = { navController.navigate(PlaceEditorRoute(it)) },
                             onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
-                            onNewProblem = { navController.navigate(ProblemEditorRoute(placeId = it)) },
                             onLogHere = { placeId, sectionId -> navController.navigate(LogClimbRoute(placeId = placeId, sectionId = sectionId ?: 0)) },
                         )
                     }

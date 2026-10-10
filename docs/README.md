@@ -11,7 +11,7 @@ Start with **[Getting started](user/getting-started.md)**.
 | [Training](user/training.md) | Exercises, how they're measured, defaults, plans and blocks |
 | [Sessions](user/sessions.md) | Running a plan or a climbing day live: sets, rest and interval timers, finishing |
 | [Journal](user/journal.md) | The timeline, search and filters, logging a climb, notes |
-| [Places](user/places.md) | Gyms, crags and boards, facilities, walls, problems, local grades, maps, projects |
+| [Places](user/places.md) | Gyms, crags and boards, facilities, walls, climbs, local grades, maps, projects |
 | [Progress](user/progress.md) | Hardest sends, grade pyramids, charts, projects |
 | [You](user/you.md) | Climber card, consistency, personal records, weight, measurements, notes, grade converter |
 | [Grades](user/grades.md) | Scales, why grades are never converted, local grades, the converter |

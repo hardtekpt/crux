@@ -7,6 +7,20 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
+ * Schema 21 drops problems as a separate idea: every log belongs to a climb (a `problems` row,
+ * which no longer needs a place). Sends are counted on each log, and logs without a climb get
+ * one, merged by name and place (see [ClimbLinks]).
+ */
+class ClimbsMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL("UPDATE climbs SET sends = CASE WHEN style = 'ATTEMPT' THEN 0 ELSE 1 END")
+        // A climb's facility is its wall's.
+        db.execSQL("UPDATE problems SET sectionId = (SELECT sectionId FROM areas WHERE areas.id = problems.areaId) WHERE areaId IS NOT NULL")
+        ClimbLinks.linkUnlinked(db, System.currentTimeMillis())
+    }
+}
+
+/**
  * Schema 20 grades each section of a place rather than the place: every section takes the
  * scales (and local grades) its place had, and the place's own are cleared.
  */
@@ -137,6 +151,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19, spec = ExerciseDefaultsMigration::class),
         AutoMigration(from = 19, to = 20, spec = SectionGradesMigration::class),
+        AutoMigration(from = 20, to = 21, spec = ClimbsMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -152,7 +167,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 20
+        const val VERSION = 21
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

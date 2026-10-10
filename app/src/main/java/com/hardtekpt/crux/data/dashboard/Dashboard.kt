@@ -33,7 +33,7 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
     WEEKLY_SENDS("Sends per week", "Sends over the last weeks", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     SENDS_BY_STYLE("Sends by style", "Flash, onsight and redpoint split", listOf(WidgetSize.LARGE, WidgetSize.WIDE)),
     RECENT_CLIMBS("Recent climbs", "Your latest journal entries", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
-    PROJECTS("Projects", "Problems you're still working", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
+    PROJECTS("Projects", "Climbs you've tried and not sent yet", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     CONSISTENCY("Consistency", "Your days on the wall over the last weeks, and your week streak", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     ;
 

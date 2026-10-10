@@ -85,9 +85,13 @@ data class Area(
     val sectionId: Long? = null,
 )
 
+/**
+ * A climb: what you try, by name and grade, and where it is if anywhere. Its logs (one per day
+ * you tried it) add up to its [ProblemStats]. With no send yet, it's a project.
+ */
 data class Problem(
     val id: Long,
-    val placeId: Long,
+    val placeId: Long?,
     val areaId: Long?,
     val name: String,
     val discipline: Discipline,
@@ -99,6 +103,8 @@ data class Problem(
     val notes: String?,
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
+    /** The facility it's in, when the place has one picked. */
+    val sectionId: Long? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }

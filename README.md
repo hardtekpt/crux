@@ -39,7 +39,7 @@ tracking: your data stays on your phone.
     <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_you.png" alt="Climber profile"></td>
   </tr>
   <tr>
-    <td align="center"><b>Places</b><br>walls, problems, projects</td>
+    <td align="center"><b>Places</b><br>walls, climbs, projects</td>
     <td align="center"><b>Progress</b><br>bests, pyramids, charts</td>
     <td align="center"><b>Train</b><br>plans and exercises</td>
     <td align="center"><b>You</b><br>records, consistency, body</td>
@@ -70,9 +70,9 @@ tests, so they always match the current version.
 **Climb**
 - Log a climb in seconds: grade, style (flash, onsight, redpoint, attempt), goes, how hard it felt,
   the day, a photo and a video.
-- **Places**: gyms, crags and boards with their facilities, walls and problems, an OpenStreetMap
+- **Places**: gyms, crags and boards with their facilities, walls and climbs, an OpenStreetMap
   pin, and the gym's own grades (numbers or colour tapes).
-- **Projects** found for you: problems you've tried and not sent yet.
+- **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 
 **Track**

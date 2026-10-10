@@ -9,7 +9,7 @@ Short walk-throughs of how Crux fits into a climbing week.
 2. Work through the plan: the screen shows one exercise at a time. Tap **Done** after each set, and
    the rest timer starts. If a set went differently (fewer reps, less load), change it before
    tapping Done.
-3. For the bouldering block, tap **Log climb** for each problem. The session already knows where
+3. For the bouldering block, tap **Log climb** for each boulder. The session already knows where
    you are.
 4. Tap **Finish**, rate how hard it felt, and add a note ("left ring finger tender").
 
@@ -27,19 +27,20 @@ Just need a timer? In any session, **Timer** runs a free one with Tabata and rep
 ## A board session
 
 Add your board as a facility of its gym (or as a place on its own) with its **usual angle** and
-grades, for example V scale. Log climbs with the angle you set the board to. Problems you set or
+grades, for example V scale. Log climbs with the angle you set the board to. Climbs you set or
 repeat on the board build up its list, and the ones you haven't sent yet show as projects.
 
 ## Working a project at a gym that grades with tape colours
 
 1. Give the gym's main walls **local grades**: the tape colours, easiest to hardest.
-2. Add the wall (with a photo of it, so you can find problems again) and the problem, with its
-   tape colour.
-3. Each session, log a go: an *Attempt* until the day it goes, then *Redpoint*.
+2. Add the wall, with a photo of it so you can find the climb again.
+3. Log your goes on it with a name, say "Pink crimps": tap **+ Fell** for each go. Next session,
+   pick it from the name suggestions (or tap **+1 go** on it in Projects) and keep going; the day it
+   goes, tap **+ Sent** and it's a redpoint.
 
-The problem stays in **Projects** on Home and Progress until you send it, with its goes and your
-last try. When the gym resets the wall, **Reset** it, and its problems retire without losing your
-history.
+The climb stays in **Projects** on Home and Progress until you send it, with its goes and your
+last try. When the gym resets the wall, **Reset** it, and its climbs are taken down without losing
+your history.
 
 ## A day at the crag
 

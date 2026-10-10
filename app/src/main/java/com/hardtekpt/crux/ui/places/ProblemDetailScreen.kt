@@ -65,21 +65,29 @@ import kotlinx.coroutines.flow.stateIn
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class ProblemDetailViewModel @Inject constructor(savedStateHandle: SavedStateHandle, places: PlaceRepository, climbs: ClimbRepository) : ViewModel() {
+class ProblemDetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    places: PlaceRepository,
+    climbs: ClimbRepository,
+    clock: java.time.Clock,
+) : ViewModel() {
     val problemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
 
     val problem: StateFlow<ProblemWithStats?> = places.observeProblem(problemId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val place: StateFlow<PlaceDetail?> = places.observeProblem(problemId).filterNotNull().map { it.problem.placeId }
-        .flatMapLatest { places.observePlaceDetail(it) }
+        .flatMapLatest { id -> if (id == null) kotlinx.coroutines.flow.flowOf(null) else places.observePlaceDetail(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val history: StateFlow<List<Climb>> = climbs.observeClimbsForProblem(problemId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** "+1 go" on this climb. */
+    val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbs, places, clock), viewModelScope)
 }
 
-/** One problem: how it's going (sessions, goes, send) and every go you logged on it. */
+/** One climb: how it's going (days, goes, send), where it is, and every log of goes on it. */
 @Composable
 fun ProblemDetailScreen(
     onBack: () -> Unit,
@@ -91,6 +99,7 @@ fun ProblemDetailScreen(
     val item by viewModel.problem.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
+    val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
     val space = CruxTheme.space
     val problem = item?.problem
     var viewingImage by remember { mutableStateOf(false) }
@@ -101,7 +110,7 @@ fun ProblemDetailScreen(
             onBack = onBack,
             actions = {
                 if (problem != null) {
-                    IconButton(onClick = { onEdit(problem.placeId, problem.id) }, modifier = Modifier.testTag("edit_problem")) {
+                    IconButton(onClick = { onEdit(problem.placeId ?: 0L, problem.id) }, modifier = Modifier.testTag("edit_problem")) {
                         Icon(Icons.Rounded.Edit, contentDescription = "Edit")
                     }
                 }
@@ -132,7 +141,7 @@ fun ProblemDetailScreen(
                     StatTile(
                         label = "Goes",
                         value = (stats?.attempts ?: 0).toString(),
-                        delta = stats?.let { "over ${it.sessions} ${if (it.sessions == 1) "session" else "sessions"}" } ?: "not tried yet",
+                        delta = stats?.let { "over ${it.sessions} ${if (it.sessions == 1) "day" else "days"}" } ?: "no goes yet",
                         modifier = Modifier.weight(1f),
                         valueModifier = Modifier.testTag("problem_goes"),
                     )
@@ -162,14 +171,18 @@ fun ProblemDetailScreen(
                 item { Text(notes, style = MaterialTheme.typography.bodyLarge) }
             }
             item {
-                CruxButton(
-                    text = "Log a go",
-                    onClick = { onLogGo(current.problem.id) },
-                    icon = Icons.Rounded.Add,
-                    modifier = Modifier.testTag("log_go"),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically) {
+                    CruxButton(
+                        text = "Log more goes",
+                        onClick = { onLogGo(current.problem.id) },
+                        icon = Icons.Rounded.Add,
+                        modifier = Modifier.testTag("log_go"),
+                    )
+                    // One more fall today, without the form.
+                    if (stats?.sent != true) QuickGoButton(current.problem.id, lastGo, viewModel.quickGo::log, viewModel.quickGo::undo)
+                }
             }
-            item { Eyebrow("Your goes", Modifier.padding(top = space.s3)) }
+            item { Eyebrow("Every log", Modifier.padding(top = space.s3)) }
             if (history.isEmpty()) {
                 item {
                     Text(
@@ -206,8 +219,8 @@ fun ProjectRow(
     CruxListRow(
         title = project.problem.name,
         supporting = listOfNotNull(
-            listOfNotNull(project.placeName, project.areaName).joinToString(" · "),
-            "${stats.attempts} ${if (stats.attempts == 1) "go" else "goes"} over ${stats.sessions} ${if (stats.sessions == 1) "session" else "sessions"}",
+            listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { null },
+            "${stats.attempts} ${if (stats.attempts == 1) "go" else "goes"} over ${stats.sessions} ${if (stats.sessions == 1) "day" else "days"}",
         ).joinToString(" · "),
         leading = { GradeBadge(project.problem.grade, GradeState.Attempted) },
         trailing = {

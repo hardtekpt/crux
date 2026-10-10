@@ -69,8 +69,9 @@ class StarterData @Inject constructor(
  * 4: the max hangs plan has Repeaters, an interval exercise (7 Oct 2026).
  * 5: interval exercises keep their rest between repeats.
  * 6: Repeaters and Tabata core come with their interval timer set up.
+ * 7: every climb has its climb (schema 21), with sends counted.
  */
-const val SAMPLE_DATA_VERSION = 6
+const val SAMPLE_DATA_VERSION = 7
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -276,9 +277,12 @@ class StarterDataSeeder(private val clock: Clock) {
                     placeId = placeIds[climb.place],
                     areaId = climb.area?.let { areaIds[climb.place to it] },
                     problemId = climb.name?.let { problemIds[climb.place to it] },
+                    sends = if (climb.style.isSend) 1 else 0,
                 )
             },
         )
+        // Every log belongs to a climb: the unnamed ones get one named for them.
+        com.hardtekpt.crux.data.local.ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, now)
         db.bodyMeasurementDao().insertAll(
             SAMPLE_WEIGHTS.map { (daysAgo, kg) ->
                 BodyMeasurementEntity(

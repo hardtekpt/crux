@@ -209,8 +209,9 @@ class BackupRepositoryTest {
         val places = db.placeDao().getPlaces()
         assertEquals(file.places!!.size, places.size)
         places.forEach { place -> assertEquals(listOf(place.type), db.placeDao().getSections(place.id).map { it.type }) }
-        val linked = db.climbDao().getAll().count { it.problemId != null && it.sectionId != null }
-        assertEquals(file.climbs!!.count { it.problem != null }, linked)
+        // Every log belongs to a climb now, and the ones that had a problem keep their facility.
+        assertTrue(db.climbDao().getAll().all { it.problemId != null })
+        assertTrue(db.climbDao().getAll().count { it.sectionId != null } >= file.climbs!!.count { it.problem != null })
     }
 
     /** A JSON file from v0.2.0, the last of format version 1: photos inside as base64, sections graded apart. */
@@ -225,7 +226,8 @@ class BackupRepositoryTest {
         repo.import(backup, BackupSection.entries.toSet())
 
         assertEquals(file.climbs!!.size, db.climbDao().count())
-        assertEquals(file.places!!.sumOf { it.problems.size }, db.placeDao().getAllProblems().size)
+        // Its problems are climbs now, plus a climb for each log that had none.
+        assertTrue(db.placeDao().getAllProblems().size >= file.places!!.sumOf { it.problems.size })
         assertEquals(GradeScale.V_SCALE, db.placeDao().getAllSections().single { it.name == "Kilter board" }.boulderScale)
         assertEquals("injury", db.noteDao().getAll().single { it.text.startsWith("Left finger") }.tag)
         val photo = db.climbMediaDao().getAll().single { it.kind == MediaKind.IMAGE }

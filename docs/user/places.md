@@ -1,9 +1,9 @@
 # Places
 
-Places are the gyms, crags and boards you climb at, with their walls and problems. Find them under
+Places are the gyms, crags and boards you climb at, with their walls and the climbs on them. Find them under
 **You → Places**.
 
-<img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/8_place.png" width="300" alt="A place page with numbers, facilities, Log here and walls of problems">
+<img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/8_place.png" width="300" alt="A place page with numbers, facilities, Log here and walls of climbs">
 
 ## The Places list
 
@@ -28,31 +28,31 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 
 ## A place's page
 
-- **Numbers**: climbs logged and the last visit, problems up and on how many walls, and open
+- **Numbers**: climbs logged and the last visit, climbs here and on how many walls, and open
   projects.
 - **Facilities**: tap one to show only its walls; tap again to show all.
 - **Log here**: starts *Log climb* at this place, and at the facility if one is selected.
-- **Add problem**.
-- **Walls** (areas), each with its problems: grade, name, goes and when you sent it. A wall can
-  have an **image** (a photo of the wall, or a gym map with it marked) and an **angle**. Its menu
-  has **Reset (retire its problems)**, for when the gym resets that wall.
+- **Walls** (areas), each with the climbs you've logged on it: grade, name, goes and when you sent
+  it. A wall can have an **image** (a photo of the wall, or a gym map with it marked) and an
+  **angle**. Its menu has **Reset (take its climbs down)**, for when the gym resets that wall.
 - **Open in Maps** hands the pin to your maps app.
 
-## Problems
+## Climbs
 
-A problem has a name, boulder or route, a grade (or a local grade), an optional **tape colour**,
-the day it was set, and notes. Its page shows **your goes** on it, and **Log a go** adds one.
+A climb is what you log goes on: a name, boulder or route, a grade (or a local grade), and where
+it is, if anywhere. You don't create climbs separately; logging goes starts one. Its page shows
+your goes in all, the days you tried it, when you sent it, and **every log**. **Log more goes**
+opens Log climb on it. Edit it to change its name, grade, wall, **tape colour** or notes; its logs
+follow. Deleting a climb deletes its logs.
 
-**Retired (taken down)** hides a problem from pickers and projects. Its history stays in your
-journal.
+**Taken down** hides a climb from suggestions and projects. Its history stays in your journal.
 
 ## Projects
 
-You don't mark projects; Crux finds them. A project is a problem that's still up, that you've
-tried and haven't sent yet. Projects show on Home, on Progress, and on each place. Send it, and it
+You don't mark projects; Crux finds them. A project is a climb that's still up, that you've
+tried and haven't sent yet, at a place or not. Projects show on Home, on Progress, and on each place. Send it, and it
 stops being a project.
 
 To log another go quickly, tap **+1 go** on the project in Home's Projects widget or in Progress.
-It logs an attempt today on that problem, at its place and wall; tap **Undo** in the next few
-seconds if it was a slip. To log a send, or a go with notes, open the project and tap **Log a go**:
-a problem you've tried before starts as an *Attempt*, and *Flash* and *Onsight* aren't offered.
+It logs a fall today on that climb, at its place and wall; tap **Undo** in the next few seconds if
+it was a slip. To log a send, or goes with a note, open the project and tap **Log more goes**.

@@ -57,7 +57,7 @@ data class SectionInput(
 /** What the problem form edits. `id == 0` creates. */
 data class ProblemInput(
     val id: Long = 0,
-    val placeId: Long,
+    val placeId: Long?,
     val areaId: Long?,
     val name: String,
     val discipline: Discipline,
@@ -67,6 +67,8 @@ data class ProblemInput(
     val notes: String?,
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
+    /** The facility, when there's no wall to tell it. */
+    val sectionId: Long? = null,
 )
 
 interface PlaceRepository {
@@ -74,8 +76,11 @@ interface PlaceRepository {
     fun observePlaceDetail(id: Long): Flow<PlaceDetail?>
     fun observeProblem(id: Long): Flow<ProblemWithStats?>
 
-    /** Problems with goes but no send, most recently tried first. */
+    /** Climbs with goes but no send, at a place or not, most recently tried first. */
     fun observeProjects(): Flow<List<Project>>
+
+    /** Climbs at a place (or with no place, for null), for picking one to log more goes on. */
+    suspend fun climbsAt(placeId: Long?): List<Problem>
     suspend fun getPlace(id: Long): Place?
     suspend fun getProblem(id: Long): Problem?
     suspend fun savePlace(input: PlaceInput): Long
@@ -161,7 +166,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                     val problem = byId[row.problemId]?.takeIf { !it.retired } ?: return@mapNotNull null
                     Project(
                         problem = problem.toModel(),
-                        placeName = placeNames[problem.placeId].orEmpty(),
+                        placeName = problem.placeId?.let(placeNames::get).orEmpty(),
                         areaName = problem.areaId?.let(areaNames::get),
                         stats = row.toModel(),
                     )
@@ -176,6 +181,8 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
     }
 
     override suspend fun getProblem(id: Long): Problem? = dbs.current().placeDao().getProblem(id)?.toModel()
+
+    override suspend fun climbsAt(placeId: Long?): List<Problem> = dbs.current().placeDao().getClimbsAt(placeId).map { it.toModel() }
 
     override suspend fun savePlace(input: PlaceInput): Long {
         val db = dbs.current()
@@ -289,12 +296,20 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
     }
 
     override suspend fun saveProblem(input: ProblemInput): Long {
-        val dao = dbs.current().placeDao()
+        val db = dbs.current()
+        return db.withTransaction { saveProblemIn(db, input) }
+    }
+
+    private suspend fun saveProblemIn(db: com.hardtekpt.crux.data.local.CruxDatabase, input: ProblemInput): Long {
+        val dao = db.placeDao()
         val existing = if (input.id != 0L) dao.getProblem(input.id) else null
+        // A wall says which facility; without one, the facility given.
+        val sectionId = input.areaId?.let { area -> dao.getAllAreas().firstOrNull { it.id == area }?.sectionId } ?: input.sectionId
         val entity = ProblemEntity(
             id = existing?.id ?: 0,
             placeId = input.placeId,
             areaId = input.areaId,
+            sectionId = sectionId.takeIf { input.placeId != null },
             name = input.name.trim(),
             discipline = input.discipline,
             gradeScale = input.gradeScale,
@@ -309,6 +324,20 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         )
         return if (existing != null) {
             dao.updateProblem(entity)
+            // Its logs show the climb as it is now.
+            dao.syncLogs(
+                id = existing.id,
+                name = entity.name,
+                discipline = entity.discipline,
+                gradeScale = entity.gradeScale,
+                gradeIndex = entity.gradeIndex,
+                gradeLabel = entity.gradeLabel,
+                gradeColour = entity.gradeColour,
+                placeId = entity.placeId,
+                sectionId = entity.sectionId,
+                areaId = entity.areaId,
+                placeName = entity.placeId?.let { dao.getPlace(it)?.name },
+            )
             existing.id
         } else {
             dao.insertProblem(entity)
@@ -323,7 +352,8 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
     override suspend fun deleteProblem(id: Long) {
         val db = dbs.current()
         db.withTransaction {
-            db.placeDao().unlinkClimbsFromProblem(id)
+            // A climb goes with its logs.
+            db.placeDao().deleteLogsOfProblem(id)
             db.placeDao().deleteProblem(id)
         }
     }
@@ -359,6 +389,7 @@ internal fun ProblemEntity.toModel() = Problem(
     notes = notes,
     gradeLabel = gradeLabel,
     gradeColour = gradeColour,
+    sectionId = sectionId,
 )
 
 private fun ProblemStatsRow.toModel() = ProblemStats(

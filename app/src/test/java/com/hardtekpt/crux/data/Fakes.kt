@@ -81,7 +81,8 @@ class FakeClimbRepository : ClimbRepository {
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, gradeLabel, gradeColour, sectionId = sectionId, sessionId = sessionId,
+        placeId, areaId, problemId, angle, effort, sends = sends, gradeLabel = gradeLabel, gradeColour = gradeColour,
+        sectionId = sectionId, sessionId = sessionId,
     )
 }
 
@@ -131,6 +132,8 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
 
     override suspend fun getPlace(id: Long): Place? = places.value.find { it.id == id }
     override suspend fun getProblem(id: Long): Problem? = problems.value.find { it.id == id }
+
+    override suspend fun climbsAt(placeId: Long?): List<Problem> = problems.value.filter { it.placeId == placeId && !it.retired }
 
     override suspend fun savePlace(input: PlaceInput): Long {
         val id = input.id.takeIf { it != 0L } ?: nextId++

@@ -13,12 +13,12 @@ Grades are never converted. A climb keeps the scale it was logged in. See [Grade
 They're safe. Demo mode shows a separate set of sample data. Turn it off in *Settings → Your data*
 and your own data is back, untouched.
 
-**Why isn't a problem showing in the Log climb picker?**
-It's probably retired (taken down), or its wall was reset. Retired problems are hidden from pickers
-and projects but stay in your history. Open the problem and turn off *Retired* if it's back up.
+**Why isn't a climb showing in the name suggestions?**
+It's probably taken down, or its wall was reset. Climbs taken down are hidden from suggestions and
+projects but stay in your history. Open the climb and turn off *Taken down* if it's back up.
 
 **How do I mark something as a project?**
-You don't: a problem you've tried and not sent is a project automatically. See
+You don't: a climb you've tried and not sent is a project automatically. See
 [Places → Projects](places.md#projects).
 
 **Why don't my session sets show up as personal records?**

@@ -380,7 +380,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun placesHoldProblemsAndGoesOnThemBecomeProjects() {
+    fun anUnsentClimbIsAProjectUntilMoreGoesSendIt() {
         composeRule.onNodeWithTag("nav_You").performClick()
         openFromProfileMenu("menu_places", "screen_Places")
         composeRule.waitForTag("new_place")
@@ -390,32 +390,42 @@ class MainActivityTest {
         composeRule.onNodeWithTag("place_favourite").performClick()
         composeRule.onNodeWithTag("save_place").performClick()
 
+        // Log two falls on a named climb here: it's a project.
         composeRule.waitForTag("screen_PlaceDetail")
-        composeRule.onNodeWithTag("add_problem").performClick()
-        composeRule.waitForTag("screen_ProblemEditor")
-        composeRule.textFieldIn("field_problem_name").performTextInput("Pink crimps")
-        composeRule.onNodeWithTag("save_problem").performClick()
+        composeRule.onNodeWithTag("log_here").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("go_fell").performScrollTo().performClick()
+        composeRule.onNodeWithTag("go_fell").performClick()
+        composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Attempt")
+        composeRule.onNodeWithTag("effort_Hard").performScrollTo().performClick()
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Pink crimps")
+        composeRule.onNodeWithTag("save_climb").performClick()
 
         composeRule.waitForTag("problem_row")
         composeRule.onNodeWithTag("problem_row").performClick()
         composeRule.waitForTag("screen_ProblemDetail")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("2") }.isSuccess
+        }
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitForTag("project_row")
+        composeRule.onNodeWithTag("project_row").performClick()
+
+        // Come back and send it first go: a redpoint, and no longer a project.
+        composeRule.waitForTag("screen_ProblemDetail")
         composeRule.onNodeWithTag("log_go").performClick()
         composeRule.waitForTag("screen_LogClimb")
         composeRule.waitUntil(5_000) {
-            composeRule.onAllNodes(hasTestTag("where_summary") and hasText("Pink crimps", substring = true)).fetchSemanticsNodes().isNotEmpty()
+            runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Redpoint") }.isSuccess
         }
-        composeRule.onNodeWithTag("style_ATTEMPT").performScrollTo().performClick()
-        composeRule.onNodeWithTag("effort_7").performScrollTo().performClick()
-        composeRule.onNodeWithTag("effort_value").assertTextEquals("7")
         composeRule.onNodeWithTag("save_climb").performClick()
-
         composeRule.waitForTag("screen_ProblemDetail")
         composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("1") }.isSuccess
+            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("3") }.isSuccess
         }
-
         composeRule.onNodeWithTag("nav_Progress").performClick()
-        composeRule.waitForTag("project_row")
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("project_row").fetchSemanticsNodes().isEmpty() }
 
         // The favourite shows as a quick pick on a new log.
         composeRule.onNodeWithTag("log_fab").performClick()

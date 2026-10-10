@@ -20,6 +20,8 @@ data class Climb(
     val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
+    /** Of [attempts], how many were sends. */
+    val sends: Int = if (style.isSend) 1 else 0,
     /** Local grades only: the label and tape colour as logged. */
     val gradeLabel: String? = null,
     val gradeColour: Long? = null,
@@ -72,6 +74,8 @@ data class NewClimb(
     val gradeColour: Long? = null,
     val sectionId: Long? = null,
     val sessionId: Long? = null,
+    /** Of [attempts], how many were sends; the rest were falls. */
+    val sends: Int = if (style.isSend) 1 else 0,
 )
 
 data class PersonalBest(

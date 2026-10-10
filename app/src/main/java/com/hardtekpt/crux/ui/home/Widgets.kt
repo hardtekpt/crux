@@ -287,7 +287,7 @@ private fun ProjectsWidget(state: HomeUiState, large: Boolean, actions: WidgetAc
             }
         }
         if (!state.isLoading && projects.isEmpty()) {
-            EmptyWidgetText("No open projects. Log a go on a saved problem and it stays here until you send it.")
+            EmptyWidgetText("No open projects. A climb you've tried and not sent stays here until you send it.")
         }
         Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
             projects.forEachIndexed { index, project ->
@@ -387,7 +387,7 @@ private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActio
         Column(Modifier.weight(1f)) {
             Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(project.placeName, project.areaName).joinToString(" · "),
+                listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { "No place" },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,

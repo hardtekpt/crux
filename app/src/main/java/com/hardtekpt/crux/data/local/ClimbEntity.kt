@@ -8,7 +8,10 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.Venue
 
-/** A single logged climb. The grade is its scale plus an index into that scale. */
+/**
+ * One log: a day's goes on a climb ([problemId], the `problems` row), with how many were sends.
+ * The grade is its scale plus an index into that scale. Since schema 21 every log has a climb.
+ */
 @Entity(tableName = "climbs", indices = [Index("dateEpochDay"), Index("placeId"), Index("problemId")])
 data class ClimbEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -41,6 +44,8 @@ data class ClimbEntity(
     val sectionId: Long? = null,
     /** The live session it was logged in (schema 17). */
     val sessionId: Long? = null,
+    /** Of [attempts], how many were sends (schema 21); the rest were falls. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val sends: Int = 0,
 )
 
 /** One row per discipline and send style: the hardest climb sent that way. */

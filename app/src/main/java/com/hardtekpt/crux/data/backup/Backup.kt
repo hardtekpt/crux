@@ -21,7 +21,7 @@ enum class BackupSection(val label: String, val description: String, val noun: S
     PLANS("Plan list", "Session plans, with the exercises they use", "plans"),
     JOURNAL("Journal", "Every climb you logged, with its photo and video", "climbs"),
     SESSIONS("Session history", "Finished sessions, with every set you logged", "sessions"),
-    PLACES("Places", "Gyms, crags and boards, with their walls, wall images and problems", "places"),
+    PLACES("Places", "Gyms, crags and boards, with their walls, wall images and climbs", "places"),
     BODY("Body stats", "Weigh-ins, body stats and circumferences", "body stats"),
     RECORDS("Personal records", "Results logged on exercises", "records"),
     NOTES("Notes", "Everything in your notes", "notes"),
@@ -153,6 +153,8 @@ data class ClimbDto(
     val loggedPlace: String? = null,
     /** The session it was logged in, by the session's [SessionDto.startedAt]. */
     val session: Long? = null,
+    /** Of [attempts], how many were sends. Older backups omit it: one for a send, none for an attempt. */
+    val sends: Int? = null,
     /** Version 2: the photo and video, by their file names under `media/` in the archive. */
     val photoFile: String? = null,
     val videoFile: String? = null,

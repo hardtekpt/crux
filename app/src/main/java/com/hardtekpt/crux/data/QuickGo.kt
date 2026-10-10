@@ -16,10 +16,10 @@ class QuickGo(private val climbs: ClimbRepository, private val places: PlaceRepo
     /** Logs the go and returns the new climb's id, or null if the problem is gone. */
     suspend fun log(problemId: Long): Long? {
         val problem = places.getProblem(problemId) ?: return null
-        val detail = places.observePlaceDetail(problem.placeId).first()
+        val detail = problem.placeId?.let { places.observePlaceDetail(it).first() }
         val place = detail?.place
         val area = detail?.areas?.firstOrNull { it.id == problem.areaId }
-        val section = place?.sectionOf(area)
+        val section = place?.sections?.firstOrNull { it.id == problem.sectionId } ?: place?.sectionOf(area)
         return climbs.logClimb(
             NewClimb(
                 discipline = problem.discipline,

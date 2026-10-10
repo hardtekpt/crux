@@ -161,6 +161,7 @@ class BackupRepository(
                         section = climb.sectionId?.let(sectionNames::get),
                         problem = climb.problemId?.let(problems::get)?.name,
                         session = climb.sessionId?.let(sessionStarts::get),
+                        sends = climb.sends,
                         photoFile = photo(photos[climb.id]),
                         videoFile = video(videos[climb.id]),
                     )
@@ -677,7 +678,7 @@ class BackupRepository(
                 places = dao.getPlaces(),
                 sections = dao.getAllSections().groupBy { it.placeId },
                 areas = dao.getAllAreas().groupBy { it.placeId },
-                problems = dao.getAllProblems().groupBy { it.placeId },
+                problems = dao.getAllProblems().filter { it.placeId != null }.groupBy { it.placeId!! },
                 plans = db.templateDao().getAll().groupBy { nameKey(it.template.name) }.mapValues { it.value.first().template.id },
             ).also { links = it }
         }
@@ -778,6 +779,7 @@ class BackupRepository(
                     gradeIndex = index,
                     style = dto.style,
                     attempts = dto.attempts,
+                    sends = (dto.sends ?: if (dto.style.isSend) 1 else 0).coerceIn(0, dto.attempts),
                     venue = dto.venue,
                     dateEpochDay = LocalDate.parse(dto.date).toEpochDay(),
                     createdAtMillis = dto.loggedAt,
@@ -791,7 +793,12 @@ class BackupRepository(
                             ?: here.firstOrNull { it.type.venue == dto.venue }?.id
                     },
                     areaId = dto.area?.let { name -> links.areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
-                    problemId = dto.problem?.let { name -> links.problems[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
+                    // Its climb at that place by name; logs without one get theirs once all are in.
+                    problemId = (dto.problem ?: dto.name)?.let { name ->
+                        place?.let {
+                            links.problems[it.id]
+                        }.orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) && it.discipline == dto.discipline }?.id
+                    },
                     angle = dto.angle,
                     effort = dto.effort,
                     gradeLabel = dto.grade.takeIf { dto.gradeScale.isLocal },
@@ -818,6 +825,8 @@ class BackupRepository(
                     }
                 }
             }
+            // Every log belongs to a climb: the rest join one by name and place, or start one.
+            com.hardtekpt.crux.data.local.ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
         }
 
         /** The climb's photo and video from the backup, in place of any it has. Without them it keeps its own. */
@@ -1021,7 +1030,7 @@ private class Describer(private val clock: Clock) {
         dto.type.label,
         dto.location,
         "${dto.areas.size} walls",
-        "${dto.problems.size} problems",
+        "${dto.problems.size} climbs",
         dto.notes?.snippet(),
     )
 

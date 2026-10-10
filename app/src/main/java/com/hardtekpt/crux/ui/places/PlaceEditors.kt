@@ -454,7 +454,7 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
             title = { Text("Delete ${draft.name}?", style = MaterialTheme.typography.headlineSmall) },
             text = {
                 Text(
-                    "Its walls and problems go. Climbs you logged here stay in your journal under the same name.",
+                    "Its walls go. Your climbs and every go on them stay in your journal, with no place.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -850,7 +850,7 @@ class ProblemEditorViewModel @Inject constructor(
             if (problem != null) {
                 _draft.update {
                     it.copy(
-                        placeId = problem.placeId, areaId = problem.areaId, name = problem.name,
+                        placeId = problem.placeId ?: 0L, areaId = problem.areaId, name = problem.name,
                         discipline = problem.discipline, gradeScale = problem.gradeScale, gradeIndex = problem.gradeIndex,
                         tape = problem.tape, notes = problem.notes.orEmpty(), retired = problem.retired,
                     )
@@ -903,7 +903,7 @@ class ProblemEditorViewModel @Inject constructor(
     fun save() {
         val d = _draft.value
         val error = when {
-            d.name.isBlank() -> "Give it a name, even just the colour and wall"
+            d.name.isBlank() -> "Give the climb a name, even just the colour and wall"
             d.name.trim().length > MAX_NAME -> "Keep the name under $MAX_NAME characters"
             else -> null
         }
@@ -914,7 +914,7 @@ class ProblemEditorViewModel @Inject constructor(
         viewModelScope.launch {
             val id = repository.saveProblem(
                 ProblemInput(
-                    id = d.id, placeId = d.placeId, areaId = d.areaId, name = d.name, discipline = d.discipline,
+                    id = d.id, placeId = d.placeId.takeIf { it != 0L }, areaId = d.areaId, name = d.name, discipline = d.discipline,
                     gradeScale = d.gradeScale, gradeIndex = d.gradeIndex, tape = d.tape, notes = d.notes,
                     gradeLabel = d.system.label(d.gradeIndex), gradeColour = d.system.colour(d.gradeIndex),
                 ),
@@ -942,7 +942,7 @@ fun ProblemEditorScreen(onDone: (deleted: Boolean) -> Unit, viewModel: ProblemEd
     val place by viewModel.place.collectAsStateWithLifecycle()
     LaunchedEffect(draft.done) { if (draft.done) onDone(draft.deleted) }
     val space = CruxTheme.space
-    val noun = if (draft.discipline == Discipline.ROUTE) "route" else "problem"
+    val noun = "climb"
 
     Column(Modifier.fillMaxSize().imePadding().testTag("screen_ProblemEditor")) {
         CruxTopAppBar(
@@ -1005,7 +1005,7 @@ fun ProblemEditorScreen(onDone: (deleted: Boolean) -> Unit, viewModel: ProblemEd
             )
             if (!draft.isNew) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Retired (taken down)", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text("Taken down", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     androidx.compose.material3.Switch(checked = draft.retired, onCheckedChange = { r -> viewModel.update { it.copy(retired = r) } })
                 }
             }
@@ -1029,7 +1029,7 @@ fun ProblemEditorScreen(onDone: (deleted: Boolean) -> Unit, viewModel: ProblemEd
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = MaterialTheme.shapes.extraLarge,
             title = { Text("Delete ${draft.name}?", style = MaterialTheme.typography.headlineSmall) },
-            text = { Text("Your logged goes on it stay in the journal.", style = MaterialTheme.typography.bodyMedium) },
+            text = { Text("Every go you logged on it is deleted too, and it leaves your journal.", style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
