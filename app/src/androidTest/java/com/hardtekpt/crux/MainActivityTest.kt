@@ -402,28 +402,24 @@ class MainActivityTest {
         composeRule.textFieldIn("field_name").performTextInput("Pink crimps")
         composeRule.onNodeWithTag("save_climb").performClick()
 
+        // The place lists it; tapping it opens Log climb on it, with its earlier log below.
         composeRule.waitForTag("problem_row")
         composeRule.onNodeWithTag("problem_row").performClick()
-        composeRule.waitForTag("screen_ProblemDetail")
-        composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("2") }.isSuccess
-        }
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitForTag("earlier_logs")
+        composeRule.onNodeWithTag("back").performClick()
+        composeRule.waitForTag("screen_PlaceDetail")
+
+        // From Projects, come back and send it first go: a redpoint, and no longer a project.
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("project_row")
         composeRule.onNodeWithTag("project_row").performClick()
-
-        // Come back and send it first go: a redpoint, and no longer a project.
-        composeRule.waitForTag("screen_ProblemDetail")
-        composeRule.onNodeWithTag("log_go").performClick()
         composeRule.waitForTag("screen_LogClimb")
         composeRule.waitUntil(5_000) {
             runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Redpoint") }.isSuccess
         }
         composeRule.onNodeWithTag("save_climb").performClick()
-        composeRule.waitForTag("screen_ProblemDetail")
-        composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("problem_goes", useUnmergedTree = true).assertTextEquals("3") }.isSuccess
-        }
+        composeRule.waitForTag("screen_Progress")
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("project_row").fetchSemanticsNodes().isEmpty() }
 

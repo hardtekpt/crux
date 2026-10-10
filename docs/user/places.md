@@ -40,12 +40,13 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 ## Climbs
 
 A climb is what you log goes on: a name, boulder or route, a grade (or a local grade), and where
-it is, if anywhere. You don't create climbs separately; logging goes starts one. Its page shows
-your goes in all, the days you tried it, when you sent it, and **every log**. **Log more goes**
-opens Log climb on it. Edit it to change its name, grade, wall, **tape colour** or notes; its logs
-follow. Deleting a climb deletes its logs.
+it is, if anywhere. You don't create climbs separately; logging goes starts one. Tapping a climb
+(on a place, or a project) opens **Log climb** on it, ready for more goes, with its **earlier
+logs** listed at the bottom; tap one to change or delete it. Changing the name, grade or wall in
+the form changes the climb and all its logs. Deleting a climb's last log deletes the climb.
 
-**Taken down** hides a climb from suggestions and projects. Its history stays in your journal.
+When the gym resets a wall, its climbs are **taken down**: hidden from suggestions and projects,
+with their history kept in your journal.
 
 ## Projects
 
@@ -55,4 +56,4 @@ stops being a project.
 
 To log another go quickly, tap **+1 go** on the project in Home's Projects widget or in Progress.
 It logs a fall today on that climb, at its place and wall; tap **Undo** in the next few seconds if
-it was a slip. To log a send, or goes with a note, open the project and tap **Log more goes**.
+it was a slip. To log a send, or goes with a note, tap the project itself.

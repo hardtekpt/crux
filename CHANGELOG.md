@@ -33,7 +33,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   attempt, flash, onsight (route, no beta) or redpoint. How hard it felt is five words. The day is
   a calendar button beside the place, amber when it isn't today. Name suggestions continue a
   climb; note, photo and video are chips until used.
-- **A climb's page** shows every log, with **Log more goes** and **+1 go**.
+- **Tapping a climb or project opens Log climb on it**, ready for more goes, with its earlier logs
+  listed at the bottom. There's no separate climb page to edit any more.
 
 - **The Bodyweight and Weight trend widgets** open Measurements instead of the You page.
 - **Latest best** on Home is your newest hardest send: the latest send harder than all before it,
@@ -51,7 +52,6 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Goes on a climb add up across days**: a send on your first go today, after earlier tries, is
   a redpoint, and the form shows your goes in all.
 - **The Journal's day tally** counts a session's logs on one climb once, like the session card.
-- **A climb opened from Progress or Home** keeps that tab lit, not You.
 - **Backups keep the place name you logged**, and a place renamed since no longer makes its climbs
   import twice.
 - **Log climb remembers where you were.** A new climb starts at the last climb's place, facility

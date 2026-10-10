@@ -150,6 +150,13 @@ class LogClimbViewModel @Inject constructor(
     val places: StateFlow<List<PlaceSummary>> = placeRepository.observePlaces()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The climb's other logs, newest first, shown under the form. */
+    val earlierLogs: StateFlow<List<com.hardtekpt.crux.data.model.Climb>> = _draft.map { it.problemId to it.climbId }.distinctUntilChanged()
+        .flatMapLatest { (problemId, climbId) ->
+            if (problemId == null) flowOf(emptyList()) else climbRepository.observeClimbsForProblem(problemId).map { logs -> logs.filter { it.id != climbId } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Walls and problems of the picked place. */
     val placeDetail: StateFlow<PlaceDetail?> = _draft.map { it.placeId }.distinctUntilChanged()
         .flatMapLatest { id -> if (id == null) flowOf(null) else placeRepository.observePlaceDetail(id) }

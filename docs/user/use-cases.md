@@ -35,7 +35,7 @@ repeat on the board build up its list, and the ones you haven't sent yet show as
 1. Give the gym's main walls **local grades**: the tape colours, easiest to hardest.
 2. Add the wall, with a photo of it so you can find the climb again.
 3. Log your goes on it with a name, say "Pink crimps": tap **+ Fell** for each go. Next session,
-   pick it from the name suggestions (or tap **+1 go** on it in Projects) and keep going; the day it
+   tap it in Projects (or pick it from the name suggestions, or tap **+1 go**) and keep going; the day it
    goes, tap **+ Sent** and it's a redpoint.
 
 The climb stays in **Projects** on Home and Progress until you send it, with its goes and your

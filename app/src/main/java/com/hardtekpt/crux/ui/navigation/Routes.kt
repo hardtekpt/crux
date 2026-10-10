@@ -40,10 +40,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class PlaceEditorRoute(val placeId: Long = 0)
 
-@Serializable data class ProblemDetailRoute(val problemId: Long)
-
-@Serializable data class ProblemEditorRoute(val placeId: Long, val problemId: Long = 0)
-
 @Serializable data object ProgressRoute
 
 @Serializable data object YouRoute

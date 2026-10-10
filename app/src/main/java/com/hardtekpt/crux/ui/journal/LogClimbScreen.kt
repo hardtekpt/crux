@@ -72,6 +72,7 @@ import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
+import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
@@ -87,16 +88,19 @@ import com.hardtekpt.crux.ui.components.input.GradeStrip
 import com.hardtekpt.crux.ui.components.input.PastDayDialog
 import com.hardtekpt.crux.ui.components.input.bleed
 import com.hardtekpt.crux.ui.dayLabel
+import com.hardtekpt.crux.ui.gradeState
+import com.hardtekpt.crux.ui.outcomeLine
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
 @Composable
-fun LogClimbScreen(onDone: () -> Unit, viewModel: LogClimbViewModel = hiltViewModel()) {
+fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel: LogClimbViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val places by viewModel.places.collectAsStateWithLifecycle()
     val detail by viewModel.placeDetail.collectAsStateWithLifecycle()
+    val earlierLogs by viewModel.earlierLogs.collectAsStateWithLifecycle()
     LaunchedEffect(draft.saved) { if (draft.saved) onDone() }
     val whereActions = WhereActions(
         selectPlace = viewModel::selectPlace,
@@ -116,6 +120,8 @@ fun LogClimbScreen(onDone: () -> Unit, viewModel: LogClimbViewModel = hiltViewMo
         onGo = viewModel::addGo,
         onUndoGo = viewModel::undoGo,
         onNoBeta = viewModel::setNoBeta,
+        earlierLogs = earlierLogs,
+        onOpenLog = onOpenLog,
         onDelete = viewModel::requestDelete,
         onDiscipline = viewModel::setDiscipline,
         onGrade = viewModel::setGrade,
@@ -180,6 +186,8 @@ fun LogClimbContent(
     onGo: (Boolean) -> Unit = {},
     onUndoGo: () -> Unit = {},
     onNoBeta: (Boolean) -> Unit = {},
+    earlierLogs: List<com.hardtekpt.crux.data.model.Climb> = emptyList(),
+    onOpenLog: (Long) -> Unit = {},
     onDelete: () -> Unit = {},
     onEffort: (Int?) -> Unit = {},
     media: @Composable () -> Unit = {},
@@ -260,6 +268,7 @@ fun LogClimbContent(
             // Name: suggests climbs here to continue; any other name starts a new climb.
             NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3))
             Extras(draft, onNotes, media)
+            if (earlierLogs.isNotEmpty()) EarlierLogs(earlierLogs, onOpenLog, Modifier.padding(top = space.s4))
         }
         CruxButton(
             text = if (draft.isEditing) "Save changes" else "Log climb",
@@ -613,6 +622,27 @@ private fun MediaThumb(onRemove: () -> Unit, removeTag: String, thumbnail: @Comp
                 .testTag(removeTag),
         ) {
             Icon(Icons.Rounded.Close, contentDescription = "Remove", modifier = Modifier.size(12.dp))
+        }
+    }
+}
+
+/**
+ * The climb's other logs, newest first: the day, the grade and how it went. Tapping one opens
+ * it to change or delete.
+ */
+@Composable
+private fun EarlierLogs(logs: List<com.hardtekpt.crux.data.model.Climb>, onOpen: (Long) -> Unit, modifier: Modifier = Modifier) {
+    val goes = logs.sumOf { it.attempts }
+    Column(modifier.testTag("earlier_logs"), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+        Eyebrow("Earlier logs · $goes ${if (goes == 1) "go" else "goes"}")
+        logs.forEach { log ->
+            CruxListRow(
+                title = log.date.dayLabel(),
+                supporting = listOfNotNull(log.outcomeLine(), log.notes).joinToString(" · "),
+                leading = { com.hardtekpt.crux.ui.components.GradeBadge(log.grade, log.gradeState) },
+                onClick = { onOpen(log.id) },
+                modifier = Modifier.testTag("earlier_log"),
+            )
         }
     }
 }

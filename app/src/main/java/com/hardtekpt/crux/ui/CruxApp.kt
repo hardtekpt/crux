@@ -72,8 +72,6 @@ import com.hardtekpt.crux.ui.navigation.PlaceDetailRoute
 import com.hardtekpt.crux.ui.navigation.PlaceEditorRoute
 import com.hardtekpt.crux.ui.navigation.PlacesRoute
 import com.hardtekpt.crux.ui.navigation.PlanEditorRoute
-import com.hardtekpt.crux.ui.navigation.ProblemDetailRoute
-import com.hardtekpt.crux.ui.navigation.ProblemEditorRoute
 import com.hardtekpt.crux.ui.navigation.ProgressGraph
 import com.hardtekpt.crux.ui.navigation.ProgressRoute
 import com.hardtekpt.crux.ui.navigation.RecordEditorRoute
@@ -96,8 +94,6 @@ import com.hardtekpt.crux.ui.navigation.cruxPredictivePopExit
 import com.hardtekpt.crux.ui.navigation.navBarClearance
 import com.hardtekpt.crux.ui.places.PlaceDetailScreen
 import com.hardtekpt.crux.ui.places.PlaceEditorScreen
-import com.hardtekpt.crux.ui.places.ProblemDetailScreen
-import com.hardtekpt.crux.ui.places.ProblemEditorScreen
 import com.hardtekpt.crux.ui.progress.ProgressScreen
 import com.hardtekpt.crux.ui.quicklog.QuickLogAction
 import com.hardtekpt.crux.ui.quicklog.QuickLogSheet
@@ -141,7 +137,6 @@ fun CruxApp() {
         PlanEditorRoute::class,
         ExerciseEditorRoute::class,
         PlaceEditorRoute::class,
-        ProblemEditorRoute::class,
         NoteEditorRoute::class,
         RecordEditorRoute::class,
     )
@@ -181,7 +176,7 @@ fun CruxApp() {
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
-                            onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
                             onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
@@ -249,7 +244,7 @@ fun CruxApp() {
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) }) }
+                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) }) }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {
@@ -292,7 +287,7 @@ fun CruxApp() {
                         PlaceDetailScreen(
                             onBack = navController::popBackStack,
                             onEdit = { navController.navigate(PlaceEditorRoute(it)) },
-                            onOpenProblem = { navController.navigate(ProblemDetailRoute(it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
                             onLogHere = { placeId, sectionId -> navController.navigate(LogClimbRoute(placeId = placeId, sectionId = sectionId ?: 0)) },
                         )
                     }
@@ -329,29 +324,6 @@ fun CruxApp() {
                         )
                     }
                 }
-                // A problem opens over whichever tab it was tapped in.
-                page<ProblemDetailRoute> {
-                    ProblemDetailScreen(
-                        onBack = navController::popBackStack,
-                        onEdit = { placeId, problemId -> navController.navigate(ProblemEditorRoute(placeId, problemId)) },
-                        onLogGo = { navController.navigate(LogClimbRoute(problemId = it)) },
-                        onOpenClimb = { navController.navigate(LogClimbRoute(climbId = it)) },
-                    )
-                }
-                page<ProblemEditorRoute> {
-                    ProblemEditorScreen(
-                        onDone = { deleted ->
-                            // Deleting from the editor also leaves the problem's own page.
-                            val fromDetail = navController.previousBackStackEntry?.destination
-                                ?.hasRoute(ProblemDetailRoute::class) == true
-                            if (deleted && fromDetail) {
-                                navController.popBackStack<ProblemDetailRoute>(inclusive = true)
-                            } else {
-                                navController.popBackStack()
-                            }
-                        },
-                    )
-                }
                 page<SessionRoute> {
                     com.hardtekpt.crux.ui.session.SessionScreen(
                         onLeave = navController::popBackStack,
@@ -359,7 +331,9 @@ fun CruxApp() {
                         onFinished = navController::popBackStack,
                     )
                 }
-                page<LogClimbRoute> { LogClimbScreen(onDone = navController::popBackStack) }
+                page<LogClimbRoute> {
+                    LogClimbScreen(onDone = navController::popBackStack, onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) })
+                }
                 page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
                 page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }
                 page<RecordEditorRoute> { RecordEditorScreen(onDone = navController::popBackStack) }

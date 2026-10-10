@@ -136,7 +136,8 @@ ticked, so they stay right when the screen is off or the app is in the backgroun
   effort, notes, media, session. Every log has a climb: `ClimbLinks.linkUnlinked` gives a log
   without one the climb of the same name at the same place (and discipline), or a new climb, named
   from the grade and where it was when the log has no name. Editing a climb rewrites its logs'
-  name, grade and place (`PlaceDao.syncLogs`); deleting the last log deletes the climb.
+  name, grade and place (`PlaceDao.syncLogs`); deleting the last log deletes the climb. A climb has
+  no page of its own: opening it opens Log climb with `problemId`, which lists its other logs.
 - **Projects are derived, not flagged**: a climb that isn't taken down, has goes, and has no send.
 - **Retired** (shown as *taken down*): hidden from suggestions and projects, history kept.
   Resetting a wall takes its climbs down.
