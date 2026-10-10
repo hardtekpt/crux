@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Interval timer page**, under *You*: a full-screen timer for the gym. Pick Tabata, Repeaters,
+  Max hangs or 4×4s, or set your own; then the phase's colour fills the screen, the seconds are as
+  big as they can be, and big buttons pause, skip and go back. Works on its side too.
 - **More accent colours**: Magenta, Slate and Chalk, alongside Teal, Blue, Violet and Pink.
 
 ## [0.3.0] - 2026-10-10

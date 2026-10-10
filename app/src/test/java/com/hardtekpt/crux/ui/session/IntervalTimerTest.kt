@@ -60,4 +60,19 @@ class IntervalTimerTest {
         assertEquals(IntervalStretch(5_000, 10_000), run.stretch(5_000))
         assertEquals(IntervalStretch(50_000, 60_000), run.stretch(100_000))
     }
+
+    @Test
+    fun `skipping jumps to the start of a phase, running or paused`() {
+        val run = IntervalRun(spec, startedAtMillis = 0)
+        // 5 s into the prep; on to the first repeat.
+        val skipped = run.skipTo(1, nowMillis = 5_000)
+        assertEquals(IntervalPhase.Kind.WORK, skipped.position(5_000).phase.kind)
+        assertEquals(20_000, skipped.position(5_000).leftMillis)
+        // Paused, it stays put at the start of the phase it went to.
+        val paused = run.pause(5_000).skipTo(2, nowMillis = 9_000)
+        assertEquals(IntervalPhase.Kind.REST, paused.position(30_000).phase.kind)
+        assertEquals(10_000, paused.position(30_000).leftMillis)
+        // Past the last phase is the end.
+        assertTrue(run.skipTo(spec.phases.size + 3, nowMillis = 1_000).position(1_000).finished)
+    }
 }

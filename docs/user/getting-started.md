@@ -39,7 +39,7 @@ The floating bar at the bottom has five tabs and the **+** Log button:
 | **Train** | Your exercise library and session plans | [Training](training.md) |
 | **Journal** | One timeline of climbs, sessions, training results and notes | [Journal](journal.md) |
 | **Progress** | Hardest sends per grade scale, grade pyramids, charts, open projects | [Progress](progress.md) |
-| **You** | Climber card, consistency, personal records, weight, measurements, notes, places, grade converter, settings | [You](you.md) |
+| **You** | Climber card, consistency, personal records, weight, measurements, notes, places, grade converter, interval timer, settings | [You](you.md) |
 
 The **+** Log menu has four entries:
 

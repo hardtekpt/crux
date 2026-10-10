@@ -53,6 +53,7 @@ com.hardtekpt.crux
 │   ├── components/         Buttons, cards, list rows, inputs; input/ = the touch input kit
 │   ├── charts/             Canvas charts and chart cards
 │   ├── home/ train/ journal/ session/ progress/ you/ places/ settings/ quicklog/
+│   ├── timer/              The standalone, full-screen interval timer
 │   ├── Format.kt           Date and number formatting
 │   └── Units.kt            Metric/imperial display, LocalUnits, LocalGradeScales, LocalClock
 └── work/                   WorkManager workers
@@ -66,5 +67,6 @@ com.hardtekpt.crux
 | Data flow for one screen | `ui/home/HomeViewModel.kt` → `data/ClimbRepository.kt` → `data/local/ClimbDao.kt` |
 | Places and grades | `data/model/Climbing.kt`, `data/model/Places.kt`, `data/PlaceRepository.kt` |
 | Live sessions | `data/SessionRepository.kt`, `ui/session/SessionScreen.kt`, `ui/session/IntervalTimer.kt` |
+| The standalone timer | `ui/timer/IntervalTimerScreen.kt` (reuses `IntervalRun` and the session's timer pieces) |
 | Migrations | `data/local/CruxDatabase.kt`, [Database](database.md) |
 | Tests | [Testing](testing.md) |

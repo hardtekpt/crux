@@ -31,7 +31,8 @@ session. Only one session runs at a time; starting another ends the first.
   can also log cycles by hand.
 - **Extras**: **+ Exercise** adds an exercise from your library, and **Timer** runs an interval
   timer of its own. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
-  (6 × 7 s on, 3 s off, three cycles, 3 min between).
+  (6 × 7 s on, 3 s off, three cycles, 3 min between). Outside a session, *You → Interval timer* is
+  a full-screen timer of its own: see [You](you.md#interval-timer).
 - **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
   session shows your climbs, sends and hardest send so far. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the

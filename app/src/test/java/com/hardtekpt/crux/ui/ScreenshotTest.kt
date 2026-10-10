@@ -48,6 +48,9 @@ import com.hardtekpt.crux.ui.places.PlaceDetailScreen
 import com.hardtekpt.crux.ui.places.PlaceDetailViewModel
 import com.hardtekpt.crux.ui.progress.ProgressContent
 import com.hardtekpt.crux.ui.progress.ProgressViewModel
+import com.hardtekpt.crux.ui.session.IntervalPhase
+import com.hardtekpt.crux.ui.session.IntervalRun
+import com.hardtekpt.crux.ui.session.IntervalSpec
 import com.hardtekpt.crux.ui.session.SessionScreen
 import com.hardtekpt.crux.ui.session.SessionViewModel
 import com.hardtekpt.crux.ui.settings.BackupContent
@@ -55,6 +58,8 @@ import com.hardtekpt.crux.ui.settings.BackupUiState
 import com.hardtekpt.crux.ui.settings.SettingsContent
 import com.hardtekpt.crux.ui.settings.SettingsUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.timer.IntervalTimerRunning
+import com.hardtekpt.crux.ui.timer.IntervalTimerSetup
 import com.hardtekpt.crux.ui.train.TrainScreen
 import com.hardtekpt.crux.ui.train.TrainViewModel
 import com.hardtekpt.crux.ui.you.ProfileActions
@@ -176,6 +181,29 @@ class ScreenshotTest {
 
     @Test
     fun backups() = bothThemes("backups") { BackupContent(state = BackupUiState(), onBack = {}) }
+
+    @Test
+    fun intervalTimer() = bothThemes("interval_timer") { IntervalTimerSetup(IntervalSpec.REPEATERS, onSpec = {}, onStart = {}, onBack = {}) }
+
+    @Test
+    fun intervalTimerRunning() = bothThemes("interval_timer_running") { RunningTimer() }
+
+    @Test
+    @Config(qualifiers = "+land")
+    fun intervalTimerLandscape() = bothThemes("interval_timer_landscape", dark = DARK) { RunningTimer() }
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun intervalTimerLargestText() = bothThemes("interval_timer_running_text_largest", dark = DARK) { RunningTimer() }
+
+    /** Repeaters, 3.5 s into the fourth repeat of the second cycle. */
+    @Composable
+    private fun RunningTimer() {
+        val run = IntervalRun(IntervalSpec.REPEATERS, startedAtMillis = 0)
+        val index = run.spec.phases.indexOfFirst { it.kind == IntervalPhase.Kind.WORK && it.cycle == 1 && it.repeat == 3 }
+        val now = run.startOf(index) + 3_500
+        IntervalTimerRunning(run, now, { now }, onPause = {}, onResume = {}, onStop = {}, onRestart = {}, onSkip = {})
+    }
 
     @Test
     fun train() {

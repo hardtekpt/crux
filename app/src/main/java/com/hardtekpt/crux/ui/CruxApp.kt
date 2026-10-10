@@ -60,6 +60,7 @@ import com.hardtekpt.crux.ui.navigation.FloatingNavBar
 import com.hardtekpt.crux.ui.navigation.GradeConverterRoute
 import com.hardtekpt.crux.ui.navigation.HomeGraph
 import com.hardtekpt.crux.ui.navigation.HomeRoute
+import com.hardtekpt.crux.ui.navigation.IntervalTimerRoute
 import com.hardtekpt.crux.ui.navigation.JournalGraph
 import com.hardtekpt.crux.ui.navigation.JournalRoute
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -101,6 +102,7 @@ import com.hardtekpt.crux.ui.settings.AboutScreen
 import com.hardtekpt.crux.ui.settings.BackupScreen
 import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.timer.IntervalTimerScreen
 import com.hardtekpt.crux.ui.train.ExerciseEditorScreen
 import com.hardtekpt.crux.ui.train.PlanEditorScreen
 import com.hardtekpt.crux.ui.train.TemplateDetailScreen
@@ -139,6 +141,7 @@ fun CruxApp() {
         PlaceEditorRoute::class,
         NoteEditorRoute::class,
         RecordEditorRoute::class,
+        IntervalTimerRoute::class,
     )
     // The current screen's tab; a page outside the tabs, like a problem, keeps the tab it was
     // opened from lit.
@@ -259,6 +262,7 @@ fun CruxApp() {
                                 openNotes = { navController.navigate(NotesRoute) },
                                 openPlaces = { navController.navigate(PlacesRoute) },
                                 openConverter = { navController.navigate(GradeConverterRoute) },
+                                openTimer = { navController.navigate(IntervalTimerRoute) },
                             ),
                         )
                     }
@@ -276,6 +280,7 @@ fun CruxApp() {
                     }
                     page<CircumferencesRoute> { CircumferencesScreen(onBack = navController::popBackStack) }
                     page<GradeConverterRoute> { GradeConverterScreen(onBack = navController::popBackStack) }
+                    page<IntervalTimerRoute> { IntervalTimerScreen(onBack = navController::popBackStack) }
                     page<PlacesRoute> {
                         PlacesScreen(
                             onBack = navController::popBackStack,

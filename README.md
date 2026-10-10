@@ -65,7 +65,8 @@ tests, so they always match the current version.
 - An exercise library measured your way: reps, time, with or without added load, or intervals.
 - Session plans in blocks, with targets for sets, reps, time, load and rest.
 - **Live sessions**: run a plan set by set with a rest timer, or a climbing day without a plan. An
-  interval timer (Tabata, hangboard repeaters, your own) logs each cycle for you.
+  interval timer (Tabata, hangboard repeaters, your own) logs each cycle for you, and runs on its
+  own as a full-screen timer for the gym.
 
 **Climb**
 - Log a climb in seconds: grade, style (flash, onsight, redpoint, attempt), goes, how hard it felt,
@@ -161,6 +162,20 @@ You need JDK 21 and the Android SDK (platform 37). On Windows, `.\crux run` buil
 app on an emulator in one step. See [Development setup](docs/developer/setup.md).
 
 ## Changelog
+
+**Unreleased** on `dev`:
+- **Interval timer page**: a full-screen timer for the gym, under *You*, with Tabata, repeaters,
+  max hangs and 4×4s presets.
+- **More accent colours**: Magenta, Slate and Chalk.
+
+**[0.3.0](https://github.com/hardtekpt/crux/releases/tag/v0.3.0)** (2026-10-10):
+- **Climbs you can come back to**: tap + Fell or + Sent for each go; goes add up across days, with
+  +1 go on projects.
+- **Accent colour and text size** in Settings.
+- **Climbs this week** and **Days on the wall** pages, and a **Consistency** widget for Home.
+- **Compact timer** in sessions.
+- **Backups carry everything**: session history, settings, Home layout and videos, and import asks
+  about duplicates.
 
 **[0.2.0](https://github.com/hardtekpt/crux/releases/tag/v0.2.0)** (2026-10-07):
 - **Live sessions** with a rest timer and an interval timer that logs cycles for you.

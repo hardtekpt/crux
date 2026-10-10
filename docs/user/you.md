@@ -41,6 +41,29 @@ A menu of pages:
 - **Grade converter**: pick a system and a grade, and see it in every other system (French, YDS,
   UIAA, British, Ewbank, Font and V), with the whole chart below. It's a reference only; your logged climbs are never converted. See
   [Grades](grades.md#the-grade-converter).
+- **Interval timer**: a timer of its own, for the gym. See [below](#interval-timer).
 - **Settings**.
 
 Each measurement keeps its history: setting a new value adds today's reading and keeps the old ones.
+
+## Interval timer
+
+*You → Interval timer* is a timer for hangboarding, circuits and 4×4s, with nothing logged. Pick a
+preset (**Tabata**, **Repeaters**, **Max hangs**, **4×4s**) or set preparation, work, rest,
+repeats, cycles and the rest between cycles yourself. The bar at the top shows the whole timer, each
+phase in its colour, and Crux remembers the setup for next time.
+
+<img src="../../app/src/test/screenshots/interval_timer_running_dark.png" width="300" alt="The interval timer running: WORK, a big 4, repeat 4 of 6, cycle 2 of 3, and pause and skip buttons">
+
+**Start** fills the screen. The phase's colour (warm for work, cool for rest) fills it from the
+bottom and drains as the phase runs. The seconds left are as big as the screen allows, with the
+repeat and cycle you're on and what comes next. Hold the phone on its side and the number moves to
+the left, the buttons to the right.
+
+- **Pause** with the big middle button, or tap the number. Paused, **Restart** starts over.
+- **⏭** skips to the next phase. **⏮** goes back to the start of this one, or to the one before
+  in its first two seconds.
+- **✕** or back stops it. Back pauses a running timer first, so a stray swipe doesn't end it.
+
+The last three seconds of each phase beep (if *Timer sounds* is on in Settings), the phone buzzes
+when a phase changes, and the screen stays on until you close the timer.

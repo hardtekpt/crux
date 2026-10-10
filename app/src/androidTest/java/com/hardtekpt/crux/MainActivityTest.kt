@@ -146,6 +146,26 @@ class MainActivityTest {
     }
 
     @Test
+    fun theIntervalTimerRunsFullScreenAndStops() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_timer", "screen_IntervalTimer")
+        composeRule.onNodeWithTag("timer_preset_Tabata").performClick()
+        composeRule.onNodeWithTag("timer_start").performClick()
+        composeRule.waitForTag("screen_IntervalTimerRunning")
+        composeRule.onNodeWithTag("timer_phase").assertTextEquals("GET READY")
+        // Skip the preparation, pause, and the pause holds.
+        composeRule.onNodeWithTag("timer_skip_next").performClick()
+        composeRule.onNodeWithTag("timer_phase").assertTextEquals("WORK")
+        composeRule.onNodeWithTag("timer_pause").performClick()
+        composeRule.onNodeWithTag("timer_resume").assertExists()
+        composeRule.onNodeWithTag("timer_restart").assertExists()
+        // Stop goes back to the setup, which kept Tabata.
+        composeRule.onNodeWithTag("timer_stop").performClick()
+        composeRule.waitForTag("screen_IntervalTimer")
+        composeRule.onNodeWithTag("timer_preset_Tabata").assertExists()
+    }
+
+    @Test
     fun theGradeConverterTranslatesBetweenSystems() {
         composeRule.onNodeWithTag("nav_You").performClick()
         openFromProfileMenu("menu_converter", "screen_GradeConverter")

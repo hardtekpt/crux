@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.IntervalSettings
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -75,6 +76,19 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     suspend fun setTextSize(size: TextSize) {
         dataStore.edit { it[TEXT_SIZE] = size.name }
+    }
+
+    /** The standalone interval timer's last setup, so it opens as it was left. */
+    val intervalTimer: Flow<IntervalSettings?> = dataStore.data.map { prefs ->
+        prefs[INTERVAL_TIMER]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 6 }?.let { v ->
+            IntervalSettings(v[0], v[1], v[2], v[3], v[4], v[5])
+        }
+    }
+
+    suspend fun setIntervalTimer(settings: IntervalSettings) {
+        dataStore.edit {
+            it[INTERVAL_TIMER] = with(settings) { listOf(prepSeconds, workSeconds, restSeconds, repeats, cycles, cycleRestSeconds) }.joinToString(",")
+        }
     }
 
     val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
@@ -162,6 +176,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ACCENT = stringPreferencesKey("accent")
         val TEXT_SIZE = stringPreferencesKey("text_size")
+        val INTERVAL_TIMER = stringPreferencesKey("interval_timer")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")

@@ -13,7 +13,7 @@ Start with **[Getting started](user/getting-started.md)**.
 | [Journal](user/journal.md) | The timeline, search and filters, logging a climb, notes |
 | [Places](user/places.md) | Gyms, crags and boards, facilities, walls, climbs, local grades, maps, projects |
 | [Progress](user/progress.md) | Hardest sends, grade pyramids, charts, projects |
-| [You](user/you.md) | Climber card, consistency, personal records, weight, measurements, notes, grade converter |
+| [You](user/you.md) | Climber card, consistency, personal records, weight, measurements, notes, grade converter, interval timer |
 | [Grades](user/grades.md) | Scales, why grades are never converted, local grades, the converter |
 | [Settings and your data](user/settings-and-data.md) | Settings, demo mode, backups, Android backup, crash reports, privacy |
 | [Use cases](user/use-cases.md) | Walk-throughs: a gym session, repeaters, board sessions, projects, crag days, new phone |
