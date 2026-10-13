@@ -58,25 +58,61 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class TrainView(val label: String) { Plans("Plans"), Exercises("Exercises") }
+enum class TrainView(val label: String) { Week("Week"), Plans("Plans"), Exercises("Exercises") }
 
-data class TrainUiState(val isLoading: Boolean = true, val plans: List<WorkoutTemplate> = emptyList(), val exercises: List<Exercise> = emptyList()) {
+data class TrainUiState(
+    val isLoading: Boolean = true,
+    val plans: List<WorkoutTemplate> = emptyList(),
+    val exercises: List<Exercise> = emptyList(),
+    /** This week from the schedule, Monday first. */
+    val week: List<WeekDay> = emptyList(),
+    val today: java.time.LocalDate = java.time.LocalDate.now(),
+    /** Places for a climbing day. */
+    val places: List<com.hardtekpt.crux.data.model.PlaceSummary> = emptyList(),
+) {
     /** Library grouped by category, categories in their defined order. */
     val exercisesByCategory: Map<ExerciseCategory, List<Exercise>>
         get() = exercises.groupBy { it.category }.toSortedMap(compareBy { it.ordinal })
 }
 
 @HiltViewModel
-class TrainViewModel @Inject constructor(templates: TemplateRepository, exercises: ExerciseRepository, private val starterData: StarterData) : ViewModel() {
+class TrainViewModel @Inject constructor(
+    templates: TemplateRepository,
+    exercises: ExerciseRepository,
+    private val starterData: StarterData,
+    private val schedule: com.hardtekpt.crux.data.ScheduleRepository,
+    sessions: com.hardtekpt.crux.data.SessionRepository,
+    climbs: com.hardtekpt.crux.data.ClimbRepository,
+    places: com.hardtekpt.crux.data.PlaceRepository,
+    private val clock: java.time.Clock,
+) : ViewModel() {
+    /** Sets what a day of the week holds. */
+    fun setDay(day: java.time.DayOfWeek, plan: com.hardtekpt.crux.data.DayPlan) {
+        viewModelScope.launch { schedule.setDay(day, plan) }
+    }
+
     /** Copies the starter exercises and plans into the active data set. */
     fun addStarterLibrary() {
         viewModelScope.launch { starterData.addStarterLibraryToCurrent() }
     }
 
+    private val week = combine(
+        schedule.observeWeek(),
+        sessions.observeFinished(),
+        climbs.observeClimbs(),
+    ) { slots, finished, logged ->
+        val today = java.time.LocalDate.now(clock)
+        buildWeek(today, slots, finished, logged.map { it.date }.toSet(), clock.zone)
+    }
+
     val uiState: StateFlow<TrainUiState> = combine(
         templates.observeTemplates(),
         exercises.observeExercises(),
-    ) { plans, library -> TrainUiState(isLoading = false, plans = plans, exercises = library) }
+        week,
+        places.observePlaces(),
+    ) { plans, library, days, placeList ->
+        TrainUiState(isLoading = false, plans = plans, exercises = library, week = days, today = java.time.LocalDate.now(clock), places = placeList)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainUiState())
 }
 
@@ -87,9 +123,11 @@ fun TrainScreen(
     onOpenExercise: (Long) -> Unit,
     onNewExercise: () -> Unit,
     viewModel: TrainViewModel = hiltViewModel(),
+    initialView: TrainView = TrainView.Week,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var view by rememberSaveable { mutableStateOf(TrainView.Plans) }
+    var view by rememberSaveable { mutableStateOf(initialView) }
+    var editingDay by rememberSaveable { mutableStateOf<java.time.DayOfWeek?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
 
@@ -97,7 +135,7 @@ fun TrainScreen(
         Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            // Swipe sideways to move between Plans and Exercises.
+            // Swipe sideways to move between Week, Plans and Exercises.
             .swipeBetweenTabs { direction -> TrainView.entries.getOrNull(view.ordinal + direction)?.let { view = it } }
             .testTag("screen_Train"),
     ) {
@@ -120,10 +158,23 @@ fun TrainScreen(
             modifier = Modifier.testTag("train_list"),
         ) {
             when (view) {
+                TrainView.Week -> week(uiState) { day -> editingDay = day.date.dayOfWeek }
                 TrainView.Plans -> plans(uiState, onOpenPlan, onNewPlan, viewModel::addStarterLibrary)
                 TrainView.Exercises -> exercises(uiState, onOpenExercise, onNewExercise, viewModel::addStarterLibrary)
             }
         }
+    }
+    uiState.week.firstOrNull { it.date.dayOfWeek == editingDay }?.let { day ->
+        DaySheet(
+            day = day,
+            plans = uiState.plans,
+            places = uiState.places,
+            onSave = { plan ->
+                viewModel.setDay(day.date.dayOfWeek, plan)
+                editingDay = null
+            },
+            onDismiss = { editingDay = null },
+        )
     }
 }
 

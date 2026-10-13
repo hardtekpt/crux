@@ -32,6 +32,7 @@ class HomeViewModelTest {
     private val climbs = FakeClimbRepository()
     private val body = FakeBodyRepository()
     private val templates = FakeTemplateRepository()
+    private val schedule = com.hardtekpt.crux.data.FakeScheduleRepository()
     private val today = LocalDate.now(FIXED_CLOCK)
 
     @get:Rule val tmp = TemporaryFolder()
@@ -39,7 +40,13 @@ class HomeViewModelTest {
     private val dataStore by lazy { mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb")) }
     private val dashboard by lazy { DashboardRepository(dataStore) }
 
-    private fun viewModel() = HomeViewModel(climbs, body, templates, FakePlaceRepository(climbs), UserPreferencesRepository(dataStore), dashboard, FIXED_CLOCK)
+    private fun viewModel() = HomeViewModel(
+        climbs, body, templates,
+        FakePlaceRepository(
+            climbs,
+        ),
+        schedule, com.hardtekpt.crux.data.FakeSessionRepository(), UserPreferencesRepository(dataStore), dashboard, FIXED_CLOCK,
+    )
 
     @Test
     fun `empty database gives empty widgets`() = runTest {
@@ -102,6 +109,32 @@ class HomeViewModelTest {
 
             body.logWeight(72.4, today)
             assertEquals(72.4, awaitUntil { it.weight != null }.weight?.latest?.value)
+        }
+    }
+
+    @Test
+    fun `today's plan comes from the weekly schedule`() = runTest {
+        templates.templates.value = listOf(WorkoutTemplate(1, "Max hangs", "", emptyList()), WorkoutTemplate(2, "Strength day", "", emptyList()))
+        // FIXED_CLOCK is a Monday.
+        schedule.setDay(java.time.DayOfWeek.MONDAY, com.hardtekpt.crux.data.DayPlan(planIds = listOf(2), climbing = true))
+        viewModel().uiState.test {
+            val state = awaitUntil { it.schedule.isNotEmpty() }
+            assertEquals("Strength day", state.todaysPlan?.name)
+            assertEquals(true, state.climbingToday)
+            assertEquals(7, state.schedule.size)
+            assertNull(state.nextUp)
+        }
+    }
+
+    @Test
+    fun `a rest day says what's next`() = runTest {
+        templates.templates.value = listOf(WorkoutTemplate(1, "Max hangs", "", emptyList()))
+        schedule.setDay(java.time.DayOfWeek.WEDNESDAY, com.hardtekpt.crux.data.DayPlan(planIds = listOf(1)))
+        viewModel().uiState.test {
+            val state = awaitUntil { it.schedule.isNotEmpty() }
+            assertNull(state.todaysPlan)
+            assertEquals(today.plusDays(2), state.nextUp?.first)
+            assertEquals("Plan 1", state.nextUp?.second)
         }
     }
 

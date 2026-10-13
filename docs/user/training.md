@@ -1,13 +1,24 @@
-# Training: exercises and plans
+# Training: your week, exercises and plans
 
-The **Train** tab has two lists: **Plans** (your session plans) and **Exercises** (your exercise
-library). Swipe sideways or tap the segment at the top to switch.
+The **Train** tab has three parts: **Week** (your weekly schedule), **Plans** (your session plans)
+and **Exercises** (your exercise library). Swipe sideways or tap the segment at the top to switch.
 
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/5_train.png" width="300" alt="Train tab listing three session plans">
 
 If both lists are empty, *Add starter exercises and plans* copies in a starter library: a few
 classic finger, pulling, core and on-the-wall exercises and three plans built from them. They're
 yours to change or delete.
+
+## Week
+
+<img src="../../app/src/test/screenshots/train_week_dark.png" width="300" alt="The Week tab: Monday to Sunday, each with its plans, climbing days or rest">
+
+Your week, Monday to Sunday, and it repeats every week. Tap a day to set it: tick any of your
+plans, and turn on **Climbing day** (with a place if you like). A day with nothing is a rest day.
+Today's tile is in the accent. A plan turns green with its time once you finish a session of it
+that day, and a climbing day once you log a climb.
+
+Home's **Today's plan** follows the week. Deleting a plan takes it off the week.
 
 ## Exercises
 

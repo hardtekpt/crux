@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Weekly schedule**: *Train → Week* lays out Monday to Sunday. Tap a day to put plans and a
+  climbing day on it; the week repeats. Days turn green as you finish them, and Home's Today's plan
+  follows the week, with a strip of the week and what's next on a rest day. Saved in backups with
+  your plans.
 - **Log more goes from a session**: tap a climb in a live session to add goes to it.
 - **Edit a finished session** from its summary: its day, start and finish time, how hard it felt
   and the note.

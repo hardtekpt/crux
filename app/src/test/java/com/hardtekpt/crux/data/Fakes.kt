@@ -272,3 +272,18 @@ class FakeSessionRepository(var runningSession: RunningSession? = null) : Sessio
     override suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?) = Unit
     override suspend fun discard(sessionId: Long) = Unit
 }
+
+class FakeScheduleRepository : ScheduleRepository {
+    val slots = MutableStateFlow<List<ScheduleSlot>>(emptyList())
+    private var nextId = 1L
+
+    override fun observeWeek(): Flow<List<ScheduleSlot>> = slots
+
+    override suspend fun setDay(day: java.time.DayOfWeek, plan: DayPlan) {
+        slots.value = slots.value.filterNot { it.day == day } +
+            plan.planIds.map { ScheduleSlot(nextId++, day, com.hardtekpt.crux.data.local.ScheduleKind.PLAN, planId = it, planName = "Plan $it") } +
+            listOfNotNull(ScheduleSlot(nextId++, day, com.hardtekpt.crux.data.local.ScheduleKind.CLIMB, placeId = plan.placeId).takeIf { plan.climbing })
+    }
+
+    override suspend fun daysWithPlan(planId: Long): Int = slots.value.count { it.planId == planId }
+}

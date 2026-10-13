@@ -88,7 +88,37 @@ class StarterDataSeeder(private val clock: Clock) {
             if (includeSampleData && db.exerciseRecordDao().getAll().isEmpty() && db.noteDao().getAll().isEmpty()) {
                 insertProfileSamples(db)
             }
+            if (includeSampleData && db.scheduleDao().getAll().isEmpty()) insertSampleSchedule(db)
         }
+    }
+
+    /** A week for the demo: hangs Monday, strength Tuesday, power endurance and climbing Thursday, a climbing Saturday. */
+    private suspend fun insertSampleSchedule(db: CruxDatabase) {
+        val plans = db.templateDao().getAll().associate { it.template.name to it.template.id }
+        val place = db.placeDao().getPlaces().firstOrNull()?.id
+        fun plan(day: java.time.DayOfWeek, name: String, position: Int) = plans[name]?.let {
+            com.hardtekpt.crux.data.local.ScheduleSlotEntity(
+                dayOfWeek = day.value,
+                position = position,
+                kind = com.hardtekpt.crux.data.local.ScheduleKind.PLAN,
+                templateId = it,
+            )
+        }
+        fun climb(day: java.time.DayOfWeek, position: Int, placeId: Long?) = com.hardtekpt.crux.data.local.ScheduleSlotEntity(
+            dayOfWeek = day.value,
+            position = position,
+            kind = com.hardtekpt.crux.data.local.ScheduleKind.CLIMB,
+            placeId = placeId,
+        )
+        db.scheduleDao().insert(
+            listOfNotNull(
+                plan(java.time.DayOfWeek.MONDAY, "Max hangs + limit bouldering", 0),
+                plan(java.time.DayOfWeek.TUESDAY, "Strength day", 0),
+                plan(java.time.DayOfWeek.THURSDAY, "Power endurance 4×4", 0),
+                climb(java.time.DayOfWeek.THURSDAY, 1, null),
+                climb(java.time.DayOfWeek.SATURDAY, 0, place),
+            ),
+        )
     }
 
     /** Adds the starter exercises and plans to a database that may already hold the climber's own. */

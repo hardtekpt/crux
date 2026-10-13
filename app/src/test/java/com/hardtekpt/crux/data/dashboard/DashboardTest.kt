@@ -32,6 +32,8 @@ class DashboardTest {
         FakeBodyRepository(),
         FakeTemplateRepository(),
         FakePlaceRepository(),
+        com.hardtekpt.crux.data.FakeScheduleRepository(),
+        com.hardtekpt.crux.data.FakeSessionRepository(),
         UserPreferencesRepository(dataStore),
         repository,
         FIXED_CLOCK,

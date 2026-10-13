@@ -55,6 +55,8 @@ data class BackupFile(
     /** Finished sessions. Version 1 reserved the key and always left it null. */
     val sessions: List<SessionDto>? = null,
     val settings: SettingsDto? = null,
+    /** The weekly schedule, saved with the plans. Older backups omit it. */
+    val schedule: List<ScheduleSlotDto>? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
@@ -117,6 +119,18 @@ data class PlanItemDto(
 
 @Serializable
 data class PlanBlockDto(val name: String, val items: List<PlanItemDto>)
+
+/** One thing on a day of the week: a plan by name, or climbing (at a place, maybe). */
+@Serializable
+data class ScheduleSlotDto(
+    /** ISO day of the week, 1 Monday to 7 Sunday. */
+    val day: Int,
+    val position: Int = 0,
+    val kind: com.hardtekpt.crux.data.local.ScheduleKind,
+    val plan: String? = null,
+    val placeType: PlaceType? = null,
+    val place: String? = null,
+)
 
 @Serializable
 data class PlanDto(val name: String, val description: String, val blocks: List<PlanBlockDto>)

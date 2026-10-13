@@ -61,6 +61,7 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.timer.IntervalTimerRunning
 import com.hardtekpt.crux.ui.timer.IntervalTimerSetup
 import com.hardtekpt.crux.ui.train.TrainScreen
+import com.hardtekpt.crux.ui.train.TrainView
 import com.hardtekpt.crux.ui.train.TrainViewModel
 import com.hardtekpt.crux.ui.you.ProfileActions
 import com.hardtekpt.crux.ui.you.YouContent
@@ -120,7 +121,17 @@ class ScreenshotTest {
     fun home() = home("home")
 
     private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
-        val vm = HomeViewModel(climbs, body, OfflineTemplateRepository(dbs), places, preferences, DashboardRepository(dataStore), FIXED_CLOCK)
+        val vm = HomeViewModel(
+            climbs,
+            body,
+            OfflineTemplateRepository(dbs),
+            places,
+            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+            OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+            preferences,
+            DashboardRepository(dataStore),
+            FIXED_CLOCK,
+        )
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
         bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
@@ -207,9 +218,28 @@ class ScreenshotTest {
 
     @Test
     fun train() {
-        val vm = TrainViewModel(OfflineTemplateRepository(dbs), exercises, StarterData(dbs, preferences, FIXED_CLOCK))
-        bothThemes("train", readyText = "Max hangs") { TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = vm) }
+        bothThemes("train", readyText = "Max hangs") {
+            TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = trainViewModel(), initialView = TrainView.Plans)
+        }
     }
+
+    @Test
+    fun trainWeek() {
+        bothThemes("train_week", readyText = "Strength day") {
+            TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = trainViewModel())
+        }
+    }
+
+    private fun trainViewModel() = TrainViewModel(
+        OfflineTemplateRepository(dbs),
+        exercises,
+        StarterData(dbs, preferences, FIXED_CLOCK),
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+        climbs,
+        places,
+        FIXED_CLOCK,
+    )
 
     @Test
     fun session() = session("session")

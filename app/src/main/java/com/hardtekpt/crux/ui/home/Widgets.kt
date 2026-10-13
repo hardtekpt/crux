@@ -176,10 +176,37 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (plan == null) {
-            Text("No plan yet", style = MaterialTheme.typography.titleMedium)
+            Text(
+                when {
+                    state.climbingToday -> "Climbing day" + (state.climbingPlace?.let { " · $it" } ?: "")
+                    state.schedule.isNotEmpty() -> "Rest day"
+                    else -> "No plan yet"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag("todays_plan_day"),
+            )
+            state.nextUp?.let { (date, what) ->
+                Text(
+                    "Next: $what on ${date.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.UK)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (state.schedule.isNotEmpty()) com.hardtekpt.crux.ui.train.WeekStrip(state.schedule, state.today, Modifier.padding(top = CruxTheme.space.s2))
             return@CruxCard
         }
         Text(plan.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = CruxTheme.space.s1))
+        // More on the schedule today, and climbing, under the first.
+        val more = state.todaysPlans.drop(1).map { it.name } + listOfNotNull(
+            state.takeIf { it.climbingToday }?.let { "Climbing day" + (it.climbingPlace?.let { place -> " · $place" } ?: "") },
+        )
+        if (more.isNotEmpty()) {
+            Text(
+                "Also: " + more.joinToString(", "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
         Text(
             "About ${plan.estimatedMinutes} min · ${plan.exerciseCount} exercises",
             style = MaterialTheme.typography.bodyMedium,
@@ -205,6 +232,7 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (state.schedule.isNotEmpty()) com.hardtekpt.crux.ui.train.WeekStrip(state.schedule, state.today, Modifier.padding(top = CruxTheme.space.s3))
         Row(
             horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
             verticalAlignment = Alignment.CenterVertically,

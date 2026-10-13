@@ -145,6 +145,22 @@ class BackupRepository(
             } else {
                 null
             },
+            schedule = if (BackupSection.PLANS in sections) {
+                val planNames = db.templateDao().getAll().associate { it.template.id to it.template.name }
+                db.scheduleDao().getAll().map { slot ->
+                    val place = slot.placeId?.let(placesById::get)
+                    ScheduleSlotDto(
+                        day = slot.dayOfWeek,
+                        position = slot.position,
+                        kind = slot.kind,
+                        plan = slot.templateId?.let(planNames::get),
+                        placeType = place?.type,
+                        place = place?.name,
+                    )
+                }.filter { it.kind == com.hardtekpt.crux.data.local.ScheduleKind.CLIMB || it.plan != null }
+            } else {
+                null
+            },
             climbs = if (BackupSection.JOURNAL in sections) {
                 val areas = allAreas.associateBy { it.id }
                 val problems = allProblems.associateBy { it.id }
@@ -400,6 +416,8 @@ class BackupRepository(
             if (BackupSection.BODY in sections) importBody()
             if (BackupSection.RECORDS in sections) importRecords()
             if (BackupSection.NOTES in sections) importNotes()
+            // The schedule names plans and places, so it goes in once they are.
+            if (BackupSection.PLANS in sections) importSchedule()
             return ImportResult(added, skipped, replaced, copied, unreadable)
         }
 
@@ -510,6 +528,30 @@ class BackupRepository(
                     }
                 }
             }
+        }
+
+        /** Adds the backup's schedule to this one: what a day already holds stays, nothing is removed. */
+        private suspend fun importSchedule() {
+            val slots = file.schedule ?: return
+            val dao = db.scheduleDao()
+            val have = dao.getAll().toMutableList()
+            val links = links()
+            val new = slots.mapNotNull { dto ->
+                if (dto.day !in 1..7) return@mapNotNull null
+                val templateId = dto.plan?.let { links.plan(it) }
+                if (dto.kind == com.hardtekpt.crux.data.local.ScheduleKind.PLAN && templateId == null) return@mapNotNull null
+                val placeId = links.place(dto.placeType, dto.place)?.id
+                val same = have.any { it.dayOfWeek == dto.day && it.kind == dto.kind && it.templateId == templateId }
+                if (same) return@mapNotNull null
+                com.hardtekpt.crux.data.local.ScheduleSlotEntity(
+                    dayOfWeek = dto.day,
+                    position = (have.filter { it.dayOfWeek == dto.day }.maxOfOrNull { it.position } ?: -1) + 1,
+                    kind = dto.kind,
+                    templateId = templateId,
+                    placeId = placeId,
+                ).also { have += it }
+            }
+            if (new.isNotEmpty()) dao.insert(new)
         }
 
         private suspend fun importPlaces() {

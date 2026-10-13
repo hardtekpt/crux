@@ -63,6 +63,7 @@ tests, so they always match the current version.
 
 **Train**
 - An exercise library measured your way: reps, time, with or without added load, or intervals.
+- A weekly schedule: plans, climbing days and rest on each day of the week; Home shows today's.
 - Session plans in blocks, with targets for sets, reps, time, load and rest.
 - **Live sessions**: run a plan set by set with a rest timer, or a climbing day without a plan. An
   interval timer (Tabata, hangboard repeaters, your own) logs each cycle for you, and runs on its
@@ -164,6 +165,7 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 ## Changelog
 
 **Unreleased** on `dev`:
+- **Weekly schedule**: plan each day of the week under *Train → Week*; Home follows it.
 - **Interval timer page**: a full-screen timer for the gym, under *You*, with Tabata, repeaters,
   max hangs and 4×4s presets.
 - **More accent colours**: Magenta, Slate and Chalk.
