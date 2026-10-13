@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -110,10 +111,10 @@ class HomeViewModel @Inject constructor(
         .combine(scheduleRepository.observeWeek()) { inputs, slots -> inputs.copy(slots = slots) }
         .combine(sessionRepository.observeFinished()) { inputs, sessions -> inputs.copy(sessions = sessions) }
         .map(::buildState)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
     val demoMode: StateFlow<Boolean> = preferences.demoMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _dashboard = MutableStateFlow(DashboardState())
     val dashboard: StateFlow<DashboardState> = _dashboard.asStateFlow()

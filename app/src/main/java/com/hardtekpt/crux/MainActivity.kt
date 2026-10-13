@@ -15,6 +15,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -81,7 +83,12 @@ class MainActivity : ComponentActivity() {
 
             CruxTheme(darkTheme = darkTheme, accent = accent) {
                 CompositionLocalProvider(LocalUnits provides units, com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales) {
-                    CruxApp()
+                    // Test tags double as resource ids, so the benchmarks and profile generator can find screens.
+                    androidx.compose.foundation.layout.Box(
+                        androidx.compose.ui.Modifier.semantics { testTagsAsResourceId = true },
+                    ) {
+                        CruxApp()
+                    }
                 }
             }
         }

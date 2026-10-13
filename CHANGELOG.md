@@ -25,6 +25,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Faster and smoother**: Crux starts faster (it ships a baseline profile), screens work out
+  their data off the main thread and fade in once it's ready instead of showing empty values,
+  the Journal scrolls more smoothly, and photos are decoded once. Light animations show what
+  changed: Journal entries slide into place, counts roll, tabs and the week's days blend to their
+  new state, and the go pads press in.
 - **Grades in one card** in Settings: bouldering and routes share a card.
 - **Measurements** no longer has a + in its header; the Log button under the weight does the same.
 - **Projects widget on Home** no longer has the **+1 go** button. Tapping a project on Home or Progress opens its log from today to add goes to, or a new log if you haven't tried it today. Progress and the problem page still have **+1 go**.

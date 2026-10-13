@@ -88,6 +88,7 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.components.input.RulerInput
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.lengthDifference
 import com.hardtekpt.crux.ui.measureInput
@@ -113,6 +114,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -230,7 +232,7 @@ class YouViewModel @Inject constructor(
             scales = prefs.scales,
             theme = prefs.theme,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState(today = today))
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState(today = today))
 
     fun setMeasurement(type: MeasurementType, value: Double) {
         viewModelScope.launch { bodyRepository.setMeasurement(type, value) }
@@ -295,7 +297,7 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
             },
         )
         LazyColumn(
-            modifier = Modifier.testTag("you_list"),
+            modifier = Modifier.revealWhen(!uiState.isLoading).testTag("you_list"),
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s6 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {

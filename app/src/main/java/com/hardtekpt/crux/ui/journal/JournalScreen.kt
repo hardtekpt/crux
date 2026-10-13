@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -81,8 +82,10 @@ import com.hardtekpt.crux.data.Note
 import com.hardtekpt.crux.data.NoteRepository
 import com.hardtekpt.crux.data.RecordRepository
 import com.hardtekpt.crux.data.model.Climb
+import com.hardtekpt.crux.ui.components.AnimatedCount
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxFilterChip
+import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -90,6 +93,7 @@ import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.VideoThumbnail
 import com.hardtekpt.crux.ui.components.input.argb
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -108,6 +112,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -155,7 +160,7 @@ class JournalViewModel @Inject constructor(
             places = climbs.mapNotNull { it.place }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key },
             tags = notes.mapNotNull { it.tag }.distinct().sorted(),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
 
     fun update(change: (JournalQuery) -> JournalQuery) = query.update(change)
 }
@@ -222,12 +227,16 @@ fun JournalContent(
             return
         }
         TypeTabs(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
-        if (uiState.query.activeFilters > 0) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = uiState.query.activeFilters > 0,
+            enter = androidx.compose.animation.expandVertically(CruxMotion.medium()) + androidx.compose.animation.fadeIn(CruxMotion.medium()),
+            exit = androidx.compose.animation.shrinkVertically(CruxMotion.medium()) + androidx.compose.animation.fadeOut(CruxMotion.fast()),
+        ) {
             Box(Modifier.padding(start = space.s4, top = space.s2)) { AppliedFilters(uiState.query, onQuery) }
         }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-            modifier = Modifier.testTag("journal_list"),
+            modifier = Modifier.revealWhen(!uiState.isLoading).testTag("journal_list"),
         ) {
             if (uiState.days.isEmpty() && !uiState.isLoading) {
                 item(key = "empty") {
@@ -243,13 +252,20 @@ fun JournalContent(
                 }
             }
             uiState.days.forEach { day ->
-                item(key = "day_${day.date}") { DayHeader(day, today = day.date == uiState.today) }
-                items(day.entries, key = { it.key }) { entry ->
-                    when (entry) {
-                        is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
-                        is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
-                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
-                        is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
+                item(key = "day_${day.date}", contentType = "day") {
+                    Box(Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())) {
+                        DayHeader(day, today = day.date == uiState.today)
+                    }
+                }
+                items(day.entries, key = { it.key }, contentType = { it::class }) { entry ->
+                    // Entries slide into place and fade when a tab, search or filter changes the list.
+                    Box(Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())) {
+                        when (entry) {
+                            is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
+                            is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                            is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
+                            is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
+                        }
                     }
                 }
             }
@@ -331,14 +347,6 @@ private fun FiltersButton(active: Int, onClick: () -> Unit) {
     }
 }
 
-/** The timeline's faint line on its own, linking the header to the first day. */
-@Composable
-private fun RailLink(modifier: Modifier = Modifier) {
-    Box(modifier.width(GUTTER), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)))
-    }
-}
-
 /**
  * Every climb on a day, including those inside its sessions, counted the way the session card
  * shows them: goes on the same problem in a session as one.
@@ -388,20 +396,35 @@ private fun TypeTabs(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit)
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(top = 10.dp, bottom = 10.dp),
                     ) {
-                        Text(
-                            option.label,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (selected) colors.onSurface else colors.onSurfaceVariant,
-                            maxLines = 1,
+                        val label by androidx.compose.animation.animateColorAsState(
+                            if (selected) colors.onSurface else colors.onSurfaceVariant,
+                            CruxMotion.fast(),
+                            label = "tab",
                         )
-                        Text((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = if (selected) colors.primary else colors.onSurfaceVariant)
+                        val count by androidx.compose.animation.animateColorAsState(
+                            if (selected) colors.primary else colors.onSurfaceVariant,
+                            CruxMotion.fast(),
+                            label = "tabCount",
+                        )
+                        Text(option.label, style = MaterialTheme.typography.titleSmall, color = label, maxLines = 1)
+                        AnimatedCount((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = count)
                     }
+                    val underline by androidx.compose.animation.animateColorAsState(
+                        if (selected) colors.primary else Color.Transparent,
+                        CruxMotion.fast(),
+                        label = "underline",
+                    )
+                    val width by androidx.compose.animation.core.animateFloatAsState(
+                        if (selected) 0.7f else 0.2f,
+                        CruxMotion.medium(),
+                        label = "underlineWidth",
+                    )
                     Box(
                         Modifier
-                            .fillMaxWidth(0.7f)
+                            .fillMaxWidth(width)
                             .height(3.dp)
                             .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                            .background(if (selected) colors.primary else Color.Transparent),
+                            .background(underline),
                     )
                 }
             }
@@ -524,13 +547,22 @@ private fun FilterSheet(uiState: JournalUiState, onQuery: ((JournalQuery) -> Jou
     }
 }
 
+/** The timeline's faint line down the middle of the gutter, drawn behind a row. */
+@Composable
+private fun Modifier.railLine(): Modifier {
+    val color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+    return drawBehind {
+        val x = GUTTER.toPx() / 2
+        drawLine(color, androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), strokeWidth = 1.dp.toPx())
+    }
+}
+
 /** A row in the timeline: a small dot in the gutter, the entry beside it, on a faint line. */
 @Composable
 private fun TimelineRow(dot: Color, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-        Box(Modifier.width(GUTTER).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.width(1.dp).fillMaxHeight().background(colors.outlineVariant.copy(alpha = 0.6f)))
+    // The line is drawn, not laid out, so the row is measured once while scrolling.
+    Row(modifier.fillMaxWidth().railLine()) {
+        Box(Modifier.width(GUTTER), contentAlignment = Alignment.TopCenter) {
             Box(
                 Modifier
                     .padding(top = 16.dp)
@@ -552,11 +584,10 @@ private fun DayHeader(day: TimelineDay, today: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            .railLine()
             .testTag("journal_day"),
     ) {
-        Box(Modifier.width(GUTTER).fillMaxHeight(), contentAlignment = Alignment.Center) {
-            RailLink(Modifier.fillMaxHeight())
+        Box(Modifier.width(GUTTER), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier

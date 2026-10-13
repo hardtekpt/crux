@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Crux"
 include(":app")
+include(":baselineprofile")

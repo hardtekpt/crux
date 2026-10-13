@@ -1,5 +1,6 @@
 package com.hardtekpt.crux.ui.train
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,16 +97,21 @@ internal fun LazyListScope.week(uiState: TrainUiState, onEditDay: (WeekDay) -> U
         }
     }
     items(uiState.week, key = { "day_${it.date.dayOfWeek}" }) { day ->
-        WeekDayRow(day, today = day.date == uiState.today, onClick = { onEditDay(day) })
+        WeekDayRow(
+            day,
+            today = day.date == uiState.today,
+            onClick = { onEditDay(day) },
+            modifier = Modifier.animateItem(placementSpec = com.hardtekpt.crux.ui.components.CruxMotion.medium()),
+        )
     }
 }
 
 @Composable
-private fun WeekDayRow(day: WeekDay, today: Boolean, onClick: () -> Unit) {
+private fun WeekDayRow(day: WeekDay, today: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(16.dp))
@@ -134,7 +140,7 @@ private fun WeekDayRow(day: WeekDay, today: Boolean, onClick: () -> Unit) {
                 color = if (today) colors.onPrimaryContainer else colors.onSurface,
             )
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f).animateContentSize(com.hardtekpt.crux.ui.components.CruxMotion.medium()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (day.isRest) {
                 Text(
                     "Rest",
@@ -154,10 +160,12 @@ private fun SlotCard(slot: ScheduleSlot, day: WeekDay, today: Boolean) {
     val colors = MaterialTheme.colorScheme
     val done = day.done(slot)
     val climb = slot.kind == ScheduleKind.CLIMB
-    val border = when {
-        done -> CruxTheme.colors.success
-        else -> colors.outlineVariant
-    }
+    // Turning done blends the border to green.
+    val border by androidx.compose.animation.animateColorAsState(
+        if (done) CruxTheme.colors.success else colors.outlineVariant,
+        com.hardtekpt.crux.ui.components.CruxMotion.slow(),
+        label = "done",
+    )
     Column(
         Modifier
             .fillMaxWidth()

@@ -57,10 +57,21 @@ fun areaImageFile(name: String): File {
     return remember(name) { File(File(context.filesDir, AreaImageStore.DIR), name) }
 }
 
+/**
+ * Decoded images, by file, size and last change, so scrolling back to a photo shows it at once.
+ * Sized in bytes, an eighth of the app's memory at most.
+ */
+private object DecodedImages : android.util.LruCache<String, ImageBitmap>((Runtime.getRuntime().maxMemory() / 8).toInt()) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
+
+    fun key(file: File, maxPx: Int) = "${file.path}|$maxPx|${file.lastModified()}"
+}
+
 /** Loads an image file off the main thread, decoded no larger than [maxPx] on its long side. */
 @Composable
 fun rememberLocalImage(file: File, maxPx: Int): ImageBitmap? {
-    val image by produceState<ImageBitmap?>(null, file, maxPx) {
+    val image by produceState(DecodedImages.get(DecodedImages.key(file, maxPx)), file, maxPx) {
+        if (value != null) return@produceState
         value = withContext(Dispatchers.IO) {
             if (!file.exists()) return@withContext null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -68,6 +79,7 @@ fun rememberLocalImage(file: File, maxPx: Int): ImageBitmap? {
             var sample = 1
             while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxPx) sample *= 2
             BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+                ?.also { DecodedImages.put(DecodedImages.key(file, maxPx), it) }
         }
     }
     return image

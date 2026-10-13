@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -126,7 +127,9 @@ class DaysOnWallViewModel @Inject constructor(
             day = buildTimeline(climbs, results, notes, sessions, clock.zone).firstOrNull { it.date == selected },
             firstDay = days.minOrNull(),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DaysOnWallUiState(today = today, month = YearMonth.from(today), selected = today))
+    }.flowOn(
+        kotlinx.coroutines.Dispatchers.Default,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DaysOnWallUiState(today = today, month = YearMonth.from(today), selected = today))
 
     fun pick(day: LocalDate) = view.update { YearMonth.from(day) to day }
 

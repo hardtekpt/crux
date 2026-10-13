@@ -47,6 +47,7 @@ import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -55,6 +56,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -113,7 +115,7 @@ class TrainViewModel @Inject constructor(
     ) { plans, library, days, placeList ->
         TrainUiState(isLoading = false, plans = plans, exercises = library, week = days, today = java.time.LocalDate.now(clock), places = placeList)
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainUiState())
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainUiState())
 }
 
 @Composable
@@ -155,7 +157,7 @@ fun TrainScreen(
                 bottom = space.s4 + LocalNavBarClearance.current,
             ),
             verticalArrangement = Arrangement.spacedBy(space.s3),
-            modifier = Modifier.testTag("train_list"),
+            modifier = Modifier.revealWhen(!uiState.isLoading).testTag("train_list"),
         ) {
             when (view) {
                 TrainView.Week -> week(uiState) { day -> editingDay = day.date.dayOfWeek }

@@ -68,6 +68,7 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -247,6 +248,7 @@ fun HomeContent(
                 .fillMaxSize()
                 .onGloballyPositioned { viewport = it.boundsInRoot() }
                 .verticalScroll(scrollState)
+                .revealWhen(!uiState.isLoading)
                 .padding(horizontal = space.s4)
                 .padding(top = space.s1, bottom = space.s4 + LocalNavBarClearance.current)
                 .testTag("home_list"),

@@ -108,6 +108,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -116,7 +117,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class PlacesViewModel @Inject constructor(repository: PlaceRepository) : ViewModel() {
     val places: StateFlow<List<PlaceSummary>?> = repository.observePlaces()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /** The Places half of the Journal tab, as list items. */
@@ -192,11 +193,11 @@ class PlaceDetailViewModel @Inject constructor(
     val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
 
     val detail: StateFlow<PlaceDetail?> = repository.observePlaceDetail(placeId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Climbs logged here, for the header's numbers and last visit. */
     val climbs: StateFlow<List<com.hardtekpt.crux.data.model.Climb>> = climbRepository.observeClimbsAtPlace(placeId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Saves a wall; a replaced or removed image file is deleted. */
     fun saveArea(areaId: Long, name: String, image: String?, previousImage: String?, sectionId: Long?) {

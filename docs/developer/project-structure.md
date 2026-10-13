@@ -14,6 +14,7 @@ crux/
 │       │   ├── resources/backups/  A real v0.1.0 backup, for compatibility tests
 │       │   └── screenshots/        Screenshot goldens (light themes, Settings)
 │       └── androidTest/            Instrumented tests (Hilt runner, migrations, DAOs, app flows)
+├── baselineprofile/                Baseline profile generator and macrobenchmarks (runs on an emulator)
 ├── docs/                           User guide and developer docs (you are here)
 ├── fastlane/metadata/android/      Store listing: texts, changelogs, icon, screenshots
 ├── gradle/libs.versions.toml       Every dependency and plugin version
