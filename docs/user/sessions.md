@@ -36,7 +36,8 @@ session. Only one session runs at a time; starting another ends the first.
 - **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
   session shows your climbs, sends and hardest send so far. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the
-  Journal and in the session's summary.
+  Journal and in the session's summary. If **Rest after a climb** is set in Settings, logging a
+  climb starts that rest in the band, so you know when to pull on again.
 
 The arrows at the end of the band make it **compact**: one slim line with the number, what's left
 and the controls, so more of the exercise shows. Tap them again for the large band. Crux remembers
@@ -55,7 +56,8 @@ asks first, and climbs you logged in it stay in the journal.
 
 Finished sessions appear in the [Journal](journal.md) with their length. Tap one for its
 summary: when, where and for how long, how it felt, what got done against the plan, every set of
-every exercise, the climbs and your note.
+every exercise, the climbs and your note. The **pencil** edits it: its day, when it started and
+finished (a finish before the start means it ran past midnight), how hard it felt, and the note.
 
 Session history is in backups, with every set, and the climbs logged in a session stay linked to it
 when you restore.

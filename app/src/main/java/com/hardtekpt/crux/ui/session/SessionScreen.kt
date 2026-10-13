@@ -116,6 +116,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -178,6 +179,21 @@ class SessionViewModel @Inject constructor(
     /** Counts timers that ran to the end, so the screen can sound the finish. */
     private val _timerEnds = MutableStateFlow(0)
     val timerEnds: StateFlow<Int> = _timerEnds.asStateFlow()
+
+    init {
+        // Logging a climb in the session starts the rest set in Settings, unless a timer runs.
+        viewModelScope.launch {
+            var seen: Int? = null
+            session.collect { current ->
+                val count = current?.climbs?.size ?: return@collect
+                val rest = preferences.climbRestSeconds.first()
+                if (seen != null && count > seen!! && rest > 0 && _timer.value == null) {
+                    _rest.value = Rest(clock.millis() + rest * 1000L, rest)
+                }
+                seen = count
+            }
+        }
+    }
 
     /** The last free timer, so the next one starts the same. */
     private var lastFreeSpec = IntervalSpec.TABATA
@@ -518,7 +534,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 rest = runningRest,
                 nowMillis = now,
                 drainNowMillis = { drainNow },
-                next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
+                next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "Before your next go",
                 segments = emptyList(),
                 compact = compactTimer,
                 onToggleCompact = viewModel::toggleTimerCompact,

@@ -266,6 +266,13 @@ class MainActivityTest {
         composeRule.onNodeWithTag("journal_session").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.waitForTag("screen_SessionSummary")
         composeRule.waitForTag("session_summary_climb")
+
+        // A finished session can be edited: how it felt and its note.
+        composeRule.onNodeWithTag("edit_session").performClick()
+        composeRule.waitForTag("edit_session_sheet")
+        composeRule.textFieldIn("edit_session_notes").performTextInput("Felt strong")
+        composeRule.onNodeWithTag("edit_session_save").performScrollTo().performClick()
+        composeRule.waitForTag("session_summary_notes")
     }
 
     @Test

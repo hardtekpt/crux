@@ -270,5 +270,6 @@ class FakeSessionRepository(var runningSession: RunningSession? = null) : Sessio
     override suspend fun addExercise(sessionId: Long, exercise: com.hardtekpt.crux.data.model.Exercise): Long = 1
     override suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?) = Unit
     override suspend fun finish(sessionId: Long, effort: Int?, notes: String?) = Unit
+    override suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?) = Unit
     override suspend fun discard(sessionId: Long) = Unit
 }

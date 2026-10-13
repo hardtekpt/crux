@@ -219,9 +219,16 @@ private fun androidx.compose.foundation.lazy.LazyListScope.exercises(
             Eyebrow(category.label, Modifier.padding(top = CruxTheme.space.s2))
         }
         items(exercises, key = { "ex_${it.id}" }) { exercise ->
+            // What plans and sessions start it at: "5 × 5 · +10 kg · 3 min rest", then any note.
+            val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+            val defaults = com.hardtekpt.crux.data.model.ExerciseTarget.defaultFor(exercise)
+            val params = listOfNotNull(
+                defaults.prescription(exercise.metric, imperial),
+                defaults.restLabel()?.let { if (exercise.metric.usesIntervals) "$it between cycles" else "$it rest" },
+            ).joinToString(" · ")
             CruxListRow(
                 title = exercise.name,
-                supporting = listOfNotNull(exercise.metric.label, exercise.notes).joinToString(" · "),
+                supporting = listOfNotNull(params, exercise.notes).joinToString(" · "),
                 trailing = {
                     Icon(
                         Icons.AutoMirrored.Rounded.KeyboardArrowRight,

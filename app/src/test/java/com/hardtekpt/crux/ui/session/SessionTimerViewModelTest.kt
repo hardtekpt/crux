@@ -19,6 +19,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
@@ -56,6 +57,8 @@ class SessionTimerViewModelTest {
         sets = listOf(SessionSet(0, 6, 7, 5.0, skipped = false)),
     )
 
+    private val preferences by lazy { UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb"))) }
+
     private fun viewModel(): SessionViewModel {
         sessions.session.value = Session(1, "Plan", 1, null, null, 0, null, true, null, null, listOf(item), emptyList())
         return SessionViewModel(
@@ -63,9 +66,24 @@ class SessionTimerViewModelTest {
             sessions,
             FakeExerciseRepository(),
             FakePlaceRepository(),
-            UserPreferencesRepository(mainDispatcherRule.preferencesDataStore(File(tmp.root, "prefs.preferences_pb"))),
+            preferences,
             clock,
         ).also { it.session.launchIn(TestScope(mainDispatcherRule.testDispatcher)) }
+    }
+
+    @Test
+    fun `logging a climb in the session starts the rest set in settings`() = kotlinx.coroutines.runBlocking {
+        preferences.setClimbRestSeconds(90)
+        val vm = viewModel()
+        assertNull(vm.rest.value)
+        val climb = com.hardtekpt.crux.data.model.Climb(
+            1, com.hardtekpt.crux.data.model.Discipline.BOULDER, com.hardtekpt.crux.data.model.GradeScale.FONT, 10,
+            com.hardtekpt.crux.data.model.AscentStyle.ATTEMPT, 1, com.hardtekpt.crux.data.model.Venue.GYM,
+            java.time.LocalDate.of(2026, 10, 13), "Pink", null, null, sessionId = 1,
+        )
+        sessions.session.value = sessions.session.value!!.copy(climbs = listOf(climb))
+        val rest = kotlinx.coroutines.withTimeout(5_000) { vm.rest.first { it != null } }!!
+        assertEquals(90, rest.totalSeconds)
     }
 
     @Test

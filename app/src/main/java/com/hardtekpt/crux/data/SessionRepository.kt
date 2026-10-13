@@ -87,6 +87,9 @@ interface SessionRepository {
     suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?)
     suspend fun finish(sessionId: Long, effort: Int?, notes: String?)
 
+    /** Changes a finished session's times, how it felt and its note. */
+    suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?)
+
     /** Throws the session away; climbs logged in it stay in the journal. */
     suspend fun discard(sessionId: Long)
 }
@@ -211,6 +214,20 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
     override suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?) {
         val dao = dbs.current().sessionDao()
         dao.getSession(sessionId)?.let { dao.updateSession(it.copy(placeId = placeId, sectionId = sectionId)) }
+    }
+
+    override suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?) {
+        val dao = dbs.current().sessionDao()
+        dao.getSession(sessionId)?.let {
+            dao.updateSession(
+                it.copy(
+                    startedAtMillis = startedAtMillis,
+                    endedAtMillis = endedAtMillis.coerceAtLeast(startedAtMillis),
+                    effort = effort?.coerceIn(1, 10),
+                    notes = notes?.trim()?.takeIf { n -> n.isNotEmpty() },
+                ),
+            )
+        }
     }
 
     override suspend fun finish(sessionId: Long, effort: Int?, notes: String?) {

@@ -31,6 +31,9 @@ An exercise has:
   their **interval timer** here instead: preparation, work, rest between repeats, repeats per
   cycle, cycles and rest between cycles.
 
+The exercise list shows each exercise's defaults under its name, like "5 × 5 · +10 kg · 3 min rest",
+with its note after them.
+
 Deleting an exercise that plans use first tells you how many plans would lose it.
 
 ## Plans

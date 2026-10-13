@@ -117,6 +117,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
     // Beeps for the last seconds of a timer phase and when the phase changes.
     val timerSounds: Flow<Boolean> = dataStore.data.map { it[TIMER_SOUNDS] ?: true }
 
+    /** Seconds of rest started when a climb is logged in a session; 0 is off. */
+    val climbRestSeconds: Flow<Int> = dataStore.data.map { it[CLIMB_REST] ?: 0 }
+
+    suspend fun setClimbRestSeconds(seconds: Int) {
+        dataStore.edit { it[CLIMB_REST] = seconds.coerceAtLeast(0) }
+    }
+
     suspend fun setTimerSounds(enabled: Boolean) {
         dataStore.edit { it[TIMER_SOUNDS] = enabled }
     }
@@ -184,6 +191,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val LAST_SECTION = longPreferencesKey("last_section_id")
         val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
+        val CLIMB_REST = androidx.datastore.preferences.core.intPreferencesKey("climb_rest_seconds")
         val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
         val BACKUP_PHOTOS = booleanPreferencesKey("backup_photos")
         val BACKUP_VIDEOS = booleanPreferencesKey("backup_videos")

@@ -56,6 +56,8 @@ data class SettingsUiState(
     val demoMode: Boolean = false,
     val units: UnitSystem = UnitSystem.METRIC,
     val timerSounds: Boolean = true,
+    /** Rest after a climb logged in a session, in seconds; 0 is off. */
+    val climbRestSeconds: Int = 0,
 )
 
 @HiltViewModel
@@ -65,8 +67,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
         combine(preferences.themeMode, preferences.accent, preferences.textSize, ::Triple),
         preferences.demoMode,
         preferences.units,
-        preferences.timerSounds,
-    ) { scales, (theme, accent, textSize), demo, units, sounds -> SettingsUiState(scales, theme, accent, textSize, demo, units, sounds) }
+        combine(preferences.timerSounds, preferences.climbRestSeconds, ::Pair),
+    ) { scales, (theme, accent, textSize), demo, units, (sounds, climbRest) ->
+        SettingsUiState(scales, theme, accent, textSize, demo, units, sounds, climbRest)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setGradeScale(scale: GradeScale) {
@@ -87,6 +91,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
 
     fun setTextSize(size: TextSize) {
         viewModelScope.launch { preferences.setTextSize(size) }
+    }
+
+    fun setClimbRest(seconds: Int) {
+        viewModelScope.launch { preferences.setClimbRestSeconds(seconds) }
     }
 
     fun setTimerSounds(enabled: Boolean) {
@@ -118,6 +126,7 @@ fun SettingsScreen(
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         onTimerSounds = viewModel::setTimerSounds,
+        onClimbRest = viewModel::setClimbRest,
         onBackups = openBackups,
         diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
         onAbout = openAbout,
@@ -139,6 +148,7 @@ fun SettingsContent(
     onTimerSounds: (Boolean) -> Unit = {},
     onAccent: (Accent) -> Unit = {},
     onTextSize: (TextSize) -> Unit = {},
+    onClimbRest: (Int) -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -261,6 +271,29 @@ fun SettingsContent(
                     )
                 }
             }
+            CruxCard {
+                Text("Rest after a climb", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "In a session, a rest timer starts each time you log a climb.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = space.s2),
+                )
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalArrangement = Arrangement.spacedBy(space.s2),
+                    modifier = Modifier.testTag("climb_rest"),
+                ) {
+                    CLIMB_REST_CHOICES.forEach { seconds ->
+                        com.hardtekpt.crux.ui.components.CruxFilterChip(
+                            label = if (seconds == 0) "Off" else com.hardtekpt.crux.data.model.formatDuration(seconds),
+                            selected = uiState.climbRestSeconds == seconds,
+                            onClick = { onClimbRest(seconds) },
+                            modifier = Modifier.testTag("climb_rest_$seconds"),
+                        )
+                    }
+                }
+            }
 
             Eyebrow("Your data", Modifier.padding(top = space.s4))
             CruxCard {
@@ -309,3 +342,6 @@ fun SettingsContent(
         }
     }
 }
+
+/** The rests offered after a climb, in seconds; 0 is off. */
+private val CLIMB_REST_CHOICES = listOf(0, 60, 90, 120, 180, 240, 300)

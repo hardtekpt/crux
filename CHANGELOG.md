@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Edit a finished session** from its summary: its day, start and finish time, how hard it felt
+  and the note.
+- **Rest after a climb**: set a rest in Settings (1 to 5 min) and logging a climb in a session
+  starts it.
+- **Exercise defaults on the exercise list**: each card shows its sets, reps or time, load and rest.
 - **Interval timer page**, under *You*: a full-screen timer for the gym. Pick Tabata, Repeaters,
   Max hangs or 4×4s, or set your own; then the phase's colour fills the screen, the seconds are as
   big as they can be, and big buttons pause, skip and go back. Works on its side too.

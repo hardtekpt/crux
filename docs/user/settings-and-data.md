@@ -14,6 +14,8 @@ Open Settings from the gear on the **You** tab.
   font size. Crux reopens on the same page to apply it.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
+- **Sessions**: *Timer sounds* (beeps for the last seconds of a rest or interval) and *Rest after a
+  climb* (Off, or 1 to 5 min: logging a climb in a session starts that rest).
 - **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
 - **About**: version, licence, source code, and the open-source libraries Crux uses.
