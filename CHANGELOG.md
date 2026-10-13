@@ -48,6 +48,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
+- **Live notification bar**: long interval timers showed one plain bar; the bar now keeps its
+  coloured segments within what Android draws (ten segments, four marks).
 - **Board climbs on the place page**: a facility with no walls, like a Moonboard, showed 0 climbs.
   Each climb now belongs to a facility, so counts and the facility filter include climbs on no
   wall, and logging more goes on a climb keeps it at its facility instead of the place's first.

@@ -56,6 +56,49 @@ data class LiveCard(
 )
 
 object LiveCards {
+    /** Android 16 draws at most this many segments; more and the bar becomes one plain segment. */
+    const val MAX_SEGMENTS = 10
+
+    /** And at most this many points. */
+    const val MAX_POINTS = 4
+
+    /**
+     * The card within Android's limits, keeping detail where it matters, around and after now:
+     * what's behind the progress becomes one done segment, neighbours of a colour join, and the
+     * far end is merged until the bar fits. Only the latest points are kept.
+     */
+    fun fit(card: LiveCard): LiveCard {
+        var segments = card.segments
+        // Everything already behind the progress, as one.
+        var start = 0
+        var behind = 0
+        var firstAhead = segments.size
+        for ((index, segment) in segments.withIndex()) {
+            if (start + segment.length <= card.progress) {
+                behind++
+            } else {
+                firstAhead = index
+                break
+            }
+            start += segment.length
+        }
+        if (behind > 1) {
+            segments = listOf(LiveSegment(segments.take(behind).sumOf { it.length }, LiveColor.DONE)) + segments.drop(firstAhead.coerceAtLeast(behind))
+        }
+        // Neighbours of one colour as one.
+        segments = segments.fold(mutableListOf<LiveSegment>()) { acc, segment ->
+            val last = acc.lastOrNull()
+            if (last != null && last.color == segment.color) acc[acc.lastIndex] = last.copy(length = last.length + segment.length) else acc += segment
+            acc
+        }
+        // The far end merged until it fits.
+        while (segments.size > MAX_SEGMENTS) {
+            val tail = segments.takeLast(2)
+            segments = segments.dropLast(2) + LiveSegment(tail.sumOf { it.length }, tail.first().color)
+        }
+        return card.copy(segments = segments, points = card.points.takeLast(MAX_POINTS))
+    }
+
     /** The length the bar of a climbing day spans when there's no history yet. */
     const val USUAL_CLIMBING_MINUTES = 120
 
@@ -174,31 +217,21 @@ object LiveCards {
         val position = run.position(now)
         val phases = spec.phases
         val current = position.phase
-        val segments = mutableListOf<LiveSegment>()
-        var progress = 0
-        var offset = 0
-        phases.groupBy { it.cycle }.toSortedMap().forEach { (cycle, cyclePhases) ->
-            val total = cyclePhases.sumOf { it.seconds }
-            val inCycle = cyclePhases.filter { it.kind != IntervalPhase.Kind.CYCLE_REST && it.kind != IntervalPhase.Kind.PREP }
-            val extras = cyclePhases.filter { it.kind == IntervalPhase.Kind.CYCLE_REST || it.kind == IntervalPhase.Kind.PREP }
-            when {
-                cycle < current.cycle -> segments += LiveSegment(inCycle.sumOf { it.seconds }.coerceAtLeast(1), LiveColor.DONE)
-
-                cycle == current.cycle -> inCycle.forEach { phase ->
-                    segments += LiveSegment(phase.seconds.coerceAtLeast(1), if (phase.kind == IntervalPhase.Kind.WORK) LiveColor.WORK else LiveColor.REST)
-                }
-
-                else -> segments += LiveSegment(inCycle.sumOf { it.seconds }.coerceAtLeast(1), LiveColor.LATER)
+        // Every phase in order; [fit] then joins what's done, and cycles to come, to fit the bar.
+        val segments = phases.map { phase ->
+            val color = when {
+                phase.kind == IntervalPhase.Kind.PREP -> LiveColor.LATER
+                phase.kind == IntervalPhase.Kind.CYCLE_REST -> LiveColor.CYCLE_REST
+                phase.cycle < current.cycle -> LiveColor.DONE
+                phase.cycle > current.cycle -> LiveColor.LATER
+                phase.kind == IntervalPhase.Kind.WORK -> LiveColor.WORK
+                else -> LiveColor.REST
             }
-            extras.forEach {
-                segments +=
-                    LiveSegment(it.seconds.coerceAtLeast(1), if (it.kind == IntervalPhase.Kind.PREP) LiveColor.LATER else LiveColor.CYCLE_REST)
-            }
-            offset += total
+            LiveSegment(phase.seconds.coerceAtLeast(1), color)
         }
         // Progress is time done, in seconds, on the same scale as the segments.
         val doneBefore = phases.take(position.index).sumOf { it.seconds }
-        progress = (doneBefore + current.seconds - (position.leftMillis / 1000).toInt()).coerceIn(0, segments.sumOf { it.length })
+        val progress = (doneBefore + current.seconds - (position.leftMillis / 1000).toInt()).coerceIn(0, segments.sumOf { it.length })
         // Phases number cycles and repeats from 0; the card counts from 1.
         val title = when {
             position.finished -> "Done"

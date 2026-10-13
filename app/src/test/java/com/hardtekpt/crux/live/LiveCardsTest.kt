@@ -129,4 +129,31 @@ class LiveCardsTest {
         assertEquals(listOf(LiveAction.RESUME, LiveAction.STOP), card.actions)
         assertEquals("Paused", card.chip)
     }
+
+    @Test
+    fun `a long interval fits Android's limits and keeps its colours`() {
+        // 8 × 20 s on, 10 s off: 16 phases with the preparation, more than Android draws.
+        val spec = IntervalSpec(prepSeconds = 10, workSeconds = 20, restSeconds = 10, repeats = 8, cycles = 1, cycleRestSeconds = 0)
+        val at = (10 + 20 + 10 + 20 + 5) * 1000L
+        val card = LiveCards.fit(LiveCards.forInterval(IntervalRun(spec, startedAtMillis = 0), at, name = null, sessionId = null))
+
+        assertTrue(card.segments.size in 2..LiveCards.MAX_SEGMENTS)
+        assertEquals(LiveColor.DONE, card.segments.first().color)
+        assertTrue(card.segments.any { it.color == LiveColor.WORK })
+        assertTrue(card.segments.any { it.color == LiveColor.REST })
+        assertEquals(spec.totalSeconds, card.segments.sumOf { it.length })
+    }
+
+    @Test
+    fun `only the latest four climbs get points`() {
+        val card =
+            LiveCard(
+                "t", null, "s", null, null, false, listOf(LiveSegment(100, LiveColor.REST)),
+                (1..6).map {
+                    LivePoint(it * 10, LiveColor.DONE)
+                },
+                70, LiveTracker.NONE, emptyList(), null,
+            )
+        assertEquals(listOf(30, 40, 50, 60), LiveCards.fit(card).points.map { it.position })
+    }
 }

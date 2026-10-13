@@ -117,7 +117,9 @@ class LiveService : Service() {
             return
         }
         // Without the permission (Android 13+, if you said no) there's simply no card.
-        if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        ) {
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, build(this, card))
         }
     }
@@ -165,7 +167,9 @@ class LiveService : Service() {
         }
 
         /** A live card as a notification: a Live Update with a segmented bar on Android 16, a plain bar before. */
-        fun build(context: Context, card: LiveCard): Notification {
+        fun build(context: Context, full: LiveCard): Notification {
+            // Within Android's limits, or it draws one plain bar.
+            val card = LiveCards.fit(full)
             val open = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(MainActivity.EXTRA_OPEN, if (card.sessionId != null) MainActivity.OPEN_SESSION else MainActivity.OPEN_TIMER)
