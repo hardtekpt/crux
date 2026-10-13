@@ -67,10 +67,6 @@ data class WidgetActions(
     val openWeekClimbs: () -> Unit = {},
     val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
-    /** "+1 go" on a project, and the one just logged, which can be undone. */
-    val logGo: ((Long) -> Unit)? = null,
-    val undoGo: () -> Unit = {},
-    val lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -410,7 +406,6 @@ private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActio
                 maxLines = 1,
             )
         }
-        actions.logGo?.let { log -> com.hardtekpt.crux.ui.places.QuickGoButton(project.problem.id, actions.lastGo, log, actions.undoGo) }
     }
 }
 

@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 
 /**
  * One more go on a saved problem, without the Log climb form: an attempt today, at the
- * problem's place, facility and wall, in its grade. For the "+1 go" on project rows.
+ * problem's place, facility and wall, in its grade. For the "+1 go" on project rows (Progress and problem pages).
  */
 class QuickGo(private val climbs: ClimbRepository, private val places: PlaceRepository, private val clock: Clock) {
 

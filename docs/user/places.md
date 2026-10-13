@@ -54,6 +54,6 @@ You don't mark projects; Crux finds them. A project is a climb that's still up, 
 tried and haven't sent yet, at a place or not. Projects show on Home, on Progress, and on each place. Send it, and it
 stops being a project.
 
-To log another go quickly, tap **+1 go** on the project in Home's Projects widget or in Progress.
+To log another go quickly, tap **+1 go** on the project in Progress or on its own page.
 It logs a fall today on that climb, at its place and wall; tap **Undo** in the next few seconds if
 it was a slip. To log a send, or goes with a note, tap the project itself.

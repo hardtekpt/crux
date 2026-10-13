@@ -89,7 +89,6 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
     val demoMode by viewModel.demoMode.collectAsStateWithLifecycle()
-    val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
     HomeContent(
         uiState = uiState,
         dashboard = dashboard,
@@ -104,9 +103,6 @@ fun HomeScreen(
             openWeekClimbs = onOpenWeekClimbs,
             openMeasurements = onOpenMeasurements,
             startPlan = onStartPlan,
-            logGo = viewModel.quickGo::log,
-            undoGo = viewModel.quickGo::undo,
-            lastGo = lastGo,
         ),
         editor = DashboardEditor(
             start = viewModel::startEditing,
