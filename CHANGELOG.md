@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Automatic backups**: daily or weekly to a folder you choose, keeping the newest few; your own
+  data only, never the demo.
 - **Live notification** while a session runs: on Android 16 a Live Update with a segmented
   progress bar and a status-bar chip, on Android 8 to 15 a plain progress bar. It has a button for
   the next step (Set done, Log climb, or Pause and Stop on the interval timer), and a rest shows as

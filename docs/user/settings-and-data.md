@@ -57,6 +57,19 @@ logged at the same moment.
 Backups page. The switches apply to imports too: with videos off, a backup's videos are left out.
 Videos can make a backup large.
 
+### Automatic backups
+
+Under *Automatic backups* on the Backups page, Crux can save a backup for you without being asked.
+
+1. Tap **Choose folder** and pick a folder on your phone. Crux keeps its access to that folder until you tap **Stop**.
+2. Pick how often: **Daily** or **Weekly** (**Off** is the default).
+3. Pick how many to **keep**: the newest 3, 5 or 10. Older automatic backups are removed from the
+   folder, and only the ones Crux made.
+
+**Back up now** saves one straight away, and the page shows when the last one was made, or why the
+last try failed. Each backup holds all your data, with photos and videos, and goes only to the
+folder you chose. Only your own data is backed up, never the demo.
+
 Backups from older versions of Crux keep importing into newer ones, the `.json` files they made
 included. A backup from a *newer* version than the app is refused, with a message to update the
 app first.
