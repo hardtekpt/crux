@@ -526,9 +526,11 @@ class MainActivityTest {
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_note").fetchSemanticsNodes().isEmpty() }
         // Search finds it by its text; a tag filter from the sheet keeps it.
         composeRule.onNodeWithTag("journal_filter_All").performClick()
+        composeRule.onNodeWithTag("journal_open_search").performClick()
         composeRule.onNodeWithTag("journal_search").performTextInput("ring finger")
         composeRule.waitForTag("journal_note")
         composeRule.onNodeWithTag("journal_search_clear").performClick()
+        composeRule.onNodeWithTag("journal_close_search").performClick()
         composeRule.onNodeWithTag("journal_open_filters").performClick()
         composeRule.onNodeWithTag("tag_filter_injury").performClick()
         composeRule.onNodeWithTag("journal_apply_filters").performClick()

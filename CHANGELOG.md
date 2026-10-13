@@ -18,6 +18,12 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   big as they can be, and big buttons pause, skip and go back. Works on its side too.
 - **More accent colours**: Magenta, Slate and Chalk, alongside Teal, Blue, Violet and Pink.
 
+### Changed
+
+- **A lighter Journal header**: search and filters sit in the top bar, the types are tabs, and
+  today is the first day on the timeline, so the timeline starts right under the tabs.
+
+
 ## [0.3.0] - 2026-10-10
 
 ### Added

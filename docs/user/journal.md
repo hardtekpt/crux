@@ -10,11 +10,12 @@ training results; and notes. Newest is at the top.
 
 ## Reading the timeline
 
-The panel at the top shows today: what you've logged so far and how the week looks. Below it:
+Days run newest first, each with a date tile and a tally; today's tile is filled in the accent.
 
-- **Type pills**: *All*, *Climbs*, *Training* or *Notes*, each with a count.
-- **Search**: finds climbs, places and notes by text.
-- **Filters** (the sliders button): the period (last 7 days, 30 days, 3 months, 12 months or all
+- **Tabs**: *All*, *Climbs*, *Training* or *Notes*, each with a count.
+- **Search** (the magnifier in the top bar): finds climbs, places and notes by text. The back
+  arrow clears the search and closes it.
+- **Filters** (the sliders in the top bar): the period (last 7 days, 30 days, 3 months, 12 months or all
   time), the result (any, sends, or not sent yet), places, and note tags. Filters combine, and the
   button shows how many are on.
 
