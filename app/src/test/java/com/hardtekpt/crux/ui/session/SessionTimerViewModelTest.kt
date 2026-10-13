@@ -68,6 +68,7 @@ class SessionTimerViewModelTest {
             FakePlaceRepository(),
             preferences,
             clock,
+            com.hardtekpt.crux.live.LiveTimers(),
         ).also { it.session.launchIn(TestScope(mainDispatcherRule.testDispatcher)) }
     }
 

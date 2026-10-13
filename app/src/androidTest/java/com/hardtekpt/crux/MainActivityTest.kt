@@ -50,6 +50,11 @@ class MainActivityTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        // The live notification's permission, so its prompt never covers a session test.
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            instrumentation.uiAutomation.grantRuntimePermission(instrumentation.targetContext.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         runBlocking {
             // The climber's own data set starts with the starter library; demo gets its full set.
             starterData.addStarterLibraryToCurrent()

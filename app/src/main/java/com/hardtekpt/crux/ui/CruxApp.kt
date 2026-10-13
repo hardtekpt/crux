@@ -23,6 +23,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,7 +121,7 @@ import com.hardtekpt.crux.ui.you.RecordEditorScreen
 import com.hardtekpt.crux.ui.you.YouScreen
 
 @Composable
-fun CruxApp() {
+fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () -> Unit = {}) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -131,6 +132,32 @@ fun CruxApp() {
     val plans by sessionsViewModel.plans.collectAsStateWithLifecycle()
     val openSession = { id: Long -> navController.navigate(SessionRoute(id)) { launchSingleTop = true } }
     val startSession = { templateId: Long? -> sessionsViewModel.start(templateId) { openSession(it) } }
+
+    // Taps on the live notification: the session, the Interval timer page, or Log climb.
+    LaunchedEffect(openRequest) {
+        when (openRequest) {
+            is com.hardtekpt.crux.OpenRequest.Session -> openSession(openRequest.id)
+            com.hardtekpt.crux.OpenRequest.Timer -> navController.navigate(IntervalTimerRoute) { launchSingleTop = true }
+            com.hardtekpt.crux.OpenRequest.LogClimb -> navController.navigate(LogClimbRoute())
+            null -> return@LaunchedEffect
+        }
+        onOpened()
+    }
+
+    // Android 13 and newer ask once, when a session first runs, whether Crux may show its live notification.
+    val notifications = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) {
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(runningSession != null) {
+        if (runningSession != null && android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val onForm = currentDestination.isAny(
         SessionRoute::class,

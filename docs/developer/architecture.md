@@ -122,6 +122,16 @@ runs carry its `sessionId`. Only one session runs at a time.
 The interval and rest timers are computed from the clock (start time plus pause bookkeeping), not
 ticked, so they stay right when the screen is off or the app is in the background.
 
+The rest, the session's interval timer and the Interval timer page's run live in `LiveTimers`, an
+app-wide singleton, so they outlive the session screen. `live/LiveService` is a foreground service
+(type `specialUse`) that runs while a session or the Interval timer page's run does: it combines
+the running session with `LiveTimers`, turns them into a `LiveCard` (`LiveCards`, pure and unit
+tested) and posts it with `NotificationCompat.ProgressStyle`, a promoted Live Update on Android 16
+and a plain progress bar before. It ends a rest that ran out and buzzes. `LiveActionReceiver`
+handles the buttons (Set done, ±30 s, Skip rest, Pause/Resume, Stop); Log climb and tapping the
+card go through `MainActivity`'s `OpenRequest`. `CruxApplication` starts the service when a
+session starts.
+
 ## Domain decisions worth knowing
 
 - **Grades** are a scale (`GradeScale`: Font, V, French, YDS, or a local scale) plus an index, and

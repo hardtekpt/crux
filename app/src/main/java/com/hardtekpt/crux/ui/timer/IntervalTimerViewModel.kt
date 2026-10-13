@@ -24,11 +24,8 @@ import kotlinx.coroutines.launch
  * from the clock. Nothing is logged.
  */
 @HiltViewModel
-class IntervalTimerViewModel @Inject constructor(
-    private val preferences: UserPreferencesRepository,
-    private val clock: Clock,
-    live: LiveTimers,
-) : ViewModel() {
+class IntervalTimerViewModel @Inject constructor(private val preferences: UserPreferencesRepository, private val clock: Clock, live: LiveTimers) :
+    ViewModel() {
     private val _spec = MutableStateFlow(IntervalSpec.TABATA)
     val spec: StateFlow<IntervalSpec> = _spec.asStateFlow()
 

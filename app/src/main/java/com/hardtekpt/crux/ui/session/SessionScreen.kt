@@ -139,6 +139,7 @@ class SessionViewModel @Inject constructor(
     private val places: PlaceRepository,
     private val preferences: UserPreferencesRepository,
     private val clock: Clock,
+    private val live: com.hardtekpt.crux.live.LiveTimers,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -170,10 +171,11 @@ class SessionViewModel @Inject constructor(
     private val _draft = MutableStateFlow(SetDraft())
     val draft: StateFlow<SetDraft> = _draft.asStateFlow()
 
-    private val _rest = MutableStateFlow<Rest?>(null)
+    // The rest and timer outlive this screen: the live notification shows and changes them too.
+    private val _rest = live.rest.also { live.attach(sessionId) }
     val rest: StateFlow<Rest?> = _rest.asStateFlow()
 
-    private val _timer = MutableStateFlow<SessionTimer?>(null)
+    private val _timer = live.timer
     val timer: StateFlow<SessionTimer?> = _timer.asStateFlow()
 
     /** Counts timers that ran to the end, so the screen can sound the finish. */

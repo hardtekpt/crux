@@ -255,7 +255,16 @@ class ScreenshotTest {
             repeat(warmUp.target.sets) { sessions.logSet(warmUp.id, it, warmUp.target.reps, warmUp.target.seconds, warmUp.target.loadKg) }
             id
         }
-        val vm = SessionViewModel(SavedStateHandle(mapOf("sessionId" to sessionId)), sessions, exercises, places, preferences, FIXED_CLOCK)
+        val vm =
+            SessionViewModel(
+                SavedStateHandle(mapOf("sessionId" to sessionId)),
+                sessions,
+                exercises,
+                places,
+                preferences,
+                FIXED_CLOCK,
+                com.hardtekpt.crux.live.LiveTimers(),
+            )
         bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
     }
 
