@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.timer
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.hardtekpt.crux.MainDispatcherRule
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.live.LiveTimers
 import com.hardtekpt.crux.ui.session.IntervalPhase
 import com.hardtekpt.crux.ui.session.IntervalSpec
 import java.io.File
@@ -41,15 +42,15 @@ class IntervalTimerViewModelTest {
 
     @Test
     fun `the setup is kept for next time`() = runTest(mainDispatcherRule.testDispatcher) {
-        IntervalTimerViewModel(preferences, clock).setSpec(IntervalSpec.MAX_HANGS)
+        IntervalTimerViewModel(preferences, clock, LiveTimers()).setSpec(IntervalSpec.MAX_HANGS)
 
         assertEquals(IntervalSpec.MAX_HANGS.toSettings(), preferences.intervalTimer.first())
-        assertEquals(IntervalSpec.MAX_HANGS, IntervalTimerViewModel(preferences, clock).spec.value)
+        assertEquals(IntervalSpec.MAX_HANGS, IntervalTimerViewModel(preferences, clock, LiveTimers()).spec.value)
     }
 
     @Test
     fun `skip moves on a phase, and back early in a phase goes to the one before`() {
-        val vm = IntervalTimerViewModel(preferences, clock)
+        val vm = IntervalTimerViewModel(preferences, clock, LiveTimers())
         vm.setSpec(IntervalSpec.TABATA)
         vm.start()
         clock.millis = 3_000
@@ -67,7 +68,7 @@ class IntervalTimerViewModelTest {
 
     @Test
     fun `pausing holds the time, and stop goes back to the setup`() {
-        val vm = IntervalTimerViewModel(preferences, clock)
+        val vm = IntervalTimerViewModel(preferences, clock, LiveTimers())
         vm.start()
         clock.millis = 2_000
         vm.pause()

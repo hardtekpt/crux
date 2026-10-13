@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.timer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
+import com.hardtekpt.crux.live.LiveTimers
 import com.hardtekpt.crux.ui.session.IntervalRun
 import com.hardtekpt.crux.ui.session.IntervalSpec
 import com.hardtekpt.crux.ui.session.toSpec
@@ -23,11 +24,16 @@ import kotlinx.coroutines.launch
  * from the clock. Nothing is logged.
  */
 @HiltViewModel
-class IntervalTimerViewModel @Inject constructor(private val preferences: UserPreferencesRepository, private val clock: Clock) : ViewModel() {
+class IntervalTimerViewModel @Inject constructor(
+    private val preferences: UserPreferencesRepository,
+    private val clock: Clock,
+    live: LiveTimers,
+) : ViewModel() {
     private val _spec = MutableStateFlow(IntervalSpec.TABATA)
     val spec: StateFlow<IntervalSpec> = _spec.asStateFlow()
 
-    private val _run = MutableStateFlow<IntervalRun?>(null)
+    // The run lives in the shared LiveTimers so the notification's Pause, Resume and Stop act on the same run.
+    private val _run = live.standalone
     val run: StateFlow<IntervalRun?> = _run.asStateFlow()
 
     val sounds: StateFlow<Boolean> = preferences.timerSounds.stateIn(viewModelScope, SharingStarted.Eagerly, true)
