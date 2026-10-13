@@ -150,12 +150,15 @@ fun HomeContent(
     editor: DashboardEditor = DashboardEditor(),
     modifier: Modifier = Modifier,
 ) {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val editing = dashboard.editing
+    // The bar slides away as the dashboard scrolls down and back on the way up; it stays put
+    // while editing, where it holds Add and Done.
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(canScroll = { !editing })
+    LaunchedEffect(editing) { if (editing) scrollBehavior.state.heightOffset = 0f }
     val scrollState = rememberScrollState()
     val haptics = LocalHapticFeedback.current
     val edgePx = with(LocalDensity.current) { 96.dp.toPx() }
     val space = CruxTheme.space
-    val editing = dashboard.editing
 
     // Drag state, all in root coordinates so it survives the widget changing rows.
     val bounds = remember { mutableStateMapOf<String, Rect>() }
@@ -234,7 +237,7 @@ fun HomeContent(
             .testTag("screen_Home"),
     ) {
         CruxTopAppBar(
-            title = if (editing) "Edit dashboard" else "Crux",
+            title = if (editing) "Edit dashboard" else "",
             scrollBehavior = scrollBehavior,
             actions = {
                 if (editing) {

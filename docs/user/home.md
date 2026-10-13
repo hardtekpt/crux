@@ -2,6 +2,9 @@
 
 Home is a dashboard of widgets that you choose and arrange yourself.
 
+The top bar holds only the edit button, and it slides away as you scroll down and comes back as
+you scroll up (it stays while you edit the dashboard).
+
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/1_home.png" width="300" alt="Home dashboard with today's plan, this week, latest best, bodyweight and projects">
 
 ## Widgets
