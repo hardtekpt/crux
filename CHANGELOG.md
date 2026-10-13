@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Live notification** while a session runs: on Android 16 a Live Update with a segmented
+  progress bar and a status-bar chip, on Android 8 to 15 a plain progress bar. It has a button for
+  the next step (Set done, Log climb, or Pause and Stop on the interval timer), and a rest shows as
+  a countdown with +30 s, −30 s and Skip rest. The Interval timer page gets the same card.
 - **Weekly schedule**: *Train → Week* lays out Monday to Sunday. Tap a day to put plans and a
   climbing day on it; the week repeats. Days turn green as you finish them, and Home's Today's plan
   follows the week, with a strip of the week and what's next on a rest day. Saved in backups with

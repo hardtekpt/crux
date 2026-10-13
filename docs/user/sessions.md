@@ -50,6 +50,26 @@ right if the screen turns off or you switch apps.
 **Leaving** with the back arrow keeps the session running. A pill above the bottom bar shows its
 name and clock; tap it to go back.
 
+## Live notification
+
+While a session runs, Crux keeps a live notification, so you can see where you are and act without
+opening the app. On Android 16 it is a Live Update: a bar in segments and a chip in the status bar.
+On Android 8 to 15 it is a plain notification with a progress bar. Tap the card to go back to the
+session or timer; there is no Open button.
+
+- **A session with a plan**: one segment per exercise, green once it's done. The title reads
+  "Exercise · set N of M". **Set done** logs the next set as planned and starts its rest.
+- **Resting**: the card turns into the countdown, in amber, with **+30 s**, **−30 s** and
+  **Skip rest**. When the rest ends the phone buzzes, if *Timer sounds* is on in Settings.
+- **The interval timer**: the current cycle rep by rep, teal for work and amber for rest. Finished
+  cycles are green, and the rests between cycles are violet. **Pause** (then **Resume**) and
+  **Stop** are on the card. The *You → Interval timer* page shows the same card.
+- **A climbing day with no plan**: the time on the wall, with a mark for each climb (green for a
+  send, grey for not yet). The title reads "N climbs · M sent" and **Log climb** is on the card.
+
+On Android 13 and later, Crux asks for permission to show notifications the first time a session
+starts. If you say no, you just don't get the notification; everything else works as before.
+
 ## Finishing
 
 Tap **Finish**. Add how hard it felt (1–10) and a note, then save. Or throw the session away. Crux
