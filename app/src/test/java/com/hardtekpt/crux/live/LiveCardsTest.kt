@@ -98,7 +98,8 @@ class LiveCardsTest {
 
     @Test
     fun `a climbing day counts climbs and marks each one`() {
-        val card = LiveCards.forSession(session(climbs = listOf(climb(1, AscentStyle.REDPOINT), climb(2, AscentStyle.ATTEMPT))), rest = null, timer = null, now = now)
+        val climbs = listOf(climb(1, AscentStyle.REDPOINT), climb(2, AscentStyle.ATTEMPT))
+        val card = LiveCards.forSession(session(climbs = climbs), rest = null, timer = null, now = now)
 
         assertTrue(card.title.startsWith("2 climbs · 1 sent"))
         assertEquals(listOf(LiveColor.DONE, LiveColor.LATER), card.points.map { it.color })
