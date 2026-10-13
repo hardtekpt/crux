@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The live bar's tracker while working: a hand on a hold. -->
+<!-- The live bar's tracker while working: a climber on a teal disc, so it reads on any bar colour. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,2a3,3 0,1 1,0 6a3,3 0,1 1,0 -6zM7,10h10l-1.5,5H17l-2,7h-2l1,-5h-4l1,5H9l-2,-7h1.5z" />
+        android:fillColor="#FF3FDDE8"
+        android:pathData="M12,0a12,12 0,1 1,0 24a12,12 0,1 1,0 -24z" />
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:fillColor="#FF00363A"
+            android:pathData="M12,2a3,3 0,1 1,0 6a3,3 0,1 1,0 -6zM7,10h10l-1.5,5H17l-2,7h-2l1,-5h-4l1,5H9l-2,-7h1.5z" />
+    </group>
 </vector>
