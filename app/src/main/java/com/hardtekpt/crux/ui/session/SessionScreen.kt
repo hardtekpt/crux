@@ -397,7 +397,13 @@ internal fun clockLabel(millis: Long): String {
  * exercise at a time and its sets; without one, the climbs. Leaving keeps the session running.
  */
 @Composable
-fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () -> Unit, viewModel: SessionViewModel = hiltViewModel()) {
+fun SessionScreen(
+    onLeave: () -> Unit,
+    onLogClimb: () -> Unit,
+    onFinished: () -> Unit,
+    onLogMore: (problemId: Long) -> Unit = {},
+    viewModel: SessionViewModel = hiltViewModel(),
+) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
@@ -589,7 +595,9 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         modifier = Modifier.testTag("session_log_climb"),
                     )
                 }
-                current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
+                current.climbGroups.sortedByDescending {
+                    it.id
+                }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
             } else {
                 // A climbing day: the tally, the climbs, Log climb.
                 ClimbTally(current.climbGroups)
@@ -600,7 +608,11 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         color = colors.onSurfaceVariant,
                     )
                 } else {
-                    Column { current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
+                    Column {
+                        current.climbGroups.sortedByDescending {
+                            it.id
+                        }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
+                    }
                 }
                 CruxButton(
                     "Log climb",
@@ -986,15 +998,20 @@ private fun TallyFigure(value: String, label: String, modifier: Modifier = Modif
     }
 }
 
+/** A climb logged in the session; tapping it logs more goes on it. */
 @Composable
-private fun SessionClimbLine(climb: Climb) {
+private fun SessionClimbLine(climb: Climb, onClick: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
     val sent = climb.style.isSend
     val tape = climb.gradeColour?.let { argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp).testTag("session_climb"),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClickLabel = "Log more goes", onClick = onClick) else Modifier)
+            .padding(vertical = 9.dp)
+            .testTag("session_climb"),
     ) {
         Box(Modifier.width(4.dp).height(28.dp).clip(RoundedCornerShape(2.dp)).background(tape))
         Text(climb.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)

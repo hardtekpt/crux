@@ -226,6 +226,16 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
         composeRule.waitForTag("screen_Session")
         composeRule.waitForTag("session_climb")
+        // Tapping it logs more goes on the same climb; the session still shows it once.
+        composeRule.onNodeWithTag("session_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("go_fell").performClick()
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Session")
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_climb") and hasText("2", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(1, composeRule.onAllNodesWithTag("session_climb").fetchSemanticsNodes().size)
 
         // An interval exercise added on the spot: a cycle logged by hand, then changed.
         composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()

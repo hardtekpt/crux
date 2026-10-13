@@ -8,6 +8,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Log more goes from a session**: tap a climb in a live session to add goes to it.
 - **Edit a finished session** from its summary: its day, start and finish time, how hard it felt
   and the note.
 - **Rest after a climb**: set a rest in Settings (1 to 5 min) and logging a climb in a session

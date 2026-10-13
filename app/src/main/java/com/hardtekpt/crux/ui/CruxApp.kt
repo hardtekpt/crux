@@ -334,6 +334,7 @@ fun CruxApp() {
                         onLeave = navController::popBackStack,
                         onLogClimb = { navController.navigate(LogClimbRoute()) },
                         onFinished = navController::popBackStack,
+                        onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
                     )
                 }
                 page<LogClimbRoute> {

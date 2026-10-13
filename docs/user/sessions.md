@@ -36,7 +36,8 @@ session. Only one session runs at a time; starting another ends the first.
 - **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
   session shows your climbs, sends and hardest send so far. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the
-  Journal and in the session's summary. If **Rest after a climb** is set in Settings, logging a
+  Journal and in the session's summary. Tap a climb in the session to log more goes on it. If
+  **Rest after a climb** is set in Settings, logging a
   climb starts that rest in the band, so you know when to pull on again.
 
 The arrows at the end of the band make it **compact**: one slim line with the number, what's left
