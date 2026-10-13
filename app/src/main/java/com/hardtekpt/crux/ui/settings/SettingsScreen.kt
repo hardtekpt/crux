@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -161,11 +162,12 @@ fun SettingsContent(
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Eyebrow("Grades")
-            Discipline.entries.forEach { discipline ->
-                CruxCard {
+            CruxCard {
+                Discipline.entries.forEachIndexed { index, discipline ->
                     Text(
                         if (discipline == Discipline.BOULDER) "Bouldering" else "Routes",
                         style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = if (index == 0) 0.dp else space.s4),
                     )
                     Text(
                         discipline.scales.joinToString("  ·  ") { scale ->
