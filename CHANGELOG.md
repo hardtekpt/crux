@@ -23,7 +23,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 - **Grades in one card** in Settings: bouldering and routes share a card.
 - **Measurements** no longer has a + in its header; the Log button under the weight does the same.
-- **Projects widget on Home** no longer has the **+1 go** button; tap a project to open it. Progress and the problem page still have it.
+- **Projects widget on Home** no longer has the **+1 go** button. Tapping a project on Home or Progress opens its log from today to add goes to, or a new log if you haven't tried it today. Progress and the problem page still have **+1 go**.
 - **Tidier "More about you" list**: row titles such as "Interval timer" stay on one line; the grey text beside them shortens instead.
 - **More room on Home**: no title bar; the dashboard starts with the date, and the edit button
   sits at its end.

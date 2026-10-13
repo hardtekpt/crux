@@ -63,8 +63,12 @@ import kotlinx.serialization.Serializable
 /** The standalone interval timer, which takes the whole screen. */
 @Serializable data object IntervalTimerRoute
 
-/** Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where. */
-@Serializable data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0, val sectionId: Long = 0)
+/**
+ * Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where.
+ * [reuseToday]: with a [problemId], open its log from today or the running session if there is one.
+ */
+@Serializable
+data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0, val sectionId: Long = 0, val reuseToday: Boolean = false)
 
 @Serializable data object LogWeightRoute
 

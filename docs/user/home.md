@@ -19,7 +19,7 @@ dashboard. While editing, a bar at the top holds *Add widget* and *Done*.
 | **Weight trend** | A chart of your weigh-ins. Tap it to open Measurements. |
 | **Sends per week** | A chart of sends over recent weeks. |
 | **Sends by style** | Flash, onsight and redpoint, side by side. |
-| **Recent climbs** | Your last few climbs. Tap one to open it. |
+| **Recent climbs** | Your last few climbs. Tap one to log it: that opens today's log of it to add goes to, or a new log if you haven't tried it today. |
 | **Projects** | Climbs you've tried but not sent yet, with how many goes and when you last tried. Tap one to open it. |
 | **Consistency** | The consistency grid from the You page: a square per day you climbed over the last weeks, with your week streak and days in the last 30. Large, it shows your streak, best streak and last 30 days as three figures. Tap it to open You. |
 

@@ -44,7 +44,7 @@ class LogClimbViewModelTest {
     }
     private val viewModel by lazy { viewModel() }
 
-    private fun viewModel(vararg args: Pair<String, Long>) =
+    private fun viewModel(vararg args: Pair<String, Any>) =
         LogClimbViewModel(SavedStateHandle(mapOf(*args)), repository, places, FIXED_CLOCK, preferences, imageFiles, sessions)
 
     private suspend fun boardWithProblem(): Pair<Long, Long> {
@@ -313,6 +313,23 @@ class LogClimbViewModelTest {
         assertEquals(1, draft.goesBefore)
         assertEquals(AscentStyle.REDPOINT, draft.style)
         assertEquals(1, draft.attempts)
+    }
+
+    @Test
+    fun `opening a project continues today's log of it, and starts a new one otherwise`() = runBlocking {
+        val (_, problemId) = boardWithProblem()
+        val fresh = viewModel("problemId" to problemId, "reuseToday" to true)
+        assertEquals(false, withTimeout(5_000) { fresh.draft.first { it.problemId == problemId } }.isEditing)
+        fresh.addGo(false)
+        fresh.save()
+        withTimeout(5_000) { fresh.draft.first { it.saved } }
+
+        val again = viewModel("problemId" to problemId, "reuseToday" to true)
+        val draft = withTimeout(5_000) { again.draft.first { it.problemId == problemId && it.isEditing } }
+        assertEquals(1, draft.attempts)
+        // Without the flag (a problem page, say) it is a new log.
+        val plain = viewModel("problemId" to problemId)
+        assertEquals(false, withTimeout(5_000) { plain.draft.first { it.problemId == problemId } }.isEditing)
     }
 
     @Test

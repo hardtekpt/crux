@@ -140,10 +140,11 @@ class LogClimbViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
-    private val climbId: Long = savedStateHandle.get<Long>("climbId") ?: 0L
+    private var climbId: Long = savedStateHandle.get<Long>("climbId") ?: 0L
     private val routePlaceId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val routeProblemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
     private val routeSectionId: Long = savedStateHandle.get<Long>("sectionId") ?: 0L
+    private val routeReuseToday: Boolean = savedStateHandle.get<Boolean>("reuseToday") ?: false
 
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
@@ -183,6 +184,17 @@ class LogClimbViewModel @Inject constructor(
     }
 
     private suspend fun prefill() {
+        // Opening a project continues its log from today or from the running session, if it has one.
+        if (climbId == 0L && routeReuseToday && routeProblemId != 0L) {
+            val running = sessions.running()
+            val today = LocalDate.now(clock)
+            val existing = climbRepository.observeClimbsForProblem(routeProblemId).first()
+                .firstOrNull { it.date == today || (running != null && it.sessionId == running.id) }
+            if (existing != null) {
+                climbId = existing.id
+                _draft.update { it.copy(climbId = existing.id) }
+            }
+        }
         if (climbId != 0L) {
             val climb = climbRepository.getClimb(climbId) ?: return
             _draft.update {

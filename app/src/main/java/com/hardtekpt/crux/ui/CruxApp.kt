@@ -179,7 +179,7 @@ fun CruxApp() {
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
-                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
                             onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
@@ -247,7 +247,7 @@ fun CruxApp() {
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) }) }
+                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) }) }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {
