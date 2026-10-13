@@ -71,7 +71,7 @@ class StarterData @Inject constructor(
  * 6: Repeaters and Tabata core come with their interval timer set up.
  * 7: every climb has its climb (schema 21), with sends counted.
  */
-const val SAMPLE_DATA_VERSION = 7
+const val SAMPLE_DATA_VERSION = 8
 
 class StarterDataSeeder(private val clock: Clock) {
     /**
@@ -207,7 +207,6 @@ class StarterDataSeeder(private val clock: Clock) {
                     location = sample.location,
                     createdAtMillis = now,
                     extraTypes = if (sample.boardAreas.isNotEmpty()) PlaceType.BOARD.name else "",
-                    defaultAngle = 40.takeIf { sample.boardAreas.isNotEmpty() },
                 ),
             )
         }
@@ -235,7 +234,6 @@ class StarterDataSeeder(private val clock: Clock) {
                         name = area,
                         position = sample.areas.size + index,
                         type = PlaceType.BOARD,
-                        angle = 40,
                         sectionId = board,
                     ),
                 )

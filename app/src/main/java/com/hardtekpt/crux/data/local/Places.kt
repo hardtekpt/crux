@@ -28,7 +28,7 @@ data class PlaceEntity(
     /** Before schema 20 a place graded as a whole; now each section does, and these stay empty. */
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
-    /** Boards: the angle the board is usually set to. */
+    /** A board's usual angle before schema 22, which moved it into [notes]; no longer used. */
     val defaultAngle: Int? = null,
     val notes: String? = null,
     val createdAtMillis: Long,
@@ -70,7 +70,7 @@ data class SectionEntity(
     val localScale: String? = null,
 )
 
-/** A wall or sector inside a place; for a board, a named angle or set. */
+/** A wall or sector inside a place; for a board, a named set. */
 @Entity(
     tableName = "areas",
     foreignKeys = [
@@ -83,6 +83,7 @@ data class AreaEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val placeId: Long,
     val name: String,
+    /** The wall's angle before schema 22, which added it to [name]; no longer used. */
     val angle: Int? = null,
     /** Gyms: the day the wall was last reset. */
     val resetEpochDay: Long? = null,

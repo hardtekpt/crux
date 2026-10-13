@@ -535,7 +535,6 @@ class BackupRepository(
                                 existing.copy(
                                     name = dto.name.trim(),
                                     location = dto.location,
-                                    defaultAngle = dto.defaultAngle,
                                     notes = dto.notes,
                                     favourite = dto.favourite,
                                     latitude = dto.latitude,
@@ -562,7 +561,6 @@ class BackupRepository(
                     name = name,
                     type = dto.type,
                     location = dto.location,
-                    defaultAngle = dto.defaultAngle,
                     notes = dto.notes,
                     createdAtMillis = dto.createdAt ?: now,
                     favourite = dto.favourite,
@@ -619,17 +617,18 @@ class BackupRepository(
             val areaIds = haveAreas.associate { nameKey(it.name) to it.id }.toMutableMap()
             dto.areas.forEach { area ->
                 val image = importPhoto(area.image, area.imageFile)
-                val match = haveAreas.firstOrNull { it.name.equals(area.name, ignoreCase = true) }
+                val areaName = com.hardtekpt.crux.data.local.BoardAngles.intoName(area.name, area.angle)
+                val match = haveAreas.firstOrNull { it.name.equals(areaName, ignoreCase = true) }
                 val entity = AreaEntity(
                     placeId = placeId,
-                    name = area.name,
-                    angle = area.angle,
+                    name = areaName,
                     resetEpochDay = area.resetDate?.let { LocalDate.parse(it).toEpochDay() },
                     position = match?.position ?: areaPosition++,
                     imagePath = image ?: match?.imagePath,
                     type = area.type?.takeIf { it != dto.type },
                     sectionId = sectionFor(area.section, area.type),
                 )
+                // Keyed by the name in the backup, which its problems use.
                 areaIds[nameKey(area.name)] = if (match != null) {
                     if (image != null) match.imagePath?.let(oldFiles::add)
                     dao.updateArea(entity.copy(id = match.id))
@@ -785,21 +784,24 @@ class BackupRepository(
                     createdAtMillis = dto.loggedAt,
                     name = dto.name,
                     place = dto.loggedPlace ?: dto.place,
-                    notes = dto.notes,
+                    notes = com.hardtekpt.crux.data.local.BoardAngles.intoNotes(dto.notes, dto.angle),
                     placeId = place?.id,
                     sectionId = place?.let { p ->
                         val here = links.sections[p.id].orEmpty()
                         here.firstOrNull { dto.section != null && it.name.equals(dto.section, ignoreCase = true) }?.id
                             ?: here.firstOrNull { it.type.venue == dto.venue }?.id
                     },
-                    areaId = dto.area?.let { name -> links.areas[place?.id].orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) }?.id },
+                    areaId = dto.area?.let { name ->
+                        links.areas[place?.id].orEmpty().firstOrNull {
+                            it.name.equals(name, ignoreCase = true) || it.name.startsWith("$name · ", ignoreCase = true)
+                        }?.id
+                    },
                     // Its climb at that place by name; logs without one get theirs once all are in.
                     problemId = (dto.problem ?: dto.name)?.let { name ->
                         place?.let {
                             links.problems[it.id]
                         }.orEmpty().firstOrNull { it.name.equals(name, ignoreCase = true) && it.discipline == dto.discipline }?.id
                     },
-                    angle = dto.angle,
                     effort = dto.effort,
                     gradeLabel = dto.grade.takeIf { dto.gradeScale.isLocal },
                     gradeColour = dto.gradeColour,
@@ -1096,7 +1098,6 @@ private fun ClimbEntity.toDto() = ClimbDto(
     name = name,
     place = place,
     notes = notes,
-    angle = angle,
     effort = effort,
     gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
     gradeColour = gradeColour,
@@ -1108,7 +1109,6 @@ private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) 
     location = location,
     boulderScale = boulderScale,
     routeScale = routeScale,
-    defaultAngle = defaultAngle,
     notes = notes,
     areas = areas,
     problems = problems,
@@ -1124,7 +1124,6 @@ private fun PlaceEntity.toDto(areas: List<AreaDto>, problems: List<ProblemDto>) 
 private fun AreaEntity.toDto() = AreaDto(
     name = name,
     type = type,
-    angle = angle,
     resetDate = resetEpochDay?.let { LocalDate.ofEpochDay(it).toString() },
 )
 

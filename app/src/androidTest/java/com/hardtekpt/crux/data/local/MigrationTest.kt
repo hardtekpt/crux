@@ -248,6 +248,31 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate21To22KeepsBoardAnglesInNotesAndNames() {
+        helper.createDatabase(DB, 21).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes, defaultAngle) VALUES (1, 'Block Lab', 'BOARD', 0, 0, '', 40)")
+            execSQL("INSERT INTO areas (id, placeId, name, angle, position) VALUES (1, 1, 'Benchmarks', 40, 0), (2, 1, 'Moon 25°', 25, 1)")
+            execSQL(
+                "INSERT INTO problems (id, placeId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) " +
+                    "VALUES (1, 1, 'Hard moves', 'BOULDER', 'V_SCALE', 6, 0, 0)",
+            )
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, sends, venue, dateEpochDay, createdAtMillis, placeId, problemId, name, notes, angle) VALUES "
+            execSQL(climb + "(1, 'BOULDER', 'V_SCALE', 6, 'ATTEMPT', 2, 0, 'BOARD', 20000, 1, 1, 1, 'Hard moves', NULL, 40)")
+            execSQL(climb + "(2, 'BOULDER', 'V_SCALE', 6, 'REDPOINT', 3, 1, 'BOARD', 20001, 2, 1, 1, 'Hard moves', 'Heel hook ', 45)")
+            execSQL(climb + "(3, 'BOULDER', 'V_SCALE', 6, 'REDPOINT', 1, 1, 'BOARD', 20002, 3, 1, 1, 'Hard moves', 'Kept', NULL)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 22, true)
+        val notes = db.query("SELECT notes, angle FROM climbs ORDER BY id").use { c ->
+            buildList { while (c.moveToNext()) add(c.getString(0) to c.isNull(1)) }
+        }
+        assertEquals(listOf("Board angle 40°" to true, "Heel hook\nBoard angle 45°" to true, "Kept" to true), notes)
+        val walls = db.query("SELECT name FROM areas ORDER BY id").use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+        assertEquals(listOf("Benchmarks · 40°", "Moon 25°"), walls)
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

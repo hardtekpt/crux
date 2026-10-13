@@ -35,7 +35,6 @@ class QuickGo(private val climbs: ClimbRepository, private val places: PlaceRepo
                 placeId = problem.placeId,
                 areaId = problem.areaId,
                 problemId = problem.id,
-                angle = area?.angle,
                 gradeLabel = problem.gradeLabel,
                 gradeColour = problem.gradeColour,
                 sectionId = section?.id,

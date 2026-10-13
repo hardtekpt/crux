@@ -140,6 +140,7 @@ data class ClimbDto(
     val placeType: PlaceType? = null,
     val area: String? = null,
     val problem: String? = null,
+    /** Before schema 22: the board angle. Imported into [notes]. */
     val angle: Int? = null,
     val effort: Int? = null,
     /** Local grades: the position in the place's scale and its tape colour; [grade] holds the label. */
@@ -163,6 +164,7 @@ data class ClimbDto(
 @Serializable
 data class AreaDto(
     val name: String,
+    /** Before schema 22: the angle of the wall. Imported into its name. */
     val angle: Int? = null,
     val resetDate: String? = null,
     /** Version 1: the wall's photo or map as base64 JPEG. Older backups omit it. */
@@ -210,6 +212,7 @@ data class PlaceDto(
     val location: String? = null,
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
+    /** Before schema 22: the usual angle of a board. No longer imported. */
     val defaultAngle: Int? = null,
     val notes: String? = null,
     val areas: List<AreaDto> = emptyList(),

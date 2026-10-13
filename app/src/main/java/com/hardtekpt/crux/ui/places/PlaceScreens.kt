@@ -199,10 +199,10 @@ class PlaceDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Saves a wall; a replaced or removed image file is deleted. */
-    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, sectionId: Long?) {
+    fun saveArea(areaId: Long, name: String, image: String?, previousImage: String?, sectionId: Long?) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.saveArea(placeId, areaId, name, angle, image, sectionId)
+            repository.saveArea(placeId, areaId, name, image, sectionId)
             if (previousImage != image) images.delete(previousImage)
         }
     }
@@ -359,7 +359,6 @@ fun PlaceDetailScreen(
                                         section = section,
                                         areas = areas.size,
                                         problems = problems,
-                                        angle = current.place.defaultAngle.takeIf { section.type == PlaceType.BOARD },
                                         scales = listOf(section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current)),
                                         selected = sections.size > 1 && facility == section.id,
                                         onClick = { if (sections.size > 1) facility = if (facility == section.id) null else section.id },
@@ -438,7 +437,6 @@ fun PlaceDetailScreen(
                                 listOfNotNull(
                                     a.name,
                                     current.place.sectionOf(a)?.name?.takeIf { current.place.hasSeveralTypes },
-                                    a.angle?.let { "$it°" },
                                 ).joinToString(" · ")
                             }
                                 ?: "No ${areaLabel.lowercase()}",
@@ -502,8 +500,8 @@ fun PlaceDetailScreen(
             initialSection = place?.sectionOf(editingArea),
             fallbackType = place?.type ?: PlaceType.GYM,
             viewModel = viewModel,
-            onSave = { name, angle, image, sectionId ->
-                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath, sectionId)
+            onSave = { name, image, sectionId ->
+                viewModel.saveArea(editingArea?.id ?: 0, name, image, editingArea?.imagePath, sectionId)
                 addingArea = false
                 editingArea = null
             },
@@ -547,7 +545,6 @@ private fun FacilityTile(
     section: com.hardtekpt.crux.data.model.Section,
     areas: Int,
     problems: Int,
-    angle: Int?,
     scales: List<String>,
     selected: Boolean,
     onClick: () -> Unit,
@@ -575,7 +572,6 @@ private fun FacilityTile(
             listOfNotNull(
                 section.type.label.takeIf { !it.equals(section.name, ignoreCase = true) },
                 "$areas ${if (areas == 1) section.type.areaLabel.lowercase() else section.type.areaLabel.lowercase() + "s"}",
-                angle?.let { "$it°" },
             ).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant,
@@ -675,7 +671,7 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onDelete: () -> Unit) {
 }
 
 /**
- * Add or edit a wall: name, angle and an optional image, a photo of the wall or a map of the
+ * Add or edit a wall: name and an optional image, a photo of the wall or a map of the
  * gym with it marked. Picked from the gallery or taken with the camera.
  */
 @Composable
@@ -685,7 +681,7 @@ private fun AreaDialog(
     initialSection: com.hardtekpt.crux.data.model.Section?,
     fallbackType: PlaceType,
     viewModel: PlaceDetailViewModel,
-    onSave: (String, Int?, String?, Long?) -> Unit,
+    onSave: (String, String?, Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var sectionId by rememberSaveable { mutableStateOf(initialSection?.id) }
@@ -693,7 +689,6 @@ private fun AreaDialog(
     val label = type.areaLabel
     val isBoard = type == PlaceType.BOARD
     var name by rememberSaveable { mutableStateOf(area?.name.orEmpty()) }
-    var angle by rememberSaveable { mutableStateOf(area?.angle?.toString().orEmpty()) }
     var image by rememberSaveable { mutableStateOf(area?.imagePath) }
     var loading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -755,13 +750,6 @@ private fun AreaDialog(
                     onValueChange = { name = it.take(40) },
                     placeholder = if (isBoard) "Benchmarks" else "Cave",
                     modifier = Modifier.testTag("field_area_name"),
-                )
-                CruxTextField(
-                    label = "Angle",
-                    value = angle,
-                    onValueChange = { angle = it.filter(Char::isDigit).take(2) },
-                    helper = "degrees, optional",
-                    keyboardType = KeyboardType.Number,
                 )
                 Eyebrow("Image · optional", Modifier.padding(top = CruxTheme.space.s2))
                 Text(
@@ -834,7 +822,7 @@ private fun AreaDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                onSave(name, angle.toIntOrNull(), image, sectionId)
+                onSave(name, image, sectionId)
             }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }

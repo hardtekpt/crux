@@ -48,9 +48,9 @@ Journal. Coming back to a climb adds another log to it.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
    like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
    or typing its exact name, adds today's goes to it. Any other name starts a new climb.
-7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
-8. **Angle** for boards is set under *Where?*.
-9. **Log climb**.
+7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it. On a board,
+   note the angle here if it matters.
+8. **Log climb**.
 
 Photos are copied into Crux and scaled to at most 2048 px, so they survive the original being
 deleted. Videos are copied as they are.

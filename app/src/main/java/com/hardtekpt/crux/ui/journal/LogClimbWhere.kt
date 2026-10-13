@@ -73,7 +73,6 @@ data class WhereActions(
     val selectPlace: (Long?) -> Unit,
     val createPlace: (String, PlaceType) -> Unit,
     val selectArea: (Long?) -> Unit,
-    val setAngle: (Int) -> Unit,
     val setVenue: (Venue) -> Unit,
     val setPlaceText: (String) -> Unit,
     /** At a place with several parts: which one this climb was at. */
@@ -103,7 +102,6 @@ fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: Place
         place?.name ?: draft.place.takeIf { it.isNotBlank() },
         place?.takeIf { it.hasSeveralTypes }?.sectionFor(draft)?.name,
         area?.name,
-        draft.angle?.takeIf { place != null && draft.venue == Venue.BOARD }?.let { "$it°" },
     ).joinToString(" · ")
 
     // Favourite places as one-tap picks; tapping the picked one again clears it.
@@ -275,21 +273,6 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                         }
                     }
                 }
-                if (place != null && draft.venue == Venue.BOARD) {
-                    item(key = "angle") {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = CruxTheme.space.s3)) {
-                            Text("Angle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            CruxStepper(
-                                value = draft.angle ?: LogClimbViewModel.DEFAULT_ANGLE,
-                                onValueChange = actions.setAngle,
-                                range = 0..70,
-                                unit = "deg",
-                                step = 5,
-                                testTagPrefix = "angle",
-                            )
-                        }
-                    }
-                }
                 if (place != null) {
                     item(key = "skip") {
                         CruxButton("Skip", next, variant = CruxButtonVariant.Text, modifier = Modifier.testTag("where_skip"))
@@ -348,7 +331,6 @@ private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, ac
     items(detail.areas.filter { section == null || detail.place.sectionOf(it)?.id == section.id }, key = { "area_${it.id}" }) { area ->
         PickRow(
             title = area.name,
-            supporting = area.angle?.let { "$it°" },
             selected = draft.areaId == area.id,
             tag = "area_${area.name}",
         ) {

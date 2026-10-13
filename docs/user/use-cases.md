@@ -26,8 +26,8 @@ Just need a timer? In any session, **Timer** runs a free one with Tabata and rep
 
 ## A board session
 
-Add your board as a facility of its gym (or as a place on its own) with its **usual angle** and
-grades, for example V scale. Log climbs with the angle you set the board to. Climbs you set or
+Add your board as a facility of its gym (or as a place on its own) with its grades, for example
+V scale. If the angle matters, put it in the climb's note. Climbs you set or
 repeat on the board build up its list, and the ones you haven't sent yet show as projects.
 
 ## Working a project at a gym that grades with tape colours

@@ -53,7 +53,6 @@ class LogClimbViewModelTest {
                 name = "Moon board",
                 types = listOf(PlaceType.BOARD),
                 location = null,
-                defaultAngle = 40,
                 notes = null,
                 sections = listOf(SectionInput(type = PlaceType.BOARD, name = "Moon board", boulderScale = GradeScale.V_SCALE)),
             ),
@@ -79,7 +78,6 @@ class LogClimbViewModelTest {
             PlaceInput(
                 name = "Block Lab",
                 location = null,
-                defaultAngle = 40,
                 notes = null,
                 sections = listOf(
                     SectionInput(type = PlaceType.GYM, name = "Main gym"),
@@ -89,8 +87,8 @@ class LogClimbViewModelTest {
             ),
         )
         val (gym, spray, moon) = places.getPlace(placeId)!!.sections.map { it.id }
-        val cave = places.saveArea(placeId, 0, "Cave", null, null, gym)
-        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, moon)
+        val cave = places.saveArea(placeId, 0, "Cave", null, gym)
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", null, moon)
         viewModel.selectPlace(placeId)
         withTimeout(5_000) { viewModel.placeDetail.first { it?.areas?.size == 2 } }
         assertEquals(gym, viewModel.draft.value.sectionId)
@@ -197,7 +195,6 @@ class LogClimbViewModelTest {
         assertEquals(GradeScale.V_SCALE, draft.gradeScale)
         assertEquals(6, draft.gradeIndex)
         assertEquals("Hard moves", draft.name)
-        assertEquals(40, draft.angle)
 
         vm.addGo(false)
         vm.save()
@@ -281,13 +278,12 @@ class LogClimbViewModelTest {
             PlaceInput(
                 name = "Block Lab",
                 location = null,
-                defaultAngle = 40,
                 notes = null,
                 sections = listOf(SectionInput(type = PlaceType.GYM, name = "Main gym"), SectionInput(type = PlaceType.BOARD, name = "Kilter")),
             ),
         )
         val kilter = places.getPlace(placeId)!!.sections[1].id
-        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, kilter)
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", null, kilter)
         val first = viewModel("placeId" to placeId)
         withTimeout(5_000) { first.placeDetail.first { it?.areas?.size == 1 } }
         first.selectArea(benchmarks)
@@ -325,7 +321,6 @@ class LogClimbViewModelTest {
             PlaceInput(
                 name = "Block Lab",
                 location = null,
-                defaultAngle = 40,
                 notes = null,
                 sections = listOf(
                     SectionInput(type = PlaceType.GYM, name = "Main gym", boulderScale = GradeScale.FONT),
@@ -348,7 +343,6 @@ class LogClimbViewModelTest {
                 name = "Tape Gym",
                 types = listOf(PlaceType.GYM),
                 location = null,
-                defaultAngle = null,
                 notes = null,
                 sections = listOf(
                     SectionInput(type = PlaceType.GYM, name = "Gym", boulderScale = GradeScale.LOCAL_BOULDER, localScale = LocalScale.DEFAULT_COLOURS),
@@ -373,7 +367,7 @@ class LogClimbViewModelTest {
     @Test
     fun `a climb logged while a session runs joins it, at the session's place`() = runBlocking {
         val placeId = places.savePlace(
-            PlaceInput(name = "Block Lab", location = null, defaultAngle = null, notes = null),
+            PlaceInput(name = "Block Lab", location = null, notes = null),
         )
         sessions.runningSession = com.hardtekpt.crux.data.RunningSession(id = 7, placeId = placeId, sectionId = null)
         val vm = viewModel()

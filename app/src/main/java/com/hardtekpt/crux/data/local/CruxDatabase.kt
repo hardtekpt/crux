@@ -6,6 +6,11 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+/** Schema 22 drops board angles; see [BoardAngles]. */
+class BoardAnglesMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) = BoardAngles.migrate(db)
+}
+
 /**
  * Schema 21 drops problems as a separate idea: every log belongs to a climb (a `problems` row,
  * which no longer needs a place). Sends are counted on each log, and logs without a climb get
@@ -154,6 +159,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 18, to = 19, spec = ExerciseDefaultsMigration::class),
         AutoMigration(from = 19, to = 20, spec = SectionGradesMigration::class),
         AutoMigration(from = 20, to = 21, spec = ClimbsMigration::class),
+        AutoMigration(from = 21, to = 22, spec = BoardAnglesMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -169,7 +175,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 21
+        const val VERSION = 22
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

@@ -16,7 +16,7 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 
 - **Name** and optional **Notes**.
 - **What's here**: one or more facilities. A gym can have its main walls *and* a board, for
-  example. Each facility is a gym, crag or board with its own name. Boards have a **usual angle**.
+  example. Each facility is a gym, crag or board with its own name.
 - **Grades for each facility**: the scales new climbs there start in, or **Local grades**, the
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests
@@ -33,8 +33,7 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 - **Facilities**: tap one to show only its walls; tap again to show all.
 - **Log here**: starts *Log climb* at this place, and at the facility if one is selected.
 - **Walls** (areas), each with the climbs you've logged on it: grade, name, goes and when you sent
-  it. A wall can have an **image** (a photo of the wall, or a gym map with it marked) and an
-  **angle**.
+  it. A wall can have an **image** (a photo of the wall, or a gym map with it marked).
 - **Open in Maps** hands the pin to your maps app.
 
 ## Climbs

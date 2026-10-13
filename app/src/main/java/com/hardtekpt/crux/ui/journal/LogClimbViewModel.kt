@@ -75,7 +75,6 @@ data class LogClimbDraft(
     val sessionId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
-    val angle: Int? = null,
     /** How hard it felt, 1 to 10; optional. */
     val effort: Int? = null,
     /** An attached photo (file name in app storage), and the one saved before this edit. */
@@ -205,7 +204,6 @@ class LogClimbViewModel @Inject constructor(
                     sessionId = climb.sessionId,
                     areaId = climb.areaId,
                     problemId = climb.problemId,
-                    angle = climb.angle,
                     effort = climb.effort,
                     imagePath = climb.imagePath,
                     savedImagePath = climb.imagePath,
@@ -282,7 +280,6 @@ class LogClimbViewModel @Inject constructor(
                     problemId = null,
                     earlierGoes = emptyList(),
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
-                    angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
                     local = section?.localScale,
                 )
@@ -296,7 +293,7 @@ class LogClimbViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             val id = placeRepository.savePlace(
-                PlaceInput(name = name, types = listOf(type), location = null, defaultAngle = null, notes = null),
+                PlaceInput(name = name, types = listOf(type), location = null, notes = null),
             )
             applyPlace(id)
         }
@@ -429,8 +426,6 @@ class LogClimbViewModel @Inject constructor(
     fun setNoBeta(noBeta: Boolean) = _draft.update { it.copy(noBeta = noBeta) }
 
     fun setEffort(effort: Int?) = _draft.update { it.copy(effort = effort?.coerceIn(1, 10)) }
-
-    fun setAngle(angle: Int) = _draft.update { it.copy(angle = angle.coerceIn(0, 70)) }
 
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
@@ -576,7 +571,6 @@ class LogClimbViewModel @Inject constructor(
                 placeId = place?.id,
                 areaId = draft.areaId.takeIf { place != null },
                 problemId = problemId,
-                angle = draft.angle.takeIf { place != null && draft.venue == Venue.BOARD },
                 effort = draft.effort,
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),
@@ -607,7 +601,6 @@ class LogClimbViewModel @Inject constructor(
     companion object {
         val ATTEMPTS = 1..99
         const val MAX_TEXT = 60
-        const val DEFAULT_ANGLE = 40
     }
 }
 

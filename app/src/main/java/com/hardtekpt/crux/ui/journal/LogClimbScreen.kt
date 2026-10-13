@@ -107,7 +107,6 @@ fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel
         selectPlace = viewModel::selectPlace,
         createPlace = viewModel::createPlace,
         selectArea = viewModel::selectArea,
-        setAngle = viewModel::setAngle,
         setVenue = viewModel::setVenue,
         setPlaceText = viewModel::setPlace,
         selectSection = viewModel::selectSection,

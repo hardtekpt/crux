@@ -81,7 +81,7 @@ class FakeClimbRepository : ClimbRepository {
 
     private fun NewClimb.toClimb(id: Long) = Climb(
         id, discipline, gradeScale, gradeIndex, style, attempts, venue, date, name, place, notes,
-        placeId, areaId, problemId, angle, effort, sends = sends, gradeLabel = gradeLabel, gradeColour = gradeColour,
+        placeId, areaId, problemId, effort, sends = sends, gradeLabel = gradeLabel, gradeColour = gradeColour,
         sectionId = sectionId, sessionId = sessionId,
     )
 }
@@ -148,7 +148,6 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
             input.name,
             kinds.first(),
             input.location,
-            input.defaultAngle,
             input.notes,
             types = kinds,
             sections = sections,
@@ -163,10 +162,10 @@ class FakePlaceRepository(private val climbs: FakeClimbRepository? = null) : Pla
         problems.value = problems.value.filterNot { it.placeId == id }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, imagePath: String?, sectionId: Long?): Long {
         val id = areaId.takeIf { it != 0L } ?: nextId++
         val section = sectionId ?: places.value.find { it.id == placeId }?.sections?.firstOrNull()?.id
-        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, angle, null, imagePath, sectionId = section)
+        areas.value = areas.value.filterNot { it.id == id } + Area(id, placeId, name, null, imagePath, sectionId = section)
         return id
     }
 
