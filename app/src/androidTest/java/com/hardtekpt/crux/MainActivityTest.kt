@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -310,6 +311,7 @@ class MainActivityTest {
     @Test
     fun trainShowsStarterTemplatesAndTheirDetail() {
         composeRule.onNodeWithTag("nav_Train").performClick()
+        composeRule.onNodeWithTag("segment_Plans").performClick()
         composeRule.waitForTag("template_card")
         composeRule.onAllNodesWithTag("template_card")[0].performClick()
         composeRule.waitForTag("template_exercise")
@@ -447,11 +449,15 @@ class MainActivityTest {
         composeRule.onNodeWithTag("back").performClick()
         composeRule.waitForTag("screen_PlaceDetail")
 
-        // From Projects, come back and send it first go: a redpoint, and no longer a project.
+        // From Projects, open today's log of it and send it: a redpoint, and no longer a project.
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("project_row")
         composeRule.onNodeWithTag("project_row").performClick()
         composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Attempt") }.isSuccess
+        }
+        composeRule.onNodeWithTag("go_sent").performScrollTo().performClick()
         composeRule.waitUntil(5_000) {
             runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Redpoint") }.isSuccess
         }
@@ -494,9 +500,33 @@ class MainActivityTest {
     }
 
     @Test
+    fun aDayOfTheWeekCanHoldAPlanAndClimbingAndHomeShowsTheWeek() {
+        composeRule.onNodeWithTag("nav_Train").performClick()
+        composeRule.waitForTag("week_day_WEDNESDAY")
+        composeRule.onNodeWithTag("week_day_WEDNESDAY").performClick()
+        composeRule.waitForTag("day_sheet")
+        composeRule.onNodeWithTag("day_plan_Strength day").performClick()
+        composeRule.onNodeWithTag("day_climbing").performClick()
+        composeRule.onNodeWithTag("day_save").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(
+                hasTestTag("week_plan") and hasAnyDescendant(hasText("Strength day")),
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("week_climb", useUnmergedTree = true).assertIsDisplayed()
+
+        // Home's Today's plan now follows the schedule, with the week as a strip.
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.waitForTag("week_strip")
+    }
+
+    @Test
     fun swipingSidewaysMovesBetweenAPagesTabs() {
         composeRule.onNodeWithTag("nav_Train").performClick()
         composeRule.waitForTag("screen_Train")
+        composeRule.onNodeWithTag("segment_Plans").performClick()
+        composeRule.waitForTag("template_card")
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("screen_Train").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
         composeRule.waitForTag("exercise_row")
