@@ -21,6 +21,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Tidier "More about you" list**: row titles such as "Interval timer" stay on one line; the grey text beside them shortens instead.
 - **More room on Home**: no title bar; the dashboard starts with the date, and the edit button
   sits at its end.
 - **No more board angle**: logging, places and walls no longer ask for an angle. Angles you logged
