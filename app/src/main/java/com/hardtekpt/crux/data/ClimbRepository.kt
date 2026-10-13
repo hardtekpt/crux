@@ -64,6 +64,7 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
         return db.withTransaction {
             val id = db.climbDao().insert(climb.toEntity(clock.millis()))
             if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            ClimbLinks.settleSections(db.openHelper.writableDatabase)
             id
         }
     }
@@ -95,6 +96,7 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
             val existing = dao.get(id) ?: return@withTransaction
             dao.update(climb.toEntity(existing.createdAtMillis).copy(id = id))
             if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            ClimbLinks.settleSections(db.openHelper.writableDatabase)
             // Moved to another climb: the one it left goes if nothing else is logged on it.
             existing.problemId?.takeIf { it != dao.get(id)?.problemId }?.let { dropIfEmpty(db, it) }
         }

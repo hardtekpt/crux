@@ -6,6 +6,11 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+/** Schema 23 puts every climb at a place in one of its facilities; see [ClimbLinks.settleSections]. */
+class ClimbSectionsMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) = ClimbLinks.settleSections(db)
+}
+
 /** Schema 22 drops board angles; see [BoardAngles]. */
 class BoardAnglesMigration : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) = BoardAngles.migrate(db)
@@ -160,6 +165,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 19, to = 20, spec = SectionGradesMigration::class),
         AutoMigration(from = 20, to = 21, spec = ClimbsMigration::class),
         AutoMigration(from = 21, to = 22, spec = BoardAnglesMigration::class),
+        AutoMigration(from = 22, to = 23, spec = ClimbSectionsMigration::class),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -175,7 +181,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 22
+        const val VERSION = 23
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

@@ -273,6 +273,28 @@ class MigrationTest {
         assertEquals(listOf("Benchmarks · 40°", "Moon 25°"), walls)
     }
 
+    @Test
+    fun migrate22To23PutsEveryClimbInAFacility() {
+        helper.createDatabase(DB, 22).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, 'BOARD')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Gym', 0), (2, 1, 'BOARD', 'Moonboard', 1)")
+            execSQL("INSERT INTO areas (id, placeId, name, position, sectionId) VALUES (1, 1, 'Cave', 0, 1)")
+            val problem = "INSERT INTO problems (id, placeId, sectionId, areaId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) VALUES "
+            // No facility: first logged on the board, then once in the gym; one on a wall; one already set.
+            execSQL(problem + "(1, 1, NULL, NULL, 'Seventh seal', 'BOULDER', 'FONT', 10, 0, 0)")
+            execSQL(problem + "(2, 1, NULL, 1, 'Blue', 'BOULDER', 'FONT', 8, 0, 0)")
+            execSQL(problem + "(3, 1, 1, NULL, 'Pink', 'BOULDER', 'FONT', 8, 0, 0)")
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, sends, venue, dateEpochDay, createdAtMillis, placeId, sectionId, problemId, name) VALUES "
+            execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'ATTEMPT', 1, 0, 'BOARD', 20000, 1, 1, 2, 1, 'Seventh seal')")
+            execSQL(climb + "(2, 'BOULDER', 'FONT', 10, 'REDPOINT', 1, 1, 'GYM', 20002, 2, 1, 1, 1, 'Seventh seal')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 23, true)
+        val sections = db.query("SELECT sectionId FROM problems ORDER BY id").use { c -> buildList { while (c.moveToNext()) add(c.getLong(0)) } }
+        assertEquals(listOf(2L, 1L, 1L), sections)
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

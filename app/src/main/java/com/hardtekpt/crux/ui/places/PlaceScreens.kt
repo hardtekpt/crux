@@ -265,6 +265,12 @@ fun PlaceDetailScreen(
         val areaLabel = if (current.place.hasSeveralTypes) "Area" else current.place.type.areaLabel
         val sections = current.place.sections
         val picked = sections.firstOrNull { it.id == facility }
+        // The facility a climb is at: its own, else its wall's, else the place's first.
+        val facilityOf: (com.hardtekpt.crux.data.model.Problem) -> Long? = { p ->
+            sections.firstOrNull { it.id == p.sectionId }?.id
+                ?: current.areas.firstOrNull { it.id == p.areaId }?.let { current.place.sectionOf(it)?.id }
+                ?: sections.firstOrNull()?.id
+        }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
@@ -354,7 +360,7 @@ fun PlaceDetailScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
                                 pair.forEach { section ->
                                     val areas = current.areas.filter { current.place.sectionOf(it)?.id == section.id }
-                                    val problems = current.problems.count { p -> areas.any { it.id == p.problem.areaId } }
+                                    val problems = current.problems.count { facilityOf(it.problem) == section.id }
                                     FacilityTile(
                                         section = section,
                                         areas = areas.size,
@@ -409,15 +415,23 @@ fun PlaceDetailScreen(
             }
 
             val visible = current.problems
-            // With a facility picked, only its walls and their problems.
+            // With a facility picked, only its walls and climbs. Climbs on no wall group by facility.
             val shownAreas = current.areas.filter { picked == null || current.place.sectionOf(it)?.id == picked.id }
-            val groups: List<Pair<Area?, List<ProblemWithStats>>> =
-                shownAreas.map { area -> area to visible.filter { it.problem.areaId == area.id } } +
-                    listOf<Pair<Area?, List<ProblemWithStats>>>(null to visible.filter { picked == null && it.problem.areaId == null })
+            val shownSections = sections.filter { picked == null || it.id == picked.id }
+            val groups: List<Triple<Area?, String, List<ProblemWithStats>>> =
+                shownAreas.map { area -> Triple(area, "area_${area.id}", visible.filter { it.problem.areaId == area.id }) } +
+                    if (sections.isEmpty()) {
+                        listOf(Triple(null, "none", visible.filter { it.problem.areaId == null }))
+                    } else {
+                        shownSections.map { section ->
+                            Triple(null, "section_${section.id}", visible.filter { it.problem.areaId == null && facilityOf(it.problem) == section.id })
+                        }
+                    }
 
-            groups.forEach { (area, problems) ->
+            groups.forEach { (area, groupKey, problems) ->
                 if (area == null && problems.isEmpty()) return@forEach
-                item(key = "area_${area?.id ?: "none"}") {
+                val section = sections.firstOrNull { "section_${it.id}" == groupKey }
+                item(key = "area_$groupKey") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(space.s3),
@@ -439,6 +453,7 @@ fun PlaceDetailScreen(
                                     current.place.sectionOf(a)?.name?.takeIf { current.place.hasSeveralTypes },
                                 ).joinToString(" · ")
                             }
+                                ?: section?.takeIf { sections.size > 1 }?.let { "${it.name} · no ${it.type.areaLabel.lowercase()}" }
                                 ?: "No ${areaLabel.lowercase()}",
                             Modifier.weight(1f),
                         )
@@ -461,7 +476,7 @@ fun PlaceDetailScreen(
                     }
                 }
                 if (problems.isNotEmpty()) {
-                    item(key = "problems_${area?.id ?: "none"}") {
+                    item(key = "problems_$groupKey") {
                         // A wall's climbs as flat lines on one panel.
                         Column(
                             Modifier

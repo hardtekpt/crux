@@ -27,6 +27,13 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **A lighter Journal header**: search and filters sit in the top bar, the types are tabs, and
   today is the first day on the timeline, so the timeline starts right under the tabs.
 
+### Fixed
+
+- **Board climbs on the place page**: a facility with no walls, like a Moonboard, showed 0 climbs.
+  Each climb now belongs to a facility, so counts and the facility filter include climbs on no
+  wall, and logging more goes on a climb keeps it at its facility instead of the place's first.
+- Climbs with the same name at two facilities of a place stay separate climbs.
+
 
 ## [0.3.0] - 2026-10-10
 

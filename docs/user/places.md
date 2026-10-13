@@ -30,7 +30,8 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 
 - **Numbers**: climbs logged and the last visit, climbs here and on how many walls, and open
   projects.
-- **Facilities**: tap one to show only its walls; tap again to show all.
+- **Facilities**, each with how many climbs it has: tap one to show only its walls and climbs; tap
+  again to show all. Climbs on no wall are listed under their facility.
 - **Log here**: starts *Log climb* at this place, and at the facility if one is selected.
 - **Walls** (areas), each with the climbs you've logged on it: grade, name, goes and when you sent
   it. A wall can have an **image** (a photo of the wall, or a gym map with it marked).

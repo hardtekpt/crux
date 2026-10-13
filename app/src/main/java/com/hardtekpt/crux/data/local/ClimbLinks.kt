@@ -10,8 +10,9 @@ import java.util.Locale
 /**
  * Every log belongs to a climb (schema 21). Climbs live in the `problems` table, logs in
  * `climbs`. This gives each log that has no climb yet one: the climb with the same name at the
- * same place (and discipline), else a new one named by the log, or by its grade and where it
- * was when the log has no name. Unnamed logs never merge; each is its own climb.
+ * same place and facility (and discipline), else a new one named by the log, or by its grade and
+ * where it was when the log has no name. Unnamed logs never merge; each is its own climb. A
+ * climb with no facility yet takes the first log's (schema 23).
  *
  * Works on the raw database so the schema 21 migration, the demo seeder and backup import can
  * all use it. The log takes the climb's name, so lists show the same name everywhere.
@@ -19,7 +20,7 @@ import java.util.Locale
 object ClimbLinks {
     private val DAY = DateTimeFormatter.ofPattern("d MMM", Locale.UK)
 
-    private data class Key(val placeId: Long?, val name: String, val discipline: String)
+    private data class Key(val placeId: Long?, val sectionId: Long?, val name: String, val discipline: String)
 
     fun linkUnlinked(db: SupportSQLiteDatabase, nowMillis: Long) {
         val places = names(db, "SELECT id, name FROM places")
@@ -30,12 +31,13 @@ object ClimbLinks {
             while (c.moveToNext()) placeSections[c.getLong(0)] = c.getInt(1)
         }
 
-        // The climbs there are, by place, name and discipline.
+        // The climbs there are, by place, facility, name and discipline.
         val climbs = mutableMapOf<Key, Long>()
-        db.query("SELECT id, placeId, name, discipline FROM problems").use { c ->
+        db.query("SELECT id, placeId, sectionId, name, discipline FROM problems").use { c ->
             while (c.moveToNext()) {
                 val placeId = if (c.isNull(1)) null else c.getLong(1)
-                climbs[Key(placeId, c.getString(2).trim().lowercase(), c.getString(3))] = c.getLong(0)
+                val sectionId = if (c.isNull(2)) null else c.getLong(2)
+                climbs[Key(placeId, sectionId, c.getString(3).trim().lowercase(), c.getString(4))] = c.getLong(0)
             }
         }
 
@@ -86,10 +88,20 @@ object ClimbLinks {
                     ?: log.sectionId?.takeIf { (placeSections[log.placeId] ?: 0) > 1 }?.let(sections::get)
                     ?: log.placeId?.let(places::get)
                     ?: LocalDate.ofEpochDay(log.day).format(DAY)
-                unique("$grade · $where") { candidate -> Key(log.placeId, candidate.lowercase(), log.discipline) in climbs }
+                unique("$grade · $where") { candidate ->
+                    Key(log.placeId, log.sectionId, candidate.lowercase(), log.discipline) in climbs ||
+                        Key(log.placeId, null, candidate.lowercase(), log.discipline) in climbs
+                }
             }
-            val key = Key(log.placeId, name.lowercase(), log.discipline)
-            val climbId = climbs[key] ?: db.insert(
+            val key = Key(log.placeId, log.sectionId, name.lowercase(), log.discipline)
+            // A climb of that name with no facility yet is this one; it takes the log's facility.
+            val loose = Key(log.placeId, null, name.lowercase(), log.discipline)
+            val claimed = climbs[loose]?.takeIf { log.sectionId != null && key !in climbs }?.also { id ->
+                db.execSQL("UPDATE problems SET sectionId = ? WHERE id = ?", arrayOf<Any>(log.sectionId!!, id))
+                climbs.remove(loose)
+                climbs[key] = id
+            }
+            val climbId = climbs[key] ?: claimed ?: db.insert(
                 "problems",
                 android.database.sqlite.SQLiteDatabase.CONFLICT_ABORT,
                 android.content.ContentValues().apply {
@@ -108,6 +120,23 @@ object ClimbLinks {
             ).also { climbs[key] = it }
             db.execSQL("UPDATE climbs SET problemId = ?, name = ? WHERE id = ?", arrayOf<Any>(climbId, name, log.id))
         }
+    }
+
+    /**
+     * Every climb at a place is at one of its facilities: one without takes its first log's, else
+     * its wall's. Before schema 23 a climb with no wall had none, and the log form then put later
+     * logs on it in the place's first facility.
+     */
+    fun settleSections(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "UPDATE problems SET sectionId = (SELECT c.sectionId FROM climbs c WHERE c.problemId = problems.id AND c.sectionId IN " +
+                "(SELECT s.id FROM sections s WHERE s.placeId = problems.placeId) ORDER BY c.createdAtMillis, c.id LIMIT 1) " +
+                "WHERE sectionId IS NULL AND placeId IS NOT NULL",
+        )
+        db.execSQL(
+            "UPDATE problems SET sectionId = (SELECT a.sectionId FROM areas a WHERE a.id = problems.areaId) " +
+                "WHERE sectionId IS NULL AND areaId IS NOT NULL",
+        )
     }
 
     /**

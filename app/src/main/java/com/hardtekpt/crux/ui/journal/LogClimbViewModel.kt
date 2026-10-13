@@ -241,7 +241,11 @@ class LogClimbViewModel @Inject constructor(
                 _draft.update { regrade(it.copy(sectionId = section.id, venue = section.type.venue), place) }
             }
         }
-        problem?.let(::pickProblem)
+        problem?.let { p ->
+            // The place's walls and facilities, loaded here since the form's own may not be yet.
+            applyProblem(p, p.placeId?.let { placeRepository.observePlaceDetail(it).first() })
+            refreshEarlierGoes(p.id, null)
+        }
     }
 
     private suspend fun restoreLastSpot(placeId: Long) {
@@ -367,10 +371,12 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = trail) else it }
     }
 
-    private fun applyProblem(problem: Problem) = _draft.update {
-        val detail = placeDetail.value?.takeIf { d -> d.place.id == problem.placeId }
+    private fun applyProblem(problem: Problem, loaded: PlaceDetail? = placeDetail.value) = _draft.update {
+        val detail = loaded?.takeIf { d -> d.place.id == problem.placeId }
         val area = detail?.areas?.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }
-        val section = detail?.place?.sections?.firstOrNull { s -> s.id == problem.sectionId } ?: detail?.place?.sectionOf(area)
+        // The climb's own facility, else its wall's; never the place's first by default.
+        val section = detail?.place?.sections?.firstOrNull { s -> s.id == problem.sectionId }
+            ?: area?.let { a -> detail.place.sections.firstOrNull { s -> s.id == a.sectionId } }
         it.copy(
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
@@ -401,7 +407,10 @@ class LogClimbViewModel @Inject constructor(
         return if (draft.placeId == null) {
             unplaced.value
         } else {
-            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems?.map { it.problem }.orEmpty()
+            // At a place with several facilities, the climbs at the picked one (or with none yet).
+            val detail = placeDetail.value?.takeIf { it.place.id == draft.placeId }
+            val several = (detail?.place?.sections?.size ?: 0) > 1
+            detail?.problems?.map { it.problem }.orEmpty().filter { !several || it.sectionId == null || it.sectionId == draft.sectionId }
         }
     }
 
