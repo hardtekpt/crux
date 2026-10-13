@@ -20,8 +20,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
-- **More room on Home**: the app name is gone from the top bar, and the bar hides as you scroll
-  down and returns as you scroll up.
+- **More room on Home**: no title bar; the dashboard starts with the date, and the edit button
+  sits at its end.
 - **A lighter Journal header**: search and filters sit in the top bar, the types are tabs, and
   today is the first day on the timeline, so the timeline starts right under the tabs.
 

@@ -2,8 +2,8 @@
 
 Home is a dashboard of widgets that you choose and arrange yourself.
 
-The top bar holds only the edit button, and it slides away as you scroll down and comes back as
-you scroll up (it stays while you edit the dashboard).
+Home has no title bar: the dashboard starts with the date, and the button at its end edits the
+dashboard. While editing, a bar at the top holds *Add widget* and *Done*.
 
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/1_home.png" width="300" alt="Home dashboard with today's plan, this week, latest best, bodyweight and projects">
 
@@ -25,7 +25,7 @@ you scroll up (it stays while you edit the dashboard).
 
 ## Arranging the dashboard
 
-Tap the grid icon at the top right to start editing. Then:
+Tap the grid icon beside the date to start editing. Then:
 
 - **Remove** a widget with its ✕.
 - **Resize** it. Most widgets come in small (half width), wide or large.
