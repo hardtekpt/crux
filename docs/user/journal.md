@@ -12,7 +12,8 @@ training results; and notes. Newest is at the top.
 
 Days run newest first, each with a date tile and a tally; today's tile is filled in the accent.
 
-- **Tabs**: *All*, *Climbs*, *Training* or *Notes*, each with a count.
+- **Tabs**: *All*, *Climbs*, *Training* or *Notes*, each with a count. Swipe sideways to move
+  between them.
 - **Search** (the magnifier in the top bar): finds climbs, places and notes by text. The back
   arrow clears the search and closes it.
 - **Filters** (the sliders in the top bar): the period (last 7 days, 30 days, 3 months, 12 months or all

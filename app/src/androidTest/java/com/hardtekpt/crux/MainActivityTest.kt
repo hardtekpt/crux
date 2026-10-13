@@ -524,6 +524,9 @@ class MainActivityTest {
         composeRule.onNode(hasTestTag("journal_note") and hasText("INJURY", substring = true)).assertIsDisplayed()
         composeRule.onNodeWithTag("journal_filter_Climbs").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_note").fetchSemanticsNodes().isEmpty() }
+        // A sideways swipe moves between the tabs: from Climbs back to All.
+        composeRule.onNodeWithTag("screen_Journal").performTouchInput { swipeRight(startX = centerX - width * 0.35f, endX = centerX + width * 0.35f) }
+        composeRule.waitForTag("journal_note")
         // Search finds it by its text; a tag filter from the sheet keeps it.
         composeRule.onNodeWithTag("journal_filter_All").performClick()
         composeRule.onNodeWithTag("journal_open_search").performClick()

@@ -93,6 +93,7 @@ import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
@@ -196,6 +197,10 @@ fun JournalContent(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
+            // Swipe sideways to move between All, Climbs, Training and Notes.
+            .swipeBetweenTabs { direction ->
+                JournalFilter.entries.getOrNull(uiState.query.kind.ordinal + direction)?.let { kind -> onQuery { it.copy(kind = kind) } }
+            }
             .testTag("screen_Journal"),
     ) {
         if (searching) {

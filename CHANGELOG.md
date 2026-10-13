@@ -25,7 +25,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **No more board angle**: logging, places and walls no longer ask for an angle. Angles you logged
   are kept: each climb's is added to its note ("Board angle 40°"), and a wall's to its name.
 - **A lighter Journal header**: search and filters sit in the top bar, the types are tabs, and
-  today is the first day on the timeline, so the timeline starts right under the tabs.
+  today is the first day on the timeline, so the timeline starts right under the tabs. Swipe
+  sideways to move between the tabs.
 
 ### Fixed
 

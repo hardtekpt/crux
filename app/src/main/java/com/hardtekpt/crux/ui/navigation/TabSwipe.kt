@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 /**
- * A sideways swipe moves between a page's own tabs (Journal's Climbs and Places, Train's
+ * A sideways swipe moves between a page's own tabs (the Journal's types, Train's
  * Plans and Exercises): right to left goes to the next one, left to right to the
  * previous. It only listens after the content has
  * had its turn, so anything that handles its own horizontal drag (wheels, rulers, grade and
