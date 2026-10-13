@@ -81,9 +81,10 @@ class LiveCardsTest {
         val rest = Rest(endsAtMillis = now + 90_000, totalSeconds = 120)
         val card = LiveCards.forSession(planSession(), rest = rest, timer = null, now = now)
 
-        assertTrue(card.title.startsWith("Rest"))
+        assertEquals("1:30 · Rest", card.title)
+        assertEquals("1:30", card.chip)
         assertTrue(card.countDown)
-        assertEquals(rest.endsAtMillis, card.clockAt)
+        assertNull(card.clockAt)
         assertEquals(listOf(LiveAction.ADD_REST, LiveAction.SUB_REST, LiveAction.SKIP_REST), card.actions)
         assertEquals(LiveColor.REST, card.accent)
     }
@@ -113,11 +114,12 @@ class LiveCardsTest {
         val at = spec.prepSeconds * 1000L + 1_000
         val card = LiveCards.forInterval(IntervalRun(spec, startedAtMillis = 0), at, name = null, sessionId = null)
 
-        assertTrue(card.title.startsWith("Work · rep 1"))
+        assertEquals("0:19 · Work", card.title)
+        assertTrue(card.text!!.startsWith("Rep 1 of"))
         assertTrue(card.segments.any { it.color == LiveColor.WORK })
         assertTrue(card.segments.any { it.color == LiveColor.REST })
         assertEquals(listOf(LiveAction.PAUSE, LiveAction.STOP), card.actions)
-        assertNull(card.chip)
+        assertEquals("0:19", card.chip)
     }
 
     @Test

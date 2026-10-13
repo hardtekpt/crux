@@ -56,6 +56,9 @@ data class LiveCard(
 )
 
 object LiveCards {
+    /** Time left as the card shows it, rounded up so it reads 0:01 until the very end. */
+    fun countdown(millis: Long): String = clockLabel(((millis.coerceAtLeast(0) + 999) / 1000) * 1000)
+
     /** Android 16 draws at most this many segments; more and the bar becomes one plain segment. */
     const val MAX_SEGMENTS = 10
 
@@ -161,12 +164,15 @@ object LiveCards {
         val current = session.items.firstOrNull { !it.finished }
         val (segments, progress) = if (session.items.isNotEmpty()) planSegments(session) else listOf(LiveSegment(rest.totalSeconds, LiveColor.REST)) to 0
         val restProgress = (rest.totalSeconds - ((rest.endsAtMillis - now) / 1000).toInt()).coerceIn(0, rest.totalSeconds)
+        // The time left leads, in the title and the status bar chip: it's what you look at.
+        val left = countdown(rest.endsAtMillis - now)
         return LiveCard(
-            title = current?.let { "Rest before set ${(it.nextSet ?: 0) + 1}" } ?: "Rest",
-            text = current?.let { "${it.exercise.name} · ${it.logged} of ${it.target.sets} sets done" } ?: "Then pull on again",
+            title = "$left · Rest",
+            text = current?.let { "Then set ${(it.nextSet ?: 0) + 1} of ${it.target.sets} · ${it.exercise.name}" } ?: "Then pull on again",
             sub = header(session, minutes),
-            chip = null,
-            clockAt = rest.endsAtMillis,
+            chip = left,
+            // No second clock beside it: the title and chip already count down.
+            clockAt = null,
             countDown = true,
             segments = segments,
             progress = if (session.items.isNotEmpty()) progress else restProgress,
@@ -233,22 +239,26 @@ object LiveCards {
         val doneBefore = phases.take(position.index).sumOf { it.seconds }
         val progress = (doneBefore + current.seconds - (position.leftMillis / 1000).toInt()).coerceIn(0, segments.sumOf { it.length })
         // Phases number cycles and repeats from 0; the card counts from 1.
-        val title = when {
+        val phase = when {
             position.finished -> "Done"
-            current.kind == IntervalPhase.Kind.WORK -> "Work · rep ${current.repeat + 1} of ${spec.repeats}"
-            current.kind == IntervalPhase.Kind.REST -> "Rest · rep ${current.repeat + 2} next"
-            current.kind == IntervalPhase.Kind.CYCLE_REST -> "Rest before cycle ${current.cycle + 2}"
-            else -> "Get ready"
+            current.kind == IntervalPhase.Kind.WORK -> "Work"
+            current.kind == IntervalPhase.Kind.PREP -> "Get ready"
+            else -> "Rest"
         }
-        val left = (position.leftMillis / 1000).toInt()
+        val where = when (current.kind) {
+            IntervalPhase.Kind.WORK -> "Rep ${current.repeat + 1} of ${spec.repeats}"
+            IntervalPhase.Kind.REST -> "Rep ${current.repeat + 2} of ${spec.repeats} next"
+            IntervalPhase.Kind.CYCLE_REST -> "Cycle ${current.cycle + 2} next"
+            IntervalPhase.Kind.PREP -> "Rep 1 of ${spec.repeats} next"
+        }
+        // The time left in this phase leads, in the title and the status bar chip: it's what you look at.
+        val clock = countdown(position.leftMillis)
         return LiveCard(
-            title = title,
-            text =
-                "Cycle ${current.cycle + 1} of ${spec.cycles}" +
-                    if (spec.cycles > 1 && spec.cycleRestSeconds > 0) " · ${clockLabel(spec.cycleRestSeconds * 1000L)} between cycles" else "",
+            title = if (position.finished) phase else "$clock · $phase",
+            text = "$where · cycle ${current.cycle + 1} of ${spec.cycles}",
             sub = listOfNotNull(name, "${spec.repeats} × ${spec.workSeconds} s on, ${spec.restSeconds} s off").joinToString(" · "),
-            chip = if (run.paused) "Paused" else null,
-            clockAt = if (run.paused) null else now + left * 1000L,
+            chip = if (run.paused) "Paused" else clock,
+            clockAt = null,
             countDown = true,
             segments = segments,
             progress = progress,

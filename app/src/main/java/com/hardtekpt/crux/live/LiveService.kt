@@ -81,7 +81,9 @@ class LiveService : Service() {
         val ticks = flow {
             while (true) {
                 emit(clock.millis())
-                delay(if (live.rest.value != null || live.timer.value != null || live.standalone.value != null) 1_000 else 30_000)
+                // On the second, so the time in the title steps with the clock.
+                val now = clock.millis()
+                delay(if (live.rest.value != null || live.timer.value != null || live.standalone.value != null) 1_000 - now % 1_000 + 20 else 30_000)
             }
         }
         combine(sessions.observeRunning(), live.rest, live.timer, live.standalone, ticks) { session, rest, timer, standalone, _ ->

@@ -60,8 +60,10 @@ session or timer; there is no Open button.
 - **A session with a plan**: one segment per exercise, green once it's done. The title reads
   "Exercise · set N of M". **Set done** logs the next set as planned and starts its rest.
 - **Resting**: the card turns into the countdown, in amber, with **+30 s**, **−30 s** and
-  **Skip rest**. When the rest ends the phone buzzes, if *Timer sounds* is on in Settings.
-- **The interval timer**: the current cycle rep by rep, teal for work and amber for rest. Finished
+  **Skip rest**. The time left leads the title ("1:24 · Rest") and fills the status bar chip. When the rest ends the phone buzzes, if *Timer sounds* is on in Settings.
+- **The interval timer**: the time left in the current phase leads the title ("0:14 · Work") and
+  fills the status bar chip; below it, the rep and cycle. The bar shows the current cycle rep by
+  rep, teal for work and amber for rest. Finished
   cycles are green, and the rests between cycles are violet. **Pause** (then **Resume**) and
   **Stop** are on the card. The *You → Interval timer* page shows the same card.
 - **A climbing day with no plan**: the time on the wall, with a mark for each climb (green for a
