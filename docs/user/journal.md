@@ -23,6 +23,10 @@ Days run newest first, each with a date tile and a tally; today's tile is filled
 Each climb shows its grade, name, style, goes and notes, with a colour bar: green for a send, grey
 for an attempt. Tap a climb to edit it. Tap a session for its summary.
 
+A **climb** has one name, grade and place (with its facility and wall); each **log** on it is a
+day's goes, with how it felt, a note and media. Changing the name, grade or where while editing a
+log changes the climb, and all its logs follow.
+
 ## Logging a climb
 
 Open **+ → Log climb**, tap **Log here** on a place page, or **Log climb** inside a session.

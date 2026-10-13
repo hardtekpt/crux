@@ -35,6 +35,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   Each climb now belongs to a facility, so counts and the facility filter include climbs on no
   wall, and logging more goes on a climb keeps it at its facility instead of the place's first.
 - Climbs with the same name at two facilities of a place stay separate climbs.
+- **A climb's name, grade and place are the climb's**: changing them while logging or editing a log
+  changes the climb, and all its logs follow. Editing where a log was no longer splits it off into
+  another climb. Logs saved at another facility than their climb's (like Moonboard climbs logged
+  under the gym) move to the climb's facility; nothing is deleted.
 
 
 ## [0.3.0] - 2026-10-10

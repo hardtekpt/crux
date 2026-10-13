@@ -295,6 +295,33 @@ class MigrationTest {
         assertEquals(listOf(2L, 1L, 1L), sections)
     }
 
+    @Test
+    fun migrate23To24MakesEveryLogShowItsClimb() {
+        helper.createDatabase(DB, 23).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, 'BOARD')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Gym', 0), (2, 1, 'BOARD', 'Moonboard', 1)")
+            execSQL(
+                "INSERT INTO problems (id, placeId, sectionId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) " +
+                    "VALUES (1, 1, 2, 'Seventh seal', 'BOULDER', 'FONT', 10, 0, 0)",
+            )
+            val climb = "INSERT INTO climbs " +
+                "(id, discipline, gradeScale, gradeIndex, style, attempts, sends, venue, dateEpochDay, createdAtMillis, placeId, sectionId, problemId, name, effort) VALUES "
+            execSQL(climb + "(1, 'BOULDER', 'FONT', 10, 'ATTEMPT', 1, 0, 'BOARD', 20000, 1, 1, 2, 1, 'Seventh seal', 7)")
+            // Saved in the gym, a grade lower and named differently: it follows its climb, keeping how it felt.
+            execSQL(climb + "(2, 'BOULDER', 'FONT', 9, 'REDPOINT', 1, 1, 'GYM', 20002, 2, 1, 1, 1, 'seventh seal', 5)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 24, true)
+        db.query("SELECT sectionId, venue, gradeIndex, name, effort FROM climbs WHERE id = 2").use { c ->
+            c.moveToFirst()
+            assertEquals(2L, c.getLong(0))
+            assertEquals("BOARD", c.getString(1))
+            assertEquals(10, c.getInt(2))
+            assertEquals("Seventh seal", c.getString(3))
+            assertEquals(5, c.getInt(4))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

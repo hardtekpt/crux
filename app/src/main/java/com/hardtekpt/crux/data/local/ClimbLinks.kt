@@ -123,6 +123,45 @@ object ClimbLinks {
     }
 
     /**
+     * A climb's name, grade, discipline and where it is belong to the climb. Saving a log on a
+     * climb makes the form's values the climb's: the climb takes them from log [logId].
+     */
+    fun adoptLog(db: SupportSQLiteDatabase, logId: Long) {
+        val columns = listOf("name", "discipline", "gradeScale", "gradeIndex", "gradeLabel", "gradeColour", "placeId", "sectionId", "areaId")
+        db.execSQL(
+            // A log saved without a name keeps the climb's.
+            "UPDATE problems SET " +
+                columns.joinToString {
+                    if (it ==
+                        "name"
+                    ) {
+                        "name = COALESCE((SELECT c.name FROM climbs c WHERE c.id = ?), name)"
+                    } else {
+                        "$it = (SELECT c.$it FROM climbs c WHERE c.id = ?)"
+                    }
+                } +
+                " WHERE id = (SELECT problemId FROM climbs WHERE id = ?)",
+            Array<Any>(columns.size + 1) { logId },
+        )
+    }
+
+    /**
+     * Each log shows its climb as it is: the climb's name, grade, discipline and where it is, the
+     * facility's kind as the venue, and the place's name. Only [problemId]'s logs when given
+     * (schema 24 does them all).
+     */
+    fun syncLogs(db: SupportSQLiteDatabase, problemId: Long? = null) {
+        val p = "(SELECT p.%s FROM problems p WHERE p.id = climbs.problemId)"
+        val columns = listOf("name", "discipline", "gradeScale", "gradeIndex", "gradeLabel", "gradeColour", "placeId", "sectionId", "areaId")
+        db.execSQL(
+            "UPDATE climbs SET " + columns.joinToString { "$it = ${p.format(it)}" } +
+                ", venue = COALESCE((SELECT s.type FROM sections s WHERE s.id = ${p.format("sectionId")}), venue)" +
+                ", place = COALESCE((SELECT pl.name FROM places pl WHERE pl.id = ${p.format("placeId")}), place)" +
+                " WHERE problemId IS NOT NULL" + if (problemId != null) " AND problemId = $problemId" else "",
+        )
+    }
+
+    /**
      * Every climb at a place is at one of its facilities: one without takes its first log's, else
      * its wall's. Before schema 23 a climb with no wall had none, and the log form then put later
      * logs on it in the place's first facility.

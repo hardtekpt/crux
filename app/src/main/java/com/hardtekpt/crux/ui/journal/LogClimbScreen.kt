@@ -268,7 +268,18 @@ fun LogClimbContent(
             // Name: suggests climbs here to continue; any other name starts a new climb.
             NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3))
             Extras(draft, onNotes, media)
-            if (earlierLogs.isNotEmpty()) EarlierLogs(earlierLogs, onOpenLog, Modifier.padding(top = space.s4))
+            if (earlierLogs.isNotEmpty()) {
+                // The name, grade and where are the climb's: changing them changes every log.
+                if (draft.isEditing) {
+                    Text(
+                        "Name, grade and where change the climb, for all ${earlierLogs.size + 1} logs.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = space.s3).testTag("climb_wide_note"),
+                    )
+                }
+                EarlierLogs(earlierLogs, onOpenLog, Modifier.padding(top = space.s4))
+            }
         }
         CruxButton(
             text = if (draft.isEditing) "Save changes" else "Log climb",

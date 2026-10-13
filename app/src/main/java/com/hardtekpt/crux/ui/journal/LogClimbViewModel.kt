@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.PlaceRepository
-import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.images.ImageFiles
 import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.model.AscentStyle
@@ -281,8 +280,9 @@ class LogClimbViewModel @Inject constructor(
                     placeId = place?.id,
                     sectionId = place?.sections?.firstOrNull()?.id,
                     areaId = null,
-                    problemId = null,
-                    earlierGoes = emptyList(),
+                    // Editing a log moves its whole climb; a new log at another place is another climb.
+                    problemId = draft.problemId.takeIf { draft.isEditing },
+                    earlierGoes = if (draft.isEditing) draft.earlierGoes else emptyList(),
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
                     scaleOverride = override,
                     local = section?.localScale,
@@ -313,7 +313,7 @@ class LogClimbViewModel @Inject constructor(
         regrade(
             it.copy(
                 areaId = id,
-                problemId = if (keepProblem) it.problemId else null,
+                problemId = if (keepProblem || it.isEditing) it.problemId else null,
                 sectionId = section?.id ?: it.sectionId,
                 venue = section?.type?.venue ?: it.venue,
             ),
@@ -332,7 +332,7 @@ class LogClimbViewModel @Inject constructor(
                 sectionId = sectionId,
                 venue = section.type.venue,
                 areaId = if (keepArea) it.areaId else null,
-                problemId = if (keepArea) it.problemId else null,
+                problemId = if (keepArea || it.isEditing) it.problemId else null,
             ),
             detail.place,
         )
@@ -439,7 +439,11 @@ class LogClimbViewModel @Inject constructor(
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
         val override = placeDetail.value?.place?.scaleFor(discipline, draft.sectionId)
-        val next = draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = emptyList())
+        val next = if (draft.isEditing) {
+            draft.copy(discipline = discipline, scaleOverride = override)
+        } else {
+            draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = emptyList())
+        }
         next.copy(gradeIndex = next.system.defaultIndex)
     }
 
@@ -537,29 +541,8 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val place = draft.placeId?.let { placeRepository.getPlace(it) }
-            // A picked climb follows the form: its name, grade and where it is.
+            // On a picked climb, the repository makes the form's name, grade and where the climb's.
             val problemId = draft.problemId
-            if (problemId != null) {
-                val existing = placeRepository.getProblem(problemId)
-                if (existing != null && draft.name.isNotBlank()) {
-                    placeRepository.saveProblem(
-                        ProblemInput(
-                            id = problemId,
-                            placeId = place?.id,
-                            areaId = draft.areaId.takeIf { place != null },
-                            sectionId = draft.sectionId.takeIf { place != null },
-                            name = draft.name.trim(),
-                            discipline = draft.discipline,
-                            gradeScale = draft.gradeScale,
-                            gradeIndex = draft.gradeIndex,
-                            tape = existing.tape,
-                            notes = existing.notes,
-                            gradeLabel = draft.system.label(draft.gradeIndex),
-                            gradeColour = draft.system.colour(draft.gradeIndex),
-                        ),
-                    )
-                }
-            }
             val climb = NewClimb(
                 discipline = draft.discipline,
                 gradeScale = draft.gradeScale,

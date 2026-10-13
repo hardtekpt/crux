@@ -256,7 +256,7 @@ interface PlaceDao {
         """
         UPDATE climbs SET name = :name, discipline = :discipline, gradeScale = :gradeScale, gradeIndex = :gradeIndex,
             gradeLabel = :gradeLabel, gradeColour = :gradeColour, placeId = :placeId, sectionId = :sectionId, areaId = :areaId,
-            place = COALESCE(:placeName, place)
+            place = COALESCE(:placeName, place), venue = COALESCE((SELECT type FROM sections WHERE id = :sectionId), venue)
         WHERE problemId = :id
         """,
     )
