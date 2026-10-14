@@ -86,6 +86,11 @@ data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val probl
 
 @Serializable data class ExerciseRecordsRoute(val exerciseId: Long)
 
+/** Your lists of climbs (You → Datasets), and one of them. */
+@Serializable data object DatasetsRoute
+
+@Serializable data class DatasetRoute(val datasetId: Long)
+
 /** The five root destinations from the app blueprint. */
 enum class TopLevelDestination(val graph: Any, val label: String, val icon: ImageVector) {
     Home(HomeGraph, "Home", Icons.Rounded.Home),

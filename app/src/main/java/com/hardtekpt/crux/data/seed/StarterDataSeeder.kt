@@ -90,6 +90,7 @@ class StarterDataSeeder(private val clock: Clock) {
             }
             if (includeSampleData && db.scheduleDao().getAll().isEmpty()) insertSampleSchedule(db)
             if (includeSampleData && db.sessionDao().countAll() == 0) insertSampleSessions(db)
+            if (includeSampleData && db.datasetDao().getDatasets().isEmpty()) insertSampleDataset(db)
         }
     }
 
@@ -198,6 +199,34 @@ class StarterDataSeeder(private val clock: Clock) {
                     ),
                 )
             }
+        }
+    }
+
+    /** A gym circuit as a dataset for the demo: 12 climbs at Block Lab, no board, in Font. */
+    private suspend fun insertSampleDataset(db: CruxDatabase) {
+        val now = clock.millis()
+        val dao = db.datasetDao()
+        val id = dao.insertDataset(
+            com.hardtekpt.crux.data.DatasetEntity(
+                name = "Block Lab circuit",
+                boulderScale = com.hardtekpt.crux.data.model.GradeScale.FONT,
+                createdAtMillis = now,
+                updatedAtMillis = now,
+            ),
+        )
+        val grades = com.hardtekpt.crux.data.model.GradeScale.FONT.grades
+        SAMPLE_CIRCUIT.forEachIndexed { index, (name, grade, note) ->
+            dao.insertClimb(
+                com.hardtekpt.crux.data.DatasetClimbEntity(
+                    datasetId = id,
+                    name = name,
+                    gradeScale = com.hardtekpt.crux.data.model.GradeScale.FONT.takeIf { grade != null },
+                    gradeIndex = grade?.let(grades::indexOf),
+                    setter = if (index % 3 == 0) "Rita" else null,
+                    note = note,
+                    createdAtMillis = now + index,
+                ),
+            )
         }
     }
 
@@ -433,6 +462,22 @@ private val SAMPLE_RECORDS = listOf(
     SampleRecord("Weighted pull-ups", 21, reps = 5, loadKg = 20.0),
     SampleRecord("Weighted pull-ups", 6, reps = 5, loadKg = 22.5),
     SampleRecord("Front lever tucks", 9, seconds = 14),
+)
+
+/** The demo's gym circuit: name, Font grade (null for one not graded yet) and a note. */
+private val SAMPLE_CIRCUIT = listOf(
+    Triple("Blue slab", "5+", "warm-up"),
+    Triple("Cave jugs", "6A", null),
+    Triple("Pinch roof", "6B", null),
+    Triple("Yellow arete", "6B+", "heel hook on the left"),
+    Triple("Cave crimps", "6B+", null),
+    Triple("Pink sloper traverse", "6C", null),
+    Triple("Comp wall dyno", "6C", "jump from the two pinches"),
+    Triple("Black overhang", "6C+", null),
+    Triple("Purple compression", "7A", null),
+    Triple("Red mono", "7A", "careful on the finger"),
+    Triple("Slab of doom", "7A+", null),
+    Triple("New set in the cave", null, "no grade yet"),
 )
 
 private val SAMPLE_NOTE_TAGS = listOf("injury", "beta", "training")

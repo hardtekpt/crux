@@ -1,7 +1,7 @@
 # Data model
 
 Room database [`CruxDatabase`](../../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt),
-**schema 26** at the time of writing. The exported schemas live in
+**schema 27** at the time of writing. The exported schemas live in
 [`app/schemas/`](../../app/schemas/com.hardtekpt.crux.data.local.CruxDatabase); each version's JSON
 is the source of truth for its tables. To change the schema, see [Database](database.md).
 
@@ -38,6 +38,8 @@ erDiagram
 | `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId` (at a place, `sectionId` is always set since schema 23; `ClimbLinks` matches logs by place, facility and name). Name, discipline, grade and where belong to the climb: saving a log on a climb writes them to it (`ClimbLinks.adoptLog`) and every log keeps a copy in step (`ClimbLinks.syncLogs`, run on all logs by schema 24), `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused) |
 | `exercises` | The exercise library | `name`, `category`, `metric`, defaults (`defaultSets`…`defaultRepRestSeconds`, `prepSeconds`) |
 | `workout_templates` | Session plans | `name`, `description`, `position` |
+| `datasets` | Your lists of climbs to pick from (schema 27) | `name`, `kind` (`own`; `catalogue` comes with board catalogues), `boardModel` (a `BoardModel.key`, `custom` for a custom board, null for none), `boardSize`, `boardHolds`, `boulderScale`/`routeScale` (null = the climber's settings; never local), `createdAtMillis`, `updatedAtMillis` |
+| `dataset_climbs` | Entries in a dataset, not climbs in the journal | `datasetId` (cascade), `name`, `discipline`, `gradeScale` + `gradeIndex` (both null when ungraded), `setter`, `note`, `createdAtMillis`. `DatasetFiles` reads and writes them as CSV and `.crux-dataset.json` (format `crux-dataset`, version 1) |
 | `schedule_slots` | The weekly schedule (schema 25), repeating every week | `dayOfWeek` (1 Monday to 7 Sunday), `position`, `kind` (`PLAN`/`CLIMB`), `templateId` (cascade), `placeId` (set null); a day with none is rest |
 | `template_blocks` | A plan's blocks | `templateId`, `position`, `name` |
 | `template_exercises` | An exercise's target in a block | `blockId`, `exerciseId`, `sets`, `reps`, `seconds`, `loadKg`, `restSeconds`, `repRestSeconds` |

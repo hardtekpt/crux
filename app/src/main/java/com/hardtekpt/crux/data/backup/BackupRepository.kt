@@ -270,6 +270,27 @@ class BackupRepository(
                 null
             },
             settings = if (BackupSection.SETTINGS in sections) settings?.read() else null,
+            datasets = if (BackupSection.DATASETS in sections) {
+                val climbs = db.datasetDao().getAllClimbs().groupBy { it.datasetId }
+                db.datasetDao().getDatasets().map { d ->
+                    DatasetDto(
+                        d.name,
+                        d.kind,
+                        d.boardModel,
+                        d.boardSize,
+                        d.boardHolds,
+                        d.boulderScale,
+                        d.routeScale,
+                        d.createdAtMillis,
+                        d.updatedAtMillis,
+                        climbs[d.id].orEmpty().map {
+                            DatasetClimbDto(it.name, it.discipline, it.gradeScale, it.gradeIndex, it.setter, it.note, it.createdAtMillis)
+                        },
+                    )
+                }
+            } else {
+                null
+            },
         )
     }
 
@@ -355,7 +376,10 @@ class BackupRepository(
             find(BackupSection.RECORDS, file.records, here.records, RecordDto::key, {
                 it.exercise.name
             }, describe::record, { it.copy(exercise = it.exercise.comparable()) }) +
-            find(BackupSection.NOTES, file.notes, here.notes, NoteDto::key, describe::noteTitle, describe::note, { it })
+            find(BackupSection.NOTES, file.notes, here.notes, NoteDto::key, describe::noteTitle, describe::note, { it }) +
+            find(BackupSection.DATASETS, file.datasets, here.datasets, DatasetDto::key, {
+                it.name
+            }, describe::dataset, { it.copy(createdAt = 0, updatedAt = 0) })
     }
 
     suspend fun import(file: BackupFile, sections: Set<BackupSection>): ImportResult = import(OpenedBackup(file), sections)
@@ -429,6 +453,7 @@ class BackupRepository(
             if (BackupSection.BODY in sections) importBody()
             if (BackupSection.RECORDS in sections) importRecords()
             if (BackupSection.NOTES in sections) importNotes()
+            if (BackupSection.DATASETS in sections) importDatasets()
             // The schedule names plans and places, so it goes in once they are.
             if (BackupSection.PLANS in sections) importSchedule()
             return ImportResult(added, skipped, replaced, copied, unreadable)
@@ -981,6 +1006,61 @@ class BackupRepository(
             }
         }
 
+        private suspend fun importDatasets() {
+            val dao = db.datasetDao()
+            val have = dao.getDatasets().associateBy { nameKey(it.name) }
+            suspend fun insert(dto: DatasetDto, name: String) {
+                val id = dao.insertDataset(
+                    com.hardtekpt.crux.data.DatasetEntity(
+                        name = name,
+                        kind = dto.kind,
+                        boardModel = dto.boardModel,
+                        boardSize = dto.boardSize,
+                        boardHolds = dto.boardHolds,
+                        boulderScale = dto.boulderScale,
+                        routeScale = dto.routeScale,
+                        createdAtMillis = dto.createdAt,
+                        updatedAtMillis = dto.updatedAt,
+                    ),
+                )
+                dto.climbs.forEach { c ->
+                    dao.insertClimb(
+                        com.hardtekpt.crux.data.DatasetClimbEntity(
+                            datasetId = id,
+                            name = c.name,
+                            discipline = c.discipline,
+                            gradeScale = c.gradeScale,
+                            gradeIndex = c.gradeIndex,
+                            setter = c.setter,
+                            note = c.note,
+                            createdAtMillis = c.createdAt,
+                        ),
+                    )
+                }
+            }
+            file.datasets?.forEach { dto ->
+                val existing = have[dto.key()]
+                when {
+                    existing == null -> insert(dto, dto.name.trim()).also { added(BackupSection.DATASETS) }
+
+                    else -> when (choice(BackupSection.DATASETS, dto.key())) {
+                        Resolution.SKIP -> Unit
+
+                        Resolution.REPLACE -> {
+                            dao.deleteDataset(existing.id)
+                            insert(dto, existing.name)
+                        }
+
+                        Resolution.KEEP_BOTH -> {
+                            val taken = dao.getDatasets().map { nameKey(it.name) }.toSet()
+                            val name = generateSequence(2) { it + 1 }.map { "${dto.name.trim()} ($it)" }.first { nameKey(it) !in taken }
+                            insert(dto, name)
+                        }
+                    }
+                }
+            }
+        }
+
         private suspend fun importNotes() {
             val dao = db.noteDao()
             val have = dao.getAll().groupBy { it.createdAtMillis }.mapValues { it.value.first() }
@@ -1043,6 +1123,8 @@ private fun MeasurementDto.key() = "${type.name}:$date:$loggedAt"
 private fun RecordDto.key() = "${exercise.key()}:$loggedAt"
 
 private fun NoteDto.key() = createdAt.toString()
+
+private fun DatasetDto.key() = nameKey(name)
 
 // What a record looks like with the parts that differ between installs left out, to tell
 // whether a duplicate is the very same.
@@ -1136,6 +1218,11 @@ private class Describer(private val clock: Clock) {
     )
 
     fun noteTitle(dto: NoteDto) = dto.text.snippet() ?: "Note"
+
+    fun dataset(dto: DatasetDto) = parts(
+        "${dto.climbs.size} ${if (dto.climbs.size == 1) "climb" else "climbs"}",
+        "changed ${day(dto.updatedAt)}",
+    )
 
     fun note(dto: NoteDto) = parts(
         dto.text.trim().lines().drop(1).joinToString(" ").snippet(),

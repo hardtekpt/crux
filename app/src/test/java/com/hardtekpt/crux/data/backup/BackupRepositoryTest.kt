@@ -166,6 +166,15 @@ class BackupRepositoryTest {
         val sections = target.placeDao().getSections(blockLab.id)
         assertEquals(listOf("Main gym", "Kilter board"), sections.map { it.name })
         assertEquals(listOf(null, GradeScale.V_SCALE), sections.map { it.boulderScale })
+        // Datasets come back with their climbs.
+        val circuit = target.datasetDao().getDatasets().single { it.name == "Block Lab circuit" }
+        assertEquals(
+            source.datasetDao().getAllClimbs().map { it.name to it.gradeIndex },
+            target.datasetDao().getClimbs(circuit.id).map {
+                it.name to
+                    it.gradeIndex
+            },
+        )
         // The board, its size and its holds come back; the gym stays a plain section.
         assertEquals(listOf(null, "kilter_homewall"), sections.map { it.boardModel })
         assertEquals(listOf(null, "10x12"), sections.map { it.boardSize })

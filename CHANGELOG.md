@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Datasets**: keep your own lists of climbs under *You → Datasets*, for a home board, a spray
+  wall or a gym circuit. Add, edit, search and sort climbs, import a CSV or a Crux dataset file
+  (with a preview first), and export either. Datasets are in your backups.
+
 - **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
   and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board
   and size show on the place, in the Places list and when you log a climb.

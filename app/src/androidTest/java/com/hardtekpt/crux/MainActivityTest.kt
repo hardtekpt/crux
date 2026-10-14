@@ -579,6 +579,37 @@ class MainActivityTest {
     }
 
     @Test
+    fun aDatasetCanBeMadeAndHoldClimbs() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("menu_datasets"))
+        composeRule.onNodeWithTag("menu_datasets").performClick()
+        // Empty to start with; New dataset opens its details, Create opens it.
+        composeRule.waitForTag("datasets_new")
+        composeRule.onNodeWithTag("datasets_new").performClick()
+        composeRule.waitForTag("dataset_details")
+        composeRule.textFieldIn("field_dataset_name").performTextInput("Garage board")
+        composeRule.onNodeWithTag("dataset_details_save").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        // A climb goes in; an ungraded one sorts last with a dash.
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Roof to pinch")
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitForTag("dataset_climb")
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Sit start project")
+        composeRule.onNodeWithTag("climb_no_grade").performClick()
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("dataset_climb").fetchSemanticsNodes().size == 2 }
+        // Search narrows the list.
+        composeRule.textFieldIn("dataset_search").performTextInput("roof")
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("dataset_climb").fetchSemanticsNodes().size == 1 }
+        composeRule.onNodeWithTag("dataset_climb").assertTextContains("Roof to pinch", substring = true)
+    }
+
+    @Test
     fun aLoggedClimbCanBeEditedAndDeleted() {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_LogClimb").performClick()

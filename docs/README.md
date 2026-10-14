@@ -12,6 +12,7 @@ Start with **[Getting started](user/getting-started.md)**.
 | [Sessions](user/sessions.md) | Running a plan or a climbing day live: sets, rest and interval timers, finishing |
 | [Journal](user/journal.md) | The timeline, search and filters, logging a climb, notes |
 | [Places](user/places.md) | Gyms, crags and boards, facilities, walls, climbs, local grades, maps, projects |
+| [Datasets](user/datasets.md) | Your lists of climbs: making them, climbs, search and sort, CSV and Crux file import and export |
 | [Progress](user/progress.md) | Hardest sends, grade pyramids, charts, projects |
 | [You](user/you.md) | Climber card, consistency, personal records, weight, measurements, notes, grade converter, interval timer |
 | [Grades](user/grades.md) | Scales, why grades are never converted, local grades, the converter |

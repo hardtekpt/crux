@@ -345,6 +345,28 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate26To27AddsEmptyDatasets() {
+        helper.createDatabase(DB, 26).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, '')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 27, true)
+        db.query("SELECT COUNT(*) FROM datasets").use { c ->
+            c.moveToFirst()
+            assertEquals(0, c.getInt(0))
+        }
+        // A dataset's climbs go with it.
+        db.execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Garage board', 'own', 0, 0)")
+        db.execSQL("INSERT INTO dataset_climbs (id, datasetId, name, discipline, createdAtMillis) VALUES (1, 1, 'Roof to pinch', 'BOULDER', 0)")
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("DELETE FROM datasets WHERE id = 1")
+        db.query("SELECT COUNT(*) FROM dataset_climbs").use { c ->
+            c.moveToFirst()
+            assertEquals(0, c.getInt(0))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

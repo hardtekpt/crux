@@ -198,6 +198,28 @@ class ScreenshotTest {
         bothThemes("progress_training") { ProgressContent(uiState = state, initialView = com.hardtekpt.crux.ui.progress.ProgressView.Training) }
     }
 
+    // Your datasets, and the demo's gym circuit as a list of climbs.
+    @Test
+    fun datasets() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(context, repo, preferences)
+        loaded(vm.uiState) { !it.isLoading && it.datasets.isNotEmpty() }
+        bothThemes("datasets", readyText = "Block Lab circuit", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.DatasetsScreen(onBack = {}, onOpen = {}, viewModel = vm)
+        }
+    }
+
+    @Test
+    fun dataset() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val id = runBlocking { db.datasetDao().getDatasets().first().id }
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetViewModel(SavedStateHandle(mapOf("datasetId" to id)), context, repo, preferences, FIXED_CLOCK)
+        loaded(vm.uiState) { it.dataset != null }
+        bothThemes("dataset", readyText = "Blue slab", dark = DARK) { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = {}, viewModel = vm) }
+    }
+
     // An exercise's page: its best, its chart and each day it was trained.
     @Test
     fun exerciseProgress() {

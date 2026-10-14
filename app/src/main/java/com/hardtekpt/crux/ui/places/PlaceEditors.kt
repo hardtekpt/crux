@@ -555,12 +555,19 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
  * choices. Keeps the section to two quiet lines instead of rows of chips.
  */
 @Composable
-private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, tagSuffix: String = "", onSelect: (GradeScale?) -> Unit) {
+internal fun ScaleChoice(
+    label: String,
+    discipline: Discipline,
+    selected: GradeScale?,
+    tagSuffix: String = "",
+    allowLocal: Boolean = true,
+    onSelect: (GradeScale?) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     val options: List<Pair<GradeScale?, String>> =
         listOf<Pair<GradeScale?, String>>(null to "My settings") +
             discipline.scales.map { it to it.label } +
-            (discipline.localScale to "Local grades")
+            listOfNotNull((discipline.localScale to "Local grades").takeIf { allowLocal })
     val current = options.firstOrNull { it.first == selected }?.second ?: "My settings"
     Box {
         Row(
@@ -880,10 +887,13 @@ private fun ChoiceRow(label: String, value: String, tag: String, onClick: () -> 
 /** Which board: Kilter, then MoonBoard, then Custom board, each with a line on what it covers. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun BoardSheet(
+internal fun BoardSheet(
     selected: com.hardtekpt.crux.data.model.BoardModel?,
     onPick: (com.hardtekpt.crux.data.model.BoardModel?) -> Unit,
     onDismiss: () -> Unit,
+    /** Datasets: also offer No board, at the top; picking it calls this. */
+    onNoBoard: (() -> Unit)? = null,
+    noBoardSelected: Boolean = false,
 ) {
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -901,6 +911,15 @@ private fun BoardSheet(
             verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
         ) {
             Text("Board", style = MaterialTheme.typography.headlineSmall)
+            onNoBoard?.let {
+                CruxListRow(
+                    title = "No board",
+                    supporting = "A gym circuit or a crag's climbs",
+                    selected = noBoardSelected,
+                    onClick = it,
+                    modifier = Modifier.testTag("board_option_none"),
+                )
+            }
             com.hardtekpt.crux.data.model.BoardModel.entries.groupBy { it.maker }.forEach { (maker, models) ->
                 Eyebrow(maker, Modifier.padding(top = CruxTheme.space.s2))
                 models.forEach { model ->
@@ -917,7 +936,7 @@ private fun BoardSheet(
             CruxListRow(
                 title = "Custom board",
                 supporting = "Spray wall, home board or anything else",
-                selected = selected == null,
+                selected = selected == null && !noBoardSelected,
                 onClick = { onPick(null) },
                 modifier = Modifier.testTag("board_option_custom"),
             )
@@ -928,7 +947,7 @@ private fun BoardSheet(
 /** A Kilter board's size as chips; a Homewall adds Full ride or Mainline only in the same sheet. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun BoardSizeSheet(
+internal fun BoardSizeSheet(
     board: com.hardtekpt.crux.data.model.BoardModel,
     size: String?,
     holds: com.hardtekpt.crux.data.model.BoardHolds?,

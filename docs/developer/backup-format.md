@@ -62,6 +62,7 @@ backup never sits in memory whole.
 | `bodyMeasurements` | Body stats | `MeasurementDto`: `type`, `value` (kg/cm), `date`, `loggedAt` | Same type, date and `loggedAt` |
 | `records` | Personal records | `RecordDto`: embedded `exercise`, `date`, `reps`, `seconds`, `loadKg`, `notes`, `loggedAt` | Same exercise name and `loggedAt` |
 | `notes` | Notes | `NoteDto`: `text`, `createdAt`, `updatedAt`, `pinned`, `tag` | Same `createdAt` |
+| `datasets` | Datasets | `DatasetDto`: `name`, `kind`, `boardModel`, `boardSize`, `boardHolds`, `boulderScale`, `routeScale`, `createdAt`, `updatedAt`, `climbs[]` (`name`, `discipline`, `gradeScale`, `gradeIndex`, `setter`, `note`, `createdAt`). App schema 27; older files omit it | Same name |
 | `settings` | Settings | `SettingsDto`: `theme`, `accent` and `textSize` (names), `units`, `boulderScale`, `routeScale`, `timerSounds`, `timerCompact`, `dashboard[]` (`type`, `size` as names) | — (always replaces) |
 
 Names match ignoring case and surrounding spaces. Dates are ISO `yyyy-MM-dd`. `loggedAt`,

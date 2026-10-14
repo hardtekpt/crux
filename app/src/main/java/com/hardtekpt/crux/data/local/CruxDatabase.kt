@@ -152,6 +152,8 @@ class PlacesMigration : AutoMigrationSpec {
         com.hardtekpt.crux.data.NoteEntity::class,
         com.hardtekpt.crux.data.ExerciseRecordEntity::class,
         ScheduleSlotEntity::class,
+        com.hardtekpt.crux.data.DatasetEntity::class,
+        com.hardtekpt.crux.data.DatasetClimbEntity::class,
     ],
     version = CruxDatabase.VERSION,
     exportSchema = true,
@@ -179,6 +181,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 23, to = 24, spec = LogsFollowClimbMigration::class),
         AutoMigration(from = 24, to = 25),
         AutoMigration(from = 25, to = 26),
+        AutoMigration(from = 26, to = 27),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -192,10 +195,11 @@ abstract class CruxDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun sessionDao(): SessionDao
     abstract fun scheduleDao(): ScheduleDao
+    abstract fun datasetDao(): com.hardtekpt.crux.data.DatasetDao
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 26
+        const val VERSION = 27
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

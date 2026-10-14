@@ -25,6 +25,7 @@ enum class BackupSection(val label: String, val description: String, val noun: S
     BODY("Body stats", "Weigh-ins, body stats and circumferences", "body stats"),
     RECORDS("Personal records", "Results logged on exercises", "records"),
     NOTES("Notes", "Everything in your notes", "notes"),
+    DATASETS("Datasets", "Your lists of climbs, with every climb in them", "datasets"),
     SETTINGS("Settings", "Grades, theme, units, timer and your Home layout", "settings"),
 }
 
@@ -57,6 +58,8 @@ data class BackupFile(
     val settings: SettingsDto? = null,
     /** The weekly schedule, saved with the plans. Older backups omit it. */
     val schedule: List<ScheduleSlotDto>? = null,
+    /** Your datasets (app schema 27). Older backups omit them. */
+    val datasets: List<DatasetDto>? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
@@ -68,6 +71,7 @@ data class BackupFile(
         BackupSection.BODY -> bodyMeasurements?.size
         BackupSection.RECORDS -> records?.size
         BackupSection.NOTES -> notes?.size
+        BackupSection.DATASETS -> datasets?.size
         BackupSection.SETTINGS -> settings?.let { 1 }
     }
 
@@ -261,6 +265,32 @@ data class RecordDto(
 
 @Serializable
 data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, val pinned: Boolean = false, val tag: String? = null)
+
+/** One of your datasets with its climbs. Its name tells one from another. */
+@Serializable
+data class DatasetDto(
+    val name: String,
+    val kind: String = "own",
+    val boardModel: String? = null,
+    val boardSize: String? = null,
+    val boardHolds: String? = null,
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val climbs: List<DatasetClimbDto> = emptyList(),
+)
+
+@Serializable
+data class DatasetClimbDto(
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    val gradeScale: GradeScale? = null,
+    val gradeIndex: Int? = null,
+    val setter: String? = null,
+    val note: String? = null,
+    val createdAt: Long,
+)
 
 @Serializable
 data class MeasurementDto(val type: MeasurementType, val value: Double, val date: String, val loggedAt: Long)

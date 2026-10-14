@@ -315,6 +315,7 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                                 openCircumferences = { navController.navigate(CircumferencesRoute) },
                                 openNotes = { navController.navigate(NotesRoute) },
                                 openPlaces = { navController.navigate(PlacesRoute) },
+                                openDatasets = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetsRoute) },
                                 openConverter = { navController.navigate(GradeConverterRoute) },
                                 openTimer = { navController.navigate(IntervalTimerRoute()) },
                             ),
@@ -376,6 +377,13 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onNew = { navController.navigate(NoteEditorRoute()) },
                         )
                     }
+                    page<com.hardtekpt.crux.ui.navigation.DatasetsRoute> {
+                        com.hardtekpt.crux.ui.datasets.DatasetsScreen(
+                            onBack = navController::popBackStack,
+                            onOpen = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetRoute(it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.DatasetRoute> { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = navController::popBackStack) }
                     page<ExerciseRecordsRoute> {
                         ExerciseRecordsScreen(
                             onBack = navController::popBackStack,

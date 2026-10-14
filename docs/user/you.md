@@ -42,6 +42,7 @@ A menu of pages:
 - **Circumferences**: forearm, bicep and thigh (left and right), chest and waist.
 - **Notes**: all your notes, pinned first, with tag filters. Tap one to edit, pin, tag or delete it.
 - **Places**: your gyms, crags and boards. See [Places](places.md).
+- **Datasets**: your lists of climbs to pick from, like a home board or a gym circuit. See [Datasets](datasets.md).
 - **Grade converter**: pick a system and a grade, and see it in every other system (French, YDS,
   UIAA, British, Ewbank, Font and V), with the whole chart below. It's a reference only; your logged climbs are never converted. See
   [Grades](grades.md#the-grade-converter).
