@@ -63,6 +63,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -647,6 +649,27 @@ fun SessionScreen(
             }
             TextButton(onClick = { finishing = true }, modifier = Modifier.testTag("session_finish")) { Text("Finish") }
         }
+        // The plan as a rail: a segment per exercise, filling as its sets go in, green once done.
+        // Tap one to scroll to that exercise.
+        val listScroll = rememberScrollState()
+        val tops = remember { androidx.compose.runtime.mutableStateMapOf<Long, Int>() }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        if (current.items.isNotEmpty()) {
+            val success = CruxTheme.colors.success
+            SegmentStrip(
+                segments = current.items.map { item ->
+                    Segment(
+                        filled = item.logged.toFloat() / item.target.sets.coerceAtLeast(1),
+                        color = if (item.finished) success else colors.primary,
+                    )
+                },
+                modifier = Modifier.padding(horizontal = space.s4).padding(bottom = space.s1).testTag("session_rail"),
+                height = 6,
+                onPick = { index ->
+                    current.items.getOrNull(index)?.let { item -> tops[item.id]?.let { y -> scope.launch { listScroll.animateScrollTo(y) } } }
+                },
+            )
+        }
         HorizontalDivider(color = colors.outlineVariant)
 
         // Big, a running rest or timer takes the top of the screen; the dock then makes way.
@@ -690,7 +713,7 @@ fun SessionScreen(
         Column(
             Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(listScroll)
                 .padding(horizontal = space.s4)
                 .padding(top = space.s3, bottom = space.s4)
                 .testTag("session_list"),
@@ -699,28 +722,31 @@ fun SessionScreen(
             if (current.items.isEmpty()) ClimbTally(current.climbGroups)
             current.items.forEach { item ->
                 key(item.id) {
-                    ExerciseCard(
-                        item = item,
-                        values = { setIndex ->
-                            pendingValues
-                            viewModel.valuesFor(item, setIndex)
-                        },
-                        previous = previous[item.exercise.id],
-                        newBest = item.id in newBests,
-                        folded = folds[item.id] ?: item.finished,
-                        open = open,
-                        timerRunning = runningTimer?.itemId == item.id,
-                        current = next?.first?.id == item.id && runningTimer == null,
-                        onToggleFold = { folds[item.id] = !(folds[item.id] ?: item.finished) },
-                        onOpen = { open = it },
-                        onValues = { setIndex, values -> viewModel.setValues(item, setIndex, values) },
-                        onTick = { setIndex ->
-                            open = null
-                            viewModel.tick(item, setIndex)
-                        },
-                        onAddSet = { viewModel.addSet(item) },
-                        onMenu = { menuFor = item.id },
-                    )
+                    // Where the card sits, for the rail to scroll to.
+                    Box(Modifier.onGloballyPositioned { tops[item.id] = it.positionInParent().y.toInt() }) {
+                        ExerciseCard(
+                            item = item,
+                            values = { setIndex ->
+                                pendingValues
+                                viewModel.valuesFor(item, setIndex)
+                            },
+                            previous = previous[item.exercise.id],
+                            newBest = item.id in newBests,
+                            folded = folds[item.id] ?: item.finished,
+                            open = open,
+                            timerRunning = runningTimer?.itemId == item.id,
+                            current = next?.first?.id == item.id && runningTimer == null,
+                            onToggleFold = { folds[item.id] = !(folds[item.id] ?: item.finished) },
+                            onOpen = { open = it },
+                            onValues = { setIndex, values -> viewModel.setValues(item, setIndex, values) },
+                            onTick = { setIndex ->
+                                open = null
+                                viewModel.tick(item, setIndex)
+                            },
+                            onAddSet = { viewModel.addSet(item) },
+                            onMenu = { menuFor = item.id },
+                        )
+                    }
                 }
             }
             if (current.climbGroups.isNotEmpty() || current.items.isEmpty()) {

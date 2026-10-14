@@ -18,6 +18,8 @@ session. Only one session runs at a time; starting another ends the first.
 
 - The top bar shows the session's name, a quiet clock with how many exercises are done, **+** and
   **Finish**.
+- **The rail** under it has a segment per exercise that fills as its sets go in and turns green
+  once it's done. Tap a segment to scroll to that exercise.
 - **Every exercise in one list**, in plan order. Each card shows the target (for example
   "6 × 10 s · +17.5 kg · 3 min rest") and a table of its sets: the set number, what you did last
   time, the values (load, reps, time) and a tick box. The exercise with the next set is outlined in

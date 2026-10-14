@@ -28,7 +28,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **A simpler live session**: every exercise in one list, each with a table of its sets showing
   last time's values. Tap a value to change it in place and tick the set. A dock at the bottom
   holds Done for the next set, the rest countdown and the interval timer; climbs, extra exercises
-  and timers sit behind the **+** in the top bar. Tap the dock for a big timer you can read from
+  and timers sit behind the **+** in the top bar. A rail under the top bar has a segment per
+  exercise that fills as you go; tap one to jump to it. Tap the dock for a big timer you can read from
   across the mat. The exercise you're on is outlined in the accent colour, finished ones fold to a
   green tick, and climbs get their own amber card with **+ go** on each climb.
 - **Smoother Home and Journal**: Home builds only the widgets on screen as you scroll, and the
