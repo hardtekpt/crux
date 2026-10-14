@@ -1,7 +1,10 @@
 package com.hardtekpt.crux.ui.session
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +42,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -131,7 +136,6 @@ internal fun ExerciseCard(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (doneFolded) 0.8f else 1f)
-            .animateContentSize(CruxMotion.medium())
             .testTag("session_exercise"),
         outline = when {
             timerRunning -> TimerColors.work
@@ -170,90 +174,98 @@ internal fun ExerciseCard(
                 Icon(Icons.Rounded.MoreHoriz, contentDescription = "${item.exercise.name}: more")
             }
         }
-        if (!folded) {
-            // Column heads: set, last time, then each value.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s2)) {
-                HeadCell(if (metric.usesIntervals) "Cycle" else "Set", Modifier.width(44.dp))
-                HeadCell("Last", Modifier.weight(1.2f))
-                fields.forEach { HeadCell(it.label, Modifier.weight(1f)) }
-                Box(Modifier.width(48.dp))
-            }
-            val next = item.nextSet
-            (0 until maxOf(item.target.sets, item.logged)).forEach { setIndex ->
-                val logged = item.sets.firstOrNull { it.setIndex == setIndex }
-                val shown = values(setIndex)
-                val last = previous?.firstOrNull { it.setIndex == setIndex && !it.skipped }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (setIndex == next) colors.surfaceContainerHigh else Color.Transparent)
-                        .padding(vertical = 2.dp)
-                        .testTag("session_set_$setIndex"),
-                ) {
-                    Text(
-                        (setIndex + 1).toString(),
-                        style = CruxTheme.type.code,
-                        color = if (setIndex == next) colors.primary else colors.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.width(44.dp),
-                    )
-                    Text(
-                        last?.let { describeSet(metric, it.reps, it.seconds, it.loadKg, imperial) } ?: "–",
-                        style = CruxTheme.type.code,
-                        color = colors.outline,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1.2f),
-                    )
-                    if (logged?.skipped == true) {
+        AnimatedVisibility(visible = !folded, enter = Reveal, exit = Hide) {
+            Column(verticalArrangement = Arrangement.spacedBy(space.s1)) {
+                // Column heads: set, last time, then each value.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = space.s2)) {
+                    HeadCell(if (metric.usesIntervals) "Cycle" else "Set", Modifier.width(44.dp))
+                    HeadCell("Last", Modifier.weight(1.2f))
+                    fields.forEach { HeadCell(it.label, Modifier.weight(1f)) }
+                    Box(Modifier.width(48.dp))
+                }
+                val next = item.nextSet
+                (0 until maxOf(item.target.sets, item.logged)).forEach { setIndex ->
+                    val logged = item.sets.firstOrNull { it.setIndex == setIndex }
+                    val shown = values(setIndex)
+                    val last = previous?.firstOrNull { it.setIndex == setIndex && !it.skipped }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (setIndex == next) colors.surfaceContainerHigh else Color.Transparent)
+                            .padding(vertical = 2.dp)
+                            .testTag("session_set_$setIndex"),
+                    ) {
                         Text(
-                            "Skipped",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.outline,
-                            modifier = Modifier.weight(fields.size.toFloat().coerceAtLeast(1f)),
+                            (setIndex + 1).toString(),
+                            style = CruxTheme.type.code,
+                            color = if (setIndex == next) colors.primary else colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(44.dp),
                         )
-                    } else {
-                        fields.forEachIndexed { index, field ->
-                            val isOpen = open == OpenCell(item.id, setIndex, index)
-                            ValueCell(
-                                text = field.show(shown, imperial),
-                                open = isOpen,
-                                done = logged != null,
-                                onClick = { onOpen(if (isOpen) null else OpenCell(item.id, setIndex, index)) },
-                                modifier = Modifier.weight(1f).testTag("session_value_${setIndex}_${field.name}"),
+                        Text(
+                            last?.let { describeSet(metric, it.reps, it.seconds, it.loadKg, imperial) } ?: "–",
+                            style = CruxTheme.type.code,
+                            color = colors.outline,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1.2f),
+                        )
+                        if (logged?.skipped == true) {
+                            Text(
+                                "Skipped",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.outline,
+                                modifier = Modifier.weight(fields.size.toFloat().coerceAtLeast(1f)),
                             )
+                        } else {
+                            fields.forEachIndexed { index, field ->
+                                val isOpen = open == OpenCell(item.id, setIndex, index)
+                                ValueCell(
+                                    text = field.show(shown, imperial),
+                                    open = isOpen,
+                                    done = logged != null,
+                                    onClick = { onOpen(if (isOpen) null else OpenCell(item.id, setIndex, index)) },
+                                    modifier = Modifier.weight(1f).testTag("session_value_${setIndex}_${field.name}"),
+                                )
+                            }
+                        }
+                        TickBox(
+                            done = logged != null && !logged.skipped,
+                            running = timerRunning && setIndex == next,
+                            onClick = { onTick(setIndex) },
+                            modifier = Modifier.testTag("session_tick_$setIndex"),
+                        )
+                    }
+                    // The open value's stepper sits right under its row.
+                    val openHere = open?.takeIf { it.itemId == item.id && it.setIndex == setIndex }
+                    val lastOpen = remember { mutableStateOf<OpenCell?>(null) }
+                    if (openHere != null) lastOpen.value = openHere
+                    AnimatedVisibility(visible = openHere != null, enter = Reveal, exit = Hide) {
+                        lastOpen.value?.let { cell ->
+                            Box(Modifier.fillMaxWidth().padding(vertical = space.s1), contentAlignment = Alignment.Center) {
+                                ValueStepper(fields[cell.field], shown, imperial) { onValues(setIndex, it) }
+                            }
                         }
                     }
-                    TickBox(
-                        done = logged != null && !logged.skipped,
-                        running = timerRunning && setIndex == next,
-                        onClick = { onTick(setIndex) },
-                        modifier = Modifier.testTag("session_tick_$setIndex"),
-                    )
                 }
-                // The open value's stepper sits right under its row.
-                val openHere = open?.takeIf { it.itemId == item.id && it.setIndex == setIndex }
-                AnimatedVisibility(visible = openHere != null) {
-                    openHere?.let { cell ->
-                        Box(Modifier.fillMaxWidth().padding(vertical = space.s1), contentAlignment = Alignment.Center) {
-                            ValueStepper(fields[cell.field], shown, imperial) { onValues(setIndex, it) }
-                        }
-                    }
-                }
+                CruxButton(
+                    if (metric.usesIntervals) "Add cycle" else "Add set",
+                    onAddSet,
+                    variant = CruxButtonVariant.Text,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.Add,
+                    modifier = Modifier.testTag("session_add_set"),
+                )
             }
-            CruxButton(
-                if (metric.usesIntervals) "Add cycle" else "Add set",
-                onAddSet,
-                variant = CruxButtonVariant.Text,
-                size = CruxButtonSize.Small,
-                icon = Icons.Rounded.Add,
-                modifier = Modifier.testTag("session_add_set"),
-            )
         }
     }
 }
+
+/** How a part of a card opens and closes: it grows from the top and fades, at the app's pace. */
+private val Reveal = expandVertically(CruxMotion.medium(), expandFrom = Alignment.Top) + fadeIn(CruxMotion.medium())
+private val Hide = shrinkVertically(CruxMotion.medium(), shrinkTowards = Alignment.Top) + fadeOut(CruxMotion.fast())
 
 @Composable
 private fun HeadCell(text: String, modifier: Modifier) {
