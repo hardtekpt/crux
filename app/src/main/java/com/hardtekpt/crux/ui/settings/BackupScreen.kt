@@ -44,6 +44,7 @@ import com.hardtekpt.crux.data.backup.BackupMedia
 import com.hardtekpt.crux.data.backup.BackupRepository
 import com.hardtekpt.crux.data.backup.BackupSection
 import com.hardtekpt.crux.data.backup.ConflictKey
+import com.hardtekpt.crux.data.backup.CsvExport
 import com.hardtekpt.crux.data.backup.ImportConflict
 import com.hardtekpt.crux.data.backup.ImportResult
 import com.hardtekpt.crux.data.backup.OpenedBackup
@@ -258,6 +259,38 @@ class AutoBackupViewModel @Inject constructor(private val auto: AutoBackups) : V
     fun backUpNow() = auto.runNow()
 }
 
+/** Climbs and sessions as a spreadsheet file, apart from the full backups. */
+@HiltViewModel
+class CsvExportViewModel @Inject constructor(private val backup: BackupRepository, private val contentResolver: ContentResolver, private val clock: Clock) :
+    ViewModel() {
+    private val _message = MutableStateFlow<String?>(null)
+
+    /** One line about the last export, or what went wrong. */
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    fun fileName(kind: String): String = "crux-$kind-${LocalDate.now(clock)}.csv"
+
+    fun exportClimbs(uri: Uri) = write(uri, "Climbs saved.", CsvExport::climbs)
+
+    fun exportSessions(uri: Uri) = write(uri, "Sessions saved.") { CsvExport.sessions(it) }
+
+    private fun write(uri: Uri, done: String, csv: (com.hardtekpt.crux.data.backup.BackupFile) -> String) {
+        viewModelScope.launch {
+            _message.value = try {
+                withContext(Dispatchers.IO) {
+                    val sections = setOf(BackupSection.JOURNAL, BackupSection.SESSIONS, BackupSection.PLACES)
+                    val text = csv(backup.snapshot(sections, BackupMedia.NONE))
+                    val out = contentResolver.openOutputStream(uri, "wt") ?: error("Could not open the file to write")
+                    out.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                }
+                done
+            } catch (e: Exception) {
+                "Something went wrong: ${e.message ?: "try again"}."
+            }
+        }
+    }
+}
+
 private fun Set<BackupSection>.toggled(section: BackupSection) = if (section in this) this - section else this + section
 
 /** What the backups page can ask for. */
@@ -276,13 +309,27 @@ data class BackupActions(
     val setAutoFrequency: (AutoBackupFrequency) -> Unit = {},
     val setAutoKeep: (Int) -> Unit = {},
     val backUpNow: () -> Unit = {},
+    val exportCsvClimbs: () -> Unit = {},
+    val exportCsvSessions: () -> Unit = {},
 )
 
 /** Settings → Backups: choose what goes into a backup, export it to a file, or import one. */
 @Composable
-fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(), autoViewModel: AutoBackupViewModel = hiltViewModel()) {
+fun BackupScreen(
+    onBack: () -> Unit,
+    viewModel: BackupViewModel = hiltViewModel(),
+    autoViewModel: AutoBackupViewModel = hiltViewModel(),
+    csvViewModel: CsvExportViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val auto by autoViewModel.state.collectAsStateWithLifecycle()
+    val csvMessage by csvViewModel.message.collectAsStateWithLifecycle()
+    val climbsCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let(csvViewModel::exportClimbs)
+    }
+    val sessionsCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let(csvViewModel::exportSessions)
+    }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let(autoViewModel::setFolder)
     }
@@ -296,6 +343,7 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
         state = state,
         onBack = onBack,
         auto = auto,
+        csvMessage = csvMessage,
         actions = BackupActions(
             toggleExport = viewModel::toggleExport,
             setPhotos = viewModel::setPhotos,
@@ -313,6 +361,8 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
             setAutoFrequency = autoViewModel::setFrequency,
             setAutoKeep = autoViewModel::setKeep,
             backUpNow = autoViewModel::backUpNow,
+            exportCsvClimbs = { climbsCsvLauncher.launch(csvViewModel.fileName("climbs")) },
+            exportCsvSessions = { sessionsCsvLauncher.launch(csvViewModel.fileName("sessions")) },
         ),
     )
 }
@@ -323,6 +373,7 @@ fun BackupContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     auto: AutoBackupPrefs = AutoBackupPrefs(),
+    csvMessage: String? = null,
     actions: BackupActions = BackupActions(),
 ) {
     val space = CruxTheme.space
@@ -371,6 +422,38 @@ fun BackupContent(
 
             Eyebrow("Automatic backups", Modifier.padding(top = space.s4))
             AutoBackupCard(auto, actions)
+
+            Eyebrow("Export as a spreadsheet", Modifier.padding(top = space.s4))
+            CruxCard(modifier = Modifier.testTag("export_csv")) {
+                Text(
+                    "Your climbs or sessions as a table for a spreadsheet app. Photos and videos stay out.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(Modifier.padding(top = space.s3), horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                    CruxButton(
+                        text = "Climbs",
+                        onClick = actions.exportCsvClimbs,
+                        variant = CruxButtonVariant.Tonal,
+                        modifier = Modifier.testTag("export_csv_climbs"),
+                    )
+                    CruxButton(
+                        text = "Sessions",
+                        onClick = actions.exportCsvSessions,
+                        variant = CruxButtonVariant.Tonal,
+                        modifier = Modifier.testTag("export_csv_sessions"),
+                    )
+                }
+                csvMessage?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .padding(top = space.s2)
+                            .testTag("export_csv_message"),
+                    )
+                }
+            }
 
             Eyebrow("Photos and videos", Modifier.padding(top = space.s4))
             CruxCard {
