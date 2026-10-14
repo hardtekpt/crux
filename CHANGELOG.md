@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Added
+
+- **Export as a spreadsheet**: save your climbs or your session sets as a `.csv` file from
+  *Settings → Backups*, to open in Excel, Google Sheets or any spreadsheet app.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added

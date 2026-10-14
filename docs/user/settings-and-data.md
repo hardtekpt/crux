@@ -70,6 +70,15 @@ Under *Automatic backups* on the Backups page, Crux can save a backup for you wi
 last try failed. Each backup holds all your data, with photos and videos, and goes only to the
 folder you chose. Only your own data is backed up, never the demo.
 
+### Export as a spreadsheet
+
+Under *Export as a spreadsheet* on the Backups page, **Climbs** and **Sessions** save your climbs
+or your session sets as a `.csv` table, which Excel, Google Sheets and the like open. Climbs have one
+row each (date, name, grade, scale, style, attempts, sends, place, facility, wall, effort, notes).
+Sessions have one row per set, with the session, exercise, set number, reps, seconds, load and
+whether it was skipped; a session with no sets gets one row of its own. Photos and videos stay out.
+It's a table to look at, not a backup: it can't be imported back.
+
 Backups from older versions of Crux keep importing into newer ones, the `.json` files they made
 included. A backup from a *newer* version than the app is refused, with a message to update the
 app first.
