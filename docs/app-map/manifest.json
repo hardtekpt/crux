@@ -279,7 +279,7 @@
    "lane": "log",
    "col": 0,
    "row": 1,
-   "desc": "A ruler for today’s bodyweight, with the change since your last weigh-in.",
+   "desc": "The day strip and a ruler for today’s bodyweight sit at the bottom, within reach of your thumb, with the change since your last weigh-in.",
    "covers": [
     "LogWeightRoute"
    ],
