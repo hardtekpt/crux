@@ -120,6 +120,37 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
     /** Seconds of rest started when a climb is logged in a session; 0 is off. */
     val climbRestSeconds: Flow<Int> = dataStore.data.map { it[CLIMB_REST] ?: 0 }
 
+    /** Automatic backups: the folder (a document tree), how often, how many to keep, and the last run. */
+    val autoBackup: Flow<AutoBackupPrefs> = dataStore.data.map {
+        AutoBackupPrefs(
+            folder = it[AUTO_BACKUP_FOLDER],
+            frequency = it[AUTO_BACKUP_FREQUENCY]?.let { name -> runCatching { AutoBackupFrequency.valueOf(name) }.getOrNull() } ?: AutoBackupFrequency.OFF,
+            keep = it[AUTO_BACKUP_KEEP] ?: 5,
+            lastAtMillis = it[AUTO_BACKUP_LAST],
+            lastError = it[AUTO_BACKUP_ERROR],
+        )
+    }
+
+    suspend fun setAutoBackupFolder(uri: String?) {
+        dataStore.edit { if (uri == null) it.remove(AUTO_BACKUP_FOLDER) else it[AUTO_BACKUP_FOLDER] = uri }
+    }
+
+    suspend fun setAutoBackupFrequency(frequency: AutoBackupFrequency) {
+        dataStore.edit { it[AUTO_BACKUP_FREQUENCY] = frequency.name }
+    }
+
+    suspend fun setAutoBackupKeep(keep: Int) {
+        dataStore.edit { it[AUTO_BACKUP_KEEP] = keep.coerceIn(1, 50) }
+    }
+
+    /** Records a run: when it worked, or why it didn't. */
+    suspend fun recordAutoBackup(atMillis: Long?, error: String?) {
+        dataStore.edit {
+            if (atMillis != null) it[AUTO_BACKUP_LAST] = atMillis
+            if (error == null) it.remove(AUTO_BACKUP_ERROR) else it[AUTO_BACKUP_ERROR] = error
+        }
+    }
+
     suspend fun setClimbRestSeconds(seconds: Int) {
         dataStore.edit { it[CLIMB_REST] = seconds.coerceAtLeast(0) }
     }
@@ -192,6 +223,11 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
         val CLIMB_REST = androidx.datastore.preferences.core.intPreferencesKey("climb_rest_seconds")
+        val AUTO_BACKUP_FOLDER = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_folder")
+        val AUTO_BACKUP_FREQUENCY = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_frequency")
+        val AUTO_BACKUP_KEEP = androidx.datastore.preferences.core.intPreferencesKey("auto_backup_keep")
+        val AUTO_BACKUP_LAST = androidx.datastore.preferences.core.longPreferencesKey("auto_backup_last")
+        val AUTO_BACKUP_ERROR = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_error")
         val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
         val BACKUP_PHOTOS = booleanPreferencesKey("backup_photos")
         val BACKUP_VIDEOS = booleanPreferencesKey("backup_videos")
@@ -202,3 +238,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
             ?: discipline.defaultScale
     }
 }
+
+enum class AutoBackupFrequency(val label: String, val days: Long) { OFF("Off", 0), DAILY("Daily", 1), WEEKLY("Weekly", 7) }
+
+data class AutoBackupPrefs(
+    val folder: String? = null,
+    val frequency: AutoBackupFrequency = AutoBackupFrequency.OFF,
+    val keep: Int = 5,
+    val lastAtMillis: Long? = null,
+    val lastError: String? = null,
+)

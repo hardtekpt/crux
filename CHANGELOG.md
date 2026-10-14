@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Session sets count as personal records**, and a set that beats your best shows **New best**
+  in the session.
 - **Automatic backups**: daily or weekly to a folder you choose, keeping the newest few; your own
   data only, never the demo.
 - **Live notification** while a session runs: on Android 16 a Live Update with a segmented
@@ -31,6 +33,9 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Tighter privacy**: Crux asks only for approximate location (to centre the map), no longer
+  sends anything to Android's cloud backup (your own backups and phone-to-phone transfer still
+  work), and drops two permissions libraries asked for. PRIVACY.md lists every permission and why.
 - **Faster and smoother**: Crux starts faster (it ships a baseline profile), screens work out
   their data off the main thread and fade in once it's ready instead of showing empty values,
   the Journal scrolls more smoothly, and photos are decoded once. Light animations show what

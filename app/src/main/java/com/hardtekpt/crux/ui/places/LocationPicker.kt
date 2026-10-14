@@ -177,12 +177,12 @@ fun LocationPickerDialog(initial: MapLocation?, placeName: String, onPick: (MapL
     }
 
     val locate = {
-        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        // Approximate location is all centring the map needs, so precise location is never asked for.
         val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (fine || coarse) {
+        if (coarse) {
             lastKnown(context)?.let { (lat, lng) -> moveTo(lat, lng) } ?: run { message = "Your location isn't known yet. Try again outdoors." }
         } else {
-            permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
     val colors = MaterialTheme.colorScheme

@@ -21,7 +21,9 @@ your **best streak**, and how many days you were active in the **last 30 days**.
 exercise, the best result is the **personal record**: the heaviest load, then the most reps, or the
 longest hold for timed exercises. Tap an exercise to see its history, and to delete a result.
 
-Results you log in a [session](sessions.md) don't count towards records yet.
+Sets you do in a [session](sessions.md) count too: they show in the history as "In a session",
+and when one beats every result before it, the session shows **New best** under the exercise.
+They're changed in their session, not here.
 
 ## Weight
 

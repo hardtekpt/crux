@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -115,6 +116,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -140,6 +142,7 @@ class SessionViewModel @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val clock: Clock,
     private val live: com.hardtekpt.crux.live.LiveTimers,
+    records: com.hardtekpt.crux.data.RecordRepository? = null,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -163,6 +166,14 @@ class SessionViewModel @Inject constructor(
     fun toggleTimerCompact() {
         viewModelScope.launch { preferences.setTimerCompact(!timerCompact.value) }
     }
+
+    /** Exercises whose personal record is a set done in this session: they show "New best". */
+    val newBests: StateFlow<Set<Long>> = (records?.observeBests() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .combine(session) { bests, current ->
+            val sets = current?.items.orEmpty().flatMap { item -> item.sets.map { -it.id to item.id } }.toMap()
+            bests.mapNotNull { best -> best.best.takeIf { it.fromSession }?.let { sets[it.id] } }.toSet()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     /** The exercise on screen; null follows the first one with sets still to do. */
     private val _currentItem = MutableStateFlow<Long?>(null)
@@ -410,6 +421,7 @@ fun SessionScreen(
     val place by viewModel.place.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val rest by viewModel.rest.collectAsStateWithLifecycle()
+    val newBests by viewModel.newBests.collectAsStateWithLifecycle()
     val timer by viewModel.timer.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
@@ -565,6 +577,7 @@ fun SessionScreen(
                 val index = current.items.indexOf(item)
                 ExerciseView(
                     item = item,
+                    newBest = item.id in newBests,
                     step = listOfNotNull("${index + 1} of ${current.items.size}", item.blockName.takeIf { it.isNotBlank() }).joinToString(" · "),
                     draft = draft,
                     timerRunning = runningTimer?.itemId == item.id,
@@ -754,6 +767,7 @@ internal fun goalSentence(item: SessionItem, imperial: Boolean): AnnotatedString
 @Composable
 private fun ExerciseView(
     item: SessionItem,
+    newBest: Boolean,
     step: String,
     draft: SetDraft,
     timerRunning: Boolean,
@@ -783,6 +797,21 @@ private fun ExerciseView(
                 style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.4).sp),
                 modifier = Modifier.testTag("session_exercise_name"),
             )
+            // A set here beat every result before it: the moment gets a quiet badge.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = newBest,
+                enter = androidx.compose.animation.fadeIn(com.hardtekpt.crux.ui.components.CruxMotion.medium()) +
+                    androidx.compose.animation.expandVertically(com.hardtekpt.crux.ui.components.CruxMotion.medium()),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.testTag("session_new_best"),
+                ) {
+                    Icon(Icons.Rounded.Star, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(18.dp))
+                    Text("New best", style = MaterialTheme.typography.labelLarge, color = colors.secondary)
+                }
+            }
             Text(goalSentence(item, imperial), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
         }
 

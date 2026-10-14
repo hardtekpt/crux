@@ -57,7 +57,20 @@ interface ExerciseRecordDao {
     suspend fun delete(id: Long)
 }
 
-data class ExerciseRecord(val id: Long, val exerciseId: Long, val date: LocalDate, val reps: Int?, val seconds: Int?, val loadKg: Double?, val notes: String?)
+/**
+ * A result on an exercise: logged by hand, or a set done in a session ([fromSession], whose id is
+ * the set's, negated, so the two never clash).
+ */
+data class ExerciseRecord(
+    val id: Long,
+    val exerciseId: Long,
+    val date: LocalDate,
+    val reps: Int?,
+    val seconds: Int?,
+    val loadKg: Double?,
+    val notes: String?,
+    val fromSession: Boolean = false,
+)
 
 /** One logged result with its exercise, and whether it is that exercise's PR. */
 data class LoggedResult(val exercise: Exercise, val record: ExerciseRecord, val isBest: Boolean)
@@ -95,9 +108,15 @@ interface RecordRepository {
 }
 
 class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : RecordRepository {
+    /** Results logged by hand and sets done in sessions, together: both count toward a personal record. */
+    private fun allResults(db: com.hardtekpt.crux.data.local.CruxDatabase): Flow<List<ExerciseRecord>> =
+        combine(db.exerciseRecordDao().observeAll(), db.sessionDao().observeSetResults()) { records, sets ->
+            records.map { it.toModel() } + sets.map { it.toRecord(clock.zone) }
+        }
+
     override fun observeBests(): Flow<List<ExerciseBest>> = dbs.observe { db ->
-        combine(db.exerciseDao().observeAll(), db.exerciseRecordDao().observeAll()) { exercises, records ->
-            val byExercise = records.map { it.toModel() }.groupBy { it.exerciseId }
+        combine(db.exerciseDao().observeAll(), allResults(db)) { exercises, records ->
+            val byExercise = records.groupBy { it.exerciseId }
             exercises.mapNotNull { entity ->
                 val mine = byExercise[entity.id] ?: return@mapNotNull null
                 val exercise = Exercise(entity.id, entity.name, entity.category, entity.metric, entity.notes)
@@ -119,7 +138,7 @@ class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases
     }
 
     override fun observeRecords(exerciseId: Long): Flow<List<ExerciseRecord>> =
-        dbs.observe { it.exerciseRecordDao().observeAll() }.map { list -> list.filter { it.exerciseId == exerciseId }.map { it.toModel() } }
+        dbs.observe { allResults(it) }.map { list -> list.filter { it.exerciseId == exerciseId }.sortedByDescending { it.date } }
 
     override suspend fun addRecord(exerciseId: Long, date: LocalDate, reps: Int?, seconds: Int?, loadKg: Double?, notes: String?): Long =
         dbs.current().exerciseRecordDao().insert(
@@ -134,7 +153,21 @@ class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases
             ),
         )
 
-    override suspend fun deleteRecord(id: Long) = dbs.current().exerciseRecordDao().delete(id)
+    /** Only results logged by hand go; a session's sets are changed in its session. */
+    override suspend fun deleteRecord(id: Long) {
+        if (id > 0) dbs.current().exerciseRecordDao().delete(id)
+    }
 }
 
 internal fun ExerciseRecordEntity.toModel() = ExerciseRecord(id, exerciseId, LocalDate.ofEpochDay(dateEpochDay), reps, seconds, loadKg, notes)
+
+internal fun com.hardtekpt.crux.data.local.SessionSetResultRow.toRecord(zone: java.time.ZoneId) = ExerciseRecord(
+    id = -setId,
+    exerciseId = exerciseId,
+    date = java.time.Instant.ofEpochMilli(completedAtMillis).atZone(zone).toLocalDate(),
+    reps = reps,
+    seconds = seconds,
+    loadKg = loadKg,
+    notes = "In a session",
+    fromSession = true,
+)

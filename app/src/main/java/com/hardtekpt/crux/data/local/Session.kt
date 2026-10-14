@@ -79,8 +79,22 @@ data class SessionSetEntity(
     val completedAtMillis: Long,
 )
 
+/** A set done in a session (not skipped, not in a discarded session), as a result of its exercise. */
+data class SessionSetResultRow(val setId: Long, val exerciseId: Long, val reps: Int?, val seconds: Int?, val loadKg: Double?, val completedAtMillis: Long)
+
 @Dao
 interface SessionDao {
+    @Query(
+        """
+        SELECT s.id AS setId, i.exerciseId AS exerciseId, s.reps AS reps, s.seconds AS seconds, s.loadKg AS loadKg, s.completedAtMillis AS completedAtMillis
+        FROM session_sets s
+        JOIN session_items i ON i.id = s.itemId
+        JOIN sessions se ON se.id = i.sessionId
+        WHERE s.skipped = 0 AND se.status != 'DISCARDED'
+        """,
+    )
+    fun observeSetResults(): Flow<List<SessionSetResultRow>>
+
     @Insert
     suspend fun insertSession(session: SessionEntity): Long
 

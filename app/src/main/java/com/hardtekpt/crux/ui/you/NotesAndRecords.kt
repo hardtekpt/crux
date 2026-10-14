@@ -549,8 +549,11 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                 CruxListRow(
                     title = record.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                     supporting = listOfNotNull(record.date.dayLabel(), record.notes, "PR".takeIf { record.id == pr?.id }).joinToString(" · "),
-                    trailing = {
-                        IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }
+                    // A set from a session is changed in its session, so only hand-logged results can go here.
+                    trailing = if (record.fromSession) {
+                        null
+                    } else {
+                        { IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") } }
                     },
                     selected = record.id == pr?.id,
                     modifier = Modifier.heightIn(min = 56.dp).testTag("record_result"),
