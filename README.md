@@ -164,11 +164,12 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 
 ## Changelog
 
-**Unreleased** on `dev`:
-- **Weekly schedule**: plan each day of the week under *Train → Week*; Home follows it.
-- **Interval timer page**: a full-screen timer for the gym, under *You*, with Tabata, repeaters,
-  max hangs and 4×4s presets.
-- **More accent colours**: Magenta, Slate and Chalk.
+**[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
+- **Weekly schedule** under *Train → Week*; Home follows it.
+- **Live notifications** for sessions, rests and the interval timer (Live Updates on Android 16).
+- **Automatic backups** to a folder you choose, and **session sets as personal records**.
+- **Interval timer page**, a lighter Journal and Home, and a faster, smoother app.
+- **Tighter privacy**: approximate location only, nothing in Android's cloud backup.
 
 **[0.3.0](https://github.com/hardtekpt/crux/releases/tag/v0.3.0)** (2026-10-10):
 - **Climbs you can come back to**: tap + Fell or + Sent for each go; goes add up across days, with
