@@ -19,7 +19,8 @@ session. Only one session runs at a time; starting another ends the first.
 - The top bar shows the session's name, a quiet clock and **Finish**. Below it, a progress strip
   has one segment per exercise; tap a segment to jump to that exercise.
 - **One exercise at a time**: its place in the plan, its goal as a sentence (for example
-  "6 hangs of 10 s with +17.5 kg, 3 min rest"), and a row per set.
+  "6 hangs of 10 s with +17.5 kg, 3 min rest"), and a row per set. The tune button beside it
+  changes its sets, reps or time, load and rest for this session only; your plan stays as it is.
 - **Logging a set**: the next set starts at the target, or at what your last set was. Change what
   went differently, then tap **Done**. *Skip this set* marks it skipped. Tap a logged set to change
   it or take it out.

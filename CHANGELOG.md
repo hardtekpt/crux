@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Change an exercise mid-session**: the tune button on an exercise changes its sets, reps or time,
+  load and rest for that session; your plan stays as it is.
 - **Export as a spreadsheet**: save your climbs or your session sets as a `.csv` file from
   *Settings → Backups*, to open in Excel, Google Sheets or any spreadsheet app.
 
