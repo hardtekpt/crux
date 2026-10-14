@@ -120,18 +120,21 @@ class ScreenshotTest {
     @Test
     fun home() = home("home")
 
+    private fun homeViewModel() = HomeViewModel(
+        climbs,
+        body,
+        OfflineTemplateRepository(dbs),
+        places,
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+        preferences,
+        DashboardRepository(dataStore),
+        FIXED_CLOCK,
+        training(),
+    )
+
     private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
-        val vm = HomeViewModel(
-            climbs,
-            body,
-            OfflineTemplateRepository(dbs),
-            places,
-            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
-            OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
-            preferences,
-            DashboardRepository(dataStore),
-            FIXED_CLOCK,
-        )
+        val vm = homeViewModel()
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
         bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
@@ -173,9 +176,66 @@ class ScreenshotTest {
 
     @Test
     fun progress() {
-        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK).uiState) { !it.isLoading }
+        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK, training()).uiState) { !it.isLoading }
         bothThemes("progress") { ProgressContent(uiState = state) }
     }
+
+    // Progress's Training tab: plan against done, three figures, then each exercise.
+    @Test
+    fun progressTraining() {
+        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK, training()).uiState) { !it.isLoading && !it.training.isEmpty }
+        bothThemes("progress_training") { ProgressContent(uiState = state, initialView = com.hardtekpt.crux.ui.progress.ProgressView.Training) }
+    }
+
+    // An exercise's page: its best, its chart and each day it was trained.
+    @Test
+    fun exerciseProgress() {
+        val exerciseId = runBlocking { db.exerciseDao().getAll().first { it.name == "Half-crimp hang" }.id }
+        val vm = com.hardtekpt.crux.ui.you.ExerciseRecordsViewModel(SavedStateHandle(mapOf("exerciseId" to exerciseId)), exercises, records)
+        loaded(vm.state) { it.second.isNotEmpty() }
+        bothThemes("exercise_progress", readyText = "Half-crimp hang", dark = DARK) {
+            com.hardtekpt.crux.ui.you.ExerciseRecordsScreen(onBack = {}, onAdd = {}, viewModel = vm)
+        }
+    }
+
+    // Home with the Training and Exercise widgets, each showing what was chosen for it.
+    @Test
+    fun homeTraining() {
+        val vm = homeViewModel()
+        val state = loaded(vm.uiState) { !it.isLoading && it.training.exercises.isNotEmpty() }
+        val hangs = state.training.exercises.first { it.exercise.name == "Half-crimp hang" }.exercise.id
+        val pullUps = state.training.exercises.first { it.exercise.name == "Weighted pull-ups" }.exercise.id
+        val widgets = listOf(
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.TRAINING,
+                stat = com.hardtekpt.crux.data.TrainingStat.ON_PLAN,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.EXERCISE,
+                exerciseId = pullUps,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.EXERCISE,
+                size = com.hardtekpt.crux.data.dashboard.WidgetSize.WIDE,
+                exerciseId = hangs,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.TRAINING,
+                size = com.hardtekpt.crux.data.dashboard.WidgetSize.WIDE,
+                stat = com.hardtekpt.crux.data.TrainingStat.SETS,
+            ),
+        )
+        bothThemes("home_training", dark = DARK) { HomeContent(uiState = state, dashboard = com.hardtekpt.crux.ui.home.DashboardState(widgets)) }
+    }
+
+    private fun training() = com.hardtekpt.crux.ui.progress.TrainingProgressSource(
+        sessions(),
+        records,
+        exercises,
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        climbs,
+        FIXED_CLOCK,
+    )
 
     @Test
     fun you() {

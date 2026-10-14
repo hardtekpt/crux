@@ -19,7 +19,8 @@ your **best streak**, and how many days you were active in the **last 30 days**.
 
 **Log a result** on an exercise: reps, time and/or added load, the day, and a note. For each
 exercise, the best result is the **personal record**: the heaviest load, then the most reps, or the
-longest hold for timed exercises. Tap an exercise to see its history, and to delete a result.
+longest hold for timed exercises. Tap an exercise for its page, with a chart and every day you
+trained it: see [Progress → An exercise's page](progress.md#an-exercises-page).
 
 Sets you do in a [session](sessions.md) count too: they show in the history as "In a session",
 and when one beats every result before it, the session shows **New best** under the exercise.

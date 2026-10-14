@@ -103,6 +103,9 @@ interface RecordRepository {
 
     /** One exercise's results, newest first. */
     fun observeRecords(exerciseId: Long): Flow<List<ExerciseRecord>>
+
+    /** Every result on every exercise, hand-logged and from sessions, in no set order. */
+    fun observeAll(): Flow<List<ExerciseRecord>>
     suspend fun addRecord(exerciseId: Long, date: LocalDate, reps: Int?, seconds: Int?, loadKg: Double?, notes: String?): Long
     suspend fun deleteRecord(id: Long)
 }
@@ -136,6 +139,8 @@ class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases
             }.sortedByDescending { it.record.date }
         }
     }
+
+    override fun observeAll(): Flow<List<ExerciseRecord>> = dbs.observe { allResults(it) }
 
     override fun observeRecords(exerciseId: Long): Flow<List<ExerciseRecord>> =
         dbs.observe { allResults(it) }.map { list -> list.filter { it.exerciseId == exerciseId }.sortedByDescending { it.date } }

@@ -14,6 +14,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
@@ -30,6 +33,7 @@ import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -38,6 +42,7 @@ import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.StatTile
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -75,6 +80,8 @@ data class ProgressUiState(
     val charts: ProgressCharts = ProgressCharts(),
     /** Problems you've tried and not sent yet, most recently tried first. */
     val projects: List<Project> = emptyList(),
+    val training: TrainingProgress = TrainingProgress(),
+    val today: LocalDate = LocalDate.now(),
 ) {
     val isEmpty: Boolean get() = groups.all { it.hardest == null } && projects.isEmpty()
 
@@ -111,6 +118,7 @@ class ProgressViewModel @Inject constructor(
     placeRepository: PlaceRepository,
     preferences: UserPreferencesRepository,
     clock: Clock,
+    training: TrainingProgressSource? = null,
 ) : ViewModel() {
     /** "+1 go" on the projects list. */
     val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbRepository, placeRepository, clock), viewModelScope)
@@ -127,17 +135,29 @@ class ProgressViewModel @Inject constructor(
             scales = scales,
             groups = bests.toDisciplineBests(),
             charts = progressCharts(climbs, scales, LocalDate.now(clock)),
+            today = LocalDate.now(clock),
         )
     }
+        .combine(training?.observe() ?: kotlinx.coroutines.flow.flowOf(TrainingProgress())) { state, progress -> state.copy(training = progress) }
         .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 }
 
 @Composable
-fun ProgressScreen(onOpenProblem: (Long) -> Unit = {}, viewModel: ProgressViewModel = hiltViewModel()) {
+fun ProgressScreen(onOpenProblem: (Long) -> Unit = {}, onOpenExercise: (Long) -> Unit = {}, viewModel: ProgressViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
-    ProgressContent(uiState, onOpenProblem = onOpenProblem, lastGo = lastGo, onGo = viewModel.quickGo::log, onUndoGo = viewModel.quickGo::undo)
+    ProgressContent(
+        uiState,
+        onOpenProblem = onOpenProblem,
+        onOpenExercise = onOpenExercise,
+        lastGo = lastGo,
+        onGo = viewModel.quickGo::log,
+        onUndoGo = viewModel.quickGo::undo,
+    )
 }
+
+/** Progress's two tabs: climbing (sends, pyramids, projects) and training (sessions and exercises). */
+enum class ProgressView(val label: String) { Climbing("Climbing"), Training("Training") }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,19 +165,41 @@ fun ProgressContent(
     uiState: ProgressUiState,
     modifier: Modifier = Modifier,
     onOpenProblem: (Long) -> Unit = {},
+    onOpenExercise: (Long) -> Unit = {},
     lastGo: com.hardtekpt.crux.data.LoggedGo? = null,
     onGo: ((Long) -> Unit)? = null,
     onUndoGo: () -> Unit = {},
+    initialView: ProgressView = ProgressView.Climbing,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
+    var view by rememberSaveable { mutableStateOf(initialView) }
     Column(
         modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
+            // Swipe sideways to move between Climbing and Training.
+            .swipeBetweenTabs { direction -> ProgressView.entries.getOrNull(view.ordinal + direction)?.let { view = it } }
             .testTag("screen_Progress"),
     ) {
         CruxTopAppBar(title = "Progress", scrollBehavior = scrollBehavior)
+        CruxSegmentedButtons(
+            options = ProgressView.entries,
+            selected = view,
+            label = { it.label },
+            onSelect = { view = it },
+            modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2).testTag("progress_tabs"),
+        )
+        if (view == ProgressView.Training) {
+            LazyColumn(
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s2, bottom = space.s4 + LocalNavBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(space.s2),
+                modifier = Modifier.revealWhen(!uiState.isLoading).testTag("progress_training"),
+            ) {
+                training(uiState.training, uiState.today, onOpenExercise)
+            }
+            return
+        }
         if (!uiState.isLoading && uiState.isEmpty) {
             EmptyState(
                 icon = Icons.Rounded.Insights,

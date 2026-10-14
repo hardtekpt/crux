@@ -98,6 +98,9 @@ interface SessionDao {
     @Insert
     suspend fun insertSession(session: SessionEntity): Long
 
+    @Query("SELECT COUNT(*) FROM sessions")
+    suspend fun countAll(): Int
+
     @Update
     suspend fun updateSession(session: SessionEntity)
 

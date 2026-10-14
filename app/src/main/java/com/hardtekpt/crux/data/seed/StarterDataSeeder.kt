@@ -89,6 +89,7 @@ class StarterDataSeeder(private val clock: Clock) {
                 insertProfileSamples(db)
             }
             if (includeSampleData && db.scheduleDao().getAll().isEmpty()) insertSampleSchedule(db)
+            if (includeSampleData && db.sessionDao().countAll() == 0) insertSampleSessions(db)
         }
     }
 
@@ -119,6 +120,85 @@ class StarterDataSeeder(private val clock: Clock) {
                 climb(java.time.DayOfWeek.SATURDAY, 0, place),
             ),
         )
+    }
+
+    /**
+     * Six weeks of finished sessions for the demo, so Training progress has something to show:
+     * hangs on Mondays and strength on Tuesdays (two Tuesdays missed), each a little heavier.
+     */
+    private suspend fun insertSampleSessions(db: CruxDatabase) {
+        val zone = clock.zone
+        val today = LocalDate.now(clock)
+        val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val exercises = db.exerciseDao().getAll().associate { it.name to it.id }
+        val plans = db.templateDao().getAll().associate { it.template.name to it.template.id }
+        val dao = db.sessionDao()
+
+        suspend fun session(date: LocalDate, plan: String, minutes: Int, work: List<Triple<String, Int, (Int) -> Triple<Int?, Int?, Double?>>>) {
+            if (!date.isBefore(today)) return
+            val start = date.atTime(18, 30).atZone(zone).toInstant().toEpochMilli()
+            val id = dao.insertSession(
+                com.hardtekpt.crux.data.local.SessionEntity(
+                    name = plan,
+                    templateId = plans[plan],
+                    startedAtMillis = start,
+                    endedAtMillis = start + minutes * 60_000L,
+                    status = com.hardtekpt.crux.data.local.SessionStatus.FINISHED,
+                    effort = 7,
+                ),
+            )
+            work.forEachIndexed { position, (name, sets, values) ->
+                val exerciseId = exercises[name] ?: return@forEachIndexed
+                val (reps, seconds, load) = values(0)
+                val itemId = dao.insertItem(
+                    com.hardtekpt.crux.data.local.SessionItemEntity(
+                        sessionId = id,
+                        exerciseId = exerciseId,
+                        position = position,
+                        sets = sets,
+                        reps = reps ?: 0,
+                        seconds = seconds ?: 0,
+                        loadKg = load ?: 0.0,
+                        restSeconds = 180,
+                    ),
+                )
+                (0 until sets).forEach { index ->
+                    val (r, t, l) = values(index)
+                    dao.insertSet(
+                        com.hardtekpt.crux.data.local.SessionSetEntity(
+                            itemId = itemId,
+                            setIndex = index,
+                            reps = r,
+                            seconds = t,
+                            loadKg = l,
+                            completedAtMillis = start + (position * sets + index + 1) * 4 * 60_000L,
+                        ),
+                    )
+                }
+            }
+        }
+
+        (6 downTo 1).forEach { back ->
+            val week = monday.minusWeeks(back.toLong())
+            val step = 6 - back
+            session(
+                week,
+                "Max hangs + limit bouldering",
+                55 + step,
+                listOf(Triple("Half-crimp hang", 5) { _: Int -> Triple(null, 10, 10.0 + step * 1.25) }),
+            )
+            if (back != 4 && back != 2) {
+                session(
+                    week.plusDays(1),
+                    "Strength day",
+                    48 + step,
+                    listOf(
+                        Triple("Weighted pull-ups", 5) { set: Int -> Triple(if (set == 4) 4 else 5, null, 15.0 + step * 1.25) },
+                        Triple("Front lever tucks", 3) { _: Int -> Triple(null, 8 + step, null) },
+                    ),
+                )
+            }
+        }
     }
 
     /** Adds the starter exercises and plans to a database that may already hold the climber's own. */

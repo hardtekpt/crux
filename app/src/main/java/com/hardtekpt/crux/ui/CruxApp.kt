@@ -206,6 +206,7 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
                             onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
@@ -274,7 +275,12 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) }) }
+                    page<ProgressRoute> {
+                        ProgressScreen(
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
+                        )
+                    }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {

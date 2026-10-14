@@ -138,6 +138,14 @@ handles the buttons (Set done, ±30 s, Skip rest, Pause/Resume, Stop); Log climb
 card go through `MainActivity`'s `OpenRequest`. `CruxApplication` starts the service when a
 session starts.
 
+Training progress (`ui/progress/TrainingProgress.kt`) is worked out, not stored: `trainingProgress`
+takes the finished sessions, every exercise result (`RecordRepository.observeAll`: hand-logged and
+session sets), the exercise library, the Week schedule and the days with climbs, and gives the last
+8 weeks (planned, done, sessions, sets, minutes, new bests), 30-day figures and each exercise's best
+per day. `TrainingProgressSource` combines the flows for Progress and Home. The Home widgets
+`TRAINING` and `EXERCISE` are configurable: `DashboardWidget` keeps the chosen `TrainingStat` or
+`exerciseId`, and the layout JSON carries them (older layouts read as before).
+
 ## Domain decisions worth knowing
 
 - **Grades** are a scale (`GradeScale`: Font, V, French, YDS, or a local scale) plus an index, and

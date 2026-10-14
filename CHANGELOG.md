@@ -8,6 +8,13 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Training progress**: Progress now has a **Training** tab. It shows how much of your Week
+  schedule you did over the last 8 weeks, your sessions, time trained and new bests in the last 30
+  days, and every exercise with a small trend of your best set. Tap an exercise for its chart (best
+  set or volume, over 3 months, a year or all time) and every day you trained it.
+- **Training and Exercise widgets** for Home: pick a training figure (on plan, sessions, sets, time
+  trained or new bests) or an exercise when you add one, and change it later with its tune button.
+
 - **Change an exercise mid-session**: its ⋯ menu changes its sets, reps or time, load and rest for
   that session; your plan stays as it is. **Add set** adds one more set, and an exercise with
   nothing logged can be taken out.

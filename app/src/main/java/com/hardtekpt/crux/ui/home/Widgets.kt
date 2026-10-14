@@ -23,12 +23,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hardtekpt.crux.data.TrainingStat
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetSize
 import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.charts.BarChart
+import com.hardtekpt.crux.ui.charts.BarDatum
 import com.hardtekpt.crux.ui.charts.ChartCard
 import com.hardtekpt.crux.ui.charts.DonutChart
 import com.hardtekpt.crux.ui.charts.SeriesPoint
@@ -46,6 +48,12 @@ import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.outcomeLine
+import com.hardtekpt.crux.ui.progress.ProgressRing
+import com.hardtekpt.crux.ui.progress.TrainingWeek
+import com.hardtekpt.crux.ui.progress.WeekBars
+import com.hardtekpt.crux.ui.progress.headlineShown
+import com.hardtekpt.crux.ui.progress.headlineUnit
+import com.hardtekpt.crux.ui.progress.minutesLabel
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
@@ -54,6 +62,7 @@ import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightUnit
 import com.hardtekpt.crux.ui.weightValue
+import com.hardtekpt.crux.ui.you.describe
 import java.time.LocalDate
 
 /** Where a widget's taps lead. Ignored while the dashboard is being edited. */
@@ -67,6 +76,7 @@ data class WidgetActions(
     val openWeekClimbs: () -> Unit = {},
     val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
+    val openExercise: (Long) -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -163,6 +173,20 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
 
         WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
+
+        WidgetType.TRAINING -> TrainingWidget(
+            widget.stat ?: TrainingStat.ON_PLAN,
+            state,
+            widget.size,
+            modifier.clickable(onClick = actions.openProgress).testTag("widget_training"),
+        )
+
+        WidgetType.EXERCISE -> ExerciseWidget(
+            widget.exerciseId,
+            state,
+            widget.size,
+            modifier.clickable { widget.exerciseId?.let(actions.openExercise) }.testTag("widget_exercise"),
+        )
     }
 }
 
@@ -468,6 +492,116 @@ private fun ConsistencyWidget(state: HomeUiState, large: Boolean, onOpen: () -> 
                 com.hardtekpt.crux.ui.you.ProfileStat("${state.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
                 com.hardtekpt.crux.ui.you.ProfileStat(state.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
             }
+        }
+    }
+}
+
+/** A training figure this week as text: "3/4" on plan, "1 h 20 min" trained, else a count. */
+private fun TrainingWeek.figure(stat: TrainingStat, scheduled: Boolean): String = when (stat) {
+    TrainingStat.ON_PLAN -> if (scheduled) "$done/$planned" else sessions.toString()
+    TrainingStat.TIME -> minutesLabel(minutes)
+    else -> formatTick(value(stat))
+}
+
+/**
+ * One training figure, chosen when it's added: small, this week's figure (On plan as a ring);
+ * wide and large, the figure week by week.
+ */
+@Composable
+private fun TrainingWidget(stat: TrainingStat, state: HomeUiState, size: WidgetSize, modifier: Modifier) {
+    val training = state.training
+    val week = training.thisWeek
+    val lastWeek = training.weeks.getOrNull(training.weeks.size - 2)
+    val scheduled = training.scheduled
+    if (size == WidgetSize.SMALL) {
+        if (stat == TrainingStat.ON_PLAN && scheduled && week != null) {
+            CruxCard(modifier = modifier.fillMaxWidth()) {
+                Text(stat.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ProgressRing(
+                    week.done.toFloat() / week.planned.coerceAtLeast(1),
+                    "${week.done}/${week.planned}",
+                    Modifier.padding(vertical = CruxTheme.space.s1).testTag("training_ring"),
+                )
+                Text("this week", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            StatTile(
+                label = if (stat == TrainingStat.ON_PLAN && !scheduled) "Sessions" else stat.label,
+                value = if (state.isLoading || week == null) "–" else week.figure(stat, scheduled),
+                delta = lastWeek?.let { "this week · ${it.figure(stat, scheduled)} last" } ?: "this week",
+                isPersonalBest = stat == TrainingStat.NEW_BESTS && (week?.newBests ?: 0) > 0,
+                modifier = modifier,
+                valueModifier = Modifier.testTag("training_figure"),
+            )
+        }
+        return
+    }
+    val weeks = if (size == WidgetSize.LARGE) training.weeks else training.weeks.takeLast(6)
+    ChartCard(
+        title = if (stat == TrainingStat.ON_PLAN && !scheduled) "Sessions per week" else "${stat.label} per week",
+        trailing = week?.let { "${it.figure(stat, scheduled)} this week" },
+        modifier = modifier,
+    ) {
+        when {
+            training.isEmpty -> EmptyWidgetText("Finish a session to see your training here.")
+
+            stat == TrainingStat.ON_PLAN -> WeekBars(weeks, scheduled, height = if (size == WidgetSize.LARGE) 120.dp else 72.dp)
+
+            else -> BarChart(
+                bars = weeks.map { BarDatum(it.start.shortLabel(), it.value(stat)) },
+                formatValue = { if (stat == TrainingStat.TIME) minutesLabel(it.toInt()) else formatTick(it) },
+                height = if (size == WidgetSize.LARGE) 170.dp else 110.dp,
+                description = "${stat.label} per week",
+            )
+        }
+    }
+}
+
+/**
+ * One exercise, chosen when it's added: small, its best; wide and large, its best set per day over
+ * 3 months or a year.
+ */
+@Composable
+private fun ExerciseWidget(exerciseId: Long?, state: HomeUiState, size: WidgetSize, modifier: Modifier) {
+    val progress = state.training.exercises.firstOrNull { it.exercise.id == exerciseId }
+    val imperial = LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+    if (progress == null) {
+        StatTile(
+            label = "Exercise",
+            value = "–",
+            delta = if (exerciseId == null) "choose an exercise" else "no results yet",
+            modifier = modifier,
+        )
+        return
+    }
+    val metric = progress.exercise.metric
+    if (size == WidgetSize.SMALL) {
+        StatTile(
+            label = progress.exercise.name,
+            value = formatTick(metric.headlineShown(progress.best, imperial)),
+            unit = metric.headlineUnit(imperial),
+            delta = "best · ${progress.best.date.shortLabel()}",
+            isPersonalBest = progress.bestIsNew(state.today),
+            modifier = modifier,
+            valueModifier = Modifier.testTag("exercise_best"),
+        )
+        return
+    }
+    val large = size == WidgetSize.LARGE
+    val start = state.today.minusDays(if (large) 365 else 91)
+    val days = progress.days.filter { !it.date.isBefore(start) }.sortedBy { it.date }
+    ChartCard(title = progress.exercise.name, trailing = "best " + progress.best.describe(metric, imperial), modifier = modifier) {
+        if (days.size < 2) {
+            EmptyWidgetText("Train it on two days to see how it moves.")
+        } else {
+            TimeSeriesChart(
+                points = days.map { SeriesPoint(it.date.toEpochDay().toDouble(), metric.headlineShown(it.best, imperial)) },
+                formatX = { LocalDate.ofEpochDay(it.toLong()).shortLabel() },
+                formatY = { formatTick(it) },
+                unit = " " + metric.headlineUnit(imperial),
+                height = if (large) 190.dp else 120.dp,
+                description = "${progress.exercise.name}: best set per day",
+            )
         }
     }
 }

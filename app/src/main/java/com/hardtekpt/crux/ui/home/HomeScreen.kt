@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.OpenInFull
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,6 +80,7 @@ import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.you.describe
 import kotlinx.coroutines.delay
 
 @Composable
@@ -92,6 +94,7 @@ fun HomeScreen(
     onOpenDaysOnWall: () -> Unit = {},
     onOpenWeekClimbs: () -> Unit = {},
     onOpenMeasurements: () -> Unit = {},
+    onOpenExercise: (Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -111,6 +114,7 @@ fun HomeScreen(
             openWeekClimbs = onOpenWeekClimbs,
             openMeasurements = onOpenMeasurements,
             startPlan = onStartPlan,
+            openExercise = onOpenExercise,
         ),
         editor = DashboardEditor(
             start = viewModel::startEditing,
@@ -122,6 +126,9 @@ fun HomeScreen(
             closeAdd = viewModel::closeAddWidget,
             add = viewModel::add,
             reset = viewModel::resetToDefault,
+            configure = viewModel::configure,
+            applySetup = viewModel::applySetup,
+            cancelSetup = viewModel::cancelSetup,
         ),
     )
 }
@@ -137,6 +144,9 @@ data class DashboardEditor(
     val closeAdd: () -> Unit = {},
     val add: (WidgetType) -> Unit = {},
     val reset: () -> Unit = {},
+    val configure: (String) -> Unit = {},
+    val applySetup: (com.hardtekpt.crux.data.TrainingStat?, Long?) -> Unit = { _, _ -> },
+    val cancelSetup: () -> Unit = {},
 )
 
 data class DragCallbacks(val onStart: (String) -> Unit, val onDrag: (Offset) -> Unit, val onEnd: () -> Unit)
@@ -322,6 +332,7 @@ fun HomeContent(
                                 callbacks = dragCallbacks,
                                 onResize = { editor.resize(widget.id) },
                                 onRemove = { editor.remove(widget.id) },
+                                onConfigure = { editor.configure(widget.id) },
                                 modifier = Modifier
                                     .onGloballyPositioned { bounds[widget.id] = it.boundsInRoot() }
                                     .zIndex(if (dragging) 1f else 0f)
@@ -391,6 +402,15 @@ fun HomeContent(
     if (dashboard.addingWidget) {
         AddWidgetSheet(onAdd = editor.add, onDismiss = editor.closeAdd)
     }
+    dashboard.setup?.let { setup ->
+        WidgetSetupSheet(
+            setup = setup,
+            current = dashboard.widgets.firstOrNull { it.id == setup.widgetId },
+            exercises = uiState.training.exercises,
+            onPick = editor.applySetup,
+            onDismiss = editor.cancelSetup,
+        )
+    }
 }
 
 /**
@@ -406,6 +426,7 @@ private fun EditableWidget(
     onResize: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
+    onConfigure: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -467,6 +488,15 @@ private fun EditableWidget(
                             )
                         },
                 )
+                if (widget.type.configurable) {
+                    IconButton(onClick = onConfigure, modifier = Modifier.size(40.dp).testTag("configure_${widget.type.name}")) {
+                        Icon(
+                            Icons.Rounded.Tune,
+                            contentDescription = "Choose what ${widget.type.title} shows",
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 if (widget.type.sizes.size > 1) {
                     IconButton(onClick = onResize, modifier = Modifier.size(40.dp).testTag("resize_${widget.type.name}")) {
                         Icon(
@@ -565,6 +595,70 @@ private fun AddWidgetSheet(onAdd: (WidgetType) -> Unit, onDismiss: () -> Unit) {
                     trailing = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.testTag("catalog_${type.name}"),
                 )
+            }
+        }
+    }
+}
+
+/**
+ * What a Training or Exercise widget shows: one of the training figures, or one exercise you've
+ * trained, as the app's other sheets look.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun WidgetSetupSheet(
+    setup: WidgetSetup,
+    current: DashboardWidget?,
+    exercises: List<com.hardtekpt.crux.ui.progress.ExerciseProgress>,
+    onPick: (com.hardtekpt.crux.data.TrainingStat?, Long?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("widget_setup"),
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        ) {
+            Text(setup.type.title, style = MaterialTheme.typography.headlineSmall)
+            if (setup.type == WidgetType.TRAINING) {
+                Eyebrow("Show", Modifier.padding(bottom = CruxTheme.space.s1))
+                com.hardtekpt.crux.data.TrainingStat.entries.forEach { stat ->
+                    CruxListRow(
+                        title = stat.label,
+                        supporting = stat.description,
+                        selected = current?.stat == stat,
+                        onClick = { onPick(stat, null) },
+                        modifier = Modifier.testTag("setup_${stat.name}"),
+                    )
+                }
+            } else {
+                Eyebrow("Exercise", Modifier.padding(bottom = CruxTheme.space.s1))
+                if (exercises.isEmpty()) {
+                    Text(
+                        "Finish a session or log a result on an exercise, then pick it here.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+                exercises.sortedBy { it.exercise.name.lowercase() }.forEach { progress ->
+                    CruxListRow(
+                        title = progress.exercise.name,
+                        supporting = "Best " + progress.best.describe(progress.exercise.metric, imperial),
+                        selected = current?.exerciseId == progress.exercise.id,
+                        onClick = { onPick(null, progress.exercise.id) },
+                        modifier = Modifier.testTag("setup_exercise_${progress.exercise.name}"),
+                    )
+                }
             }
         }
     }

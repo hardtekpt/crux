@@ -383,6 +383,50 @@ class MainActivityTest {
     }
 
     @Test
+    fun trainingProgressShowsInProgressAndAsWidgetsYouSetUp() {
+        // A result logged by hand is training too.
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasText("Log a record"))
+        composeRule.onNode(hasText("Log a record")).performClick()
+        composeRule.waitForTag("row_record_exercise")
+        // The exercise list starts open; it only needs opening when it isn't.
+        if (composeRule.onAllNodesWithTag("record_pick_Half-crimp hang").fetchSemanticsNodes().isEmpty()) {
+            composeRule.onNodeWithTag("row_record_exercise").performClick()
+        }
+        composeRule.waitForTag("record_pick_Half-crimp hang")
+        composeRule.onNodeWithTag("record_pick_Half-crimp hang").performScrollTo().performClick()
+        composeRule.onNodeWithTag("save_record").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("screen_RecordEditor").fetchSemanticsNodes().isEmpty() }
+
+        // Progress's Training tab lists the exercises trained, and each opens its page with a chart.
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitForTag("progress_tabs")
+        composeRule.onNode(hasText("Training")).performClick()
+        composeRule.waitForTag("training_exercise")
+        composeRule.onAllNodesWithTag("training_exercise")[0].performClick()
+        composeRule.waitForTag("exercise_chart")
+        composeRule.onNodeWithTag("back").performClick()
+
+        // On Home, a Training widget asks which figure to show, and an Exercise widget which exercise.
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.waitForTag("edit_dashboard")
+        composeRule.onNodeWithTag("edit_dashboard").performClick()
+        composeRule.onNodeWithTag("add_widget").performClick()
+        composeRule.onNodeWithTag("catalog_TRAINING").performScrollTo().performClick()
+        composeRule.waitForTag("setup_SETS")
+        composeRule.onNodeWithTag("setup_SETS").performClick()
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_TRAINING"))
+        composeRule.onNodeWithTag("training_figure", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag("add_widget").performClick()
+        composeRule.onNodeWithTag("catalog_EXERCISE").performScrollTo().performClick()
+        composeRule.waitForTag("setup_exercise_Half-crimp hang")
+        composeRule.onNodeWithTag("setup_exercise_Half-crimp hang").performScrollTo().performClick()
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_EXERCISE"))
+        composeRule.onNodeWithTag("exercise_best", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
     fun dashboardWidgetsCanBeAddedRemovedResizedAndMoved() {
         composeRule.onNodeWithTag("edit_dashboard").performClick()
         composeRule.onNodeWithTag("remove_TODAYS_PLAN").performClick()

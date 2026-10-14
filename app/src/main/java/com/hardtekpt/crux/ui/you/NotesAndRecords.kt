@@ -521,6 +521,12 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
         CruxTopAppBar(title = exercise?.name.orEmpty(), onBack = onBack)
         val ex = exercise ?: return@Column
         val pr = ex.metric.best(results)
+        val today = java.time.LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current)
+        val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+        val progress = androidx.compose.runtime.remember(ex, results, today) {
+            com.hardtekpt.crux.ui.progress.trainingProgress(emptyList(), results, listOf(ex), emptyList(), emptySet(), today, java.time.ZoneId.systemDefault())
+                .exercises.firstOrNull()
+        }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
@@ -544,18 +550,35 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                     onAdd(ex.id)
                 }, icon = Icons.Rounded.Add, variant = CruxButtonVariant.Tonal, modifier = Modifier.testTag("add_record"))
             }
-            item { Eyebrow("All results · ${results.size}", Modifier.padding(top = space.s3)) }
-            items(results, key = { it.id }) { record ->
+            // Its best set per day, or how much was done, over time.
+            progress?.let { item(key = "chart") { com.hardtekpt.crux.ui.progress.ExerciseChartCard(it, today, Modifier.padding(top = space.s2)) } }
+            // Each day it was trained: how many results, and the best of them.
+            val days = progress?.days.orEmpty()
+            item { Eyebrow("By day · ${days.size}", Modifier.padding(top = space.s3)) }
+            items(days, key = { it.date.toEpochDay() }) { day ->
+                val single = day.best.takeIf { day.results == 1 && !it.fromSession }
                 CruxListRow(
-                    title = record.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
-                    supporting = listOfNotNull(record.date.dayLabel(), record.notes, "PR".takeIf { record.id == pr?.id }).joinToString(" · "),
-                    // A set from a session is changed in its session, so only hand-logged results can go here.
-                    trailing = if (record.fromSession) {
-                        null
+                    title = day.date.dayLabel(),
+                    supporting = listOfNotNull(
+                        when {
+                            day.results == 1 && day.fromSession -> "1 set in a session"
+                            day.fromSession -> "${day.results} sets in a session"
+                            day.results == 1 -> "Logged by hand"
+                            else -> "${day.results} results logged by hand"
+                        },
+                        "best ${day.best.describe(ex.metric, imperial)}",
+                        single?.notes,
+                    ).joinToString(" · "),
+                    leading = if (day.isBest) {
+                        { Icon(Icons.Rounded.EmojiEvents, contentDescription = "Personal record", tint = colors.secondary) }
                     } else {
+                        null
+                    },
+                    // A set from a session is changed in its session, so only a day with one hand-logged result can go here.
+                    trailing = single?.let { record ->
                         { IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") } }
                     },
-                    selected = record.id == pr?.id,
+                    selected = day.isBest,
                     modifier = Modifier.heightIn(min = 56.dp).testTag("record_result"),
                 )
             }

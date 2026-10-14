@@ -79,7 +79,8 @@ tests, so they always match the current version.
 
 **Track**
 - **Journal**: one timeline of climbs, sessions, results and notes, with search and filters.
-- **Progress**: hardest sends per scale and style, grade pyramids, sends per week and by style.
+- **Progress**: hardest sends per scale and style, grade pyramids, sends per week and by style;
+  and training: plan against done, sessions, time and new bests, and each exercise over time.
 - **You**: a consistency grid with weekly streaks, personal records, weight, body stats with ape
   index, circumferences, and notes with tags.
 - **Home**: a dashboard of widgets you add, resize and arrange.
@@ -163,6 +164,13 @@ You need JDK 21 and the Android SDK (platform 37). On Windows, `.\crux run` buil
 app on an emulator in one step. See [Development setup](docs/developer/setup.md).
 
 ## Changelog
+
+**Unreleased**:
+- **Training progress** in Progress, with a chart for each exercise, and **Training** and
+  **Exercise** widgets for Home that show what you pick.
+- **A simpler live session**: every exercise in one list, sets changed in place, and a dock for
+  rests and timers.
+- **Export as a spreadsheet** (CSV).
 
 **[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
 - **Weekly schedule** under *Train → Week*; Home follows it.

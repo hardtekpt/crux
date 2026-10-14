@@ -172,16 +172,16 @@ class BackupRepositoryTest {
         assertEquals(linkedSource, linkedTarget)
 
         // The session comes back with its sets, its plan, its place, and the climb logged in it.
-        val session = target.sessionDao().getFinished().single()
+        val session = target.sessionDao().getFinished().single { it.notes == "Felt strong" }
         assertEquals("Felt strong", session.notes)
         assertEquals(7, session.effort)
         assertEquals(4_600_000L, session.endedAtMillis)
         assertEquals(target.templateDao().getAll().first { it.template.name == "Strength day" }.template.id, session.templateId)
         assertEquals(blockLab.id, session.placeId)
         assertEquals(sections[0].id, session.sectionId)
-        val item = target.sessionDao().getAllItems().single()
+        val item = target.sessionDao().getAllItems().single { it.sessionId == session.id }
         assertEquals(exercise.name, target.exerciseDao().get(item.exerciseId)!!.name)
-        assertEquals(listOf(false, true), target.sessionDao().getAllSets().map { it.skipped })
+        assertEquals(listOf(false, true), target.sessionDao().getAllSets().filter { it.itemId == item.id }.map { it.skipped })
         assertEquals(1, target.climbDao().getAll().count { it.sessionId == session.id })
     }
 

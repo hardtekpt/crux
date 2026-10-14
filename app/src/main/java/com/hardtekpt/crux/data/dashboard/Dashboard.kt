@@ -22,8 +22,11 @@ enum class WidgetSize(val label: String, val fullWidth: Boolean) {
     LARGE("Large", fullWidth = true),
 }
 
-/** Everything the dashboard can show. The first size listed is the default when added. */
-enum class WidgetType(val title: String, val description: String, val sizes: List<WidgetSize>) {
+/**
+ * Everything the dashboard can show. The first size listed is the default when added. A
+ * [configurable] widget asks what to show when it's added: a training figure or an exercise.
+ */
+enum class WidgetType(val title: String, val description: String, val sizes: List<WidgetSize>, val configurable: Boolean = false) {
     TODAYS_PLAN("Today's plan", "The session planned for today", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     WEEK_CLIMBS("This week", "Climbs and sends since Monday", listOf(WidgetSize.SMALL, WidgetSize.WIDE)),
     DAYS_ON_WALL("Days on the wall", "Days you climbed this week", listOf(WidgetSize.SMALL, WidgetSize.WIDE)),
@@ -35,13 +38,33 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
     RECENT_CLIMBS("Recent climbs", "Your latest journal entries", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     PROJECTS("Projects", "Climbs you've tried and not sent yet", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     CONSISTENCY("Consistency", "Your days on the wall over the last weeks, and your week streak", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
+    TRAINING(
+        "Training",
+        "A training figure you choose, week by week: on plan, sessions, sets, time or new bests",
+        listOf(WidgetSize.SMALL, WidgetSize.WIDE, WidgetSize.LARGE),
+        configurable = true,
+    ),
+    EXERCISE(
+        "Exercise",
+        "An exercise you choose: its best and how it's moved",
+        listOf(WidgetSize.SMALL, WidgetSize.WIDE, WidgetSize.LARGE),
+        configurable = true,
+    ),
     ;
 
     val defaultSize: WidgetSize get() = sizes.first()
 }
 
 @Serializable
-data class DashboardWidget(val id: String = UUID.randomUUID().toString(), val type: WidgetType, val size: WidgetSize = type.defaultSize) {
+data class DashboardWidget(
+    val id: String = UUID.randomUUID().toString(),
+    val type: WidgetType,
+    val size: WidgetSize = type.defaultSize,
+    /** [WidgetType.TRAINING]: the figure it shows. */
+    val stat: com.hardtekpt.crux.data.TrainingStat? = null,
+    /** [WidgetType.EXERCISE]: the exercise it follows. */
+    val exerciseId: Long? = null,
+) {
     /** The next size this widget supports, wrapping around. */
     fun nextSize(): DashboardWidget {
         val sizes = type.sizes
