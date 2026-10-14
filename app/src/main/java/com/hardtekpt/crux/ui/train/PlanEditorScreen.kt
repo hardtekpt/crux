@@ -301,9 +301,9 @@ private fun ExercisePickerSheet(library: List<Exercise>, onPick: (Exercise) -> U
     }
 }
 
-/** Targets for one exercise; only the fields its metric uses are shown. */
+/** Targets for one exercise; only the fields its metric uses are shown. [note] says where the change applies. */
 @Composable
-private fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit, onDismiss: () -> Unit) {
+internal fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit, onDismiss: () -> Unit, note: String? = null) {
     val metric = exercise.metric
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -326,6 +326,7 @@ private fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (E
                 style = CruxTheme.type.code,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (metric.usesIntervals) {
                 IntervalTargets(target, metric.usesLoad, onChange)
             } else {

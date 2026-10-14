@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -85,6 +86,7 @@ import com.hardtekpt.crux.data.SessionRepository
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Exercise
 import com.hardtekpt.crux.data.model.ExerciseCategory
+import com.hardtekpt.crux.data.model.ExerciseTarget
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.model.formatDuration
 import com.hardtekpt.crux.data.model.formatLoad
@@ -248,6 +250,19 @@ class SessionViewModel @Inject constructor(
     }
 
     fun updateDraft(change: (SetDraft) -> SetDraft) = _draft.update(change)
+
+    /** Changes what an exercise asks for in this session; the next set's draft follows it. */
+    fun updateTarget(item: SessionItem, target: ExerciseTarget) {
+        if (target == item.target) return
+        viewModelScope.launch { sessions.updateTarget(item.id, target) }
+        _draft.update { draft ->
+            if (draft.itemId != item.id || item.sets.any { !it.skipped }) {
+                draft
+            } else {
+                draft.copy(reps = target.reps, seconds = target.seconds, loadKg = target.loadKg)
+            }
+        }
+    }
 
     /** Logs the set as drafted, then starts the rest; after the last set, moves to the next exercise. */
     fun doneSet(item: SessionItem) {
@@ -446,6 +461,7 @@ fun SessionScreen(
     var finishing by rememberSaveable { mutableStateOf(false) }
     var picking by rememberSaveable { mutableStateOf(false) }
     var settingUpTimer by rememberSaveable { mutableStateOf(false) }
+    var editingTarget by rememberSaveable { mutableStateOf<Long?>(null) }
     var freeTimer by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Pair<Long, Int>?>(null) }
     val context = LocalContext.current
@@ -586,6 +602,7 @@ fun SessionScreen(
                     onSkip = { viewModel.skipSet(item) },
                     onEdit = { setIndex -> editing = item.id to setIndex },
                     onStartTimer = { settingUpTimer = true },
+                    onEditTarget = { editingTarget = item.id },
                     onPrevious = current.items.getOrNull(index - 1)?.let { prev -> { viewModel.show(prev.id) } },
                     onNext = current.items.getOrNull(index + 1)?.let { next -> { viewModel.show(next.id) } },
                 )
@@ -691,6 +708,20 @@ fun SessionScreen(
             onDismiss = { picking = false },
         )
     }
+    // Changing an exercise for this session only: the plan stays as it is.
+    current?.items?.firstOrNull { it.id == editingTarget }?.let { edited ->
+        var target by remember(edited.id) { mutableStateOf(edited.target) }
+        com.hardtekpt.crux.ui.train.TargetSheet(
+            exercise = edited.exercise,
+            target = target,
+            onChange = { target = it.copy(sets = it.sets.coerceAtLeast(maxOf(1, edited.logged))) },
+            onDismiss = {
+                viewModel.updateTarget(edited, target)
+                editingTarget = null
+            },
+            note = "For this session only. Your plan stays as it is.",
+        )
+    }
     if (settingUpTimer && item != null) {
         TimerSetupSheet(
             initial = viewModel.timerFor(item),
@@ -776,6 +807,7 @@ private fun ExerciseView(
     onSkip: () -> Unit,
     onEdit: (Int) -> Unit,
     onStartTimer: () -> Unit,
+    onEditTarget: () -> Unit,
     onPrevious: (() -> Unit)?,
     onNext: (() -> Unit)?,
 ) {
@@ -787,6 +819,10 @@ private fun ExerciseView(
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(step, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+                // Sets, reps, time, load and rest for this session.
+                IconButton(onClick = onEditTarget, modifier = Modifier.size(36.dp).testTag("session_edit_target")) {
+                    Icon(Icons.Rounded.Tune, contentDescription = "Change this exercise for this session", tint = colors.onSurfaceVariant)
+                }
                 if (onPrevious != null || onNext != null) {
                     SmallArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous exercise", onPrevious)
                     SmallArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next exercise", onNext, Modifier.testTag("session_next"))

@@ -259,6 +259,12 @@ class MainActivityTest {
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("set_edit").fetchSemanticsNodes().isEmpty() }
         composeRule.onNodeWithTag("session_set_0").assertTextContains("5 × 7 s", substring = true)
 
+        // Its targets change for this session: the tune button opens them; Done keeps them.
+        composeRule.onNodeWithTag("session_edit_target").performScrollTo().performClick()
+        composeRule.waitForTag("target_sheet")
+        composeRule.onNodeWithTag("target_done").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("target_sheet").fetchSemanticsNodes().isEmpty() }
+
         // A timer of its own opens the band at the top; paused, it can be stopped.
         composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
         composeRule.waitForTag("timer_start")

@@ -140,6 +140,13 @@ interface SessionDao {
     @Query("DELETE FROM session_sets WHERE itemId = :itemId AND setIndex = :setIndex")
     suspend fun deleteSet(itemId: Long, setIndex: Int)
 
+    /** Changes what an exercise in a session asks for; the plan it came from stays as it is. */
+    @Query(
+        "UPDATE session_items SET sets = :sets, reps = :reps, seconds = :seconds, loadKg = :loadKg, " +
+            "restSeconds = :restSeconds, repRestSeconds = :repRestSeconds WHERE id = :itemId",
+    )
+    suspend fun updateTarget(itemId: Long, sets: Int, reps: Int, seconds: Int, loadKg: Double, restSeconds: Int, repRestSeconds: Int)
+
     @Query("SELECT s.* FROM session_sets s JOIN session_items i ON i.id = s.itemId WHERE i.sessionId = :sessionId ORDER BY s.itemId, s.setIndex")
     fun observeSets(sessionId: Long): Flow<List<SessionSetEntity>>
 

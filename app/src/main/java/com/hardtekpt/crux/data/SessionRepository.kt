@@ -82,6 +82,9 @@ interface SessionRepository {
     suspend fun skipSet(itemId: Long, setIndex: Int)
     suspend fun undoSet(itemId: Long, setIndex: Int)
 
+    /** Changes an exercise's target for this session only; at least as many sets as are already logged. */
+    suspend fun updateTarget(itemId: Long, target: ExerciseTarget)
+
     /** Adds an exercise during the session, with its usual target. */
     suspend fun addExercise(sessionId: Long, exercise: Exercise): Long
     suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?)
@@ -192,6 +195,20 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
     }
 
     override suspend fun undoSet(itemId: Long, setIndex: Int) = dbs.current().sessionDao().deleteSet(itemId, setIndex)
+
+    override suspend fun updateTarget(itemId: Long, target: ExerciseTarget) {
+        val dao = dbs.current().sessionDao()
+        val logged = dao.getAllSets().count { it.itemId == itemId }
+        dao.updateTarget(
+            itemId = itemId,
+            sets = target.sets.coerceAtLeast(maxOf(1, logged)),
+            reps = target.reps,
+            seconds = target.seconds,
+            loadKg = target.loadKg,
+            restSeconds = target.restSeconds,
+            repRestSeconds = target.repRestSeconds,
+        )
+    }
 
     override suspend fun addExercise(sessionId: Long, exercise: Exercise): Long {
         val dao = dbs.current().sessionDao()
