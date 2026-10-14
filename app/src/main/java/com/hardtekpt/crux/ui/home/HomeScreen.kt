@@ -361,17 +361,26 @@ fun HomeContent(
             ) {
                 item(key = "header") { header() }
                 items(dashboard.widgets.toRows(), key = { row -> row.joinToString { it.id } }) { row ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(space.s3),
-                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                    ) {
-                        row.forEach { widget ->
-                            Box(Modifier.weight(1f).fillMaxHeight().testTag("widget_${widget.type.name}")) {
-                                DashboardWidgetContent(widget = widget, state = uiState, actions = actions, modifier = Modifier.fillMaxSize())
-                            }
+                    val widget = row.first()
+                    if (widget.size.fullWidth) {
+                        // A full-width widget sizes itself; charts and grids inside can't be asked for intrinsic sizes.
+                        Box(Modifier.fillMaxWidth().testTag("widget_${widget.type.name}")) {
+                            DashboardWidgetContent(widget = widget, state = uiState, actions = actions, modifier = Modifier.fillMaxWidth())
                         }
-                        // A lone half-width widget keeps its half.
-                        if (row.size == 1 && !row[0].size.fullWidth) Box(Modifier.weight(1f))
+                    } else {
+                        // Two small tiles share the taller one's height, as in the editing grid.
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(space.s3),
+                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                        ) {
+                            row.forEach { small ->
+                                Box(Modifier.weight(1f).fillMaxHeight().testTag("widget_${small.type.name}")) {
+                                    DashboardWidgetContent(widget = small, state = uiState, actions = actions, modifier = Modifier.fillMaxSize())
+                                }
+                            }
+                            // A lone small widget keeps its half.
+                            if (row.size == 1) Box(Modifier.weight(1f))
+                        }
                     }
                 }
                 item(key = "footer") { footer() }

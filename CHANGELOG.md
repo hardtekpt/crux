@@ -16,6 +16,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Smoother Home and Journal**: Home builds only the widgets on screen as you scroll, and the
   Journal's search waits until you stop typing, then filters once.
 
+### Fixed
+
+- **Home crashed on open** with some widgets (a dev build after 0.4.0 only): full-width widgets
+  lay out again as they did in 0.4.0.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added
