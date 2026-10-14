@@ -30,6 +30,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.buildAnnotatedString
@@ -85,7 +86,7 @@ enum class CruxCardFill { Default, Low, Outlined }
 
 /** The container everything sits in: `radius-lg`, `space-4` padding, no shadow. */
 @Composable
-fun CruxCard(modifier: Modifier = Modifier, fill: CruxCardFill = CruxCardFill.Default, content: @Composable ColumnScope.() -> Unit) {
+fun CruxCard(modifier: Modifier = Modifier, fill: CruxCardFill = CruxCardFill.Default, outline: Color? = null, content: @Composable ColumnScope.() -> Unit) {
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier,
@@ -98,8 +99,8 @@ fun CruxCard(modifier: Modifier = Modifier, fill: CruxCardFill = CruxCardFill.De
             },
             contentColor = colors.onSurface,
         ),
-        // Every card carries a hairline so it stands off the screen behind it.
-        border = BorderStroke(CruxTheme.size.borderHairline, colors.outlineVariant),
+        // Every card carries a hairline so it stands off the screen behind it; [outline] marks one out in a colour.
+        border = outline?.let { BorderStroke(CruxTheme.size.borderEmphasis, it) } ?: BorderStroke(CruxTheme.size.borderHairline, colors.outlineVariant),
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(

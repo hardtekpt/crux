@@ -244,7 +244,27 @@ class ScreenshotTest {
     @Test
     fun session() = session("session")
 
-    private fun session(name: String, dark: List<Boolean> = BOTH) {
+    // A rest running in the dock after a set.
+    @Test
+    fun sessionResting() = session("session_resting", dark = DARK) { live, _ ->
+        live.rest.value = com.hardtekpt.crux.ui.session.Rest(FIXED_CLOCK.millis() + 48_000, 90)
+    }
+
+    // An exercise's interval timer, made big.
+    @Test
+    fun sessionTimerBig() = session("session_timer_big", dark = DARK, bigTimer = true) { live, itemId ->
+        live.timer.value = com.hardtekpt.crux.ui.session.SessionTimer(
+            com.hardtekpt.crux.ui.session.IntervalRun(com.hardtekpt.crux.ui.session.IntervalSpec.REPEATERS, FIXED_CLOCK.millis() - 26_000),
+            itemId,
+        )
+    }
+
+    private fun session(
+        name: String,
+        dark: List<Boolean> = BOTH,
+        bigTimer: Boolean = false,
+        running: (com.hardtekpt.crux.live.LiveTimers, Long) -> Unit = { _, _ -> },
+    ) {
         val sessions = sessions()
         val sessionId = runBlocking {
             val plan = OfflineTemplateRepository(dbs).observeTemplates().first().first()
@@ -255,6 +275,7 @@ class ScreenshotTest {
             repeat(warmUp.target.sets) { sessions.logSet(warmUp.id, it, warmUp.target.reps, warmUp.target.seconds, warmUp.target.loadKg) }
             id
         }
+        val live = com.hardtekpt.crux.live.LiveTimers()
         val vm =
             SessionViewModel(
                 SavedStateHandle(mapOf("sessionId" to sessionId)),
@@ -263,9 +284,13 @@ class ScreenshotTest {
                 places,
                 preferences,
                 FIXED_CLOCK,
-                com.hardtekpt.crux.live.LiveTimers(),
+                live,
             )
-        bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
+        // The session's second exercise is the one a timer runs for.
+        running(live, runBlocking { sessions.observeSession(sessionId).first { it != null }!!.items[1].id })
+        bothThemes(name, readyText = "Max hangs", dark = dark) {
+            SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm, bigTimer = bigTimer)
+        }
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.session
 import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -164,14 +165,6 @@ class SessionViewModel @Inject constructor(
 
     val timerSounds: StateFlow<Boolean> = preferences.timerSounds
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
-
-    /** The timer band as one slim line; remembered between sessions. */
-    val timerCompact: StateFlow<Boolean> = preferences.timerCompact
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    fun toggleTimerCompact() {
-        viewModelScope.launch { preferences.setTimerCompact(!timerCompact.value) }
-    }
 
     /** Values changed on sets not done yet, by item and set; ticking a set logs them. */
     private val _pending = MutableStateFlow<Map<Pair<Long, Int>, SetValues>>(emptyMap())
@@ -385,7 +378,9 @@ class SessionViewModel @Inject constructor(
         _draft.value = SetDraft()
     }
 
-    fun addRest(seconds: Int) = _rest.update { it?.copy(endsAtMillis = it.endsAtMillis + seconds * 1000L, totalSeconds = it.totalSeconds + seconds) }
+    fun addRest(seconds: Int) = _rest.update {
+        it?.copy(endsAtMillis = it.endsAtMillis + seconds * 1000L, totalSeconds = (it.totalSeconds + seconds).coerceAtLeast(1))
+    }
     fun endRest() {
         _rest.value = null
     }
@@ -413,6 +408,22 @@ class SessionViewModel @Inject constructor(
     fun pauseTimer() = _timer.update { it?.copy(run = it.run.pause(clock.millis())) }
 
     fun resumeTimer() = _timer.update { it?.copy(run = it.run.resume(clock.millis())) }
+
+    /** Forward to the next phase, or back to the start of this one (or the one before, early on). */
+    fun skipPhase(forward: Boolean) {
+        _timer.update { t ->
+            t ?: return@update null
+            val now = clock.millis()
+            val position = t.run.position(now)
+            val index = when {
+                forward -> position.index + 1
+                t.run.elapsed(now) - t.run.startOf(position.index) < 2_000 -> position.index - 1
+                else -> position.index
+            }
+            t.copy(run = t.run.skipTo(index, now))
+        }
+        tickTimer()
+    }
 
     /** Stops the timer; whole cycles already done stay logged. */
     fun stopTimer() {
@@ -509,6 +520,8 @@ fun SessionScreen(
     onFinished: () -> Unit,
     onLogMore: (problemId: Long) -> Unit = {},
     viewModel: SessionViewModel = hiltViewModel(),
+    /** Opens a running rest or timer big from the start; for screenshots. */
+    bigTimer: Boolean = false,
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()
@@ -518,7 +531,6 @@ fun SessionScreen(
     val timer by viewModel.timer.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
-    val compactTimer by viewModel.timerCompact.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
     viewModel.currentItem.collectAsStateWithLifecycle()
     // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
@@ -599,10 +611,13 @@ fun SessionScreen(
     var open by remember { mutableStateOf<OpenCell?>(null) }
     var menuFor by rememberSaveable { mutableStateOf<Long?>(null) }
     var adding by rememberSaveable { mutableStateOf(false) }
+    // The big timer view opens on a tap of the dock and stays big for the next rest, until made small.
+    var big by rememberSaveable { mutableStateOf(bigTimer) }
     val next = viewModel.nextUp(current)
     val runningTimer = timer
     val runningRest = rest
     val done = current.items.count { it.finished }
+    val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
 
     Column(Modifier.fillMaxSize().statusBarsPadding().testTag("screen_Session")) {
         // Top: leave (the session keeps running), the title over a quiet clock, + and Finish.
@@ -634,6 +649,43 @@ fun SessionScreen(
         }
         HorizontalDivider(color = colors.outlineVariant)
 
+        // Big, a running rest or timer takes the top of the screen; the dock then makes way.
+        val nextLine = next?.let { (item, setIndex) -> "${item.exercise.name}, set ${setIndex + 1}" }
+        AnimatedVisibility(visible = big && (runningTimer != null || runningRest != null)) {
+            Box(Modifier.fillMaxWidth().height(BigTimerHeight)) {
+                when {
+                    runningTimer != null -> BigInterval(
+                        run = runningTimer.run,
+                        nowMillis = now,
+                        title = current.items.firstOrNull { it.id == runningTimer.itemId }?.let { item ->
+                            listOfNotNull(item.exercise.name, item.target.loadKg.takeIf { it != 0.0 }?.let { loadLabel(it, imperial) }).joinToString(" · ")
+                        } ?: "Timer of its own",
+                        onPause = viewModel::pauseTimer,
+                        onResume = viewModel::resumeTimer,
+                        onSkip = viewModel::skipPhase,
+                        onStop = viewModel::stopTimer,
+                        onSmall = { big = false },
+                    )
+
+                    runningRest != null -> BigRest(
+                        rest = runningRest,
+                        nowMillis = now,
+                        drainNowMillis = { drainNow },
+                        detail = next?.let { (item, setIndex) ->
+                            listOfNotNull(
+                                "then ${item.exercise.name}",
+                                "set ${setIndex + 1} of ${maxOf(item.target.sets, item.logged)}",
+                                item.target.prescription(item.exercise.metric, imperial).takeIf { it.isNotBlank() },
+                            ).joinToString(" · ")
+                        } ?: "before your next go",
+                        onAdd = viewModel::addRest,
+                        onSkip = viewModel::endRest,
+                        onSmall = { big = false },
+                    )
+                }
+            }
+        }
+
         // Everything in the session, in order: the exercises, then the climbs.
         Column(
             Modifier
@@ -658,6 +710,7 @@ fun SessionScreen(
                         folded = folds[item.id] ?: item.finished,
                         open = open,
                         timerRunning = runningTimer?.itemId == item.id,
+                        current = next?.first?.id == item.id && runningTimer == null,
                         onToggleFold = { folds[item.id] = !(folds[item.id] ?: item.finished) },
                         onOpen = { open = it },
                         onValues = { setIndex, values -> viewModel.setValues(item, setIndex, values) },
@@ -678,28 +731,31 @@ fun SessionScreen(
         // The dock: what's happening now. The next set's Done, a rest, or a running timer.
         Box(Modifier.fillMaxWidth().navigationBarsPadding().testTag("session_dock")) {
             when {
-                runningTimer != null -> IntervalBand(
-                    run = runningTimer.run,
-                    nowMillis = now,
-                    drainNowMillis = { drainNow },
-                    compact = compactTimer,
-                    onToggleCompact = viewModel::toggleTimerCompact,
-                    onPause = viewModel::pauseTimer,
-                    onResume = viewModel::resumeTimer,
-                    onStop = viewModel::stopTimer,
-                )
+                big && (runningTimer != null || runningRest != null) -> Unit
 
-                runningRest != null -> RestBand(
-                    rest = runningRest,
-                    nowMillis = now,
-                    drainNowMillis = { drainNow },
-                    next = next?.let { (item, setIndex) -> "then ${item.exercise.name}, set ${setIndex + 1}" } ?: "before your next go",
-                    segments = emptyList(),
-                    compact = compactTimer,
-                    onToggleCompact = viewModel::toggleTimerCompact,
-                    onAdd = { viewModel.addRest(30) },
-                    onSkip = viewModel::endRest,
-                )
+                runningTimer != null -> Box(Modifier.padding(horizontal = space.s4, vertical = space.s2)) {
+                    IntervalDock(
+                        run = runningTimer.run,
+                        nowMillis = now,
+                        onPause = viewModel::pauseTimer,
+                        onResume = viewModel::resumeTimer,
+                        onSkip = { viewModel.skipPhase(true) },
+                        onStop = viewModel::stopTimer,
+                        onOpen = { big = true },
+                    )
+                }
+
+                runningRest != null -> Box(Modifier.padding(horizontal = space.s4, vertical = space.s2)) {
+                    RestDock(
+                        rest = runningRest,
+                        nowMillis = now,
+                        drainNowMillis = { drainNow },
+                        label = nextLine?.let { "Rest · then $it" } ?: "Rest before your next go",
+                        onAdd = { viewModel.addRest(30) },
+                        onSkip = viewModel::endRest,
+                        onOpen = { big = true },
+                    )
+                }
 
                 else -> Box(Modifier.padding(horizontal = space.s4, vertical = space.s2)) {
                     when {
@@ -895,34 +951,29 @@ internal fun describeSet(metric: com.hardtekpt.crux.data.model.MetricType, reps:
 private fun ClimbTally(climbs: List<Climb>) {
     val sent = climbs.filter { it.style.isSend }
     val hardest = sent.maxByOrNull { it.gradeIndex }?.grade ?: "–"
-    Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s5), modifier = Modifier.testTag("session_tally")) {
-        PlainFigure(climbs.size.toString(), if (climbs.size == 1) "climb" else "climbs")
-        PlainFigure(sent.size.toString(), "sent")
-        PlainFigure(hardest, "hardest send")
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max).testTag("session_tally"),
+    ) {
+        TallyFigure(climbs.size.toString(), if (climbs.size == 1) "climb" else "climbs", Modifier.weight(1f))
+        TallyFigure(sent.size.toString(), "sent", Modifier.weight(1f))
+        TallyFigure(hardest, "hardest send", Modifier.weight(1f), accent = true)
     }
 }
 
 @Composable
-private fun PlainFigure(value: String, label: String) {
-    Column {
-        Text(value, style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 28.sp))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun TallyFigure(value: String, label: String, modifier: Modifier = Modifier) {
+private fun TallyFigure(value: String, label: String, modifier: Modifier = Modifier, accent: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     Column(
         modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(12.dp))
-            .background(colors.surfaceContainerLow)
-            .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(12.dp))
+            .background(if (accent) colors.primaryContainer else colors.surfaceContainerLow)
+            .border(CruxTheme.size.borderHairline, if (accent) colors.primaryContainer else colors.outlineVariant, RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
-        Text(value, style = CruxTheme.type.metricMedium.copy(fontSize = 22.sp))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        Text(value, style = CruxTheme.type.metricMedium.copy(fontSize = 22.sp), color = if (accent) colors.onPrimaryContainer else colors.onSurface)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = if (accent) colors.onPrimaryContainer else colors.onSurfaceVariant)
     }
 }
 
@@ -941,14 +992,28 @@ internal fun SessionClimbLine(climb: Climb, onClick: (() -> Unit)?) {
             .padding(vertical = 9.dp)
             .testTag("session_climb"),
     ) {
-        Box(Modifier.width(4.dp).height(28.dp).clip(RoundedCornerShape(2.dp)).background(tape))
+        Box(Modifier.width(4.dp).height(32.dp).clip(RoundedCornerShape(2.dp)).background(tape))
         Text(climb.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)
-        Text(climb.displayName(), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            climb.style.label + if (!climb.style.singleAttempt) " · ${climb.attempts}" else "",
-            style = MaterialTheme.typography.bodySmall,
-            color = if (sent) CruxTheme.colors.success else colors.onSurfaceVariant,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(climb.displayName(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                climb.style.label + if (!climb.style.singleAttempt) " · ${climb.attempts} ${if (climb.attempts == 1) "go" else "goes"}" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (sent) CruxTheme.colors.success else colors.onSurfaceVariant,
+            )
+        }
+        if (onClick != null) {
+            Text(
+                "+ go",
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.primary,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .border(CruxTheme.size.borderHairline, colors.outline, CircleShape)
+                    .clickable(onClickLabel = "Log another go", onClick = onClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
     }
 }
 

@@ -40,6 +40,8 @@ Pixel 7 size. Goldens:
 - Dark Home, Journal, Progress, You, Train, Session, Log climb and Place are the **store
   screenshots**: `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 - Everything else (light themes, Settings) is in `app/src/test/screenshots/`.
+- `session_resting_dark` and `session_timer_big_dark` show a rest in the dock and an exercise's
+  interval timer made big.
 - `*_text_largest_dark` render Home, Log climb, Session and Settings with 1.69× text
   (`@Config(fontScale = …)`), to catch text that clips or overlaps when the font is large.
 - `home_{blue,violet,pink,chalk}_{dark,light}` show Home in some of the accents other than teal.

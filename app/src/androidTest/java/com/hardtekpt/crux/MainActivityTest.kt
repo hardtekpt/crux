@@ -272,16 +272,18 @@ class MainActivityTest {
         composeRule.onNodeWithTag("target_done").performScrollTo().performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("target_sheet").fetchSemanticsNodes().isEmpty() }
 
-        // A timer of its own opens the band in the dock; paused, it can be stopped.
+        // A timer of its own runs in the dock; paused, it can be stopped.
         composeRule.onNodeWithTag("session_add").performClick()
         composeRule.waitForTag("session_timer")
         composeRule.onNodeWithTag("session_timer").performClick()
         composeRule.waitForTag("timer_start")
         composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
         composeRule.waitForTag("timer_band")
-        // Compact, it keeps its controls on one line, and stays compact until opened up again.
-        composeRule.onNodeWithTag("timer_compact").performClick()
-        composeRule.waitForTag("timer_counts")
+        // Tapping the dock makes it big; Make small puts it back in the dock.
+        composeRule.onNodeWithTag("timer_band").performClick()
+        composeRule.waitForTag("timer_make_small")
+        composeRule.onNodeWithTag("timer_make_small").performClick()
+        composeRule.waitForTag("timer_pause")
         composeRule.onNodeWithTag("timer_pause").performClick()
         composeRule.waitForTag("timer_stop")
         composeRule.onNodeWithTag("timer_stop").performClick()

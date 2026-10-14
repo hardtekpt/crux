@@ -41,6 +41,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -112,6 +113,7 @@ internal fun ExerciseCard(
     folded: Boolean,
     open: OpenCell?,
     timerRunning: Boolean,
+    current: Boolean,
     onToggleFold: () -> Unit,
     onOpen: (OpenCell?) -> Unit,
     onValues: (Int, SetValues) -> Unit,
@@ -124,21 +126,42 @@ internal fun ExerciseCard(
     val imperial = LocalUnits.current == UnitSystem.IMPERIAL
     val metric = item.exercise.metric
     val fields = metric.fields()
-    CruxCard(modifier = Modifier.fillMaxWidth().animateContentSize(CruxMotion.medium()).testTag("session_exercise")) {
+    val doneFolded = folded && item.finished
+    CruxCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (doneFolded) 0.8f else 1f)
+            .animateContentSize(CruxMotion.medium())
+            .testTag("session_exercise"),
+        outline = when {
+            timerRunning -> TimerColors.work
+            current -> colors.primary
+            else -> null
+        },
+    ) {
         // The header folds and unfolds the card; ⋯ holds what applies to the whole exercise.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleFold)) {
             Column(Modifier.weight(1f)) {
                 Text(item.exercise.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("session_exercise_name"))
-                Text(
-                    if (folded && item.finished) {
-                        "${item.done} of ${item.target.sets} ${if (metric.usesIntervals) "cycle" else "set"}${if (item.target.sets == 1) "" else "s"} done"
-                    } else {
+                if (!doneFolded) {
+                    Text(
                         item.target.prescription(metric, imperial) +
-                            if (item.target.restSeconds > 0) " · ${formatDuration(item.target.restSeconds)} rest" else ""
-                    },
-                    style = CruxTheme.type.code,
-                    color = if (folded && item.finished) CruxTheme.colors.success else colors.onSurfaceVariant,
-                )
+                            if (item.target.restSeconds > 0) " · ${formatDuration(item.target.restSeconds)} rest" else "",
+                        style = CruxTheme.type.code,
+                        color = colors.onSurfaceVariant,
+                    )
+                }
+            }
+            if (item.finished) {
+                // Done: a green tick and the count, beside the name.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("session_exercise_done")) {
+                    Icon(Icons.Rounded.Check, contentDescription = null, tint = CruxTheme.colors.success, modifier = Modifier.size(16.dp))
+                    Text(
+                        " ${item.done} ${if (metric.usesIntervals) "cycle" else "set"}${if (item.done == 1) "" else "s"}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = CruxTheme.colors.success,
+                    )
+                }
             }
             if (newBest) {
                 Icon(Icons.Rounded.Star, contentDescription = "New best", tint = colors.secondary, modifier = Modifier.size(20.dp).testTag("session_new_best"))
@@ -285,7 +308,7 @@ private fun TickBox(done: Boolean, running: Boolean, onClick: () -> Unit, modifi
                     if (done) {
                         success
                     } else if (running) {
-                        colors.primary
+                        TimerColors.work
                     } else {
                         colors.outline
                     },
@@ -295,7 +318,7 @@ private fun TickBox(done: Boolean, running: Boolean, onClick: () -> Unit, modifi
         ) {
             when {
                 done -> Icon(Icons.Rounded.Check, contentDescription = "Done", tint = CruxTheme.colors.onSuccess, modifier = Modifier.size(18.dp))
-                running -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Timer running", tint = colors.primary, modifier = Modifier.size(18.dp))
+                running -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Timer running", tint = TimerColors.work, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -337,11 +360,16 @@ private fun ValueStepper(field: Field, values: SetValues, imperial: Boolean, onC
 @Composable
 internal fun ClimbsCard(climbs: List<com.hardtekpt.crux.data.model.Climb>, onLogMore: (Long) -> Unit, onLogClimb: () -> Unit) {
     val sent = climbs.count { it.style.isSend }
-    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs")) {
-        Text(
-            if (climbs.isEmpty()) "Climbs" else "Climbs · ${climbs.size} · $sent sent",
-            style = MaterialTheme.typography.titleMedium,
-        )
+    val hardest = climbs.filter { it.style.isSend }.maxByOrNull { it.gradeIndex }?.grade
+    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs"), outline = MaterialTheme.colorScheme.secondary) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (climbs.isEmpty()) "Climbs" else "Climbs · ${climbs.size} · $sent sent",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            hardest?.let { Text("hardest $it", style = CruxTheme.type.code, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
         if (climbs.isEmpty()) {
             Text("Climbs you log now land in this session.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
