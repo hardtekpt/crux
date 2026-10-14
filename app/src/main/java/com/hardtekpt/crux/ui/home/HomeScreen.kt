@@ -10,13 +10,19 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -63,6 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.dashboard.defaultDashboard
+import com.hardtekpt.crux.data.dashboard.toRows
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
@@ -243,17 +250,7 @@ fun HomeContent(
                 },
             )
         }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned { viewport = it.boundsInRoot() }
-                .verticalScroll(scrollState)
-                .revealWhen(!uiState.isLoading)
-                .padding(horizontal = space.s4)
-                .padding(top = space.s1, bottom = space.s4 + LocalNavBarClearance.current)
-                .testTag("home_list"),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
+        val header: @Composable () -> Unit = {
             // The date, with the button that edits the dashboard at its end.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Eyebrow(
@@ -274,44 +271,8 @@ fun HomeContent(
                     }
                 }
             }
-            // One flat, keyed list laid out as a two-column flow: moving a widget only reorders
-            // children, so the widget being dragged keeps its gesture while it changes rows.
-            DashboardGrid(widgets = dashboard.widgets, spacing = space.s3) {
-                dashboard.widgets.forEach { widget ->
-                    key(widget.id) {
-                        val dragging = widget.id == draggingId
-                        EditableWidget(
-                            widget = widget,
-                            editing = editing,
-                            dragging = dragging,
-                            callbacks = dragCallbacks,
-                            onResize = { editor.resize(widget.id) },
-                            onRemove = { editor.remove(widget.id) },
-                            modifier = Modifier
-                                .onGloballyPositioned { bounds[widget.id] = it.boundsInRoot() }
-                                .zIndex(if (dragging) 1f else 0f)
-                                .graphicsLayer {
-                                    val current = bounds[widget.id]
-                                    if (dragging && current != null) {
-                                        val offset = dragOrigin() - current.topLeft
-                                        translationX = offset.x
-                                        translationY = offset.y
-                                        scaleX = 1.03f
-                                        scaleY = 1.03f
-                                        shadowElevation = 24f
-                                    }
-                                },
-                        ) {
-                            DashboardWidgetContent(
-                                widget = widget,
-                                state = uiState,
-                                actions = if (editing) WidgetActions() else actions,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                    }
-                }
-            }
+        }
+        val footer: @Composable () -> Unit = {
             if (dashboard.widgets.isEmpty()) {
                 Text(
                     "Your dashboard is empty. Tap Add widget to put something here.",
@@ -333,6 +294,87 @@ fun HomeContent(
                     )
                     CruxButton(text = "Reset layout", onClick = editor.reset, variant = CruxButtonVariant.Text)
                 }
+            }
+        }
+        if (editing) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { viewport = it.boundsInRoot() }
+                    .verticalScroll(scrollState)
+                    .revealWhen(!uiState.isLoading)
+                    .padding(horizontal = space.s4)
+                    .padding(top = space.s1, bottom = space.s4 + LocalNavBarClearance.current)
+                    .testTag("home_list"),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+            ) {
+                header()
+                // One flat, keyed list laid out as a two-column flow: moving a widget only reorders
+                // children, so the widget being dragged keeps its gesture while it changes rows.
+                DashboardGrid(widgets = dashboard.widgets, spacing = space.s3) {
+                    dashboard.widgets.forEach { widget ->
+                        key(widget.id) {
+                            val dragging = widget.id == draggingId
+                            EditableWidget(
+                                widget = widget,
+                                editing = editing,
+                                dragging = dragging,
+                                callbacks = dragCallbacks,
+                                onResize = { editor.resize(widget.id) },
+                                onRemove = { editor.remove(widget.id) },
+                                modifier = Modifier
+                                    .onGloballyPositioned { bounds[widget.id] = it.boundsInRoot() }
+                                    .zIndex(if (dragging) 1f else 0f)
+                                    .graphicsLayer {
+                                        val current = bounds[widget.id]
+                                        if (dragging && current != null) {
+                                            val offset = dragOrigin() - current.topLeft
+                                            translationX = offset.x
+                                            translationY = offset.y
+                                            scaleX = 1.03f
+                                            scaleY = 1.03f
+                                            shadowElevation = 24f
+                                        }
+                                    },
+                            ) {
+                                DashboardWidgetContent(
+                                    widget = widget,
+                                    state = uiState,
+                                    actions = if (editing) WidgetActions() else actions,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                    }
+                }
+                footer()
+            }
+        } else {
+            // Not editing, the dashboard is a lazy list: only the rows on screen are built.
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .revealWhen(!uiState.isLoading)
+                    .testTag("home_list"),
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+            ) {
+                item(key = "header") { header() }
+                items(dashboard.widgets.toRows(), key = { row -> row.joinToString { it.id } }) { row ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(space.s3),
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    ) {
+                        row.forEach { widget ->
+                            Box(Modifier.weight(1f).fillMaxHeight().testTag("widget_${widget.type.name}")) {
+                                DashboardWidgetContent(widget = widget, state = uiState, actions = actions, modifier = Modifier.fillMaxSize())
+                            }
+                        }
+                        // A lone half-width widget keeps its half.
+                        if (row.size == 1 && !row[0].size.fullWidth) Box(Modifier.weight(1f))
+                    }
+                }
+                item(key = "footer") { footer() }
             }
         }
     }

@@ -112,7 +112,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -142,27 +144,50 @@ class JournalViewModel @Inject constructor(
     private val today = LocalDate.now(clock)
     private val query = MutableStateFlow(JournalQuery())
 
-    val uiState: StateFlow<JournalUiState> = combine(
+    private data class Logged(val all: List<TimelineDay>, val places: List<String>, val tags: List<String>)
+
+    /** The timeline, built when something is logged, not on every keystroke or tap of a filter. */
+    private val logged = combine(
         climbRepository.observeClimbs(),
         recordRepository.observeResults(),
         noteRepository.observeNotes(),
         sessionRepository.observeFinished(),
-        query,
-    ) { climbs, results, notes, sessions, q ->
-        val all = buildTimeline(climbs, results, notes, sessions, clock.zone)
-        JournalUiState(
-            today = today,
-            isLoading = false,
-            all = all,
-            days = all.matching(q, today),
-            query = q,
-            counts = JournalFilter.entries.associateWith { all.matching(q.copy(kind = it), today).count() },
+    ) { climbs, results, notes, sessions ->
+        Logged(
+            all = buildTimeline(climbs, results, notes, sessions, clock.zone),
             places = climbs.mapNotNull { it.place }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key },
             tags = notes.mapNotNull { it.tag }.distinct().sorted(),
         )
-    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
+    }
+
+    /** The query the list follows: a tab or filter at once, search once you stop typing. */
+    private var searched = ""
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private val settled = query
+        .debounce { q -> if (q.search != searched) SEARCH_PAUSE_MILLIS else 0L }
+        .onEach { searched = it.search }
+
+    val uiState: StateFlow<JournalUiState> = combine(logged, settled) { data, q ->
+        JournalUiState(
+            today = today,
+            isLoading = false,
+            all = data.all,
+            days = data.all.matching(q, today),
+            counts = JournalFilter.entries.associateWith { data.all.matching(q.copy(kind = it), today).count() },
+            places = data.places,
+            tags = data.tags,
+        )
+    }
+        // The search field shows what you typed straight away.
+        .combine(query) { state, q -> state.copy(query = q) }
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
 
     fun update(change: (JournalQuery) -> JournalQuery) = query.update(change)
+
+    private companion object {
+        const val SEARCH_PAUSE_MILLIS = 150L
+    }
 }
 
 /** Where the journal's taps lead. */

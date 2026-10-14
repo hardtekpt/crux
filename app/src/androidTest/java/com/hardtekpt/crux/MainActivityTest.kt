@@ -192,8 +192,10 @@ class MainActivityTest {
 
     @Test
     fun bodyweightWidgetOpensMeasurements() {
-        composeRule.waitForTag("widget_bodyweight")
-        composeRule.onNodeWithTag("widget_bodyweight").performScrollTo().performClick()
+        // Home is a lazy list: scroll the widget into view before tapping it.
+        composeRule.waitForTag("home_list")
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_bodyweight"))
+        composeRule.onNodeWithTag("widget_bodyweight").performClick()
         composeRule.waitForTag("screen_Measurements")
     }
 

@@ -11,6 +11,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Export as a spreadsheet**: save your climbs or your session sets as a `.csv` file from
   *Settings → Backups*, to open in Excel, Google Sheets or any spreadsheet app.
 
+### Changed
+
+- **Smoother Home and Journal**: Home builds only the widgets on screen as you scroll, and the
+  Journal's search waits until you stop typing, then filters once.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added
