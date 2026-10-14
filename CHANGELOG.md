@@ -8,6 +8,15 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **One page per exercise**: every list of exercises opens the same page, with your record, chart,
+  how it's set up, the plans that use it and every day you trained it. Edit it from the pencil, log
+  a result, or start an interval exercise's timer from there.
+- **Also change the plan**: changing an exercise mid-session can update the plan too, so next time
+  starts from it.
+- **Places in the Journal**: a Places tab next to Notes, and a **My gym** widget for Home with the
+  place you climb at most, its projects and Log here.
+- **Shortcuts**: long-press Crux's icon for Log climb, Session, Log weight and the Interval timer.
+
 - **Training progress**: Progress now has a **Training** tab. It shows how much of your Week
   schedule you did over the last 8 weeks, your sessions, time trained and new bests in the last 30
   days, and every exercise with a small trend of your best set. Tap an exercise for its chart (best

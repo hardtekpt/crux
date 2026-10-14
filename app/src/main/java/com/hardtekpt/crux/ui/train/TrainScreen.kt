@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,7 +52,9 @@ import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
+import com.hardtekpt.crux.ui.progress.headline
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.you.describe
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,6 +75,8 @@ data class TrainUiState(
     val today: java.time.LocalDate = java.time.LocalDate.now(),
     /** Places for a climbing day. */
     val places: List<com.hardtekpt.crux.data.model.PlaceSummary> = emptyList(),
+    /** Each trained exercise's best and history, for its row in the library. */
+    val progress: Map<Long, com.hardtekpt.crux.ui.progress.ExerciseProgress> = emptyMap(),
 ) {
     /** Library grouped by category, categories in their defined order. */
     val exercisesByCategory: Map<ExerciseCategory, List<Exercise>>
@@ -87,6 +93,7 @@ class TrainViewModel @Inject constructor(
     climbs: com.hardtekpt.crux.data.ClimbRepository,
     places: com.hardtekpt.crux.data.PlaceRepository,
     private val clock: java.time.Clock,
+    training: com.hardtekpt.crux.ui.progress.TrainingProgressSource? = null,
 ) : ViewModel() {
     /** Sets what a day of the week holds. */
     fun setDay(day: java.time.DayOfWeek, plan: com.hardtekpt.crux.data.DayPlan) {
@@ -115,6 +122,9 @@ class TrainViewModel @Inject constructor(
     ) { plans, library, days, placeList ->
         TrainUiState(isLoading = false, plans = plans, exercises = library, week = days, today = java.time.LocalDate.now(clock), places = placeList)
     }
+        .combine(training?.observe() ?: kotlinx.coroutines.flow.flowOf(com.hardtekpt.crux.ui.progress.TrainingProgress())) { state, progress ->
+            state.copy(progress = progress.exercises.associateBy { it.exercise.id })
+        }
         .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainUiState())
 }
 
@@ -279,15 +289,30 @@ private fun androidx.compose.foundation.lazy.LazyListScope.exercises(
                 defaults.prescription(exercise.metric, imperial),
                 defaults.restLabel()?.let { if (exercise.metric.usesIntervals) "$it between cycles" else "$it rest" },
             ).joinToString(" · ")
+            // A trained exercise shows its best and a small trend; the row opens its page.
+            val progress = uiState.progress[exercise.id]
             CruxListRow(
                 title = exercise.name,
-                supporting = listOfNotNull(params, exercise.notes).joinToString(" · "),
+                supporting = if (progress != null) {
+                    "Best " + progress.best.describe(exercise.metric, imperial) +
+                        if (progress.bestIsNew(uiState.today)) " ★" else ""
+                } else {
+                    listOfNotNull(params, exercise.notes).joinToString(" · ")
+                },
                 trailing = {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (progress != null && progress.days.size > 1) {
+                        com.hardtekpt.crux.ui.progress.Sparkline(
+                            progress.days.take(12).reversed().map { exercise.metric.headline(it.best) },
+                            Modifier.size(width = 64.dp, height = 24.dp),
+                            newBest = progress.bestIsNew(uiState.today),
+                        )
+                    } else {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 },
                 onClick = { onOpenExercise(exercise.id) },
                 modifier = Modifier.testTag("exercise_row"),

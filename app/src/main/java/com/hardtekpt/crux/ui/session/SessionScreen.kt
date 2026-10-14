@@ -152,6 +152,7 @@ class SessionViewModel @Inject constructor(
     private val clock: Clock,
     private val live: com.hardtekpt.crux.live.LiveTimers,
     records: com.hardtekpt.crux.data.RecordRepository? = null,
+    private val templates: com.hardtekpt.crux.data.TemplateRepository? = null,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -324,8 +325,37 @@ class SessionViewModel @Inject constructor(
 
     fun updateDraft(change: (SetDraft) -> SetDraft) = _draft.update(change)
 
-    /** Changes what an exercise asks for in this session; the next set's draft follows it. */
-    fun updateTarget(item: SessionItem, target: ExerciseTarget) {
+    /** Whether the session's plan has this exercise, so a change can go to the plan too. */
+    fun inPlan(item: SessionItem): Boolean = session.value?.templateId != null && item.blockName.isNotEmpty()
+
+    /**
+     * Changes an exercise's targets for this session; with [alsoPlan], in the session's plan as well
+     * (the same exercise in the same block), so next time starts from them.
+     */
+    fun updateTarget(item: SessionItem, target: ExerciseTarget, alsoPlan: Boolean = false) {
+        if (alsoPlan) {
+            val planId = session.value?.templateId
+            if (planId != null && templates != null) {
+                viewModelScope.launch {
+                    val plan = templates.getTemplate(planId) ?: return@launch
+                    var changed = false
+                    val blocks = plan.blocks.map { block ->
+                        if (block.name != item.blockName || changed) return@map block
+                        block.copy(
+                            items = block.items.map { planItem ->
+                                if (!changed && planItem.exercise.id == item.exercise.id) {
+                                    changed = true
+                                    planItem.copy(target = target)
+                                } else {
+                                    planItem
+                                }
+                            },
+                        )
+                    }
+                    if (changed) templates.saveTemplate(plan.copy(blocks = blocks))
+                }
+            }
+        }
         if (target == item.target) return
         viewModelScope.launch { sessions.updateTarget(item.id, target) }
         _draft.update { draft ->
@@ -521,6 +551,7 @@ fun SessionScreen(
     onLogClimb: () -> Unit,
     onFinished: () -> Unit,
     onLogMore: (problemId: Long) -> Unit = {},
+    onOpenExercise: (exerciseId: Long) -> Unit = {},
     viewModel: SessionViewModel = hiltViewModel(),
     /** Opens a running rest or timer big from the start; for screenshots. */
     bigTimer: Boolean = false,
@@ -846,6 +877,10 @@ fun SessionScreen(
                 viewModel.removeExercise(item)
             }.takeIf { item.sets.isEmpty() },
             onDismiss = { menuFor = null },
+            onAbout = {
+                menuFor = null
+                onOpenExercise(item.exercise.id)
+            },
         )
     }
     if (adding) {
@@ -878,15 +913,41 @@ fun SessionScreen(
     // Changing an exercise for this session only: the plan stays as it is.
     current.items.firstOrNull { it.id == editingTarget }?.let { edited ->
         var target by remember(edited.id) { mutableStateOf(edited.target) }
+        var alsoPlan by remember(edited.id) { mutableStateOf(false) }
+        val inPlan = viewModel.inPlan(edited)
         com.hardtekpt.crux.ui.train.TargetSheet(
             exercise = edited.exercise,
             target = target,
             onChange = { target = it.copy(sets = it.sets.coerceAtLeast(maxOf(1, edited.logged))) },
             onDismiss = {
-                viewModel.updateTarget(edited, target)
+                viewModel.updateTarget(edited, target, alsoPlan)
                 editingTarget = null
             },
-            note = "For this session only. Your plan stays as it is.",
+            note = when {
+                !inPlan -> "For this session only."
+                alsoPlan -> "For this session and in ${current.name}, so next time starts here."
+                else -> "For this session only. Your plan stays as it is."
+            },
+            // Progressing a load usually happens mid-session: save it to the plan in the same step.
+            extra = if (inPlan) {
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { alsoPlan = !alsoPlan }
+                            .testTag("target_also_plan"),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Also change the plan", style = MaterialTheme.typography.titleSmall)
+                            Text(current.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                        }
+                        androidx.compose.material3.Switch(checked = alsoPlan, onCheckedChange = { alsoPlan = it })
+                    }
+                }
+            } else {
+                null
+            },
         )
     }
     current.items.firstOrNull { it.id == timerFor }?.let { item ->

@@ -160,6 +160,17 @@ class ScreenshotTest {
         bothThemes("journal") { JournalContent(uiState = state) }
     }
 
+    // The Journal's Places tab: every place, as You → Places lists them.
+    @Test
+    fun journalPlaces() {
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val vm = JournalViewModel(climbs, records, notes, sessions, FIXED_CLOCK)
+        vm.update { it.copy(kind = com.hardtekpt.crux.ui.journal.JournalFilter.Places) }
+        val state = loaded(vm.uiState) { !it.isLoading && it.query.kind == com.hardtekpt.crux.ui.journal.JournalFilter.Places }
+        val placeList = loaded(places.observePlaces()) { it.isNotEmpty() }
+        bothThemes("journal_places", readyText = "Block Lab", dark = DARK) { JournalContent(uiState = state, places = placeList) }
+    }
+
     @Test
     fun daysOnWall() {
         val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
@@ -191,8 +202,14 @@ class ScreenshotTest {
     @Test
     fun exerciseProgress() {
         val exerciseId = runBlocking { db.exerciseDao().getAll().first { it.name == "Half-crimp hang" }.id }
-        val vm = com.hardtekpt.crux.ui.you.ExerciseRecordsViewModel(SavedStateHandle(mapOf("exerciseId" to exerciseId)), exercises, records)
-        loaded(vm.state) { it.second.isNotEmpty() }
+        val vm = com.hardtekpt.crux.ui.you.ExerciseRecordsViewModel(
+            SavedStateHandle(mapOf("exerciseId" to exerciseId)),
+            exercises,
+            records,
+            OfflineTemplateRepository(dbs),
+            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        )
+        loaded(vm.state) { it.results.isNotEmpty() && it.plans.isNotEmpty() }
         bothThemes("exercise_progress", readyText = "Half-crimp hang", dark = DARK) {
             com.hardtekpt.crux.ui.you.ExerciseRecordsScreen(onBack = {}, onAdd = {}, viewModel = vm)
         }
@@ -206,6 +223,7 @@ class ScreenshotTest {
         val hangs = state.training.exercises.first { it.exercise.name == "Half-crimp hang" }.exercise.id
         val pullUps = state.training.exercises.first { it.exercise.name == "Weighted pull-ups" }.exercise.id
         val widgets = listOf(
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(type = com.hardtekpt.crux.data.dashboard.WidgetType.MY_GYM),
             com.hardtekpt.crux.data.dashboard.DashboardWidget(
                 type = com.hardtekpt.crux.data.dashboard.WidgetType.TRAINING,
                 stat = com.hardtekpt.crux.data.TrainingStat.ON_PLAN,

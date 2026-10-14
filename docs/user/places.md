@@ -1,7 +1,8 @@
 # Places
 
-Places are the gyms, crags and boards you climb at, with their walls and the climbs on them. Find them under
-**You → Places**.
+Places are the gyms, crags and boards you climb at, with their walls and the climbs on them. Find them in
+the **Journal's Places tab**, or under **You → Places**. The **My gym** widget on Home opens the place
+you climb at most, and logs there in one tap.
 
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/8_place.png" width="300" alt="A place page with numbers, facilities, Log here and walls of climbs">
 

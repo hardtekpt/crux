@@ -57,7 +57,13 @@ class TemplateDetailViewModel @Inject constructor(savedStateHandle: SavedStateHa
 
 /** A plan's blocks and targets, with Edit in the app bar and Start session. */
 @Composable
-fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onStart: (Long) -> Unit = {}, viewModel: TemplateDetailViewModel = hiltViewModel()) {
+fun TemplateDetailScreen(
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onStart: (Long) -> Unit = {},
+    viewModel: TemplateDetailViewModel = hiltViewModel(),
+    onOpenExercise: (Long) -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val template = uiState.template
     val space = CruxTheme.space
@@ -116,6 +122,7 @@ fun TemplateDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onStart: (L
                     val item = block.items[itemIndex]
                     CruxListRow(
                         title = item.exercise.name,
+                        onClick = { onOpenExercise(item.exercise.id) },
                         supporting = item.prescription(com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                         trailing = item.target.restLabel()?.let { rest ->
                             {

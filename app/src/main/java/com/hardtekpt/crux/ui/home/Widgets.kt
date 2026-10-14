@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,6 +78,8 @@ data class WidgetActions(
     val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
     val openExercise: (Long) -> Unit = {},
+    val openPlace: (Long) -> Unit = {},
+    val logAtPlace: (Long) -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -173,6 +176,8 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
 
         WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
+
+        WidgetType.MY_GYM -> MyGymWidget(state, large, actions, modifier)
 
         WidgetType.TRAINING -> TrainingWidget(
             widget.stat ?: TrainingStat.ON_PLAN,
@@ -637,3 +642,59 @@ private fun ExerciseWidget(exerciseId: Long?, state: HomeUiState, size: WidgetSi
 
 /** How many of today's exercises the wide Today's plan widget lists before "and N more". */
 private const val WIDE_PLAN_ROWS = 4
+
+/**
+ * The place you climb at most: your days and climbs there this month, when you were last there,
+ * its open projects (three, or six when large), Log here and a way into the place.
+ */
+@Composable
+private fun MyGymWidget(state: HomeUiState, large: Boolean, actions: WidgetActions, modifier: Modifier) {
+    val gym = state.myGym
+    CruxCard(modifier = modifier.fillMaxWidth().testTag("widget_my_gym")) {
+        Text("My gym".uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (gym == null) {
+            EmptyWidgetText("Log a climb at a place and it shows here, with its projects and Log here.")
+            return@CruxCard
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(gym.name, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        }
+        Text(
+            listOf(
+                "${gym.daysLast30} ${if (gym.daysLast30 == 1) "day" else "days"} and ${gym.climbsLast30} ${if (gym.climbsLast30 == 1) "climb" else "climbs"} in 30 days",
+                "last here ${gym.lastVisit.relativeLabel(state.today).lowercase()}",
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val projects = gym.projects.take(if (large) 6 else 3)
+        if (projects.isNotEmpty()) {
+            Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
+                projects.forEachIndexed { index, project ->
+                    if (index > 0) {
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                    }
+                    ProjectLine(project, state.today, actions)
+                }
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = CruxTheme.space.s2),
+        ) {
+            CruxButton(
+                text = "Log here",
+                onClick = { actions.logAtPlace(gym.placeId) },
+                icon = Icons.Rounded.Add,
+                modifier = Modifier.testTag("my_gym_log"),
+            )
+            CruxButton(
+                text = "Open",
+                onClick = { actions.openPlace(gym.placeId) },
+                variant = CruxButtonVariant.Outlined,
+                modifier = Modifier.testTag("my_gym_open"),
+            )
+        }
+    }
+}

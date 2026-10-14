@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
@@ -407,8 +408,18 @@ internal fun ExerciseMenuSheet(
     onSkip: (() -> Unit)?,
     onRemove: (() -> Unit)?,
     onDismiss: () -> Unit,
+    onAbout: (() -> Unit)? = null,
 ) {
     MenuSheet(item.exercise.name, onDismiss) {
+        onAbout?.let {
+            CruxListRow(
+                title = "About this exercise",
+                supporting = "Your record, chart and history",
+                leading = { Icon(Icons.Rounded.Insights, contentDescription = null) },
+                onClick = it,
+                modifier = Modifier.testTag("session_exercise_about"),
+            )
+        }
         CruxListRow(
             title = "Change sets, reps and rest",
             supporting = "For this session only",

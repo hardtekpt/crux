@@ -98,6 +98,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
+import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
@@ -196,12 +197,19 @@ data class JournalActions(
     val openNote: (Long) -> Unit = {},
     val openRecords: (Long) -> Unit = {},
     val openSession: (Long) -> Unit = {},
+    val openPlace: (Long) -> Unit = {},
+    val newPlace: () -> Unit = {},
 )
 
 @Composable
-fun JournalScreen(actions: JournalActions, viewModel: JournalViewModel = hiltViewModel()) {
+fun JournalScreen(
+    actions: JournalActions,
+    viewModel: JournalViewModel = hiltViewModel(),
+    placesViewModel: com.hardtekpt.crux.ui.places.PlacesViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions)
+    val places by placesViewModel.places.collectAsStateWithLifecycle()
+    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions, places = places)
 }
 
 private val GUTTER = 48.dp
@@ -218,10 +226,12 @@ fun JournalContent(
     modifier: Modifier = Modifier,
     onQuery: ((JournalQuery) -> JournalQuery) -> Unit = {},
     actions: JournalActions = JournalActions(),
+    places: List<com.hardtekpt.crux.data.model.PlaceSummary>? = null,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     var showFilters by rememberSaveable { mutableStateOf(false) }
+    var placeType by rememberSaveable { mutableStateOf<com.hardtekpt.crux.data.model.PlaceType?>(null) }
     var searching by rememberSaveable { mutableStateOf(uiState.query.search.isNotEmpty()) }
     Column(
         modifier = modifier
@@ -243,7 +253,7 @@ fun JournalContent(
                 FiltersButton(uiState.query.activeFilters) { showFilters = true }
             }
         }
-        if (!uiState.isLoading && uiState.all.isEmpty()) {
+        if (!uiState.isLoading && uiState.all.isEmpty() && uiState.query.kind != JournalFilter.Places) {
             EmptyState(
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 headline = "Nothing logged yet",
@@ -251,7 +261,19 @@ fun JournalContent(
             )
             return
         }
-        TypeTabs(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        TypeTabs(uiState, placeCount = places?.size ?: 0, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        // Places: the gyms, crags and boards you climb at, with New place, in place of the timeline.
+        if (uiState.query.kind == JournalFilter.Places) {
+            LazyColumn(
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+                modifier = Modifier.testTag("journal_places"),
+            ) {
+                placesList(places, actions.openPlace, actions.newPlace, placeType, { placeType = it })
+            }
+            if (showFilters) FilterSheet(uiState, onQuery, onDismiss = { showFilters = false })
+            return@Column
+        }
         androidx.compose.animation.AnimatedVisibility(
             visible = uiState.query.activeFilters > 0,
             enter = androidx.compose.animation.expandVertically(CruxMotion.medium()) + androidx.compose.animation.fadeIn(CruxMotion.medium()),
@@ -397,7 +419,7 @@ private fun daySummary(day: TimelineDay): String {
 
 /** The four types as equal tabs with live counts, the picked one underlined. */
 @Composable
-private fun TypeTabs(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit) {
+private fun TypeTabs(uiState: JournalUiState, placeCount: Int = 0, onSelect: (JournalFilter) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column {
         Row(
@@ -432,7 +454,11 @@ private fun TypeTabs(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit)
                             label = "tabCount",
                         )
                         Text(option.label, style = MaterialTheme.typography.titleSmall, color = label, maxLines = 1)
-                        AnimatedCount((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = count)
+                        AnimatedCount(
+                            (if (option == JournalFilter.Places) placeCount else uiState.counts[option] ?: 0).toString(),
+                            style = MonoLabel,
+                            color = count,
+                        )
                     }
                     val underline by androidx.compose.animation.animateColorAsState(
                         if (selected) colors.primary else Color.Transparent,

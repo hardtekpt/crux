@@ -303,7 +303,14 @@ private fun ExercisePickerSheet(library: List<Exercise>, onPick: (Exercise) -> U
 
 /** Targets for one exercise; only the fields its metric uses are shown. [note] says where the change applies. */
 @Composable
-internal fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit, onDismiss: () -> Unit, note: String? = null) {
+internal fun TargetSheet(
+    exercise: Exercise,
+    target: ExerciseTarget,
+    onChange: (ExerciseTarget) -> Unit,
+    onDismiss: () -> Unit,
+    note: String? = null,
+    extra: (@Composable () -> Unit)? = null,
+) {
     val metric = exercise.metric
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -332,6 +339,7 @@ internal fun TargetSheet(exercise: Exercise, target: ExerciseTarget, onChange: (
             } else {
                 StandardTargets(target, metric, onChange)
             }
+            extra?.invoke()
             CruxButton(
                 text = "Done",
                 onClick = onDismiss,

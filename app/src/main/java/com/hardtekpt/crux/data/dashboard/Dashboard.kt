@@ -44,6 +44,7 @@ enum class WidgetType(val title: String, val description: String, val sizes: Lis
         listOf(WidgetSize.SMALL, WidgetSize.WIDE, WidgetSize.LARGE),
         configurable = true,
     ),
+    MY_GYM("My gym", "The place you climb at most: your days there, open projects and Log here", listOf(WidgetSize.WIDE, WidgetSize.LARGE)),
     EXERCISE(
         "Exercise",
         "An exercise you choose: its best and how it's moved",

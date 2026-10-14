@@ -61,7 +61,7 @@ import kotlinx.serialization.Serializable
 // Full-screen forms above the tabs; the nav bar hides while they are open.
 
 /** The standalone interval timer, which takes the whole screen. */
-@Serializable data object IntervalTimerRoute
+@Serializable data class IntervalTimerRoute(val exerciseId: Long = 0)
 
 /**
  * Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where.

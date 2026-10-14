@@ -95,6 +95,8 @@ fun HomeScreen(
     onOpenWeekClimbs: () -> Unit = {},
     onOpenMeasurements: () -> Unit = {},
     onOpenExercise: (Long) -> Unit = {},
+    onOpenPlace: (Long) -> Unit = {},
+    onLogAtPlace: (Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -115,6 +117,8 @@ fun HomeScreen(
             openMeasurements = onOpenMeasurements,
             startPlan = onStartPlan,
             openExercise = onOpenExercise,
+            openPlace = onOpenPlace,
+            logAtPlace = onLogAtPlace,
         ),
         editor = DashboardEditor(
             start = viewModel::startEditing,

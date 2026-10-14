@@ -1,7 +1,9 @@
 # Journal
 
 The Journal is one timeline of everything you've done: climbs, grouped by day and place; sessions;
-training results; and notes. Newest is at the top.
+training results; and notes. Newest is at the top. Tabs pick the type (All, Climbs, Training,
+Notes); swipe sideways to move between them. The last tab, **Places**, lists the places you climb at,
+with **New place**; tap one to open it. See [Places](places.md).
 
 <p>
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/2_journal.png" width="300" alt="Journal timeline grouped by day and place">

@@ -31,9 +31,10 @@ session. Only one session runs at a time; starting another ends the first.
   the same way; tick it again to take it back. **Add set** adds one more for this session.
 - **The dock** at the bottom always shows what's next: **Done · Exercise, set N** ticks the next
   set, **Start timer** runs the next interval exercise, and **Log climb** on a climbing day.
-- **The ⋯ menu** on an exercise changes its sets, reps or time, load and rest for this session
-  only (your plan stays as it is), starts its timer, skips the rest of it, or takes it out while
-  nothing is logged on it.
+- **The ⋯ menu** on an exercise opens **About this exercise** (its page, with your record and
+  chart), changes its sets, reps or time, load and rest, starts its timer, skips the rest of it, or
+  takes it out while nothing is logged on it. A change is for this session only, unless you switch
+  on **Also change the plan**: then the plan changes too, so next time starts from it.
 - **Rest timer**: after a set, the dock turns amber with the rest counting down, what's next, a bar
   that drains as it runs out, **+30 s** and **Skip**. It beeps for the last three seconds and
   buzzes when the rest is over.

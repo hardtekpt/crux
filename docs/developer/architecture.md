@@ -146,6 +146,13 @@ per day. `TrainingProgressSource` combines the flows for Progress and Home. The 
 `TRAINING` and `EXERCISE` are configurable: `DashboardWidget` keeps the chosen `TrainingStat` or
 `exerciseId`, and the layout JSON carries them (older layouts read as before).
 
+An exercise has one page, `ExerciseRecordsRoute` (`ui/you/ExercisePage.kt`): its record, chart,
+setup, the plans that use it (from `TemplateRepository` and the week) and its days. Every exercise
+list opens it; the editor (`ExerciseEditorRoute`) is behind its pencil. `IntervalTimerRoute` takes an
+optional `exerciseId` to start from that exercise's timer. Launcher shortcuts are dynamic
+(`LauncherShortcuts` in `MainActivity.kt`), so they point at whichever build is installed; they open
+through the same `OpenRequest` path as the live notification.
+
 ## Domain decisions worth knowing
 
 - **Grades** are a scale (`GradeScale`: Font, V, French, YDS, or a local scale) plus an index, and

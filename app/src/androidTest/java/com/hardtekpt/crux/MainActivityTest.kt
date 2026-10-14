@@ -353,6 +353,10 @@ class MainActivityTest {
         composeRule.onNodeWithTag("category_CLIMBING").performClick()
         composeRule.onNodeWithTag("save_exercise").performClick()
 
+        // A new exercise lands on its own page; back goes to the library.
+        composeRule.waitForTag("screen_ExerciseRecords")
+        composeRule.waitForTag("exercise_setup")
+        composeRule.onNodeWithTag("back").performClick()
         composeRule.waitForTag("screen_Train")
         composeRule.onNodeWithTag("segment_Plans").performClick()
         composeRule.onNodeWithTag("new_plan").performClick()

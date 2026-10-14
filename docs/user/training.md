@@ -43,7 +43,10 @@ An exercise has:
   cycle, cycles and rest between cycles.
 
 The exercise list shows each exercise's defaults under its name, like "5 × 5 · +10 kg · 3 min rest",
-with its note after them.
+with its note after them. Once you've trained one, it shows your best instead, with a small trend.
+Tap an exercise for [its page](progress.md#an-exercises-page): your record, chart, how it's set up,
+the plans that use it and every day you trained it. The pencil there edits it. **New exercise**
+opens the editor straight away, and saving lands on the new exercise's page.
 
 Deleting an exercise that plans use first tells you how many plans would lose it.
 

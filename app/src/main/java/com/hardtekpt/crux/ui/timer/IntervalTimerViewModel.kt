@@ -24,8 +24,16 @@ import kotlinx.coroutines.launch
  * from the clock. Nothing is logged.
  */
 @HiltViewModel
-class IntervalTimerViewModel @Inject constructor(private val preferences: UserPreferencesRepository, private val clock: Clock, live: LiveTimers) :
-    ViewModel() {
+class IntervalTimerViewModel @Inject constructor(
+    private val preferences: UserPreferencesRepository,
+    private val clock: Clock,
+    live: LiveTimers,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle = androidx.lifecycle.SavedStateHandle(),
+    exercises: com.hardtekpt.crux.data.ExerciseRepository? = null,
+) : ViewModel() {
+    /** Opened from an exercise's page: its timer, without changing the page's saved one. */
+    private val exerciseId: Long = savedStateHandle.get<Long>("exerciseId") ?: 0L
+
     private val _spec = MutableStateFlow(IntervalSpec.TABATA)
     val spec: StateFlow<IntervalSpec> = _spec.asStateFlow()
 
@@ -36,7 +44,14 @@ class IntervalTimerViewModel @Inject constructor(private val preferences: UserPr
     val sounds: StateFlow<Boolean> = preferences.timerSounds.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     init {
-        viewModelScope.launch { preferences.intervalTimer.first()?.let { _spec.value = it.toSpec() } }
+        viewModelScope.launch {
+            val fromExercise = exerciseId.takeIf { it > 0 }?.let { exercises?.getExercise(it) }?.intervals
+            if (fromExercise != null) {
+                _spec.value = fromExercise.toSpec()
+            } else {
+                preferences.intervalTimer.first()?.let { _spec.value = it.toSpec() }
+            }
+        }
     }
 
     fun now(): Long = clock.millis()

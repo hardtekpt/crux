@@ -44,8 +44,20 @@ Sets done in sessions and results logged by hand both count.
 
 ### An exercise's page
 
-Tap an exercise (here, or under *You → Personal records*) for its page: your personal record,
-**Log a result**, a chart and every day you trained it.
+Every exercise has one page, whichever list you open it from: *Train → Exercises*, *You → Personal
+records*, Progress → Training, the Home **Exercise** widget, an exercise in a plan, **About this
+exercise** in a session's ⋯ menu, or a result in the Journal. It holds:
+
+- The exercise's category and what it measures, and the **pencil** to edit it (name, category,
+  defaults, interval timer, delete).
+- Your **personal record**, **Log a result**, and for interval exercises **Timer**, which opens the
+  Interval timer set from the exercise.
+- The chart below, with three figures: days trained, results, and how much your best moved in the
+  last 3 months.
+- **How it's set up**: what plans and sessions start it at, what it measures, and its notes.
+- **In your plans**: each plan that uses it, the days it's on and its target there. Tap one to open
+  the plan.
+- **By day**, below.
 
 <img src="../../app/src/test/screenshots/exercise_progress_dark.png" width="300" alt="An exercise's page with its record, a chart of the best set per day and the days it was trained">
 

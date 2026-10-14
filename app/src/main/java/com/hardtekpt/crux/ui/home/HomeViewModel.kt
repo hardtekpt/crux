@@ -42,6 +42,27 @@ import kotlinx.coroutines.launch
 
 data class WeekSummary(val climbs: Int = 0, val sends: Int = 0, val daysClimbed: Int = 0)
 
+/** The place you climb at most lately: how often, when last, and the projects open there. */
+data class MyGym(val placeId: Long, val name: String, val daysLast30: Int, val climbsLast30: Int, val lastVisit: LocalDate, val projects: List<Project>)
+
+/** The place with the most days climbed in the last 90 days (else ever), with its open projects. */
+fun myGym(climbs: List<Climb>, projects: List<Project>, today: LocalDate): MyGym? {
+    val placed = climbs.filter { it.placeId != null }
+    if (placed.isEmpty()) return null
+    val recent = placed.filter { !it.date.isBefore(today.minusDays(89)) }.ifEmpty { placed }
+    val (placeId, atPlace) = recent.groupBy { it.placeId!! }.maxBy { (_, list) -> list.map { it.date }.distinct().size }
+    val all = placed.filter { it.placeId == placeId }
+    val month = all.filter { !it.date.isBefore(today.minusDays(29)) }
+    return MyGym(
+        placeId = placeId,
+        name = atPlace.first().place.orEmpty(),
+        daysLast30 = month.map { it.date }.distinct().size,
+        climbsLast30 = month.size,
+        lastVisit = all.maxOf { it.date },
+        projects = projects.filter { it.problem.placeId == placeId },
+    )
+}
+
 /** Everything the dashboard's widgets can draw from. */
 data class HomeUiState(
     val isLoading: Boolean = true,
@@ -69,6 +90,7 @@ data class HomeUiState(
     val weekStreak: Int = 0,
     val bestWeekStreak: Int = 0,
     val daysLast30: Int = 0,
+    val myGym: MyGym? = null,
     /** Training week by week and per exercise, for the Training and Exercise widgets. */
     val training: com.hardtekpt.crux.ui.progress.TrainingProgress = com.hardtekpt.crux.ui.progress.TrainingProgress(),
 )
@@ -195,6 +217,7 @@ class HomeViewModel @Inject constructor(
             weekStreak = streak,
             bestWeekStreak = bestStreak,
             daysLast30 = climbDays.keys.count { !it.isBefore(today.minusDays(29)) && !it.isAfter(today) },
+            myGym = myGym(inputs.climbs, inputs.projects, today),
         )
     }
 
