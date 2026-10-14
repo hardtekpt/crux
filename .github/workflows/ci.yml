@@ -25,6 +25,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      - name: App map covers every screen
+        run: python3 docs/app-map/check.py
+
       - name: Format, test, lint
         run: ./gradlew spotlessCheck verifyRoborazziDebug lintDebug koverXmlReportDebug koverLogDebug
 

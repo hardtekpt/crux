@@ -13,3 +13,6 @@
 *.apk
 *.aab
 *.hprof
+
+# App map: full-size screenshots from the last capture
+docs/app-map/raw/

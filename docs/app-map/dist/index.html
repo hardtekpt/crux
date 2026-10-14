@@ -1,0 +1,403 @@
+<title>Crux App Map</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: an infinite canvas, one swim lane per tab (plus the Log button and the live session), screens as cards, arrows for taps. */
+:root {
+  --bg: #0a1110;
+  --panel: #101a19;
+  --card: #131e1d;
+  --line: #263837;
+  --fg: #e3efed;
+  --muted: #86a09d;
+  --accent: #35d8de;
+  --accent-ink: #052a2c;
+  --arrow: #4fc9cf;
+  --sheet: #f0aa4b;
+  --tab: #7c9390;
+  --dot: #1b2b2a;
+  --c-home: #35d8de;
+  --c-log: #f0aa4b;
+  --c-train: #a99bf5;
+  --c-session: #ff8a65;
+  --c-journal: #6aa8f7;
+  --c-progress: #62d68e;
+  --c-you: #f27fb0;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf3f2; --panel: #ffffff; --card: #ffffff; --line: #c3d3d1; --fg: #0e1c1b; --muted: #50706c;
+    --accent: #078a91; --accent-ink: #ffffff; --arrow: #0d8f96; --sheet: #b8700f; --tab: #5f7b78; --dot: #cfdddb;
+    --c-home: #078a91; --c-log: #b8700f; --c-train: #6a58d6; --c-session: #d4552e; --c-journal: #2f6fd0; --c-progress: #1f9a58; --c-you: #cc3f82;
+    --shadow: 0 8px 22px rgba(20, 50, 48, .16);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf3f2; --panel: #ffffff; --card: #ffffff; --line: #c3d3d1; --fg: #0e1c1b; --muted: #50706c;
+  --accent: #078a91; --accent-ink: #ffffff; --arrow: #0d8f96; --sheet: #b8700f; --tab: #5f7b78; --dot: #cfdddb;
+  --c-home: #078a91; --c-log: #b8700f; --c-train: #6a58d6; --c-session: #d4552e; --c-journal: #2f6fd0; --c-progress: #1f9a58; --c-you: #cc3f82;
+  --shadow: 0 8px 22px rgba(20, 50, 48, .16);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0a1110; --panel: #101a19; --card: #131e1d; --line: #263837; --fg: #e3efed; --muted: #86a09d;
+  --accent: #35d8de; --accent-ink: #052a2c; --arrow: #4fc9cf; --sheet: #f0aa4b; --tab: #7c9390; --dot: #1b2b2a;
+  --c-home: #35d8de; --c-log: #f0aa4b; --c-train: #a99bf5; --c-session: #ff8a65; --c-journal: #6aa8f7; --c-progress: #62d68e; --c-you: #f27fb0;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; overflow: hidden; margin: 0; }
+.app { height: 100%; display: flex; flex-direction: column; }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 5; }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .01em; }
+.brand p { margin: 0; color: var(--muted); font-size: 12px; font-family: var(--font-mono); }
+.chips { display: flex; gap: 6px; overflow-x: auto; flex: 1 1 320px; min-width: 0; padding-block: 2px; scrollbar-width: thin; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--fg); font: 500 12px var(--font-body); cursor: pointer; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.chip:hover, .chip:focus-visible { border-color: var(--c); outline: none; }
+.zoom { display: flex; gap: 6px; align-items: center; }
+.btn { min-width: 34px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: 500 13px var(--font-body); cursor: pointer; }
+.btn:hover, .btn:focus-visible { border-color: var(--accent); outline: none; }
+.pct { min-width: 44px; text-align: center; color: var(--muted); font: 12px var(--font-mono); }
+
+.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.6px);
+  background-size: var(--gs, 28px) var(--gs, 28px); background-position: var(--gx, 0) var(--gy, 0); }
+.stage.drag { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.labels { position: absolute; left: 0; top: 0; pointer-events: none; }
+
+.lane { position: absolute; border: 1px solid color-mix(in srgb, var(--c) 35%, var(--line)); border-radius: 22px; background: color-mix(in srgb, var(--c) 5%, transparent); }
+.lane-head { position: absolute; left: 28px; top: 20px; display: flex; align-items: baseline; gap: 14px; }
+.lane-head h2 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.01em; color: var(--c); }
+.lane-head span { font: 500 15px var(--font-mono); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.lane-note { position: absolute; left: 28px; top: 62px; width: 880px; color: var(--muted); font-size: 16px; line-height: 1.45; }
+
+.node { position: absolute; width: 216px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: border-color .15s, opacity .15s, transform .15s; outline: none; }
+.node:hover, .node:focus-visible { border-color: var(--c); transform: translateY(-2px); }
+.node img { display: block; width: 216px; background: #0b1514; -webkit-user-drag: none; user-select: none; pointer-events: none; }
+.node .cap { height: 64px; padding: 9px 12px 0; box-sizing: border-box; }
+.node .t { font-weight: 600; font-size: 14px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node .k { margin-top: 3px; font: 500 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
+.node.sheet .k { color: var(--sheet); }
+.node.dim { opacity: .38; }
+.node.flash { animation: flash 1.2s ease 1; }
+@keyframes flash { 0%, 100% { box-shadow: var(--shadow); } 40% { box-shadow: 0 0 0 5px var(--c), var(--shadow); } }
+
+.edge { fill: none; stroke: var(--arrow); stroke-width: 2.4; opacity: .85; }
+.edge.tab { stroke: var(--tab); stroke-dasharray: 9 7; }
+.edge.sheet { stroke: var(--sheet); }
+.edge.dim { opacity: .12; }
+.edge.on { opacity: 1; stroke-width: 3.6; }
+.arrowhead { fill: context-stroke; }
+.lbl { position: absolute; transform: translate(-50%, -50%); padding: 3px 9px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--fg); font: 500 13px var(--font-body); white-space: nowrap; transition: opacity .15s; }
+.lbl.short { max-width: 108px; white-space: normal; text-align: center; line-height: 1.2; border-radius: 12px; }
+.lbl.dim { opacity: .1; }
+.lbl.on { border-color: var(--arrow); }
+
+.legend { position: absolute; left: 16px; bottom: 16px; z-index: 3; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--panel) 94%, transparent); font-size: 12px; color: var(--muted); display: grid; gap: 7px; max-width: 250px; }
+.legend div { display: flex; align-items: center; gap: 10px; }
+.legend svg { flex: none; }
+.legend b { color: var(--fg); font-weight: 500; }
+@media (max-width: 640px) { .legend { display: none; } .brand p { display: none; } }
+
+.lightbox { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(4, 10, 10, .78); }
+.lightbox.open { display: flex; }
+.sheetbox { display: flex; gap: 28px; max-width: 920px; max-height: 100%; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 22px; overflow: auto; box-shadow: var(--shadow); }
+.sheetbox .shot { flex: none; width: min(300px, 42vw); align-self: flex-start; }
+.sheetbox .shot img { width: 100%; display: block; border-radius: 16px; border: 1px solid var(--line); }
+.sheetbox .info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.sheetbox .info .eyebrow { font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+.sheetbox h3 { margin: 0; font-size: 24px; font-weight: 600; text-wrap: balance; }
+.sheetbox p { margin: 0; line-height: 1.55; color: var(--fg); max-width: 60ch; }
+.sheetbox h4 { margin: 6px 0 0; font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 6px; }
+.links button { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); font: 500 12.5px var(--font-body); cursor: pointer; }
+.links button:hover, .links button:focus-visible { border-color: var(--accent); outline: none; }
+.links em { font-style: normal; color: var(--muted); }
+.close { align-self: flex-end; margin-top: auto; }
+@media (max-width: 640px) { .sheetbox { flex-direction: column; gap: 16px; } .sheetbox .shot { width: min(240px, 70vw); align-self: center; } }
+@media (prefers-reduced-motion: reduce) { .node, .lbl, .edge { transition: none; } .node.flash { animation: none; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Crux app map</h1>
+      <p id="brand-sub">every screen, and what leads where</p>
+    </div>
+    <nav class="chips" id="chips" aria-label="Jump to a flow"></nav>
+    <div class="zoom">
+      <button class="btn" id="zout" aria-label="Zoom out">−</button>
+      <span class="pct" id="pct">100%</span>
+      <button class="btn" id="zin" aria-label="Zoom in">+</button>
+      <button class="btn" id="fit">Fit all</button>
+    </div>
+  </header>
+  <main class="stage" id="stage">
+    <div class="world" id="world">
+      <svg class="edges" id="edges" aria-hidden="true">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <path d="M0 0 L10 5 L0 10 z" class="arrowhead"></path>
+          </marker>
+        </defs>
+      </svg>
+      <div class="labels" id="labels"></div>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--arrow)" stroke-width="2.4"/></svg><span><b>Tap</b> goes to the next screen</span></div>
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--sheet)" stroke-width="2.4"/></svg><span><b>Sheet</b> or dialog opens over it</span></div>
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--tab)" stroke-width="2.4" stroke-dasharray="6 5"/></svg><span><b>Tab</b> or scroll, same screen</span></div>
+      <div>Drag to pan, pinch or Ctrl+scroll to zoom. Tap a screen for details.</div>
+    </div>
+  </main>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+  <div class="sheetbox" id="sheetbox">
+    <div class="shot"><img id="lb-img" alt=""></div>
+    <div class="info">
+      <div class="eyebrow" id="lb-kind"></div>
+      <h3 id="lb-title"></h3>
+      <p id="lb-desc"></p>
+      <h4>Opens</h4>
+      <div class="links" id="lb-out"></div>
+      <h4>Reached from</h4>
+      <div class="links" id="lb-in"></div>
+      <button class="btn close" id="lb-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CW = 216, STEP = 344, ROW = 760, HEAD = 230, PADX = 28, LANEGAP = 56;
+  var DATA = {"lanes": [{"id": "home", "name": "Home", "tab": "Home tab", "c": "--c-home", "note": "Today at a glance. Widgets you can rearrange; each one opens the page behind it."}, {"id": "log", "name": "Log button", "tab": "The + button", "c": "--c-log", "note": "The round button on every tab. One tap to log a climb, a weigh-in, a note, or to start a session."}, {"id": "train", "name": "Train", "tab": "Train tab", "c": "--c-train", "note": "Plans, the exercise library and the weekly schedule. Starting a plan opens the live session."}, {"id": "session", "name": "Live session", "tab": "From Train or the Log menu", "c": "--c-session", "note": "A running workout or climbing day. It keeps running when you leave the screen, with a pill above the tab bar and a live notification."}, {"id": "journal", "name": "Journal", "tab": "Journal tab", "c": "--c-journal", "note": "One timeline of climbs, sessions, results and notes, with search and filters."}, {"id": "progress", "name": "Progress", "tab": "Progress tab", "c": "--c-progress", "note": "How climbing and training are going."}, {"id": "you", "name": "You", "tab": "You tab", "c": "--c-you", "note": "Your profile, body, places and settings."}, {"id": "states", "name": "Other states", "tab": "The same pages with other settings", "c": "--muted", "note": "Light theme, the largest text size, another accent colour, and Home before there is any data."}], "pages": [{"id": "home-top", "title": "Home", "kind": "page", "lane": "home", "col": 0, "row": 0, "desc": "The dashboard: today’s plan from your weekly schedule, climbs and days this week, latest best, bodyweight, open projects and recent climbs. Tapping a project or a recent climb opens its log.", "ih": 480}, {"id": "home-more", "title": "Home, lower half", "kind": "page", "lane": "home", "col": 1, "row": 0, "desc": "Open projects with their goes, and your recent climbs with a link to the Journal.", "ih": 480}, {"id": "home-edit", "title": "Edit dashboard", "kind": "mode", "lane": "home", "col": 2, "row": 0, "desc": "Edit mode: drag widgets to move them, resize them or remove them.", "ih": 480}, {"id": "home-add-widget", "title": "Add widget", "kind": "sheet", "lane": "home", "col": 3, "row": 0, "desc": "The widget list: Today’s plan, This week, Days on the wall, Latest best, Bodyweight, Weight trend, Sends per week, Sends by style, Recent climbs, Projects, Consistency, Training and Exercise.", "ih": 480}, {"id": "home-widget-setup", "title": "Choose what to show", "kind": "sheet", "lane": "home", "col": 4, "row": 0, "desc": "The Training and Exercise widgets ask what to show: a training figure (on plan, sessions, sets, time or new bests) or one exercise.", "ih": 480}, {"id": "week-climbs", "title": "Climbs this week", "kind": "page", "lane": "home", "col": 0, "row": 1, "desc": "Every climb of the week, with a week picker and totals for climbs, sends and hardest.", "ih": 480}, {"id": "days-on-wall", "title": "Days on the wall", "kind": "page", "lane": "home", "col": 1, "row": 1, "desc": "A calendar of the days you climbed, with week, month and year counts and your week streak.", "ih": 480}, {"id": "log-menu", "title": "Log menu", "kind": "sheet", "lane": "log", "col": 0, "row": 0, "desc": "What did you do? Log climb, Log weight, Start a session, Add a note.", "ih": 480}, {"id": "log-climb", "title": "Log climb", "kind": "page", "lane": "log", "col": 1, "row": 0, "desc": "Where, climb type, grade strip, the day, goes (+ Fell, + Sent), how hard it felt, name, note, photo and video. When a session is running, the climb joins it.", "ih": 480}, {"id": "log-climb-more", "title": "Log climb, lower half", "kind": "page", "lane": "log", "col": 2, "row": 0, "desc": "Effort, name, note and the photo and video buttons, then Log climb.", "ih": 480}, {"id": "log-climb-where", "title": "Where", "kind": "sheet", "lane": "log", "col": 3, "row": 0, "desc": "Pick a saved place, then a facility and wall, then a problem. Or skip and log without a place.", "ih": 480}, {"id": "log-climb-new-place", "title": "New place", "kind": "sheet", "lane": "log", "col": 4, "row": 0, "desc": "Name a new place and pick its type without leaving Log climb.", "ih": 480}, {"id": "log-climb-day", "title": "Pick the day", "kind": "sheet", "lane": "log", "col": 5, "row": 0, "desc": "A calendar for logging a climb on an earlier day.", "ih": 480}, {"id": "log-weight", "title": "Log weight", "kind": "page", "lane": "log", "col": 0, "row": 1, "desc": "A ruler for today’s bodyweight, with the change since your last weigh-in.", "ih": 480}, {"id": "note-new", "title": "New note", "kind": "page", "lane": "log", "col": 1, "row": 1, "desc": "Write a thought, a niggle or beta, with an optional tag.", "ih": 480}, {"id": "log-climb-where-wall", "title": "Where, wall step", "kind": "sheet", "lane": "log", "col": 6, "row": 0, "desc": "After the place, pick the wall or facility. A problem on the wall fills in its grade.", "ih": 480}, {"id": "log-climb-edit", "title": "Edit log", "kind": "page", "lane": "log", "col": 2, "row": 1, "desc": "A logged climb in the same form as Log climb, with Save changes and Delete. Opening a project from Home or Progress lands here when you already logged it today.", "ih": 480}, {"id": "log-climb-delete", "title": "Delete this log?", "kind": "sheet", "lane": "log", "col": 3, "row": 1, "desc": "Asks before a logged climb is deleted.", "ih": 480}, {"id": "log-weight-type", "title": "Type a value", "kind": "sheet", "lane": "log", "col": 0, "row": 2, "desc": "Rulers, wheels and steppers all open a number pad when you tap the value, so you can type it instead.", "ih": 480}, {"id": "note-editor", "title": "Note", "kind": "page", "lane": "log", "col": 1, "row": 2, "desc": "Edit a note: tag, text, pin or delete.", "ih": 480}, {"id": "note-delete", "title": "Delete this note?", "kind": "sheet", "lane": "log", "col": 2, "row": 2, "desc": "Asks before a note is deleted.", "ih": 480}, {"id": "note-tag", "title": "New tag", "kind": "sheet", "lane": "log", "col": 3, "row": 2, "desc": "Name a new tag for a note.", "ih": 480}, {"id": "train-week", "title": "Week", "kind": "page", "lane": "train", "col": 0, "row": 0, "desc": "Your weekly schedule: which plans and climbing days fall on which day. Home’s Today’s plan follows it.", "ih": 480}, {"id": "week-day-sheet", "title": "Plan a day", "kind": "sheet", "lane": "train", "col": 1, "row": 0, "desc": "Pick any plans for the day, and a climbing day with an optional place.", "ih": 480}, {"id": "train-plans", "title": "Plans", "kind": "page", "lane": "train", "col": 2, "row": 0, "desc": "Your session plans, each with its blocks, exercises and a time estimate.", "ih": 480}, {"id": "plan-detail", "title": "Plan", "kind": "page", "lane": "train", "col": 3, "row": 0, "desc": "A plan’s blocks and exercises with their targets and rests. Start session runs it, Edit plan changes it.", "ih": 480}, {"id": "plan-editor", "title": "Edit plan", "kind": "page", "lane": "train", "col": 4, "row": 0, "desc": "Name, description, blocks and exercises. Reorder, remove or add exercises and set each one’s targets.", "ih": 480}, {"id": "plan-new", "title": "New plan", "kind": "page", "lane": "train", "col": 5, "row": 0, "desc": "The same editor, empty: name it, add a block and pick exercises.", "ih": 480}, {"id": "plan-add-exercise", "title": "Add an exercise", "kind": "sheet", "lane": "train", "col": 4, "row": 1, "desc": "Pick an exercise from the library to add to a block.", "ih": 480}, {"id": "plan-target", "title": "Targets", "kind": "sheet", "lane": "train", "col": 5, "row": 1, "desc": "Sets, reps or time, load and rest for one exercise in the plan.", "ih": 480}, {"id": "plan-delete", "title": "Delete plan?", "kind": "sheet", "lane": "train", "col": 3, "row": 1, "desc": "Asks before a plan is deleted. Finished sessions keep their history.", "ih": 480}, {"id": "train-exercises", "title": "Exercises", "kind": "page", "lane": "train", "col": 0, "row": 2, "desc": "The exercise library by category, each with its defaults.", "ih": 480}, {"id": "exercise-editor", "title": "Edit exercise", "kind": "page", "lane": "train", "col": 1, "row": 2, "desc": "Category, how it is measured and its default sets, reps or time, load and rest.", "ih": 480}, {"id": "exercise-editor-intervals", "title": "Edit interval exercise", "kind": "page", "lane": "train", "col": 2, "row": 2, "desc": "An interval exercise sets work, rest, repeats, cycles and the rest between cycles instead of reps.", "ih": 480}, {"id": "exercise-new", "title": "New exercise", "kind": "page", "lane": "train", "col": 3, "row": 2, "desc": "The exercise editor, empty.", "ih": 480}, {"id": "exercise-delete", "title": "Delete exercise?", "kind": "sheet", "lane": "train", "col": 4, "row": 2, "desc": "Asks before an exercise is deleted, and says how many plans use it.", "ih": 480}, {"id": "start-session-sheet", "title": "Start a session", "kind": "sheet", "lane": "session", "col": 0, "row": 0, "desc": "Start without a plan (a climbing day or an unplanned workout), or from one of your plans.", "ih": 480}, {"id": "session-live", "title": "Live session", "kind": "page", "lane": "session", "col": 1, "row": 0, "desc": "The plan’s exercises as one list of cards with a table of sets. A rail of segments under the top bar shows each exercise and fills as sets go in. Tick a set, or change what you did first.", "ih": 480}, {"id": "session-set-logged", "title": "A set logged", "kind": "page", "lane": "session", "col": 2, "row": 0, "desc": "A finished exercise folds up. A set that beats your best earns the New best star.", "ih": 480}, {"id": "session-rest", "title": "Rest in the dock", "kind": "page", "lane": "session", "col": 3, "row": 0, "desc": "After a set the dock at the bottom counts the rest down with +30 s and Skip, and buzzes at the end.", "ih": 480}, {"id": "session-big-timer", "title": "Big timer", "kind": "page", "lane": "session", "col": 4, "row": 0, "desc": "Tap the dock for a big countdown with −30 s, +30 s and Skip rest. Make small returns to the dock.", "ih": 480}, {"id": "session-exercise-menu", "title": "Exercise menu", "kind": "sheet", "lane": "session", "col": 5, "row": 0, "desc": "The ⋯ on a card: change its sets, reps and rest for this session, skip the rest of it, or take it out.", "ih": 480}, {"id": "session-target", "title": "Change this exercise", "kind": "sheet", "lane": "session", "col": 6, "row": 0, "desc": "Sets, reps or time, load and rest for this session only. Your plan stays as it is.", "ih": 480}, {"id": "session-exercise-timer", "title": "Exercise timer", "kind": "sheet", "lane": "session", "col": 7, "row": 0, "desc": "An interval exercise can start its own timer; each cycle ticks itself off as a set.", "ih": 480}, {"id": "session-timer-running", "title": "Timer running", "kind": "page", "lane": "session", "col": 8, "row": 0, "desc": "The dock counts the phases of the interval timer, with pause and skip. Tap it for the big view.", "ih": 480}, {"id": "session-add-sheet", "title": "Add to this session", "kind": "sheet", "lane": "session", "col": 0, "row": 1, "desc": "Log a climb, add an exercise, or start an interval timer.", "ih": 480}, {"id": "session-add-exercise", "title": "Add an exercise", "kind": "sheet", "lane": "session", "col": 1, "row": 1, "desc": "Search the library and add an exercise on the spot.", "ih": 480}, {"id": "session-timer-setup", "title": "Interval timer", "kind": "sheet", "lane": "session", "col": 2, "row": 1, "desc": "Pick Tabata, Repeaters or your own preparation, work, rest, repeats and cycles.", "ih": 480}, {"id": "session-log-climb", "title": "Log a climb here", "kind": "page", "lane": "session", "col": 3, "row": 1, "desc": "The same Log climb form; the climb is added to the session and the journal.", "ih": 480}, {"id": "session-finish", "title": "Finish session", "kind": "sheet", "lane": "session", "col": 4, "row": 1, "desc": "Sets done, climbs and sends, how hard it felt and a note. Save it or discard the session.", "ih": 480}, {"id": "session-discard", "title": "Discard this session?", "kind": "sheet", "lane": "session", "col": 5, "row": 1, "desc": "Asks before a session is thrown away. Climbs you logged in it stay in the journal.", "ih": 480}, {"id": "session-climbing-day", "title": "Climbing day", "kind": "page", "lane": "session", "col": 0, "row": 2, "desc": "A session without a plan: climbs, sends and hardest send so far, with a Log climb button.", "ih": 480}, {"id": "session-pill", "title": "Session pill", "kind": "page", "lane": "session", "col": 1, "row": 2, "desc": "Leave the session with the back arrow and a pill above the tab bar keeps it one tap away.", "ih": 480}, {"id": "live-notification", "title": "Live notification", "kind": "notification", "lane": "session", "col": 2, "row": 2, "desc": "While a session runs, a notification shows progress with its next action: Set done, rest controls, interval Pause and Stop, or Log climb. On Android 16 it is a Live Update.", "ih": 122}, {"id": "journal-top", "title": "Journal", "kind": "page", "lane": "journal", "col": 0, "row": 0, "desc": "Everything you did, newest first: climbs by place, sessions, personal records and notes. Filter by All, Climbs, Training or Notes.", "ih": 480}, {"id": "journal-filters", "title": "Filters", "kind": "sheet", "lane": "journal", "col": 1, "row": 0, "desc": "When, sends or not, places and note tags.", "ih": 480}, {"id": "journal-search", "title": "Search", "kind": "page", "lane": "journal", "col": 2, "row": 0, "desc": "Search climbs, places and notes.", "ih": 480}, {"id": "journal-training", "title": "Journal, Training", "kind": "page", "lane": "journal", "col": 3, "row": 0, "desc": "The Training filter shows sessions and personal records only.", "ih": 480}, {"id": "session-summary", "title": "Session summary", "kind": "page", "lane": "journal", "col": 0, "row": 1, "desc": "A finished session: duration, sets done, climbs and each exercise’s sets.", "ih": 480}, {"id": "session-edit", "title": "Edit session", "kind": "sheet", "lane": "journal", "col": 1, "row": 1, "desc": "Change the day, start and finish time, how hard it felt and the note.", "ih": 480}, {"id": "session-time", "title": "Pick a time", "kind": "sheet", "lane": "journal", "col": 2, "row": 1, "desc": "A clock to set when the session started or finished.", "ih": 480}, {"id": "session-delete", "title": "Delete this session?", "kind": "sheet", "lane": "journal", "col": 3, "row": 1, "desc": "Asks before a finished session is deleted.", "ih": 480}, {"id": "progress-climbing", "title": "Climbing", "kind": "page", "lane": "progress", "col": 0, "row": 0, "desc": "Hardest sends per scale, open projects with +1 go, sends per week and the boulder pyramid.", "ih": 480}, {"id": "progress-climbing-more", "title": "Climbing, lower half", "kind": "page", "lane": "progress", "col": 1, "row": 0, "desc": "Sends by style and the routes pyramid by grade.", "ih": 480}, {"id": "progress-training", "title": "Training", "kind": "page", "lane": "progress", "col": 2, "row": 0, "desc": "Weeks on plan, sessions, time trained and new bests over the last 30 days, and every exercise with its best.", "ih": 480}, {"id": "exercise-progress", "title": "Exercise", "kind": "page", "lane": "progress", "col": 3, "row": 0, "desc": "One exercise: its personal record, a chart of the best set or the volume, and every day it was trained.", "ih": 480}, {"id": "exercise-progress-volume", "title": "Exercise, volume", "kind": "page", "lane": "progress", "col": 4, "row": 0, "desc": "The same chart showing volume, with a range from 3 months to all time.", "ih": 480}, {"id": "record-editor", "title": "Log a result", "kind": "page", "lane": "progress", "col": 5, "row": 0, "desc": "Pick an exercise and enter what you did to log a result by hand.", "ih": 480}, {"id": "you-top", "title": "You", "kind": "page", "lane": "you", "col": 0, "row": 0, "desc": "Climber card with days and climbs this year and your hardest sends, the consistency grid, and your personal records.", "ih": 480}, {"id": "you-more", "title": "You, menu", "kind": "page", "lane": "you", "col": 1, "row": 0, "desc": "The weight tracker and the “More about you” list: Measurements, Circumferences, Notes, Places, Grade converter, Interval timer and Settings.", "ih": 480}, {"id": "measurements", "title": "Measurements", "kind": "page", "lane": "you", "col": 2, "row": 0, "desc": "Weight with a chart and range, and body stats on a body outline you tap to update.", "ih": 480}, {"id": "measurements-more", "title": "Measurements, lower half", "kind": "page", "lane": "you", "col": 3, "row": 0, "desc": "More body stats and the list of weigh-ins.", "ih": 480}, {"id": "circumferences", "title": "Circumferences", "kind": "page", "lane": "you", "col": 4, "row": 0, "desc": "Left and right forearm, bicep and thigh, plus chest and waist, on a body outline.", "ih": 480}, {"id": "notes", "title": "Notes", "kind": "page", "lane": "you", "col": 5, "row": 0, "desc": "Your notes with tag filters and pinned notes first.", "ih": 480}, {"id": "places", "title": "Places", "kind": "page", "lane": "you", "col": 0, "row": 1, "desc": "Gyms, crags and boards with their climb counts, filtered by type.", "ih": 480}, {"id": "place-detail", "title": "Place", "kind": "page", "lane": "you", "col": 1, "row": 1, "desc": "A place: climbs logged, walls, open projects, facilities and every problem with its goes.", "ih": 480}, {"id": "place-editor", "title": "Edit place", "kind": "page", "lane": "you", "col": 2, "row": 1, "desc": "Name, kinds of climbing, grade scales, location and notes.", "ih": 480}, {"id": "wall-editor", "title": "Edit wall", "kind": "sheet", "lane": "you", "col": 3, "row": 1, "desc": "Rename a wall and give it a photo or a map.", "ih": 480}, {"id": "grade-converter", "title": "Grade converter", "kind": "page", "lane": "you", "col": 0, "row": 2, "desc": "Pick a system and a grade, and see it in French, YDS, Font, V and more.", "ih": 480}, {"id": "interval-timer-setup", "title": "Interval timer", "kind": "page", "lane": "you", "col": 1, "row": 2, "desc": "Pick Tabata, Repeaters, Max hangs or 4×4s, or set your own. Nothing is logged.", "ih": 480}, {"id": "interval-timer-running", "title": "Interval timer running", "kind": "page", "lane": "you", "col": 3, "row": 2, "desc": "The phase’s colour fills the screen with big seconds, and buttons to pause, skip and go back.", "ih": 480}, {"id": "settings-top", "title": "Settings", "kind": "page", "lane": "you", "col": 4, "row": 2, "desc": "Grades per discipline, theme, accent colour, text size and units.", "ih": 480}, {"id": "settings-bottom", "title": "Settings, lower half", "kind": "page", "lane": "you", "col": 5, "row": 2, "desc": "Timer sounds, rest after a climb, demo mode, backups, crash reports and About.", "ih": 480}, {"id": "backups-top", "title": "Backups", "kind": "page", "lane": "you", "col": 6, "row": 2, "desc": "Choose what to export, import a backup, set automatic backups to a folder, or export climbs and sessions as a spreadsheet.", "ih": 480}, {"id": "about", "title": "About", "kind": "page", "lane": "you", "col": 7, "row": 2, "desc": "Version, licence, source code and open-source libraries.", "ih": 480}, {"id": "measurement-dialog", "title": "Update a body stat", "kind": "sheet", "lane": "you", "col": 4, "row": 1, "desc": "Tap a stat on the body outline to type or dial in a new value. Circumferences use the same dialog.", "ih": 480}, {"id": "place-new", "title": "New place", "kind": "page", "lane": "you", "col": 5, "row": 1, "desc": "The place editor, empty: name, kinds of climbing, grade scales, location and notes.", "ih": 480}, {"id": "place-delete", "title": "Delete place?", "kind": "sheet", "lane": "you", "col": 6, "row": 1, "desc": "Asks before a place is deleted. Every climb and log is kept.", "ih": 480}, {"id": "place-local-grades", "title": "Local grades", "kind": "page", "lane": "you", "col": 7, "row": 1, "desc": "A place can grade in its own scale: numbers or colour tapes, easiest first, never converted to Font or French.", "ih": 480}, {"id": "place-tape-colour", "title": "Tape colour", "kind": "sheet", "lane": "you", "col": 8, "row": 1, "desc": "Tap a tape’s swatch to pick its colour from the palette.", "ih": 480}, {"id": "place-map-picker", "title": "Map pin", "kind": "sheet", "lane": "you", "col": 0, "row": 3, "desc": "Search an address or move the map so the pin sits on the place. Uses OpenStreetMap, with no account or key.", "ih": 480}, {"id": "interval-timer-prep", "title": "Get ready", "kind": "page", "lane": "you", "col": 2, "row": 2, "desc": "A full-screen countdown before the first repeat.", "ih": 480}, {"id": "interval-timer-landscape", "title": "Interval timer, on its side", "kind": "page", "lane": "you", "col": 3, "row": 3, "desc": "The timer works on its side too, with the big seconds beside the buttons.", "ih": 97}, {"id": "backups-bottom", "title": "Backups, lower half", "kind": "page", "lane": "you", "col": 8, "row": 2, "desc": "Photos and videos switches, and Import.", "ih": 480}, {"id": "backups-import", "title": "Import backup", "kind": "sheet", "lane": "you", "col": 0, "row": 4, "desc": "After you pick a backup file, choose what to bring in. Settings start switched off because they replace yours.", "ih": 480}, {"id": "backups-conflict", "title": "Already in Crux", "kind": "sheet", "lane": "you", "col": 1, "row": 4, "desc": "When something in the backup is already here, Crux shows both and asks: skip, replace or keep both.", "ih": 480}, {"id": "log-climb-photo", "title": "Photo attached", "kind": "page", "lane": "log", "col": 4, "row": 1, "desc": "A photo from your gallery or the camera is copied into Crux and shown on the log. Tap it to view it.", "ih": 480}, {"id": "image-viewer", "title": "Photo viewer", "kind": "sheet", "lane": "log", "col": 5, "row": 1, "desc": "The photo full screen: pinch to zoom, drag to pan.", "ih": 480}, {"id": "video-player", "title": "Video player", "kind": "sheet", "lane": "log", "col": 6, "row": 1, "desc": "A climb’s video plays full screen. Videos are copied into Crux and are included in backups unless you switch them off.", "ih": 480}, {"id": "state-light", "title": "Light theme", "kind": "page", "lane": "states", "col": 0, "row": 0, "desc": "Settings has Dark (the default), Light or System. Everything follows, accent colours included.", "ih": 480}, {"id": "state-largest-text", "title": "Largest text", "kind": "page", "lane": "states", "col": 1, "row": 0, "desc": "Text size goes up to Largest, on top of the phone’s own font size.", "ih": 480}, {"id": "state-accent", "title": "Accent colour", "kind": "page", "lane": "states", "col": 2, "row": 0, "desc": "Seven accent colours; the amber for goes and the green for sends stay the same in every accent.", "ih": 480}, {"id": "state-empty-home", "title": "Home with no data", "kind": "page", "lane": "states", "col": 3, "row": 0, "desc": "Before there is any data, every widget explains what will appear and how to add the first entry.", "ih": 480}], "edges": [["home-top", "home-more", "Scroll", "tab"], ["home-top", "home-edit", "Edit dashboard", "nav"], ["home-edit", "home-add-widget", "Add widget", "sheet"], ["home-add-widget", "home-widget-setup", "Training or Exercise", "sheet"], ["home-top", "week-climbs", "This week widget", "nav"], ["home-top", "days-on-wall", "Days widget", "nav"], ["log-menu", "log-climb", "Log climb", "nav"], ["log-climb", "log-climb-more", "Scroll", "tab"], ["log-climb", "log-climb-where", "Where", "sheet"], ["log-climb-where", "log-climb-new-place", "New place", "sheet"], ["log-climb", "log-climb-day", "Today", "sheet"], ["log-menu", "log-weight", "Log weight", "nav"], ["log-menu", "note-new", "Add a note", "nav"], ["log-climb-where", "log-climb-where-wall", "Pick a place", "sheet"], ["log-climb-edit", "log-climb-delete", "Delete", "sheet"], ["log-weight", "log-weight-type", "Tap the value", "sheet"], ["note-editor", "note-delete", "Delete", "sheet"], ["note-new", "note-tag", "New tag", "sheet"], ["train-week", "week-day-sheet", "Tap a day", "sheet"], ["train-week", "train-plans", "Plans tab", "tab"], ["train-plans", "plan-detail", "Open a plan", "nav"], ["train-plans", "plan-new", "New plan", "nav"], ["plan-detail", "plan-editor", "Edit plan", "nav"], ["plan-editor", "plan-add-exercise", "Add exercise", "sheet"], ["plan-editor", "plan-target", "Tap an exercise", "sheet"], ["plan-editor", "plan-delete", "Delete", "sheet"], ["train-plans", "train-exercises", "Exercises tab", "tab"], ["train-exercises", "exercise-editor", "Open an exercise", "nav"], ["train-exercises", "exercise-editor-intervals", "An interval exercise", "nav"], ["train-exercises", "exercise-new", "New exercise", "nav"], ["exercise-editor", "exercise-delete", "Delete", "sheet"], ["start-session-sheet", "session-live", "From a plan", "nav"], ["start-session-sheet", "session-climbing-day", "Without a plan", "nav"], ["session-live", "session-set-logged", "Tick a set", "nav"], ["session-set-logged", "session-rest", "Rest starts", "nav"], ["session-rest", "session-big-timer", "Tap the dock", "tab"], ["session-live", "session-exercise-menu", "⋯ on a card", "sheet"], ["session-exercise-menu", "session-target", "Change sets, reps and rest", "sheet"], ["session-exercise-menu", "session-exercise-timer", "Start its timer", "sheet"], ["session-exercise-timer", "session-timer-running", "Start", "nav"], ["session-live", "session-add-sheet", "+ in the top bar", "sheet"], ["session-add-sheet", "session-add-exercise", "Add an exercise", "sheet"], ["session-add-sheet", "session-timer-setup", "Start a timer", "sheet"], ["session-timer-setup", "session-timer-running", "Start", "nav"], ["session-add-sheet", "session-log-climb", "Log a climb", "nav"], ["session-climbing-day", "session-log-climb", "Log climb", "nav"], ["session-live", "session-finish", "Finish", "sheet"], ["session-finish", "session-discard", "Discard session", "sheet"], ["session-live", "session-pill", "Back arrow", "nav"], ["session-live", "live-notification", "While it runs", "tab"], ["journal-top", "journal-filters", "Filters", "sheet"], ["journal-top", "journal-search", "Search", "nav"], ["journal-top", "journal-training", "Training filter", "tab"], ["journal-training", "session-summary", "A session", "nav"], ["session-summary", "session-edit", "Edit session", "sheet"], ["session-edit", "session-time", "Started or Finished", "sheet"], ["session-summary", "session-delete", "Delete", "sheet"], ["journal-top", "log-climb-edit", "A climb", "nav"], ["journal-top", "note-editor", "A note", "nav"], ["progress-climbing", "progress-climbing-more", "Scroll", "tab"], ["progress-climbing", "progress-training", "Training tab", "tab"], ["progress-training", "exercise-progress", "An exercise", "nav"], ["exercise-progress", "exercise-progress-volume", "Volume", "tab"], ["exercise-progress", "record-editor", "Log a result", "nav"], ["progress-climbing", "log-climb-edit", "A project, +1 go", "nav"], ["you-top", "you-more", "Scroll", "tab"], ["you-top", "exercise-progress", "A record", "nav"], ["you-top", "record-editor", "Log a record", "nav"], ["you-more", "measurements", "Measurements", "nav"], ["measurements", "measurements-more", "Scroll", "tab"], ["you-more", "log-weight", "Log (weight)", "nav"], ["you-more", "circumferences", "Circumferences", "nav"], ["you-more", "notes", "Notes", "nav"], ["notes", "note-editor", "A note", "nav"], ["notes", "note-new", "New note", "nav"], ["you-more", "places", "Places", "nav"], ["places", "place-detail", "A place", "nav"], ["place-detail", "place-editor", "Edit place", "nav"], ["place-detail", "wall-editor", "Wall options", "sheet"], ["place-detail", "log-climb", "Log here", "nav"], ["you-more", "grade-converter", "Grade converter", "nav"], ["you-more", "interval-timer-setup", "Interval timer", "nav"], ["you-more", "settings-top", "Settings", "nav"], ["settings-top", "settings-bottom", "Scroll", "tab"], ["settings-bottom", "backups-top", "Backups", "nav"], ["settings-bottom", "about", "About Crux", "nav"], ["you-more", "measurement-dialog", "A body stat", "sheet"], ["places", "place-new", "New place", "nav"], ["place-editor", "place-delete", "Delete", "sheet"], ["place-editor", "place-local-grades", "My settings, Local grades", "tab"], ["place-local-grades", "place-tape-colour", "A tape’s swatch", "sheet"], ["place-editor", "place-map-picker", "Add a map pin", "sheet"], ["interval-timer-setup", "interval-timer-prep", "Start", "nav"], ["interval-timer-prep", "interval-timer-running", "10 s later", "tab"], ["interval-timer-running", "interval-timer-landscape", "Rotate", "tab"], ["backups-top", "backups-bottom", "Scroll", "tab"], ["backups-bottom", "backups-import", "Import", "sheet"], ["backups-import", "backups-conflict", "Something is already here", "sheet"], ["log-climb", "log-climb-photo", "Photo", "sheet"], ["log-climb-photo", "image-viewer", "Tap the photo", "sheet"], ["log-climb", "video-player", "Video, then tap it", "sheet"], ["settings-top", "state-light", "Theme", "tab"], ["settings-top", "state-largest-text", "Text size", "tab"], ["settings-top", "state-accent", "Accent", "tab"], ["settings-bottom", "state-empty-home", "Demo mode off", "tab"]], "meta": {"version": "0.4.0", "commit": "ebb2325", "captured": "14 Oct 2026"}};
+  var LANES = DATA.lanes.map(function (l) { return { id: l.id, name: l.name, tab: l.tab, c: l.c, note: l.note, nodes: DATA.pages.filter(function (p) { return p.lane === l.id; }) }; });
+  var EDGES = DATA.edges;
+  var M = DATA.meta || {};
+  document.getElementById('brand-sub').textContent = 'every screen, and what leads where · ' + (DATA.pages.length) + ' pages · demo data' + (M.version ? ' · v' + M.version : '') + (M.commit ? ' · ' + M.commit : '') + (M.captured ? ' · ' + M.captured : '');
+
+  var world = document.getElementById('world'), stage = document.getElementById('stage');
+  var svg = document.getElementById('edges'), labelsEl = document.getElementById('labels');
+  var ND = {}, laneRect = [], order = [];
+
+  function imgH(n) { return n.ih || 480; }
+  // id suffixes let a screen appear in two flows (the same shot, a different place on the map)
+  LANES.forEach(function (lane, li) {
+    var maxCol = 0, maxRow = 0;
+    lane.nodes.forEach(function (n) { maxCol = Math.max(maxCol, n.col); maxRow = Math.max(maxRow, n.row); });
+    lane.top = li ? laneRect[li - 1].top + laneRect[li - 1].h + LANEGAP : 0;
+    var w = (maxCol + 1) * STEP + PADX * 2 - (STEP - CW);
+    var h = HEAD + maxRow * ROW + 544 + 40;
+    laneRect.push({ top: lane.top, w: w, h: h });
+    lane.nodes.forEach(function (n) {
+      var id = n.id, h2 = imgH(n) + 64;
+      ND[id] = { id: id, file: n.id, ih: n.ih, title: n.title, kind: n.kind, lane: lane, x: PADX + n.col * STEP, y: lane.top + HEAD + n.row * ROW, w: CW, h: h2, desc: n.desc, out: [], inn: [] };
+      order.push(id);
+    });
+  });
+  var worldW = Math.max.apply(null, laneRect.map(function (r) { return r.w; })), worldH = laneRect[laneRect.length - 1].top + laneRect[laneRect.length - 1].h;
+
+  // lanes and nodes
+  LANES.forEach(function (lane, li) {
+    var r = laneRect[li], el = document.createElement('section');
+    el.className = 'lane'; el.style.cssText = 'left:0;top:' + r.top + 'px;width:' + r.w + 'px;height:' + r.h + 'px;--c:var(' + lane.c + ')';
+    el.innerHTML = '<div class="lane-head"><h2>' + lane.name + '</h2><span>' + lane.tab + '</span></div><div class="lane-note">' + lane.note + '</div>';
+    world.insertBefore(el, svg);
+  });
+  order.forEach(function (id) {
+    var n = ND[id], el = document.createElement('div');
+    el.className = 'node' + (n.kind === 'sheet' ? ' sheet' : ''); el.tabIndex = 0; el.setAttribute('role', 'button'); el.dataset.id = id;
+    el.style.cssText = 'left:' + n.x + 'px;top:' + n.y + 'px;--c:var(' + n.lane.c + ')';
+    var k = n.kind === 'sheet' ? 'Sheet' : n.kind === 'notification' ? 'Notification' : n.kind === 'mode' ? 'Mode' : 'Screen';
+    el.innerHTML = '<img src="shots/' + n.file + '.webp" alt="' + n.title + ' screenshot" width="216" height="' + imgH(n) + '" loading="eager" decoding="async"><div class="cap"><div class="t">' + n.title + '</div><div class="k">' + (n.kind === 'sheet' ? 'Sheet' : k) + '</div></div>';
+    el.setAttribute('aria-label', n.title + ', ' + k);
+    n.el = el; world.appendChild(el);
+  });
+
+  // edges
+  var edgeEls = [];
+  function route() {
+    var sides = {};
+    EDGES.forEach(function (e, i) {
+      var a = ND[e[0]], b = ND[e[1]];
+      if (!a || !b) { console.warn('missing node', e); return; }
+      var acx = a.x + a.w / 2, acy = a.y + a.h / 2, bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
+      var dx = bcx - acx, dy = bcy - acy, mode;
+      if (Math.abs(dy) < 250) mode = Math.abs(dx) > STEP * 1.2 ? 'arc' : (dx >= 0 ? 'h+' : 'h-');
+      else mode = dy > 0 ? 'v+' : 'v-';
+      var sa, sb;
+      if (mode === 'h+') { sa = 'R'; sb = 'L'; } else if (mode === 'h-') { sa = 'L'; sb = 'R'; }
+      else if (mode === 'arc') { sa = 'T'; sb = 'T'; } else if (mode === 'v+') { sa = 'B'; sb = 'T'; } else { sa = 'T'; sb = 'B'; }
+      (sides[a.id + sa] = sides[a.id + sa] || []).push([i, 'a']); (sides[b.id + sb] = sides[b.id + sb] || []).push([i, 'b']);
+      e._m = { a: a, b: b, mode: mode, sa: sa, sb: sb };
+      a.out.push({ to: b.id, label: e[2], type: e[3] }); b.inn.push({ from: a.id, label: e[2], type: e[3] });
+    });
+    function anchor(n, side, idx, count) {
+      var t = count === 1 ? 0.5 : 0.18 + 0.64 * (idx / (count - 1));
+      if (side === 'L') return [n.x, n.y + Math.min(n.h, 140) + (n.h > 200 ? 160 * t : 0)];
+      if (side === 'R') return [n.x + n.w, n.y + Math.min(n.h, 140) + (n.h > 200 ? 160 * t : 0)];
+      if (side === 'T') return [n.x + n.w * t, n.y];
+      return [n.x + n.w * t, n.y + n.h];
+    }
+    var frag = document.createDocumentFragment(), lfrag = document.createDocumentFragment();
+    EDGES.forEach(function (e, i) {
+      var m = e._m; if (!m) return;
+      var la = sides[m.a.id + m.sa], lb = sides[m.b.id + m.sb];
+      var ia = la.findIndex(function (q) { return q[0] === i && q[1] === 'a'; }), ib = lb.findIndex(function (q) { return q[0] === i && q[1] === 'b'; });
+      var p0 = anchor(m.a, m.sa, ia, la.length), p3 = anchor(m.b, m.sb, ib, lb.length);
+      var c1, c2, kx = Math.max(60, Math.abs(p3[0] - p0[0]) * 0.45), ky = Math.max(90, Math.abs(p3[1] - p0[1]) * 0.38);
+      if (m.mode === 'h+') { c1 = [p0[0] + kx, p0[1]]; c2 = [p3[0] - kx, p3[1]]; }
+      else if (m.mode === 'h-') { c1 = [p0[0] - kx, p0[1]]; c2 = [p3[0] + kx, p3[1]]; }
+      else if (m.mode === 'arc') { var up = 110 + (i % 3) * 28; c1 = [p0[0], p0[1] - up]; c2 = [p3[0], p3[1] - up]; }
+      else if (m.mode === 'v+') { c1 = [p0[0], p0[1] + ky]; c2 = [p3[0], p3[1] - ky]; }
+      else { c1 = [p0[0], p0[1] - ky]; c2 = [p3[0], p3[1] + ky]; }
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M' + p0 + ' C' + c1 + ' ' + c2 + ' ' + p3);
+      path.setAttribute('class', 'edge ' + e[3]); path.setAttribute('marker-end', 'url(#ah)');
+      path.style.color = '';
+      frag.appendChild(path);
+      var mx = (p0[0] + 3 * c1[0] + 3 * c2[0] + p3[0]) / 8, my = (p0[1] + 3 * c1[1] + 3 * c2[1] + p3[1]) / 8;
+      var lbl = document.createElement('div'); lbl.className = 'lbl' + (m.mode === 'h+' || m.mode === 'h-' ? ' short' : ''); lbl.textContent = e[2]; lbl.style.left = mx + 'px'; lbl.style.top = my + 'px';
+      lfrag.appendChild(lbl);
+      edgeEls.push({ path: path, lbl: lbl, from: m.a.id, to: m.b.id });
+    });
+    svg.appendChild(frag); labelsEl.appendChild(lfrag);
+  }
+  route();
+  [svg, labelsEl, world].forEach(function (el) { el.style.width = worldW + 'px'; el.style.height = worldH + 'px'; });
+  svg.setAttribute('width', worldW); svg.setAttribute('height', worldH);
+  // labels sit above cards; edges below
+  labelsEl.style.zIndex = 2; svg.style.zIndex = 0;
+  Array.prototype.forEach.call(document.querySelectorAll('.node'), function (n) { n.style.zIndex = 1; });
+
+  // highlight
+  function focusNode(id) {
+    var rel = {}; if (id) rel[id] = 1;
+    edgeEls.forEach(function (e) {
+      var on = id && (e.from === id || e.to === id);
+      if (on) { rel[e.from] = 1; rel[e.to] = 1; }
+      e.path.classList.toggle('on', !!on); e.lbl.classList.toggle('on', !!on);
+      e.path.classList.toggle('dim', !!id && !on); e.lbl.classList.toggle('dim', !!id && !on);
+    });
+    order.forEach(function (k) { ND[k].el.classList.toggle('dim', !!id && !rel[k]); });
+  }
+  world.addEventListener('pointerover', function (ev) { var n = ev.target.closest && ev.target.closest('.node'); if (n && ev.pointerType === 'mouse') focusNode(n.dataset.id); });
+  world.addEventListener('pointerout', function (ev) { var n = ev.target.closest && ev.target.closest('.node'); if (n && ev.pointerType === 'mouse') focusNode(null); });
+  world.addEventListener('focusin', function (ev) { var n = ev.target.closest('.node'); if (n) focusNode(n.dataset.id); });
+  world.addEventListener('focusout', function () { focusNode(null); });
+
+  // pan and zoom
+  var V = { x: 0, y: 0, s: 1 }, MIN = 0.06, MAX = 1.6;
+  function apply() {
+    world.style.transform = 'translate(' + V.x + 'px,' + V.y + 'px) scale(' + V.s + ')';
+    stage.style.setProperty('--gs', 28 * V.s + 'px'); stage.style.setProperty('--gx', V.x + 'px'); stage.style.setProperty('--gy', V.y + 'px');
+    document.getElementById('pct').textContent = Math.round(V.s * 100) + '%';
+  }
+  function zoomAt(cx, cy, f) {
+    var s = Math.min(MAX, Math.max(MIN, V.s * f)); f = s / V.s;
+    V.x = cx - (cx - V.x) * f; V.y = cy - (cy - V.y) * f; V.s = s; apply();
+  }
+  function view() { var r = stage.getBoundingClientRect(); return r.width > 100 ? r : { left: 0, top: 0, width: window.innerWidth || 1000, height: Math.max(300, (window.innerHeight || 700) - 60) }; }
+  function fitRect(x, y, w, h, maxS) {
+    var r = view(), s = Math.min((r.width - 40) / w, (r.height - 40) / h, maxS || MAX); s = Math.max(MIN, s);
+    V.s = s; V.x = (r.width - w * s) / 2 - x * s; V.y = (r.height - h * s) / 2 - y * s; apply();
+  }
+  function showLane(i) {
+    var r = laneRect[i], v = view(), s = Math.min(0.62, (v.width - 32) / r.w);
+    V.s = Math.max(MIN, s); V.x = 16 - 0 * s; V.y = 16 - r.top * V.s; apply();
+  }
+  function fitAll() { fitRect(0, 0, worldW, worldH); }
+  var pts = {}, drag = null, pinch = null, downNode = null;
+  stage.addEventListener('pointerdown', function (ev) {
+    if (ev.button > 0) return;
+    stage.setPointerCapture(ev.pointerId); pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    downNode = ev.target.closest && ev.target.closest('.node');
+    var ids = Object.keys(pts);
+    if (ids.length === 1) drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false };
+    else if (ids.length === 2) { var a = pts[ids[0]], b = pts[ids[1]]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: V.s }; drag = null; }
+  });
+  stage.addEventListener('pointermove', function (ev) {
+    if (!pts[ev.pointerId]) return; pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    var ids = Object.keys(pts);
+    if (pinch && ids.length === 2) {
+      var a = pts[ids[0]], b = pts[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y), r = view();
+      zoomAt((a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, (d / pinch.d * pinch.s) / V.s);
+    } else if (drag) {
+      var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) > 5) { drag.moved = true; stage.classList.add('drag'); }
+      if (drag.moved) { V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); }
+    }
+  });
+  function up(ev) {
+    var wasMoved = drag && drag.moved, n = downNode;
+    delete pts[ev.pointerId]; stage.classList.remove('drag');
+    if (Object.keys(pts).length < 2) pinch = null;
+    if (ev.type === 'pointerup' && drag && !wasMoved && n && Object.keys(pts).length === 0) openBox(n.dataset.id);
+    if (Object.keys(pts).length === 0) { drag = null; downNode = null; }
+  }
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', function (ev) {
+    ev.preventDefault(); var r = view();
+    if (ev.ctrlKey || ev.metaKey) zoomAt(ev.clientX - r.left, ev.clientY - r.top, Math.exp(-ev.deltaY * 0.01));
+    else { V.x -= ev.deltaX; V.y -= ev.deltaY; apply(); }
+  }, { passive: false });
+  document.getElementById('zin').onclick = function () { var r = view(); zoomAt(r.width / 2, r.height / 2, 1.25); };
+  document.getElementById('zout').onclick = function () { var r = view(); zoomAt(r.width / 2, r.height / 2, 0.8); };
+  document.getElementById('fit').onclick = fitAll;
+  var chips = document.getElementById('chips');
+  LANES.forEach(function (l, i) {
+    var b = document.createElement('button'); b.className = 'chip'; b.style.setProperty('--c', 'var(' + l.c + ')');
+    b.innerHTML = '<i></i>' + l.name; b.onclick = function () { showLane(i); }; chips.appendChild(b);
+  });
+
+  // detail box
+  var box = document.getElementById('lightbox');
+  function linkBtn(wrap, id, suffix) {
+    var n = ND[id], b = document.createElement('button'); b.textContent = n.title + (suffix ? ' · ' + suffix : '');
+    b.onclick = function () { closeBox(); goTo(id); }; wrap.appendChild(b);
+  }
+  function openBox(id) {
+    var n = ND[id]; box.style.setProperty('--c', 'var(' + n.lane.c + ')');
+    document.getElementById('lb-img').src = 'shots/' + n.file + '.webp'; document.getElementById('lb-img').alt = n.title + ' screenshot';
+    document.getElementById('lb-kind').textContent = n.lane.name + ' · ' + (n.kind === 'sheet' ? 'sheet or dialog' : n.kind === 'notification' ? 'notification' : n.kind === 'mode' ? 'mode' : 'screen');
+    document.getElementById('lb-title').textContent = n.title; document.getElementById('lb-desc').textContent = n.desc;
+    var o = document.getElementById('lb-out'), i = document.getElementById('lb-in'); o.innerHTML = ''; i.innerHTML = '';
+    n.out.forEach(function (e) { linkBtn(o, e.to, e.label); }); n.inn.forEach(function (e) { linkBtn(i, e.from, e.label); });
+    if (!n.out.length) o.innerHTML = '<em>Nothing; back returns.</em>'; if (!n.inn.length) i.innerHTML = '<em>A tab or button.</em>';
+    box.classList.add('open'); document.getElementById('lb-close').focus();
+  }
+  function closeBox() { box.classList.remove('open'); }
+  function goTo(id) {
+    var n = ND[id], r = view(), s = Math.max(V.s, 0.5);
+    V.s = Math.min(MAX, s); V.x = r.width / 2 - (n.x + n.w / 2) * V.s; V.y = r.height / 2 - (n.y + n.h / 2) * V.s; apply();
+    n.el.classList.remove('flash'); void n.el.offsetWidth; n.el.classList.add('flash');
+  }
+  document.getElementById('lb-close').onclick = closeBox;
+  box.addEventListener('pointerdown', function (ev) { if (ev.target === box) closeBox(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') closeBox();
+    if (ev.key === 'Enter' && document.activeElement && document.activeElement.classList.contains('node')) openBox(document.activeElement.dataset.id);
+  });
+  window.addEventListener('resize', function () { apply(); });
+  var touched = false;
+  ['pointerdown', 'wheel', 'keydown'].forEach(function (t) { stage.addEventListener(t, function () { touched = true; }, { passive: true }); });
+  ['zin', 'zout', 'fit', 'chips'].forEach(function (id) { document.getElementById(id).addEventListener('click', function () { touched = true; }); });
+  showLane(0);
+  if (window.ResizeObserver) new ResizeObserver(function () { if (!touched) showLane(0); }).observe(stage);
+})();
+</script>

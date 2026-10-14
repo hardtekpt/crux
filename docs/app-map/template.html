@@ -1,0 +1,403 @@
+<title>Crux App Map</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: an infinite canvas, one swim lane per tab (plus the Log button and the live session), screens as cards, arrows for taps. */
+:root {
+  --bg: #0a1110;
+  --panel: #101a19;
+  --card: #131e1d;
+  --line: #263837;
+  --fg: #e3efed;
+  --muted: #86a09d;
+  --accent: #35d8de;
+  --accent-ink: #052a2c;
+  --arrow: #4fc9cf;
+  --sheet: #f0aa4b;
+  --tab: #7c9390;
+  --dot: #1b2b2a;
+  --c-home: #35d8de;
+  --c-log: #f0aa4b;
+  --c-train: #a99bf5;
+  --c-session: #ff8a65;
+  --c-journal: #6aa8f7;
+  --c-progress: #62d68e;
+  --c-you: #f27fb0;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf3f2; --panel: #ffffff; --card: #ffffff; --line: #c3d3d1; --fg: #0e1c1b; --muted: #50706c;
+    --accent: #078a91; --accent-ink: #ffffff; --arrow: #0d8f96; --sheet: #b8700f; --tab: #5f7b78; --dot: #cfdddb;
+    --c-home: #078a91; --c-log: #b8700f; --c-train: #6a58d6; --c-session: #d4552e; --c-journal: #2f6fd0; --c-progress: #1f9a58; --c-you: #cc3f82;
+    --shadow: 0 8px 22px rgba(20, 50, 48, .16);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf3f2; --panel: #ffffff; --card: #ffffff; --line: #c3d3d1; --fg: #0e1c1b; --muted: #50706c;
+  --accent: #078a91; --accent-ink: #ffffff; --arrow: #0d8f96; --sheet: #b8700f; --tab: #5f7b78; --dot: #cfdddb;
+  --c-home: #078a91; --c-log: #b8700f; --c-train: #6a58d6; --c-session: #d4552e; --c-journal: #2f6fd0; --c-progress: #1f9a58; --c-you: #cc3f82;
+  --shadow: 0 8px 22px rgba(20, 50, 48, .16);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0a1110; --panel: #101a19; --card: #131e1d; --line: #263837; --fg: #e3efed; --muted: #86a09d;
+  --accent: #35d8de; --accent-ink: #052a2c; --arrow: #4fc9cf; --sheet: #f0aa4b; --tab: #7c9390; --dot: #1b2b2a;
+  --c-home: #35d8de; --c-log: #f0aa4b; --c-train: #a99bf5; --c-session: #ff8a65; --c-journal: #6aa8f7; --c-progress: #62d68e; --c-you: #f27fb0;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; overflow: hidden; margin: 0; }
+.app { height: 100%; display: flex; flex-direction: column; }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); z-index: 5; }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .01em; }
+.brand p { margin: 0; color: var(--muted); font-size: 12px; font-family: var(--font-mono); }
+.chips { display: flex; gap: 6px; overflow-x: auto; flex: 1 1 320px; min-width: 0; padding-block: 2px; scrollbar-width: thin; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--fg); font: 500 12px var(--font-body); cursor: pointer; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.chip:hover, .chip:focus-visible { border-color: var(--c); outline: none; }
+.zoom { display: flex; gap: 6px; align-items: center; }
+.btn { min-width: 34px; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: 500 13px var(--font-body); cursor: pointer; }
+.btn:hover, .btn:focus-visible { border-color: var(--accent); outline: none; }
+.pct { min-width: 44px; text-align: center; color: var(--muted); font: 12px var(--font-mono); }
+
+.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.6px);
+  background-size: var(--gs, 28px) var(--gs, 28px); background-position: var(--gx, 0) var(--gy, 0); }
+.stage.drag { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.labels { position: absolute; left: 0; top: 0; pointer-events: none; }
+
+.lane { position: absolute; border: 1px solid color-mix(in srgb, var(--c) 35%, var(--line)); border-radius: 22px; background: color-mix(in srgb, var(--c) 5%, transparent); }
+.lane-head { position: absolute; left: 28px; top: 20px; display: flex; align-items: baseline; gap: 14px; }
+.lane-head h2 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.01em; color: var(--c); }
+.lane-head span { font: 500 15px var(--font-mono); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.lane-note { position: absolute; left: 28px; top: 62px; width: 880px; color: var(--muted); font-size: 16px; line-height: 1.45; }
+
+.node { position: absolute; width: 216px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: border-color .15s, opacity .15s, transform .15s; outline: none; }
+.node:hover, .node:focus-visible { border-color: var(--c); transform: translateY(-2px); }
+.node img { display: block; width: 216px; background: #0b1514; -webkit-user-drag: none; user-select: none; pointer-events: none; }
+.node .cap { height: 64px; padding: 9px 12px 0; box-sizing: border-box; }
+.node .t { font-weight: 600; font-size: 14px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node .k { margin-top: 3px; font: 500 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
+.node.sheet .k { color: var(--sheet); }
+.node.dim { opacity: .38; }
+.node.flash { animation: flash 1.2s ease 1; }
+@keyframes flash { 0%, 100% { box-shadow: var(--shadow); } 40% { box-shadow: 0 0 0 5px var(--c), var(--shadow); } }
+
+.edge { fill: none; stroke: var(--arrow); stroke-width: 2.4; opacity: .85; }
+.edge.tab { stroke: var(--tab); stroke-dasharray: 9 7; }
+.edge.sheet { stroke: var(--sheet); }
+.edge.dim { opacity: .12; }
+.edge.on { opacity: 1; stroke-width: 3.6; }
+.arrowhead { fill: context-stroke; }
+.lbl { position: absolute; transform: translate(-50%, -50%); padding: 3px 9px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--fg); font: 500 13px var(--font-body); white-space: nowrap; transition: opacity .15s; }
+.lbl.short { max-width: 108px; white-space: normal; text-align: center; line-height: 1.2; border-radius: 12px; }
+.lbl.dim { opacity: .1; }
+.lbl.on { border-color: var(--arrow); }
+
+.legend { position: absolute; left: 16px; bottom: 16px; z-index: 3; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--panel) 94%, transparent); font-size: 12px; color: var(--muted); display: grid; gap: 7px; max-width: 250px; }
+.legend div { display: flex; align-items: center; gap: 10px; }
+.legend svg { flex: none; }
+.legend b { color: var(--fg); font-weight: 500; }
+@media (max-width: 640px) { .legend { display: none; } .brand p { display: none; } }
+
+.lightbox { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(4, 10, 10, .78); }
+.lightbox.open { display: flex; }
+.sheetbox { display: flex; gap: 28px; max-width: 920px; max-height: 100%; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 22px; overflow: auto; box-shadow: var(--shadow); }
+.sheetbox .shot { flex: none; width: min(300px, 42vw); align-self: flex-start; }
+.sheetbox .shot img { width: 100%; display: block; border-radius: 16px; border: 1px solid var(--line); }
+.sheetbox .info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.sheetbox .info .eyebrow { font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+.sheetbox h3 { margin: 0; font-size: 24px; font-weight: 600; text-wrap: balance; }
+.sheetbox p { margin: 0; line-height: 1.55; color: var(--fg); max-width: 60ch; }
+.sheetbox h4 { margin: 6px 0 0; font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 6px; }
+.links button { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); font: 500 12.5px var(--font-body); cursor: pointer; }
+.links button:hover, .links button:focus-visible { border-color: var(--accent); outline: none; }
+.links em { font-style: normal; color: var(--muted); }
+.close { align-self: flex-end; margin-top: auto; }
+@media (max-width: 640px) { .sheetbox { flex-direction: column; gap: 16px; } .sheetbox .shot { width: min(240px, 70vw); align-self: center; } }
+@media (prefers-reduced-motion: reduce) { .node, .lbl, .edge { transition: none; } .node.flash { animation: none; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Crux app map</h1>
+      <p id="brand-sub">every screen, and what leads where</p>
+    </div>
+    <nav class="chips" id="chips" aria-label="Jump to a flow"></nav>
+    <div class="zoom">
+      <button class="btn" id="zout" aria-label="Zoom out">−</button>
+      <span class="pct" id="pct">100%</span>
+      <button class="btn" id="zin" aria-label="Zoom in">+</button>
+      <button class="btn" id="fit">Fit all</button>
+    </div>
+  </header>
+  <main class="stage" id="stage">
+    <div class="world" id="world">
+      <svg class="edges" id="edges" aria-hidden="true">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <path d="M0 0 L10 5 L0 10 z" class="arrowhead"></path>
+          </marker>
+        </defs>
+      </svg>
+      <div class="labels" id="labels"></div>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--arrow)" stroke-width="2.4"/></svg><span><b>Tap</b> goes to the next screen</span></div>
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--sheet)" stroke-width="2.4"/></svg><span><b>Sheet</b> or dialog opens over it</span></div>
+      <div><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="var(--tab)" stroke-width="2.4" stroke-dasharray="6 5"/></svg><span><b>Tab</b> or scroll, same screen</span></div>
+      <div>Drag to pan, pinch or Ctrl+scroll to zoom. Tap a screen for details.</div>
+    </div>
+  </main>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+  <div class="sheetbox" id="sheetbox">
+    <div class="shot"><img id="lb-img" alt=""></div>
+    <div class="info">
+      <div class="eyebrow" id="lb-kind"></div>
+      <h3 id="lb-title"></h3>
+      <p id="lb-desc"></p>
+      <h4>Opens</h4>
+      <div class="links" id="lb-out"></div>
+      <h4>Reached from</h4>
+      <div class="links" id="lb-in"></div>
+      <button class="btn close" id="lb-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CW = 216, STEP = 344, ROW = 760, HEAD = 230, PADX = 28, LANEGAP = 56;
+  var DATA = /*APPMAP_DATA*/ null;
+  var LANES = DATA.lanes.map(function (l) { return { id: l.id, name: l.name, tab: l.tab, c: l.c, note: l.note, nodes: DATA.pages.filter(function (p) { return p.lane === l.id; }) }; });
+  var EDGES = DATA.edges;
+  var M = DATA.meta || {};
+  document.getElementById('brand-sub').textContent = 'every screen, and what leads where · ' + (DATA.pages.length) + ' pages · demo data' + (M.version ? ' · v' + M.version : '') + (M.commit ? ' · ' + M.commit : '') + (M.captured ? ' · ' + M.captured : '');
+
+  var world = document.getElementById('world'), stage = document.getElementById('stage');
+  var svg = document.getElementById('edges'), labelsEl = document.getElementById('labels');
+  var ND = {}, laneRect = [], order = [];
+
+  function imgH(n) { return n.ih || 480; }
+  // id suffixes let a screen appear in two flows (the same shot, a different place on the map)
+  LANES.forEach(function (lane, li) {
+    var maxCol = 0, maxRow = 0;
+    lane.nodes.forEach(function (n) { maxCol = Math.max(maxCol, n.col); maxRow = Math.max(maxRow, n.row); });
+    lane.top = li ? laneRect[li - 1].top + laneRect[li - 1].h + LANEGAP : 0;
+    var w = (maxCol + 1) * STEP + PADX * 2 - (STEP - CW);
+    var h = HEAD + maxRow * ROW + 544 + 40;
+    laneRect.push({ top: lane.top, w: w, h: h });
+    lane.nodes.forEach(function (n) {
+      var id = n.id, h2 = imgH(n) + 64;
+      ND[id] = { id: id, file: n.id, ih: n.ih, title: n.title, kind: n.kind, lane: lane, x: PADX + n.col * STEP, y: lane.top + HEAD + n.row * ROW, w: CW, h: h2, desc: n.desc, out: [], inn: [] };
+      order.push(id);
+    });
+  });
+  var worldW = Math.max.apply(null, laneRect.map(function (r) { return r.w; })), worldH = laneRect[laneRect.length - 1].top + laneRect[laneRect.length - 1].h;
+
+  // lanes and nodes
+  LANES.forEach(function (lane, li) {
+    var r = laneRect[li], el = document.createElement('section');
+    el.className = 'lane'; el.style.cssText = 'left:0;top:' + r.top + 'px;width:' + r.w + 'px;height:' + r.h + 'px;--c:var(' + lane.c + ')';
+    el.innerHTML = '<div class="lane-head"><h2>' + lane.name + '</h2><span>' + lane.tab + '</span></div><div class="lane-note">' + lane.note + '</div>';
+    world.insertBefore(el, svg);
+  });
+  order.forEach(function (id) {
+    var n = ND[id], el = document.createElement('div');
+    el.className = 'node' + (n.kind === 'sheet' ? ' sheet' : ''); el.tabIndex = 0; el.setAttribute('role', 'button'); el.dataset.id = id;
+    el.style.cssText = 'left:' + n.x + 'px;top:' + n.y + 'px;--c:var(' + n.lane.c + ')';
+    var k = n.kind === 'sheet' ? 'Sheet' : n.kind === 'notification' ? 'Notification' : n.kind === 'mode' ? 'Mode' : 'Screen';
+    el.innerHTML = '<img src="shots/' + n.file + '.webp" alt="' + n.title + ' screenshot" width="216" height="' + imgH(n) + '" loading="eager" decoding="async"><div class="cap"><div class="t">' + n.title + '</div><div class="k">' + (n.kind === 'sheet' ? 'Sheet' : k) + '</div></div>';
+    el.setAttribute('aria-label', n.title + ', ' + k);
+    n.el = el; world.appendChild(el);
+  });
+
+  // edges
+  var edgeEls = [];
+  function route() {
+    var sides = {};
+    EDGES.forEach(function (e, i) {
+      var a = ND[e[0]], b = ND[e[1]];
+      if (!a || !b) { console.warn('missing node', e); return; }
+      var acx = a.x + a.w / 2, acy = a.y + a.h / 2, bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
+      var dx = bcx - acx, dy = bcy - acy, mode;
+      if (Math.abs(dy) < 250) mode = Math.abs(dx) > STEP * 1.2 ? 'arc' : (dx >= 0 ? 'h+' : 'h-');
+      else mode = dy > 0 ? 'v+' : 'v-';
+      var sa, sb;
+      if (mode === 'h+') { sa = 'R'; sb = 'L'; } else if (mode === 'h-') { sa = 'L'; sb = 'R'; }
+      else if (mode === 'arc') { sa = 'T'; sb = 'T'; } else if (mode === 'v+') { sa = 'B'; sb = 'T'; } else { sa = 'T'; sb = 'B'; }
+      (sides[a.id + sa] = sides[a.id + sa] || []).push([i, 'a']); (sides[b.id + sb] = sides[b.id + sb] || []).push([i, 'b']);
+      e._m = { a: a, b: b, mode: mode, sa: sa, sb: sb };
+      a.out.push({ to: b.id, label: e[2], type: e[3] }); b.inn.push({ from: a.id, label: e[2], type: e[3] });
+    });
+    function anchor(n, side, idx, count) {
+      var t = count === 1 ? 0.5 : 0.18 + 0.64 * (idx / (count - 1));
+      if (side === 'L') return [n.x, n.y + Math.min(n.h, 140) + (n.h > 200 ? 160 * t : 0)];
+      if (side === 'R') return [n.x + n.w, n.y + Math.min(n.h, 140) + (n.h > 200 ? 160 * t : 0)];
+      if (side === 'T') return [n.x + n.w * t, n.y];
+      return [n.x + n.w * t, n.y + n.h];
+    }
+    var frag = document.createDocumentFragment(), lfrag = document.createDocumentFragment();
+    EDGES.forEach(function (e, i) {
+      var m = e._m; if (!m) return;
+      var la = sides[m.a.id + m.sa], lb = sides[m.b.id + m.sb];
+      var ia = la.findIndex(function (q) { return q[0] === i && q[1] === 'a'; }), ib = lb.findIndex(function (q) { return q[0] === i && q[1] === 'b'; });
+      var p0 = anchor(m.a, m.sa, ia, la.length), p3 = anchor(m.b, m.sb, ib, lb.length);
+      var c1, c2, kx = Math.max(60, Math.abs(p3[0] - p0[0]) * 0.45), ky = Math.max(90, Math.abs(p3[1] - p0[1]) * 0.38);
+      if (m.mode === 'h+') { c1 = [p0[0] + kx, p0[1]]; c2 = [p3[0] - kx, p3[1]]; }
+      else if (m.mode === 'h-') { c1 = [p0[0] - kx, p0[1]]; c2 = [p3[0] + kx, p3[1]]; }
+      else if (m.mode === 'arc') { var up = 110 + (i % 3) * 28; c1 = [p0[0], p0[1] - up]; c2 = [p3[0], p3[1] - up]; }
+      else if (m.mode === 'v+') { c1 = [p0[0], p0[1] + ky]; c2 = [p3[0], p3[1] - ky]; }
+      else { c1 = [p0[0], p0[1] - ky]; c2 = [p3[0], p3[1] + ky]; }
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M' + p0 + ' C' + c1 + ' ' + c2 + ' ' + p3);
+      path.setAttribute('class', 'edge ' + e[3]); path.setAttribute('marker-end', 'url(#ah)');
+      path.style.color = '';
+      frag.appendChild(path);
+      var mx = (p0[0] + 3 * c1[0] + 3 * c2[0] + p3[0]) / 8, my = (p0[1] + 3 * c1[1] + 3 * c2[1] + p3[1]) / 8;
+      var lbl = document.createElement('div'); lbl.className = 'lbl' + (m.mode === 'h+' || m.mode === 'h-' ? ' short' : ''); lbl.textContent = e[2]; lbl.style.left = mx + 'px'; lbl.style.top = my + 'px';
+      lfrag.appendChild(lbl);
+      edgeEls.push({ path: path, lbl: lbl, from: m.a.id, to: m.b.id });
+    });
+    svg.appendChild(frag); labelsEl.appendChild(lfrag);
+  }
+  route();
+  [svg, labelsEl, world].forEach(function (el) { el.style.width = worldW + 'px'; el.style.height = worldH + 'px'; });
+  svg.setAttribute('width', worldW); svg.setAttribute('height', worldH);
+  // labels sit above cards; edges below
+  labelsEl.style.zIndex = 2; svg.style.zIndex = 0;
+  Array.prototype.forEach.call(document.querySelectorAll('.node'), function (n) { n.style.zIndex = 1; });
+
+  // highlight
+  function focusNode(id) {
+    var rel = {}; if (id) rel[id] = 1;
+    edgeEls.forEach(function (e) {
+      var on = id && (e.from === id || e.to === id);
+      if (on) { rel[e.from] = 1; rel[e.to] = 1; }
+      e.path.classList.toggle('on', !!on); e.lbl.classList.toggle('on', !!on);
+      e.path.classList.toggle('dim', !!id && !on); e.lbl.classList.toggle('dim', !!id && !on);
+    });
+    order.forEach(function (k) { ND[k].el.classList.toggle('dim', !!id && !rel[k]); });
+  }
+  world.addEventListener('pointerover', function (ev) { var n = ev.target.closest && ev.target.closest('.node'); if (n && ev.pointerType === 'mouse') focusNode(n.dataset.id); });
+  world.addEventListener('pointerout', function (ev) { var n = ev.target.closest && ev.target.closest('.node'); if (n && ev.pointerType === 'mouse') focusNode(null); });
+  world.addEventListener('focusin', function (ev) { var n = ev.target.closest('.node'); if (n) focusNode(n.dataset.id); });
+  world.addEventListener('focusout', function () { focusNode(null); });
+
+  // pan and zoom
+  var V = { x: 0, y: 0, s: 1 }, MIN = 0.06, MAX = 1.6;
+  function apply() {
+    world.style.transform = 'translate(' + V.x + 'px,' + V.y + 'px) scale(' + V.s + ')';
+    stage.style.setProperty('--gs', 28 * V.s + 'px'); stage.style.setProperty('--gx', V.x + 'px'); stage.style.setProperty('--gy', V.y + 'px');
+    document.getElementById('pct').textContent = Math.round(V.s * 100) + '%';
+  }
+  function zoomAt(cx, cy, f) {
+    var s = Math.min(MAX, Math.max(MIN, V.s * f)); f = s / V.s;
+    V.x = cx - (cx - V.x) * f; V.y = cy - (cy - V.y) * f; V.s = s; apply();
+  }
+  function view() { var r = stage.getBoundingClientRect(); return r.width > 100 ? r : { left: 0, top: 0, width: window.innerWidth || 1000, height: Math.max(300, (window.innerHeight || 700) - 60) }; }
+  function fitRect(x, y, w, h, maxS) {
+    var r = view(), s = Math.min((r.width - 40) / w, (r.height - 40) / h, maxS || MAX); s = Math.max(MIN, s);
+    V.s = s; V.x = (r.width - w * s) / 2 - x * s; V.y = (r.height - h * s) / 2 - y * s; apply();
+  }
+  function showLane(i) {
+    var r = laneRect[i], v = view(), s = Math.min(0.62, (v.width - 32) / r.w);
+    V.s = Math.max(MIN, s); V.x = 16 - 0 * s; V.y = 16 - r.top * V.s; apply();
+  }
+  function fitAll() { fitRect(0, 0, worldW, worldH); }
+  var pts = {}, drag = null, pinch = null, downNode = null;
+  stage.addEventListener('pointerdown', function (ev) {
+    if (ev.button > 0) return;
+    stage.setPointerCapture(ev.pointerId); pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    downNode = ev.target.closest && ev.target.closest('.node');
+    var ids = Object.keys(pts);
+    if (ids.length === 1) drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false };
+    else if (ids.length === 2) { var a = pts[ids[0]], b = pts[ids[1]]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: V.s }; drag = null; }
+  });
+  stage.addEventListener('pointermove', function (ev) {
+    if (!pts[ev.pointerId]) return; pts[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    var ids = Object.keys(pts);
+    if (pinch && ids.length === 2) {
+      var a = pts[ids[0]], b = pts[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y), r = view();
+      zoomAt((a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, (d / pinch.d * pinch.s) / V.s);
+    } else if (drag) {
+      var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) > 5) { drag.moved = true; stage.classList.add('drag'); }
+      if (drag.moved) { V.x = drag.vx + dx; V.y = drag.vy + dy; apply(); }
+    }
+  });
+  function up(ev) {
+    var wasMoved = drag && drag.moved, n = downNode;
+    delete pts[ev.pointerId]; stage.classList.remove('drag');
+    if (Object.keys(pts).length < 2) pinch = null;
+    if (ev.type === 'pointerup' && drag && !wasMoved && n && Object.keys(pts).length === 0) openBox(n.dataset.id);
+    if (Object.keys(pts).length === 0) { drag = null; downNode = null; }
+  }
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', function (ev) {
+    ev.preventDefault(); var r = view();
+    if (ev.ctrlKey || ev.metaKey) zoomAt(ev.clientX - r.left, ev.clientY - r.top, Math.exp(-ev.deltaY * 0.01));
+    else { V.x -= ev.deltaX; V.y -= ev.deltaY; apply(); }
+  }, { passive: false });
+  document.getElementById('zin').onclick = function () { var r = view(); zoomAt(r.width / 2, r.height / 2, 1.25); };
+  document.getElementById('zout').onclick = function () { var r = view(); zoomAt(r.width / 2, r.height / 2, 0.8); };
+  document.getElementById('fit').onclick = fitAll;
+  var chips = document.getElementById('chips');
+  LANES.forEach(function (l, i) {
+    var b = document.createElement('button'); b.className = 'chip'; b.style.setProperty('--c', 'var(' + l.c + ')');
+    b.innerHTML = '<i></i>' + l.name; b.onclick = function () { showLane(i); }; chips.appendChild(b);
+  });
+
+  // detail box
+  var box = document.getElementById('lightbox');
+  function linkBtn(wrap, id, suffix) {
+    var n = ND[id], b = document.createElement('button'); b.textContent = n.title + (suffix ? ' · ' + suffix : '');
+    b.onclick = function () { closeBox(); goTo(id); }; wrap.appendChild(b);
+  }
+  function openBox(id) {
+    var n = ND[id]; box.style.setProperty('--c', 'var(' + n.lane.c + ')');
+    document.getElementById('lb-img').src = 'shots/' + n.file + '.webp'; document.getElementById('lb-img').alt = n.title + ' screenshot';
+    document.getElementById('lb-kind').textContent = n.lane.name + ' · ' + (n.kind === 'sheet' ? 'sheet or dialog' : n.kind === 'notification' ? 'notification' : n.kind === 'mode' ? 'mode' : 'screen');
+    document.getElementById('lb-title').textContent = n.title; document.getElementById('lb-desc').textContent = n.desc;
+    var o = document.getElementById('lb-out'), i = document.getElementById('lb-in'); o.innerHTML = ''; i.innerHTML = '';
+    n.out.forEach(function (e) { linkBtn(o, e.to, e.label); }); n.inn.forEach(function (e) { linkBtn(i, e.from, e.label); });
+    if (!n.out.length) o.innerHTML = '<em>Nothing; back returns.</em>'; if (!n.inn.length) i.innerHTML = '<em>A tab or button.</em>';
+    box.classList.add('open'); document.getElementById('lb-close').focus();
+  }
+  function closeBox() { box.classList.remove('open'); }
+  function goTo(id) {
+    var n = ND[id], r = view(), s = Math.max(V.s, 0.5);
+    V.s = Math.min(MAX, s); V.x = r.width / 2 - (n.x + n.w / 2) * V.s; V.y = r.height / 2 - (n.y + n.h / 2) * V.s; apply();
+    n.el.classList.remove('flash'); void n.el.offsetWidth; n.el.classList.add('flash');
+  }
+  document.getElementById('lb-close').onclick = closeBox;
+  box.addEventListener('pointerdown', function (ev) { if (ev.target === box) closeBox(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') closeBox();
+    if (ev.key === 'Enter' && document.activeElement && document.activeElement.classList.contains('node')) openBox(document.activeElement.dataset.id);
+  });
+  window.addEventListener('resize', function () { apply(); });
+  var touched = false;
+  ['pointerdown', 'wheel', 'keydown'].forEach(function (t) { stage.addEventListener(t, function () { touched = true; }, { passive: true }); });
+  ['zin', 'zout', 'fit', 'chips'].forEach(function (id) { document.getElementById(id).addEventListener('click', function () { touched = true; }); });
+  showLane(0);
+  if (window.ResizeObserver) new ResizeObserver(function () { if (!touched) showLane(0); }).observe(stage);
+})();
+</script>
