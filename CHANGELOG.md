@@ -23,6 +23,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Today's plan shows the plan**: each block with its exercises and their sets, reps, time and
+  load, and the week strip shows the dates.
 - **A simpler live session**: every exercise in one list, each with a table of its sets showing
   last time's values. Tap a value to change it in place and tick the set. A dock at the bottom
   holds Done for the next set, the rest countdown and the interval timer; climbs, extra exercises

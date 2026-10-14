@@ -11,7 +11,7 @@ dashboard. While editing, a bar at the top holds *Add widget* and *Done*.
 
 | Widget | Shows |
 | --- | --- |
-| **Today's plan** | Today's plan from your week (*Train → Week*), with how long it takes, its blocks, *Start session* and *View plan*, and the week as a strip of dots: teal for plans, amber for climbing, green once done. On a rest day it says what's next. With no week set up, it rotates through your plans by day of the week. |
+| **Today's plan** | Today's plan from your week (*Train → Week*), with how long it takes, each block with its exercises and what they ask for (wide shows the first four, large all of them), *Start session* and *View plan*, and the week as a strip of days with their dates and dots: teal for plans, amber for climbing, green once done. On a rest day it says what's next. With no week set up, it rotates through your plans by day of the week. |
 | **This week** | Climbs and sends since Monday. Tap it for the **Climbs this week** page: the week's climbs, sends, days and hardest send, then each day's climbs (sessions included) as the Journal shows them. The arrows go back through earlier weeks. |
 | **Days on the wall** | Days you climbed since Monday. Tap it for the **Days on the wall** page: your days this week, month and year and your week streak, and a month calendar with each climbing day filled (deeper for more climbs). Tap a day to see its journal under the calendar; the arrows page through the months. |
 | **Latest best** | Your newest hardest send: the latest send harder than every send before it, in any style. An easier flash after a harder redpoint doesn't replace it. Grades are compared within a scale. |

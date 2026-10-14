@@ -318,6 +318,11 @@ fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifi
                     style = DayLabel,
                     color = if (isToday) colors.onPrimaryContainer else colors.onSurfaceVariant,
                 )
+                Text(
+                    day.date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isToday) colors.onPrimaryContainer else colors.onSurface,
+                )
                 Column(
                     Modifier
                         .width(6.dp)

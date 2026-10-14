@@ -236,25 +236,54 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (large) {
-            Column(Modifier.padding(top = CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                plan.blocks.flatMap { it.items }.forEach { item ->
-                    Row {
-                        Text(item.exercise.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        // The day's plan in detail: each block, and each exercise with what it asks for. Wide shows
+        // the first few exercises; large shows them all.
+        val imperial = LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+        val total = plan.blocks.sumOf { it.items.size }
+        var budget = if (large) Int.MAX_VALUE else WIDE_PLAN_ROWS
+        Column(
+            Modifier.padding(top = CruxTheme.space.s2).testTag("todays_plan_detail"),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            plan.blocks.forEach { block ->
+                if (budget <= 0 || block.items.isEmpty()) return@forEach
+                if (block.name.isNotBlank()) {
+                    Text(
+                        block.name.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                block.items.take(budget).forEach { item ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            item.prescription(LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                            item.exercise.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text(
+                            item.prescription(imperial),
                             style = CruxTheme.type.code,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // Each side keeps at least half the row, so neither shrinks to a letter.
+                            modifier = Modifier.weight(1f, fill = false).padding(start = CruxTheme.space.s2),
                         )
                     }
                 }
+                budget -= block.items.size
             }
-        } else {
-            Text(
-                plan.blocks.joinToString(" · ") { it.name },
-                style = CruxTheme.type.code,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (!large && total > WIDE_PLAN_ROWS) {
+                Text(
+                    "and ${total - WIDE_PLAN_ROWS} more",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (state.schedule.isNotEmpty()) com.hardtekpt.crux.ui.train.WeekStrip(state.schedule, state.today, Modifier.padding(top = CruxTheme.space.s3))
         Row(
@@ -605,3 +634,6 @@ private fun ExerciseWidget(exerciseId: Long?, state: HomeUiState, size: WidgetSi
         }
     }
 }
+
+/** How many of today's exercises the wide Today's plan widget lists before "and N more". */
+private const val WIDE_PLAN_ROWS = 4
