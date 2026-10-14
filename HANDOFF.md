@@ -9,12 +9,18 @@ consistency). Built for Boss's Pixel 8a, with an emulator for testing.
 ## Where things are
 - Repo: `C:\Users\ffvd\Projects\crux` (git, remote `hardtekpt/crux`; work on `dev`, release by merging to `main` — see CLAUDE.md). Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
-- Dev script: `.\crux.cmd run` (emulator `Crux_Pixel_9`), `.\crux.cmd run -Device 192.168.1.128:<port>`
-  (phone over wireless debugging; the port changes, last one was **42117** — ask Boss when
-  `adb connect` is refused), `.\crux.cmd test`, `.\crux.cmd device-test` (emulator only).
+- Dev script: `.\crux.cmd run` (emulator `Crux_Pixel_9`, debug build), `.\crux.cmd test`,
+  `.\crux.cmd device-test` (emulator only).
+- **The phone runs the `internal` build** (release-like: R8, baseline profile, not debuggable; same
+  app id and key as debug, so data stays). Install it with `./gradlew :app:assembleInternal` and
+  `adb install -r app/build/outputs/apk/internal/app-internal.apk` to `192.168.1.128:<port>` over
+  wireless debugging (the port changes, last one was **40799**; ask Boss when `adb connect` is
+  refused). Never install `app-debug.apk` on the phone. Because it isn't debuggable, `run-as`
+  backups don't work: ask Boss to export from Settings → Backups before a risky install.
 - Gradle from a shell needs `JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'`.
 - **Never run device tests on the phone**: connected tests uninstall the app (wipes data).
-  Device tests also uninstall the app from the emulator; reinstall afterwards.
+  Device tests also uninstall the app from the emulator; reinstall afterwards. The emulator stays
+  on the debug build.
 - Design system artifact: https://claude.ai/artifact/7T76aAwmEZHfY339ZaLZ4Q
   Input kit preview: https://claude.ai/artifact/XGd4dKtVPqvnSBhZerD7Ea
 
@@ -27,24 +33,35 @@ tests first and the install only after they finish (tests uninstall the app from
 ## Stack
 Kotlin 2.4, AGP 9.4 (built-in Kotlin), Compose (BOM 2026.09), Material 3, Navigation Compose
 (type-safe, nested graph per tab), Hilt, Room 2.8 with exported schemas and auto-migrations
-(now **schema 16**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
+(now **schema 25**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
 Two databases: the climber's own and a demo one (Settings → Demo mode).
 
 ## What's done (latest first)
+- **Live notifications** (`crux.live`): while a session runs, a Live Update on Android 16 (segmented
+  bar, status-bar chip) or a plain progress notification on 8 to 15. Plan sessions (Set done, then the
+  rest countdown with +30 s, −30 s, Skip), climbing days (Log climb), and the interval timer (Pause,
+  Resume, Stop), which the Interval timer page shares through `LiveTimers`.
+- **Automatic backups**: daily or weekly to a folder chosen with the system picker, newest 3, 5 or
+  10 kept, own data only (never the demo); Backups page has the settings and *Back up now*.
+- **Weekly schedule** (schema 25): a Week tab on Train, and Home's Today's plan follows it.
+- **Performance**: an `internal` build type, a baseline profile (`baselineprofile` module), data
+  built off the main thread, a smoother Journal and lighter animations.
+- **Sessions**: run a plan or a climbing day, log sets, rests, interval timers, climbs; finished
+  sessions can be edited; sets done in sessions count toward personal records (read-only there).
+  **Backups** now include sessions, the schedule, settings and videos, and ask about duplicates.
 - **Profile rework + Journal timeline** (schema 14): You tab = climber card, consistency, records,
   compact weight tracker (sparkline + Log), and a menu list → Measurements (body stats, weight chart,
   weigh-ins), Circumferences (left/right for forearm, bicep, thigh; chest, waist), Notes, Places
   (moved out of Journal; place/problem pages now live in the You graph), Settings. Notes have an
   optional tag (chips in the editor, filter on Notes). Journal is one timeline (climbs per place,
-  training results, notes) with All/Climbs/Training/Notes filters; workout sessions slot in as
-  another `TimelineEntry` once the session logger exists. `FOREARM`/`BICEP`/`THIGH` mean the left side.
+  training results, sessions, notes) with All/Climbs/Training/Notes filters.
+  `FOREARM`/`BICEP`/`THIGH` mean the left side.
 - `b5f1d55` **Profile page** (You tab): climber card (tape strip, days/climbs this year, hardest
   boulder/route), consistency grid (GitHub-style, weekly streaks), personal records per exercise
   (log a result; per-exercise history; PR = heaviest load, then reps, or longest hold), measurements
   (weight + trend, body stats, new circumferences: forearm, bicep, chest, waist, thigh), notes
   (new table; editor with pin/delete; "Add a note" in the Log menu now works), preferences summary
-  → Settings. Notes and records are in backups. **Waiting on**: device test run, then install and
-  screenshots of the You tab (Demo mode on) for a visual check before reporting to Boss.
+  → Settings. Notes and records are in backups.
 - `33bdbc3` Fixed a real dashboard bug: a removed widget's old position could swallow a drag.
   The dashboard drag device test should now pass reliably (to be confirmed by the Tests thread).
 - Places: custom place cards (banner from wall photo / map / type art; climbs, walls, open
@@ -73,18 +90,17 @@ Two databases: the climber's own and a demo one (Settings → Demo mode).
 - Places: one local scale per place; climbs copy a problem's grade but stay editable.
 - Projects are derived (no flag): a non-retired problem with goes and no send.
 - Retired = taken down: hidden from pickers/projects, history kept. Wall Reset retires its problems.
-- Images/videos are copied into app storage (`filesDir/area_images`); photos are scaled to 2048 px
-  and included in backups as base64; **videos are not backed up** (too large).
+- Images/videos are copied into app storage (`filesDir/area_images`); photos are scaled to 2048 px.
+  Backups include photos and videos by default, each with its own switch on the Backups page.
 - Map is OpenStreetMap (no account/key). Google Maps tiles would need a Maps API key from Boss.
 - Imperial is display-only; data stays kg/cm. Added load on exercises stays in kg.
-- Personal records are entered by hand until a session logger exists.
+- Personal records are results logged by hand plus sets done in sessions (merged on read; session
+  sets have negative ids and can only be changed in their session).
 
 ## What's left / next steps
-1. Confirm `b5f1d55` (device tests, install, screenshots), fix anything visual, then report the
-   profile page to Boss with a short layout description so they can steer.
-2. Session logger ("Start a workout" in the Log menu is still disabled): run a plan, log sets;
-   then derive exercise PRs from logged sets and add sessions to the consistency grid and backups.
-3. Optional ideas offered to Boss, not yet asked for: manual "project" flag on problems; swipe on
-   the Places type filters; Google Maps tiles (needs a key); video backup; add the input-kit
-   components to the design system artifact (step 5 of that plan).
-4. Housekeeping: `MainActivityTest` dashboard drag test was flaky before `33bdbc3`; keep an eye on it.
+1. **Release 0.4.0**, next up per Boss (`version.properties` is still 0.3.0): follow the release
+   procedure in CLAUDE.md once Boss says go; device tests and the CHANGELOG move happen then.
+2. Optional ideas offered to Boss, not yet asked for: manual "project" flag on problems; swipe on
+   the Places type filters; Google Maps tiles (needs a key); add the input-kit components to the
+   design system artifact (step 5 of that plan).
+3. Housekeeping: `MainActivityTest` dashboard drag test was flaky before `33bdbc3`; keep an eye on it.

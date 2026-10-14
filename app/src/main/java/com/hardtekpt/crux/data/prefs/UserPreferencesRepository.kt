@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
+import com.hardtekpt.crux.data.model.IntervalSettings
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -15,8 +16,20 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
 
-/** The app's accent colour. Teal is the brand; the others are tuned to match it (ui/theme/Color.kt). */
-enum class Accent(val label: String) { TEAL("Teal"), BLUE("Blue"), VIOLET("Violet"), PINK("Pink") }
+/**
+ * The app's accent colour, in the order Settings shows them: round the colour wheel, then the
+ * two quiet ones.
+ * Teal is the brand; the others are tuned to match it (ui/theme/Color.kt).
+ */
+enum class Accent(val label: String) {
+    TEAL("Teal"),
+    BLUE("Blue"),
+    VIOLET("Violet"),
+    MAGENTA("Magenta"),
+    PINK("Pink"),
+    SLATE("Slate"),
+    CHALK("Chalk"),
+}
 
 /** Text size in Crux, multiplying the phone's own font size. */
 enum class TextSize(val label: String, val scale: Float) {
@@ -65,6 +78,19 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[TEXT_SIZE] = size.name }
     }
 
+    /** The standalone interval timer's last setup, so it opens as it was left. */
+    val intervalTimer: Flow<IntervalSettings?> = dataStore.data.map { prefs ->
+        prefs[INTERVAL_TIMER]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 6 }?.let { v ->
+            IntervalSettings(v[0], v[1], v[2], v[3], v[4], v[5])
+        }
+    }
+
+    suspend fun setIntervalTimer(settings: IntervalSettings) {
+        dataStore.edit {
+            it[INTERVAL_TIMER] = with(settings) { listOf(prepSeconds, workSeconds, restSeconds, repeats, cycles, cycleRestSeconds) }.joinToString(",")
+        }
+    }
+
     val units: Flow<UnitSystem> = dataStore.data.map { prefs ->
         prefs[UNITS]?.let { name -> UnitSystem.entries.firstOrNull { it.name == name } } ?: UnitSystem.METRIC
     }
@@ -90,6 +116,44 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
     /** The place last logged at, so the next log starts there. */
     // Beeps for the last seconds of a timer phase and when the phase changes.
     val timerSounds: Flow<Boolean> = dataStore.data.map { it[TIMER_SOUNDS] ?: true }
+
+    /** Seconds of rest started when a climb is logged in a session; 0 is off. */
+    val climbRestSeconds: Flow<Int> = dataStore.data.map { it[CLIMB_REST] ?: 0 }
+
+    /** Automatic backups: the folder (a document tree), how often, how many to keep, and the last run. */
+    val autoBackup: Flow<AutoBackupPrefs> = dataStore.data.map {
+        AutoBackupPrefs(
+            folder = it[AUTO_BACKUP_FOLDER],
+            frequency = it[AUTO_BACKUP_FREQUENCY]?.let { name -> runCatching { AutoBackupFrequency.valueOf(name) }.getOrNull() } ?: AutoBackupFrequency.OFF,
+            keep = it[AUTO_BACKUP_KEEP] ?: 5,
+            lastAtMillis = it[AUTO_BACKUP_LAST],
+            lastError = it[AUTO_BACKUP_ERROR],
+        )
+    }
+
+    suspend fun setAutoBackupFolder(uri: String?) {
+        dataStore.edit { if (uri == null) it.remove(AUTO_BACKUP_FOLDER) else it[AUTO_BACKUP_FOLDER] = uri }
+    }
+
+    suspend fun setAutoBackupFrequency(frequency: AutoBackupFrequency) {
+        dataStore.edit { it[AUTO_BACKUP_FREQUENCY] = frequency.name }
+    }
+
+    suspend fun setAutoBackupKeep(keep: Int) {
+        dataStore.edit { it[AUTO_BACKUP_KEEP] = keep.coerceIn(1, 50) }
+    }
+
+    /** Records a run: when it worked, or why it didn't. */
+    suspend fun recordAutoBackup(atMillis: Long?, error: String?) {
+        dataStore.edit {
+            if (atMillis != null) it[AUTO_BACKUP_LAST] = atMillis
+            if (error == null) it.remove(AUTO_BACKUP_ERROR) else it[AUTO_BACKUP_ERROR] = error
+        }
+    }
+
+    suspend fun setClimbRestSeconds(seconds: Int) {
+        dataStore.edit { it[CLIMB_REST] = seconds.coerceAtLeast(0) }
+    }
 
     suspend fun setTimerSounds(enabled: Boolean) {
         dataStore.edit { it[TIMER_SOUNDS] = enabled }
@@ -150,6 +214,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val ACCENT = stringPreferencesKey("accent")
         val TEXT_SIZE = stringPreferencesKey("text_size")
+        val INTERVAL_TIMER = stringPreferencesKey("interval_timer")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
@@ -157,6 +222,12 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val LAST_SECTION = longPreferencesKey("last_section_id")
         val LAST_AREA = longPreferencesKey("last_area_id")
         val TIMER_SOUNDS = booleanPreferencesKey("timer_sounds")
+        val CLIMB_REST = androidx.datastore.preferences.core.intPreferencesKey("climb_rest_seconds")
+        val AUTO_BACKUP_FOLDER = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_folder")
+        val AUTO_BACKUP_FREQUENCY = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_frequency")
+        val AUTO_BACKUP_KEEP = androidx.datastore.preferences.core.intPreferencesKey("auto_backup_keep")
+        val AUTO_BACKUP_LAST = androidx.datastore.preferences.core.longPreferencesKey("auto_backup_last")
+        val AUTO_BACKUP_ERROR = androidx.datastore.preferences.core.stringPreferencesKey("auto_backup_error")
         val TIMER_COMPACT = booleanPreferencesKey("timer_compact")
         val BACKUP_PHOTOS = booleanPreferencesKey("backup_photos")
         val BACKUP_VIDEOS = booleanPreferencesKey("backup_videos")
@@ -167,3 +238,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
             ?: discipline.defaultScale
     }
 }
+
+enum class AutoBackupFrequency(val label: String, val days: Long) { OFF("Off", 0), DAILY("Daily", 1), WEEKLY("Weekly", 7) }
+
+data class AutoBackupPrefs(
+    val folder: String? = null,
+    val frequency: AutoBackupFrequency = AutoBackupFrequency.OFF,
+    val keep: Int = 5,
+    val lastAtMillis: Long? = null,
+    val lastError: String? = null,
+)

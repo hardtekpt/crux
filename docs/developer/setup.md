@@ -27,9 +27,26 @@ Windows, escape the colon: `sdk.dir=C\:/Users/you/AppData/Local/Android/Sdk`.
 ./gradlew spotlessApply                                 # fix formatting
 ./gradlew recordRoborazziDebug                          # re-record screenshots after an intended UI change
 ./gradlew connectedDebugAndroidTest                     # instrumented tests, on an emulator
+./gradlew assembleInternal                              # optimized build with the debug app id (below)
 ```
 
 The debug build installs next to a release build: its app id ends in `.debug`.
+
+The **internal** build is the release build (R8, baseline profile, not debuggable) under the debug
+app's id and key, so it installs over a phone's debug app and keeps its data. Use it to judge
+speed: debug builds are several times slower (on the emulator, cold start is about 2.5 s for
+debug against 0.6 s for internal). It isn't debuggable, so `run-as` doesn't work on it; back up
+from the app instead.
+
+### Baseline profile and benchmarks
+
+`baselineprofile/` generates the baseline profile (`app/src/main/generated/baselineProfiles/`,
+committed) and holds macrobenchmarks for cold start and scrolling. With an emulator running:
+
+```sh
+./gradlew :app:generateBaselineProfile                          # regenerate after big UI changes
+./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest # startup and frame timings
+```
 
 ### The `crux` script (Windows)
 

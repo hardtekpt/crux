@@ -1,7 +1,7 @@
 # Data model
 
 Room database [`CruxDatabase`](../../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt),
-**schema 21** at the time of writing. The exported schemas live in
+**schema 25** at the time of writing. The exported schemas live in
 [`app/schemas/`](../../app/schemas/com.hardtekpt.crux.data.local.CruxDatabase); each version's JSON
 is the source of truth for its tables. To change the schema, see [Database](database.md).
 
@@ -30,14 +30,15 @@ erDiagram
 
 | Table | Holds | Key columns |
 | --- | --- | --- |
-| `climbs` | Logs: a day's goes on a climb | `problemId` (its climb; set on every log since schema 21), `discipline`, `gradeScale` + `gradeIndex` (+ `gradeLabel`/`gradeColour` for local grades), `style` (worked out from the goes), `attempts`, `sends`, `venue`, `dateEpochDay`, `name` (the climb's), optional `placeId`/`sectionId`/`areaId`, `angle`, `effort`, `sessionId` |
+| `climbs` | Logs: a day's goes on a climb | `problemId` (its climb; set on every log since schema 21), `discipline`, `gradeScale` + `gradeIndex` (+ `gradeLabel`/`gradeColour` for local grades), `style` (worked out from the goes), `attempts`, `sends`, `venue`, `dateEpochDay`, `name` (the climb's), optional `placeId`/`sectionId`/`areaId`, `effort`, `sessionId`; `angle` is unused since schema 22, which moved it into `notes` |
 | `climb_media` | A climb's photo and video | `climbId`, `kind` (`IMAGE`/`VIDEO`), `path` (a file name in `files/area_images`) |
 | `places` | Gyms, crags, boards | `name`, `type` (main kind), `extraTypes`, `favourite`, `latitude`/`longitude`/`address`, legacy place-wide scales |
 | `sections` | A place's facilities | `placeId`, `type` (`GYM`/`CRAG`/`BOARD`), `name`, `position`, `boulderScale`/`routeScale`/`localScale` |
-| `areas` | Walls and boards | `placeId`, `sectionId`, `name`, `angle`, `resetEpochDay` (legacy, unused), `imagePath` |
-| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId`, `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused) |
+| `areas` | Walls and boards | `placeId`, `sectionId`, `name`, `resetEpochDay` (legacy, unused), `imagePath`; `angle` is unused since schema 22, which added it to `name` |
+| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId` (at a place, `sectionId` is always set since schema 23; `ClimbLinks` matches logs by place, facility and name). Name, discipline, grade and where belong to the climb: saving a log on a climb writes them to it (`ClimbLinks.adoptLog`) and every log keeps a copy in step (`ClimbLinks.syncLogs`, run on all logs by schema 24), `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused) |
 | `exercises` | The exercise library | `name`, `category`, `metric`, defaults (`defaultSets`…`defaultRepRestSeconds`, `prepSeconds`) |
 | `workout_templates` | Session plans | `name`, `description`, `position` |
+| `schedule_slots` | The weekly schedule (schema 25), repeating every week | `dayOfWeek` (1 Monday to 7 Sunday), `position`, `kind` (`PLAN`/`CLIMB`), `templateId` (cascade), `placeId` (set null); a day with none is rest |
 | `template_blocks` | A plan's blocks | `templateId`, `position`, `name` |
 | `template_exercises` | An exercise's target in a block | `blockId`, `exerciseId`, `sets`, `reps`, `seconds`, `loadKg`, `restSeconds`, `repRestSeconds` |
 | `sessions` | Live and finished sessions | `templateId`, `placeId`, `sectionId`, `startedAtMillis`, `endedAtMillis`, `status` (`RUNNING`/`FINISHED`/`DISCARDED`), `effort`, `notes` |

@@ -33,7 +33,7 @@ data class ClimbEntity(
     val placeId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
-    /** Board angle in degrees, when logged on a board. */
+    /** Board angle before schema 22, which moved it into [notes]; no longer used. */
     val angle: Int? = null,
     /** How hard it felt, 1 to 10 (schema 7). Optional. */
     val effort: Int? = null,

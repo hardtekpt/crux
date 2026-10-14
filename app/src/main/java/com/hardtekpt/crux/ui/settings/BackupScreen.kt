@@ -37,6 +37,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.hardtekpt.crux.data.backup.AutoBackups
 import com.hardtekpt.crux.data.backup.BackupFile
 import com.hardtekpt.crux.data.backup.BackupFormatException
 import com.hardtekpt.crux.data.backup.BackupMedia
@@ -47,23 +48,31 @@ import com.hardtekpt.crux.data.backup.ImportConflict
 import com.hardtekpt.crux.data.backup.ImportResult
 import com.hardtekpt.crux.data.backup.OpenedBackup
 import com.hardtekpt.crux.data.backup.Resolution
+import com.hardtekpt.crux.data.prefs.AutoBackupFrequency
+import com.hardtekpt.crux.data.prefs.AutoBackupPrefs
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
+import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
@@ -229,6 +238,26 @@ class BackupViewModel @Inject constructor(
     }
 }
 
+/** The automatic backups settings, apart from the file export and import above them. */
+@HiltViewModel
+class AutoBackupViewModel @Inject constructor(private val auto: AutoBackups) : ViewModel() {
+    val state: StateFlow<AutoBackupPrefs> = auto.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AutoBackupPrefs())
+
+    fun setFolder(uri: Uri?) {
+        viewModelScope.launch { auto.setFolder(uri) }
+    }
+
+    fun setFrequency(frequency: AutoBackupFrequency) {
+        viewModelScope.launch { auto.setFrequency(frequency) }
+    }
+
+    fun setKeep(keep: Int) {
+        viewModelScope.launch { auto.setKeep(keep) }
+    }
+
+    fun backUpNow() = auto.runNow()
+}
+
 private fun Set<BackupSection>.toggled(section: BackupSection) = if (section in this) this - section else this + section
 
 /** What the backups page can ask for. */
@@ -242,12 +271,21 @@ data class BackupActions(
     val confirmImport: () -> Unit = {},
     val cancelImport: () -> Unit = {},
     val resolve: (Resolution, Boolean) -> Unit = { _, _ -> },
+    val chooseAutoFolder: () -> Unit = {},
+    val stopAutoBackups: () -> Unit = {},
+    val setAutoFrequency: (AutoBackupFrequency) -> Unit = {},
+    val setAutoKeep: (Int) -> Unit = {},
+    val backUpNow: () -> Unit = {},
 )
 
 /** Settings → Backups: choose what goes into a backup, export it to a file, or import one. */
 @Composable
-fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel()) {
+fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(), autoViewModel: AutoBackupViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val auto by autoViewModel.state.collectAsStateWithLifecycle()
+    val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let(autoViewModel::setFolder)
+    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(viewModel::export)
     }
@@ -257,6 +295,7 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
     BackupContent(
         state = state,
         onBack = onBack,
+        auto = auto,
         actions = BackupActions(
             toggleExport = viewModel::toggleExport,
             setPhotos = viewModel::setPhotos,
@@ -269,12 +308,23 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
             confirmImport = viewModel::confirmImport,
             cancelImport = viewModel::cancelImport,
             resolve = viewModel::resolve,
+            chooseAutoFolder = { folderLauncher.launch(null) },
+            stopAutoBackups = { autoViewModel.setFolder(null) },
+            setAutoFrequency = autoViewModel::setFrequency,
+            setAutoKeep = autoViewModel::setKeep,
+            backUpNow = autoViewModel::backUpNow,
         ),
     )
 }
 
 @Composable
-fun BackupContent(state: BackupUiState, onBack: () -> Unit, modifier: Modifier = Modifier, actions: BackupActions = BackupActions()) {
+fun BackupContent(
+    state: BackupUiState,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    auto: AutoBackupPrefs = AutoBackupPrefs(),
+    actions: BackupActions = BackupActions(),
+) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Backups")) {
         CruxTopAppBar(title = "Backups", onBack = onBack)
@@ -318,6 +368,9 @@ fun BackupContent(state: BackupUiState, onBack: () -> Unit, modifier: Modifier =
                         .testTag("export_backup"),
                 )
             }
+
+            Eyebrow("Automatic backups", Modifier.padding(top = space.s4))
+            AutoBackupCard(auto, actions)
 
             Eyebrow("Photos and videos", Modifier.padding(top = space.s4))
             CruxCard {
@@ -367,6 +420,86 @@ fun BackupContent(state: BackupUiState, onBack: () -> Unit, modifier: Modifier =
     state.pendingImport?.let { file -> ImportDialog(file, state, actions) }
     state.conflict?.takeIf { !state.busy }?.let { conflict -> ConflictDialog(conflict, state, actions) }
 }
+
+@Composable
+private fun AutoBackupCard(auto: AutoBackupPrefs, actions: BackupActions) {
+    val space = CruxTheme.space
+    val colors = MaterialTheme.colorScheme
+    val hasFolder = auto.folder != null
+    CruxCard(modifier = Modifier.testTag("auto_backups")) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+            Column(Modifier.weight(1f)) {
+                Text("Folder", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    auto.folder?.let { Uri.parse(it).lastPathSegment?.substringAfter(':') } ?: "No folder yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.testTag("auto_backup_folder"),
+                )
+            }
+            if (hasFolder) TextButton(onClick = actions.stopAutoBackups, modifier = Modifier.testTag("auto_backup_stop")) { Text("Stop") }
+            CruxButton(
+                text = "Choose folder",
+                onClick = actions.chooseAutoFolder,
+                variant = CruxButtonVariant.Tonal,
+                modifier = Modifier.testTag("auto_backup_choose"),
+            )
+        }
+        Text("How often", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = space.s3, bottom = space.s2))
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+            AutoBackupFrequency.entries.forEach { frequency ->
+                CruxFilterChip(
+                    label = frequency.label,
+                    selected = auto.frequency == frequency,
+                    onClick = { actions.setAutoFrequency(frequency) },
+                    modifier = Modifier.testTag("auto_backup_${frequency.name}"),
+                )
+            }
+        }
+        Text("Keep the newest", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = space.s3, bottom = space.s2))
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+            listOf(3, 5, 10).forEach { keep ->
+                CruxFilterChip(
+                    label = "$keep",
+                    selected = auto.keep == keep,
+                    onClick = { actions.setAutoKeep(keep) },
+                    modifier = Modifier.testTag("auto_keep_$keep"),
+                )
+            }
+        }
+        CruxButton(
+            text = "Back up now",
+            onClick = actions.backUpNow,
+            enabled = hasFolder,
+            modifier = Modifier
+                .padding(top = space.s3)
+                .testTag("auto_backup_now"),
+        )
+        val error = auto.lastError
+        val lastAt = auto.lastAtMillis
+        Text(
+            when {
+                error != null -> "Last try failed: $error"
+                lastAt != null -> "Last backup: ${lastBackupLabel(lastAt)}"
+                else -> "Not backed up yet"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (error != null) colors.error else colors.onSurfaceVariant,
+            modifier = Modifier
+                .padding(top = space.s2)
+                .testTag("auto_backup_status"),
+        )
+    }
+    Text(
+        "Everything, with photos and videos, saved to the folder you choose. Nothing leaves your phone otherwise.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.onSurfaceVariant,
+    )
+}
+
+private val LAST_BACKUP_FORMAT = DateTimeFormatter.ofPattern("d MMM, HH:mm")
+
+private fun lastBackupLabel(millis: Long): String = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(LAST_BACKUP_FORMAT)
 
 @Composable
 private fun ImportDialog(file: BackupFile, state: BackupUiState, actions: BackupActions) {

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -30,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +48,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
@@ -68,6 +68,7 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -89,7 +90,6 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboard by viewModel.dashboard.collectAsStateWithLifecycle()
     val demoMode by viewModel.demoMode.collectAsStateWithLifecycle()
-    val lastGo by viewModel.quickGo.last.collectAsStateWithLifecycle()
     HomeContent(
         uiState = uiState,
         dashboard = dashboard,
@@ -104,9 +104,6 @@ fun HomeScreen(
             openWeekClimbs = onOpenWeekClimbs,
             openMeasurements = onOpenMeasurements,
             startPlan = onStartPlan,
-            logGo = viewModel.quickGo::log,
-            undoGo = viewModel.quickGo::undo,
-            lastGo = lastGo,
         ),
         editor = DashboardEditor(
             start = viewModel::startEditing,
@@ -150,12 +147,11 @@ fun HomeContent(
     editor: DashboardEditor = DashboardEditor(),
     modifier: Modifier = Modifier,
 ) {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val editing = dashboard.editing
     val scrollState = rememberScrollState()
     val haptics = LocalHapticFeedback.current
     val edgePx = with(LocalDensity.current) { 96.dp.toPx() }
     val space = CruxTheme.space
-    val editing = dashboard.editing
 
     // Drag state, all in root coordinates so it survives the widget changing rows.
     val bounds = remember { mutableStateMapOf<String, Rect>() }
@@ -230,45 +226,54 @@ fun HomeContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .then(if (editing) Modifier else Modifier.statusBarsPadding())
             .testTag("screen_Home"),
     ) {
-        CruxTopAppBar(
-            title = if (editing) "Edit dashboard" else "Crux",
-            scrollBehavior = scrollBehavior,
-            actions = {
-                if (editing) {
+        // No header: the dashboard starts at the top. Editing brings a bar with Add and Done.
+        if (editing) {
+            CruxTopAppBar(
+                title = "Edit dashboard",
+                actions = {
                     IconButton(onClick = editor.openAdd, modifier = Modifier.testTag("add_widget")) {
                         Icon(Icons.Rounded.Add, contentDescription = "Add widget")
                     }
                     TextButton(onClick = editor.finish, modifier = Modifier.testTag("done_editing")) {
                         Text("Done", style = MaterialTheme.typography.labelLarge)
                     }
-                } else {
-                    IconButton(onClick = editor.start, modifier = Modifier.testTag("edit_dashboard")) {
-                        Icon(Icons.Rounded.DashboardCustomize, contentDescription = "Edit dashboard")
-                    }
-                }
-            },
-        )
+                },
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .onGloballyPositioned { viewport = it.boundsInRoot() }
                 .verticalScroll(scrollState)
+                .revealWhen(!uiState.isLoading)
                 .padding(horizontal = space.s4)
                 .padding(top = space.s1, bottom = space.s4 + LocalNavBarClearance.current)
                 .testTag("home_list"),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            Eyebrow(
-                when {
-                    editing -> "Drag to move · resize · remove"
-                    demoMode -> "${uiState.today.dayLabel()} · Demo data"
-                    else -> uiState.today.dayLabel()
-                },
-                Modifier.testTag("home_eyebrow"),
-            )
+            // The date, with the button that edits the dashboard at its end.
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Eyebrow(
+                    when {
+                        editing -> "Drag to move · resize · remove"
+                        demoMode -> "${uiState.today.dayLabel()} · Demo data"
+                        else -> uiState.today.dayLabel()
+                    },
+                    Modifier.weight(1f).testTag("home_eyebrow"),
+                )
+                if (!editing) {
+                    IconButton(onClick = editor.start, modifier = Modifier.testTag("edit_dashboard")) {
+                        Icon(
+                            Icons.Rounded.DashboardCustomize,
+                            contentDescription = "Edit dashboard",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             // One flat, keyed list laid out as a two-column flow: moving a widget only reorders
             // children, so the widget being dragged keeps its gesture while it changes rows.
             DashboardGrid(widgets = dashboard.widgets, spacing = space.s3) {

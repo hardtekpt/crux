@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,11 +70,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hardtekpt.crux.data.model.AscentStyle
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.Venue
+import com.hardtekpt.crux.ui.components.AnimatedCount
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
@@ -88,6 +91,7 @@ import com.hardtekpt.crux.ui.components.input.EffortScale
 import com.hardtekpt.crux.ui.components.input.GradeStrip
 import com.hardtekpt.crux.ui.components.input.PastDayDialog
 import com.hardtekpt.crux.ui.components.input.bleed
+import com.hardtekpt.crux.ui.components.pressScale
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.outcomeLine
@@ -107,7 +111,6 @@ fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel
         selectPlace = viewModel::selectPlace,
         createPlace = viewModel::createPlace,
         selectArea = viewModel::selectArea,
-        setAngle = viewModel::setAngle,
         setVenue = viewModel::setVenue,
         setPlaceText = viewModel::setPlace,
         selectSection = viewModel::selectSection,
@@ -269,7 +272,18 @@ fun LogClimbContent(
             // Name: suggests climbs here to continue; any other name starts a new climb.
             NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3))
             Extras(draft, onNotes, media)
-            if (earlierLogs.isNotEmpty()) EarlierLogs(earlierLogs, onOpenLog, Modifier.padding(top = space.s4))
+            if (earlierLogs.isNotEmpty()) {
+                // The name, grade and where are the climb's: changing them changes every log.
+                if (draft.isEditing) {
+                    Text(
+                        "Name, grade and where change the climb, for all ${earlierLogs.size + 1} logs.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = space.s3).testTag("climb_wide_note"),
+                    )
+                }
+                EarlierLogs(earlierLogs, onOpenLog, Modifier.padding(top = space.s4))
+            }
         }
         CruxButton(
             text = if (draft.isEditing) "Save changes" else "Log climb",
@@ -427,18 +441,25 @@ private fun GoPads(draft: LogClimbDraft, onGo: (Boolean) -> Unit) {
 @Composable
 private fun GoPad(label: String, hint: String, count: Int, fill: Color, ink: Color, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(18.dp)
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
         modifier
             .height(84.dp)
+            .pressScale(interaction)
             .clip(shape)
             .background(fill, shape)
-            .clickable(onClickLabel = "Add a go: $label", onClick = onClick),
+            .clickable(
+                interactionSource = interaction,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                onClickLabel = "Add a go: $label",
+                onClick = onClick,
+            ),
     ) {
         Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("+ $label", style = MaterialTheme.typography.titleMedium, color = ink)
             Text(hint.uppercase(), style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.8f))
         }
-        Text(
+        AnimatedCount(
             count.toString(),
             style = MaterialTheme.typography.labelLarge,
             color = ink,
@@ -551,7 +572,7 @@ private fun NameField(
 @Composable
 private fun Extras(draft: LogClimbDraft, onNotes: (String) -> Unit, media: @Composable () -> Unit) {
     var writing by rememberSaveable { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.animateContentSize(CruxMotion.medium())) {
         if (writing || draft.notes.isNotBlank()) {
             CruxTextField(
                 label = "Note",

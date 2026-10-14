@@ -15,12 +15,14 @@ dark is the default theme, and light and system are options.
 | Sizes | `CruxSize` | `touchTarget` (48 dp), border widths, and so on |
 | Shapes | `CruxShape`, `CruxShapes` | Rounded corners for cards, rows and buttons |
 
-**Accents.** The climber picks an accent (`Accent` in `data/prefs`: Teal, Blue, Violet, Pink), and
+**Accents.** The climber picks an accent (`Accent` in `data/prefs`: Teal, Blue, Violet, Magenta, Pink, Slate, Chalk), and
 `CruxTheme(darkTheme, accent)` builds the scheme with `cruxColorScheme`. An accent sets the
 primary roles and tints the surfaces and `outlineVariant` slightly towards itself; everything else
 (text, outline, secondary amber, success, danger, tape, charts, timer phases) is the same in every
 accent. Teal is the brand palette. The others are teal's tones turned to their hue in OKLCH, at
-the same lightness and the same share of the chroma that hue allows. `AccentContrastTest` checks
+the same lightness and the same share of the chroma that hue allows (Slate a third of it); Chalk
+(white on dark, charcoal on light) is picked by hand. Keep neighbouring accents far enough apart to
+tell at a glance in both modes: an Indigo was too close to Blue in dark, and a Sky to Teal in light. `AccentContrastTest` checks
 every accent in both modes. Don't add an amber, green or red accent: those colours already mean a
 go, a send and danger. `CruxTheme.isDark` says which mode is in use.
 
@@ -68,8 +70,18 @@ Wheels expose semantics actions, so TalkBack can set them directly.
 - A floating, icon-only bar with five tabs and the **+** Log button built in
   (`navigation/FloatingNavBar.kt`). Screens pad their content with `LocalNavBarClearance`.
 - Page transitions are quiet fades, including predictive back.
-- Pages with their own tabs (Train: Plans / Exercises) swipe sideways between them
-  (`TabSwipe.kt`). The main tabs don't swipe.
+- Pages with their own tabs (Train: Week / Plans / Exercises, the Journal's types) swipe sideways
+  between them (`TabSwipe.kt`). The main tabs don't swipe.
+- **Motion** lives in `components/Motion.kt`: `CruxMotion` durations (120 / 160 / 200 ms,
+  decelerating, no overshoot), `revealWhen(ready)` to fade a list in once its data is loaded
+  instead of showing empty values, `pressScale` for big tap targets and `AnimatedCount` for
+  numbers that roll. Lazy lists use `Modifier.animateItem()`; colours that change with state use
+  `animateColorAsState`. Keep new motion within these: short, quiet, never in the way of a tap.
+- **Performance**: view models build their state with `flowOn(Dispatchers.Default)` before
+  `stateIn`, so only the result reaches the main thread. In lazy lists, give items keys and a
+  `contentType`, and draw decorations like the Journal's rail (`drawBehind`) rather than
+  measuring rows with `IntrinsicSize`. Stored photos go through `rememberLocalImage`, which
+  caches decoded bitmaps.
 
 ## Conventions
 

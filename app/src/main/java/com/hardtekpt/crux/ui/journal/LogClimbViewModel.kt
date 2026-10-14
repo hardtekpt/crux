@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.hardtekpt.crux.data.ClimbRepository
 import com.hardtekpt.crux.data.PlaceInput
 import com.hardtekpt.crux.data.PlaceRepository
-import com.hardtekpt.crux.data.ProblemInput
 import com.hardtekpt.crux.data.images.ImageFiles
 import com.hardtekpt.crux.data.local.MediaKind
 import com.hardtekpt.crux.data.model.AscentStyle
@@ -75,7 +74,6 @@ data class LogClimbDraft(
     val sessionId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
-    val angle: Int? = null,
     /** How hard it felt, 1 to 10; optional. */
     val effort: Int? = null,
     /** An attached photo (file name in app storage), and the one saved before this edit. */
@@ -142,10 +140,11 @@ class LogClimbViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
-    private val climbId: Long = savedStateHandle.get<Long>("climbId") ?: 0L
+    private var climbId: Long = savedStateHandle.get<Long>("climbId") ?: 0L
     private val routePlaceId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val routeProblemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
     private val routeSectionId: Long = savedStateHandle.get<Long>("sectionId") ?: 0L
+    private val routeReuseToday: Boolean = savedStateHandle.get<Boolean>("reuseToday") ?: false
 
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
@@ -185,6 +184,17 @@ class LogClimbViewModel @Inject constructor(
     }
 
     private suspend fun prefill() {
+        // Opening a project continues its log from today or from the running session, if it has one.
+        if (climbId == 0L && routeReuseToday && routeProblemId != 0L) {
+            val running = sessions.running()
+            val today = LocalDate.now(clock)
+            val existing = climbRepository.observeClimbsForProblem(routeProblemId).first()
+                .firstOrNull { it.date == today || (running != null && it.sessionId == running.id) }
+            if (existing != null) {
+                climbId = existing.id
+                _draft.update { it.copy(climbId = existing.id) }
+            }
+        }
         if (climbId != 0L) {
             val climb = climbRepository.getClimb(climbId) ?: return
             _draft.update {
@@ -205,7 +215,6 @@ class LogClimbViewModel @Inject constructor(
                     sessionId = climb.sessionId,
                     areaId = climb.areaId,
                     problemId = climb.problemId,
-                    angle = climb.angle,
                     effort = climb.effort,
                     imagePath = climb.imagePath,
                     savedImagePath = climb.imagePath,
@@ -243,7 +252,11 @@ class LogClimbViewModel @Inject constructor(
                 _draft.update { regrade(it.copy(sectionId = section.id, venue = section.type.venue), place) }
             }
         }
-        problem?.let(::pickProblem)
+        problem?.let { p ->
+            // The place's walls and facilities, loaded here since the form's own may not be yet.
+            applyProblem(p, p.placeId?.let { placeRepository.observePlaceDetail(it).first() })
+            refreshEarlierGoes(p.id, null)
+        }
     }
 
     private suspend fun restoreLastSpot(placeId: Long) {
@@ -279,10 +292,10 @@ class LogClimbViewModel @Inject constructor(
                     placeId = place?.id,
                     sectionId = place?.sections?.firstOrNull()?.id,
                     areaId = null,
-                    problemId = null,
-                    earlierGoes = emptyList(),
+                    // Editing a log moves its whole climb; a new log at another place is another climb.
+                    problemId = draft.problemId.takeIf { draft.isEditing },
+                    earlierGoes = if (draft.isEditing) draft.earlierGoes else emptyList(),
                     venue = (place?.sections?.firstOrNull()?.type ?: place?.type)?.venue ?: draft.venue,
-                    angle = if (place != null && PlaceType.BOARD in place.types) (draft.angle ?: place.defaultAngle ?: DEFAULT_ANGLE) else null,
                     scaleOverride = override,
                     local = section?.localScale,
                 )
@@ -296,7 +309,7 @@ class LogClimbViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             val id = placeRepository.savePlace(
-                PlaceInput(name = name, types = listOf(type), location = null, defaultAngle = null, notes = null),
+                PlaceInput(name = name, types = listOf(type), location = null, notes = null),
             )
             applyPlace(id)
         }
@@ -312,7 +325,7 @@ class LogClimbViewModel @Inject constructor(
         regrade(
             it.copy(
                 areaId = id,
-                problemId = if (keepProblem) it.problemId else null,
+                problemId = if (keepProblem || it.isEditing) it.problemId else null,
                 sectionId = section?.id ?: it.sectionId,
                 venue = section?.type?.venue ?: it.venue,
             ),
@@ -331,7 +344,7 @@ class LogClimbViewModel @Inject constructor(
                 sectionId = sectionId,
                 venue = section.type.venue,
                 areaId = if (keepArea) it.areaId else null,
-                problemId = if (keepArea) it.problemId else null,
+                problemId = if (keepArea || it.isEditing) it.problemId else null,
             ),
             detail.place,
         )
@@ -370,10 +383,12 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { if (it.problemId == problemId) it.copy(earlierGoes = trail) else it }
     }
 
-    private fun applyProblem(problem: Problem) = _draft.update {
-        val detail = placeDetail.value?.takeIf { d -> d.place.id == problem.placeId }
+    private fun applyProblem(problem: Problem, loaded: PlaceDetail? = placeDetail.value) = _draft.update {
+        val detail = loaded?.takeIf { d -> d.place.id == problem.placeId }
         val area = detail?.areas?.firstOrNull { a -> a.id == (problem.areaId ?: it.areaId) }
-        val section = detail?.place?.sections?.firstOrNull { s -> s.id == problem.sectionId } ?: detail?.place?.sectionOf(area)
+        // The climb's own facility, else its wall's; never the place's first by default.
+        val section = detail?.place?.sections?.firstOrNull { s -> s.id == problem.sectionId }
+            ?: area?.let { a -> detail.place.sections.firstOrNull { s -> s.id == a.sectionId } }
         it.copy(
             problemId = problem.id,
             areaId = problem.areaId ?: it.areaId,
@@ -404,7 +419,10 @@ class LogClimbViewModel @Inject constructor(
         return if (draft.placeId == null) {
             unplaced.value
         } else {
-            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems?.map { it.problem }.orEmpty()
+            // At a place with several facilities, the climbs at the picked one (or with none yet).
+            val detail = placeDetail.value?.takeIf { it.place.id == draft.placeId }
+            val several = (detail?.place?.sections?.size ?: 0) > 1
+            detail?.problems?.map { it.problem }.orEmpty().filter { !several || it.sectionId == null || it.sectionId == draft.sectionId }
         }
     }
 
@@ -430,12 +448,14 @@ class LogClimbViewModel @Inject constructor(
 
     fun setEffort(effort: Int?) = _draft.update { it.copy(effort = effort?.coerceIn(1, 10)) }
 
-    fun setAngle(angle: Int) = _draft.update { it.copy(angle = angle.coerceIn(0, 70)) }
-
     fun setDiscipline(discipline: Discipline) = _draft.update { draft ->
         if (draft.discipline == discipline) return@update draft
         val override = placeDetail.value?.place?.scaleFor(discipline, draft.sectionId)
-        val next = draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = emptyList())
+        val next = if (draft.isEditing) {
+            draft.copy(discipline = discipline, scaleOverride = override)
+        } else {
+            draft.copy(discipline = discipline, scaleOverride = override, problemId = null, earlierGoes = emptyList())
+        }
         next.copy(gradeIndex = next.system.defaultIndex)
     }
 
@@ -533,29 +553,8 @@ class LogClimbViewModel @Inject constructor(
         _draft.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val place = draft.placeId?.let { placeRepository.getPlace(it) }
-            // A picked climb follows the form: its name, grade and where it is.
+            // On a picked climb, the repository makes the form's name, grade and where the climb's.
             val problemId = draft.problemId
-            if (problemId != null) {
-                val existing = placeRepository.getProblem(problemId)
-                if (existing != null && draft.name.isNotBlank()) {
-                    placeRepository.saveProblem(
-                        ProblemInput(
-                            id = problemId,
-                            placeId = place?.id,
-                            areaId = draft.areaId.takeIf { place != null },
-                            sectionId = draft.sectionId.takeIf { place != null },
-                            name = draft.name.trim(),
-                            discipline = draft.discipline,
-                            gradeScale = draft.gradeScale,
-                            gradeIndex = draft.gradeIndex,
-                            tape = existing.tape,
-                            notes = existing.notes,
-                            gradeLabel = draft.system.label(draft.gradeIndex),
-                            gradeColour = draft.system.colour(draft.gradeIndex),
-                        ),
-                    )
-                }
-            }
             val climb = NewClimb(
                 discipline = draft.discipline,
                 gradeScale = draft.gradeScale,
@@ -576,7 +575,6 @@ class LogClimbViewModel @Inject constructor(
                 placeId = place?.id,
                 areaId = draft.areaId.takeIf { place != null },
                 problemId = problemId,
-                angle = draft.angle.takeIf { place != null && draft.venue == Venue.BOARD },
                 effort = draft.effort,
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),
@@ -607,7 +605,6 @@ class LogClimbViewModel @Inject constructor(
     companion object {
         val ATTEMPTS = 1..99
         const val MAX_TEXT = 60
-        const val DEFAULT_ANGLE = 40
     }
 }
 

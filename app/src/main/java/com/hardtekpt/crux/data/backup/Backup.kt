@@ -55,6 +55,8 @@ data class BackupFile(
     /** Finished sessions. Version 1 reserved the key and always left it null. */
     val sessions: List<SessionDto>? = null,
     val settings: SettingsDto? = null,
+    /** The weekly schedule, saved with the plans. Older backups omit it. */
+    val schedule: List<ScheduleSlotDto>? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
@@ -118,6 +120,18 @@ data class PlanItemDto(
 @Serializable
 data class PlanBlockDto(val name: String, val items: List<PlanItemDto>)
 
+/** One thing on a day of the week: a plan by name, or climbing (at a place, maybe). */
+@Serializable
+data class ScheduleSlotDto(
+    /** ISO day of the week, 1 Monday to 7 Sunday. */
+    val day: Int,
+    val position: Int = 0,
+    val kind: com.hardtekpt.crux.data.local.ScheduleKind,
+    val plan: String? = null,
+    val placeType: PlaceType? = null,
+    val place: String? = null,
+)
+
 @Serializable
 data class PlanDto(val name: String, val description: String, val blocks: List<PlanBlockDto>)
 
@@ -140,6 +154,7 @@ data class ClimbDto(
     val placeType: PlaceType? = null,
     val area: String? = null,
     val problem: String? = null,
+    /** Before schema 22: the board angle. Imported into [notes]. */
     val angle: Int? = null,
     val effort: Int? = null,
     /** Local grades: the position in the place's scale and its tape colour; [grade] holds the label. */
@@ -163,6 +178,7 @@ data class ClimbDto(
 @Serializable
 data class AreaDto(
     val name: String,
+    /** Before schema 22: the angle of the wall. Imported into its name. */
     val angle: Int? = null,
     val resetDate: String? = null,
     /** Version 1: the wall's photo or map as base64 JPEG. Older backups omit it. */
@@ -210,6 +226,7 @@ data class PlaceDto(
     val location: String? = null,
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
+    /** Before schema 22: the usual angle of a board. No longer imported. */
     val defaultAngle: Int? = null,
     val notes: String? = null,
     val areas: List<AreaDto> = emptyList(),

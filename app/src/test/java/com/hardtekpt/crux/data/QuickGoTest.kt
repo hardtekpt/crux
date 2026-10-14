@@ -24,13 +24,12 @@ class QuickGoTest {
             PlaceInput(
                 name = "Block Lab",
                 location = null,
-                defaultAngle = 40,
                 notes = null,
                 sections = listOf(SectionInput(type = PlaceType.GYM, name = "Main gym"), SectionInput(type = PlaceType.BOARD, name = "Kilter")),
             ),
         )
         val kilter = places.getPlace(placeId)!!.sections[1].id
-        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", 40, null, kilter)
+        val benchmarks = places.saveArea(placeId, 0, "Benchmarks", null, kilter)
         val problemId = places.saveProblem(
             ProblemInput(
                 placeId = placeId,

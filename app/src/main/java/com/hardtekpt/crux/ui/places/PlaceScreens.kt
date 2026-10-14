@@ -108,6 +108,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -116,7 +117,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class PlacesViewModel @Inject constructor(repository: PlaceRepository) : ViewModel() {
     val places: StateFlow<List<PlaceSummary>?> = repository.observePlaces()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /** The Places half of the Journal tab, as list items. */
@@ -192,17 +193,17 @@ class PlaceDetailViewModel @Inject constructor(
     val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
 
     val detail: StateFlow<PlaceDetail?> = repository.observePlaceDetail(placeId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Climbs logged here, for the header's numbers and last visit. */
     val climbs: StateFlow<List<com.hardtekpt.crux.data.model.Climb>> = climbRepository.observeClimbsAtPlace(placeId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Saves a wall; a replaced or removed image file is deleted. */
-    fun saveArea(areaId: Long, name: String, angle: Int?, image: String?, previousImage: String?, sectionId: Long?) {
+    fun saveArea(areaId: Long, name: String, image: String?, previousImage: String?, sectionId: Long?) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.saveArea(placeId, areaId, name, angle, image, sectionId)
+            repository.saveArea(placeId, areaId, name, image, sectionId)
             if (previousImage != image) images.delete(previousImage)
         }
     }
@@ -265,6 +266,12 @@ fun PlaceDetailScreen(
         val areaLabel = if (current.place.hasSeveralTypes) "Area" else current.place.type.areaLabel
         val sections = current.place.sections
         val picked = sections.firstOrNull { it.id == facility }
+        // The facility a climb is at: its own, else its wall's, else the place's first.
+        val facilityOf: (com.hardtekpt.crux.data.model.Problem) -> Long? = { p ->
+            sections.firstOrNull { it.id == p.sectionId }?.id
+                ?: current.areas.firstOrNull { it.id == p.areaId }?.let { current.place.sectionOf(it)?.id }
+                ?: sections.firstOrNull()?.id
+        }
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s3),
@@ -354,12 +361,11 @@ fun PlaceDetailScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
                                 pair.forEach { section ->
                                     val areas = current.areas.filter { current.place.sectionOf(it)?.id == section.id }
-                                    val problems = current.problems.count { p -> areas.any { it.id == p.problem.areaId } }
+                                    val problems = current.problems.count { facilityOf(it.problem) == section.id }
                                     FacilityTile(
                                         section = section,
                                         areas = areas.size,
                                         problems = problems,
-                                        angle = current.place.defaultAngle.takeIf { section.type == PlaceType.BOARD },
                                         scales = listOf(section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current)),
                                         selected = sections.size > 1 && facility == section.id,
                                         onClick = { if (sections.size > 1) facility = if (facility == section.id) null else section.id },
@@ -410,15 +416,23 @@ fun PlaceDetailScreen(
             }
 
             val visible = current.problems
-            // With a facility picked, only its walls and their problems.
+            // With a facility picked, only its walls and climbs. Climbs on no wall group by facility.
             val shownAreas = current.areas.filter { picked == null || current.place.sectionOf(it)?.id == picked.id }
-            val groups: List<Pair<Area?, List<ProblemWithStats>>> =
-                shownAreas.map { area -> area to visible.filter { it.problem.areaId == area.id } } +
-                    listOf<Pair<Area?, List<ProblemWithStats>>>(null to visible.filter { picked == null && it.problem.areaId == null })
+            val shownSections = sections.filter { picked == null || it.id == picked.id }
+            val groups: List<Triple<Area?, String, List<ProblemWithStats>>> =
+                shownAreas.map { area -> Triple(area, "area_${area.id}", visible.filter { it.problem.areaId == area.id }) } +
+                    if (sections.isEmpty()) {
+                        listOf(Triple(null, "none", visible.filter { it.problem.areaId == null }))
+                    } else {
+                        shownSections.map { section ->
+                            Triple(null, "section_${section.id}", visible.filter { it.problem.areaId == null && facilityOf(it.problem) == section.id })
+                        }
+                    }
 
-            groups.forEach { (area, problems) ->
+            groups.forEach { (area, groupKey, problems) ->
                 if (area == null && problems.isEmpty()) return@forEach
-                item(key = "area_${area?.id ?: "none"}") {
+                val section = sections.firstOrNull { "section_${it.id}" == groupKey }
+                item(key = "area_$groupKey") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(space.s3),
@@ -438,9 +452,9 @@ fun PlaceDetailScreen(
                                 listOfNotNull(
                                     a.name,
                                     current.place.sectionOf(a)?.name?.takeIf { current.place.hasSeveralTypes },
-                                    a.angle?.let { "$it°" },
                                 ).joinToString(" · ")
                             }
+                                ?: section?.takeIf { sections.size > 1 }?.let { "${it.name} · no ${it.type.areaLabel.lowercase()}" }
                                 ?: "No ${areaLabel.lowercase()}",
                             Modifier.weight(1f),
                         )
@@ -463,7 +477,7 @@ fun PlaceDetailScreen(
                     }
                 }
                 if (problems.isNotEmpty()) {
-                    item(key = "problems_${area?.id ?: "none"}") {
+                    item(key = "problems_$groupKey") {
                         // A wall's climbs as flat lines on one panel.
                         Column(
                             Modifier
@@ -502,8 +516,8 @@ fun PlaceDetailScreen(
             initialSection = place?.sectionOf(editingArea),
             fallbackType = place?.type ?: PlaceType.GYM,
             viewModel = viewModel,
-            onSave = { name, angle, image, sectionId ->
-                viewModel.saveArea(editingArea?.id ?: 0, name, angle, image, editingArea?.imagePath, sectionId)
+            onSave = { name, image, sectionId ->
+                viewModel.saveArea(editingArea?.id ?: 0, name, image, editingArea?.imagePath, sectionId)
                 addingArea = false
                 editingArea = null
             },
@@ -547,7 +561,6 @@ private fun FacilityTile(
     section: com.hardtekpt.crux.data.model.Section,
     areas: Int,
     problems: Int,
-    angle: Int?,
     scales: List<String>,
     selected: Boolean,
     onClick: () -> Unit,
@@ -575,7 +588,6 @@ private fun FacilityTile(
             listOfNotNull(
                 section.type.label.takeIf { !it.equals(section.name, ignoreCase = true) },
                 "$areas ${if (areas == 1) section.type.areaLabel.lowercase() else section.type.areaLabel.lowercase() + "s"}",
-                angle?.let { "$it°" },
             ).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant,
@@ -675,7 +687,7 @@ private fun AreaMenu(area: Area, onEdit: () -> Unit, onDelete: () -> Unit) {
 }
 
 /**
- * Add or edit a wall: name, angle and an optional image, a photo of the wall or a map of the
+ * Add or edit a wall: name and an optional image, a photo of the wall or a map of the
  * gym with it marked. Picked from the gallery or taken with the camera.
  */
 @Composable
@@ -685,7 +697,7 @@ private fun AreaDialog(
     initialSection: com.hardtekpt.crux.data.model.Section?,
     fallbackType: PlaceType,
     viewModel: PlaceDetailViewModel,
-    onSave: (String, Int?, String?, Long?) -> Unit,
+    onSave: (String, String?, Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var sectionId by rememberSaveable { mutableStateOf(initialSection?.id) }
@@ -693,7 +705,6 @@ private fun AreaDialog(
     val label = type.areaLabel
     val isBoard = type == PlaceType.BOARD
     var name by rememberSaveable { mutableStateOf(area?.name.orEmpty()) }
-    var angle by rememberSaveable { mutableStateOf(area?.angle?.toString().orEmpty()) }
     var image by rememberSaveable { mutableStateOf(area?.imagePath) }
     var loading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -755,13 +766,6 @@ private fun AreaDialog(
                     onValueChange = { name = it.take(40) },
                     placeholder = if (isBoard) "Benchmarks" else "Cave",
                     modifier = Modifier.testTag("field_area_name"),
-                )
-                CruxTextField(
-                    label = "Angle",
-                    value = angle,
-                    onValueChange = { angle = it.filter(Char::isDigit).take(2) },
-                    helper = "degrees, optional",
-                    keyboardType = KeyboardType.Number,
                 )
                 Eyebrow("Image · optional", Modifier.padding(top = CruxTheme.space.s2))
                 Text(
@@ -834,7 +838,7 @@ private fun AreaDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                onSave(name, angle.toIntOrNull(), image, sectionId)
+                onSave(name, image, sectionId)
             }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
                 Text("Save")
             }

@@ -48,6 +48,9 @@ import com.hardtekpt.crux.ui.places.PlaceDetailScreen
 import com.hardtekpt.crux.ui.places.PlaceDetailViewModel
 import com.hardtekpt.crux.ui.progress.ProgressContent
 import com.hardtekpt.crux.ui.progress.ProgressViewModel
+import com.hardtekpt.crux.ui.session.IntervalPhase
+import com.hardtekpt.crux.ui.session.IntervalRun
+import com.hardtekpt.crux.ui.session.IntervalSpec
 import com.hardtekpt.crux.ui.session.SessionScreen
 import com.hardtekpt.crux.ui.session.SessionViewModel
 import com.hardtekpt.crux.ui.settings.BackupContent
@@ -55,7 +58,10 @@ import com.hardtekpt.crux.ui.settings.BackupUiState
 import com.hardtekpt.crux.ui.settings.SettingsContent
 import com.hardtekpt.crux.ui.settings.SettingsUiState
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.timer.IntervalTimerRunning
+import com.hardtekpt.crux.ui.timer.IntervalTimerSetup
 import com.hardtekpt.crux.ui.train.TrainScreen
+import com.hardtekpt.crux.ui.train.TrainView
 import com.hardtekpt.crux.ui.train.TrainViewModel
 import com.hardtekpt.crux.ui.you.ProfileActions
 import com.hardtekpt.crux.ui.you.YouContent
@@ -115,7 +121,17 @@ class ScreenshotTest {
     fun home() = home("home")
 
     private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
-        val vm = HomeViewModel(climbs, body, OfflineTemplateRepository(dbs), places, preferences, DashboardRepository(dataStore), FIXED_CLOCK)
+        val vm = HomeViewModel(
+            climbs,
+            body,
+            OfflineTemplateRepository(dbs),
+            places,
+            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+            OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+            preferences,
+            DashboardRepository(dataStore),
+            FIXED_CLOCK,
+        )
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
         bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
@@ -130,6 +146,9 @@ class ScreenshotTest {
 
     @Test
     fun homePink() = home("home_pink", accent = Accent.PINK)
+
+    @Test
+    fun homeChalk() = home("home_chalk", accent = Accent.CHALK)
 
     @Test
     fun journal() {
@@ -175,10 +194,52 @@ class ScreenshotTest {
     fun backups() = bothThemes("backups") { BackupContent(state = BackupUiState(), onBack = {}) }
 
     @Test
-    fun train() {
-        val vm = TrainViewModel(OfflineTemplateRepository(dbs), exercises, StarterData(dbs, preferences, FIXED_CLOCK))
-        bothThemes("train", readyText = "Max hangs") { TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = vm) }
+    fun intervalTimer() = bothThemes("interval_timer") { IntervalTimerSetup(IntervalSpec.REPEATERS, onSpec = {}, onStart = {}, onBack = {}) }
+
+    @Test
+    fun intervalTimerRunning() = bothThemes("interval_timer_running") { RunningTimer() }
+
+    @Test
+    @Config(qualifiers = "+land")
+    fun intervalTimerLandscape() = bothThemes("interval_timer_landscape", dark = DARK) { RunningTimer() }
+
+    @Test
+    @Config(fontScale = LARGEST_TEXT)
+    fun intervalTimerLargestText() = bothThemes("interval_timer_running_text_largest", dark = DARK) { RunningTimer() }
+
+    /** Repeaters, 3.5 s into the fourth repeat of the second cycle. */
+    @Composable
+    private fun RunningTimer() {
+        val run = IntervalRun(IntervalSpec.REPEATERS, startedAtMillis = 0)
+        val index = run.spec.phases.indexOfFirst { it.kind == IntervalPhase.Kind.WORK && it.cycle == 1 && it.repeat == 3 }
+        val now = run.startOf(index) + 3_500
+        IntervalTimerRunning(run, now, { now }, onPause = {}, onResume = {}, onStop = {}, onRestart = {}, onSkip = {})
     }
+
+    @Test
+    fun train() {
+        bothThemes("train", readyText = "Max hangs") {
+            TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = trainViewModel(), initialView = TrainView.Plans)
+        }
+    }
+
+    @Test
+    fun trainWeek() {
+        bothThemes("train_week", readyText = "Strength day") {
+            TrainScreen(onOpenPlan = {}, onNewPlan = {}, onOpenExercise = {}, onNewExercise = {}, viewModel = trainViewModel())
+        }
+    }
+
+    private fun trainViewModel() = TrainViewModel(
+        OfflineTemplateRepository(dbs),
+        exercises,
+        StarterData(dbs, preferences, FIXED_CLOCK),
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+        climbs,
+        places,
+        FIXED_CLOCK,
+    )
 
     @Test
     fun session() = session("session")
@@ -194,7 +255,16 @@ class ScreenshotTest {
             repeat(warmUp.target.sets) { sessions.logSet(warmUp.id, it, warmUp.target.reps, warmUp.target.seconds, warmUp.target.loadKg) }
             id
         }
-        val vm = SessionViewModel(SavedStateHandle(mapOf("sessionId" to sessionId)), sessions, exercises, places, preferences, FIXED_CLOCK)
+        val vm =
+            SessionViewModel(
+                SavedStateHandle(mapOf("sessionId" to sessionId)),
+                sessions,
+                exercises,
+                places,
+                preferences,
+                FIXED_CLOCK,
+                com.hardtekpt.crux.live.LiveTimers(),
+            )
         bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
     }
 

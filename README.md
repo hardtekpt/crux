@@ -63,9 +63,11 @@ tests, so they always match the current version.
 
 **Train**
 - An exercise library measured your way: reps, time, with or without added load, or intervals.
+- A weekly schedule: plans, climbing days and rest on each day of the week; Home shows today's.
 - Session plans in blocks, with targets for sets, reps, time, load and rest.
 - **Live sessions**: run a plan set by set with a rest timer, or a climbing day without a plan. An
-  interval timer (Tabata, hangboard repeaters, your own) logs each cycle for you.
+  interval timer (Tabata, hangboard repeaters, your own) logs each cycle for you, and runs on its
+  own as a full-screen timer for the gym.
 
 **Climb**
 - Log a climb in seconds: grade, style (flash, onsight, redpoint, attempt), goes, how hard it felt,
@@ -86,7 +88,7 @@ tests, so they always match the current version.
 - Everything on your phone. Backups to a file you keep, with photos, videos, session history and
   settings; on import, Crux asks about anything already there.
 - Demo mode with sample data, kept apart from yours.
-- Metric or imperial, dark or light, in teal, blue, violet or pink, with larger or smaller text.
+- Metric or imperial, dark or light, in one of seven accent colours, with larger or smaller text.
   Crash reports stay on the phone unless you share them.
 
 See the **[user guide](docs/README.md#user-guide)** for every feature, and
@@ -161,6 +163,22 @@ You need JDK 21 and the Android SDK (platform 37). On Windows, `.\crux run` buil
 app on an emulator in one step. See [Development setup](docs/developer/setup.md).
 
 ## Changelog
+
+**[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
+- **Weekly schedule** under *Train → Week*; Home follows it.
+- **Live notifications** for sessions, rests and the interval timer (Live Updates on Android 16).
+- **Automatic backups** to a folder you choose, and **session sets as personal records**.
+- **Interval timer page**, a lighter Journal and Home, and a faster, smoother app.
+- **Tighter privacy**: approximate location only, nothing in Android's cloud backup.
+
+**[0.3.0](https://github.com/hardtekpt/crux/releases/tag/v0.3.0)** (2026-10-10):
+- **Climbs you can come back to**: tap + Fell or + Sent for each go; goes add up across days, with
+  +1 go on projects.
+- **Accent colour and text size** in Settings.
+- **Climbs this week** and **Days on the wall** pages, and a **Consistency** widget for Home.
+- **Compact timer** in sessions.
+- **Backups carry everything**: session history, settings, Home layout and videos, and import asks
+  about duplicates.
 
 **[0.2.0](https://github.com/hardtekpt/crux/releases/tag/v0.2.0)** (2026-10-07):
 - **Live sessions** with a rest timer and an interval timer that logs cycles for you.

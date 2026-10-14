@@ -8,12 +8,14 @@ Open Settings from the gear on the **You** tab.
 
 - **Grades**: the scale new climbs are logged in, per discipline. See [Grades](grades.md).
 - **Appearance**: Dark (the default), Light, or System, and the accent colour: Teal (the
-  default), Blue, Violet or Pink. The accent colours buttons, selected options and highlights;
+  default), Blue, Violet, Magenta, Pink, Slate or Chalk. The accent colours buttons, selected options and highlights;
   the amber for goes and the green for sends stay the same in every accent. **Text size** makes
   the text in Crux smaller or larger (Small, Default, Large, Largest) on top of your phone's own
   font size. Crux reopens on the same page to apply it.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
+- **Sessions**: *Timer sounds* (beeps for the last seconds of a rest or interval) and *Rest after a
+  climb* (Off, or 1 to 5 min: logging a climb in a session starts that rest).
 - **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
 - **About**: version, licence, source code, and the open-source libraries Crux uses.
@@ -54,6 +56,19 @@ logged at the same moment.
 **Photos and videos** go into the backup unless you switch them off under *Photos and videos* on the
 Backups page. The switches apply to imports too: with videos off, a backup's videos are left out.
 Videos can make a backup large.
+
+### Automatic backups
+
+Under *Automatic backups* on the Backups page, Crux can save a backup for you without being asked.
+
+1. Tap **Choose folder** and pick a folder on your phone. Crux keeps its access to that folder until you tap **Stop**.
+2. Pick how often: **Daily** or **Weekly** (**Off** is the default).
+3. Pick how many to **keep**: the newest 3, 5 or 10. Older automatic backups are removed from the
+   folder, and only the ones Crux made.
+
+**Back up now** saves one straight away, and the page shows when the last one was made, or why the
+last try failed. Each backup holds all your data, with photos and videos, and goes only to the
+folder you chose. Only your own data is backed up, never the demo.
 
 Backups from older versions of Crux keep importing into newer ones, the `.json` files they made
 included. A backup from a *newer* version than the app is refused, with a message to update the

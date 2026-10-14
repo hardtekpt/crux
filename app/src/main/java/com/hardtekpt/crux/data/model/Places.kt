@@ -11,7 +11,6 @@ data class Place(
     val name: String,
     val type: PlaceType,
     val location: String?,
-    val defaultAngle: Int?,
     val notes: String?,
     /** Shown as a quick pick on Log climb. */
     val favourite: Boolean = false,
@@ -75,7 +74,6 @@ data class Area(
     val id: Long,
     val placeId: Long,
     val name: String,
-    val angle: Int?,
     val resetDate: LocalDate?,
     /** A photo of the wall or a map with it marked; a file name in app storage. */
     val imagePath: String? = null,

@@ -1,6 +1,7 @@
 package com.hardtekpt.crux
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
@@ -15,6 +16,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -58,9 +61,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Where a tap on the live notification asked to go, until the app has gone there. */
+    private val openRequest = kotlinx.coroutines.flow.MutableStateFlow<OpenRequest?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openRequest.value = OpenRequest.from(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(darkBars(), darkBars())
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) openRequest.value = OpenRequest.from(intent)
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
@@ -81,10 +93,24 @@ class MainActivity : ComponentActivity() {
 
             CruxTheme(darkTheme = darkTheme, accent = accent) {
                 CompositionLocalProvider(LocalUnits provides units, com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales) {
-                    CruxApp()
+                    // Test tags double as resource ids, so the benchmarks and profile generator can find screens.
+                    androidx.compose.foundation.layout.Box(
+                        androidx.compose.ui.Modifier.semantics { testTagsAsResourceId = true },
+                    ) {
+                        val request by openRequest.collectAsStateWithLifecycle()
+                        CruxApp(openRequest = request, onOpened = { openRequest.value = null })
+                    }
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_OPEN = "crux.open"
+        const val EXTRA_SESSION = "crux.session"
+        const val OPEN_SESSION = "session"
+        const val OPEN_TIMER = "timer"
+        const val OPEN_LOG_CLIMB = "log_climb"
     }
 
     private fun darkBars() = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -137,4 +163,20 @@ class MainViewModel @Inject constructor(preferences: UserPreferencesRepository) 
         started = SharingStarted.Eagerly,
         initialValue = com.hardtekpt.crux.data.prefs.GradeScales(),
     )
+}
+
+/** A place the live notification opens: a session, the Interval timer page, or Log climb. */
+sealed interface OpenRequest {
+    data class Session(val id: Long) : OpenRequest
+    data object Timer : OpenRequest
+    data object LogClimb : OpenRequest
+
+    companion object {
+        fun from(intent: Intent?): OpenRequest? = when (intent?.getStringExtra(MainActivity.EXTRA_OPEN)) {
+            MainActivity.OPEN_SESSION -> intent.getLongExtra(MainActivity.EXTRA_SESSION, 0L).takeIf { it != 0L }?.let(::Session)
+            MainActivity.OPEN_TIMER -> Timer
+            MainActivity.OPEN_LOG_CLIMB -> LogClimb
+            else -> null
+        }
+    }
 }

@@ -93,6 +93,12 @@ class PlaceRepositoryTest {
             com.hardtekpt.crux.data.model.AscentStyle.FLASH, 1, com.hardtekpt.crux.data.model.Venue.GYM, day, null, "Gym $placeId", null,
             placeId = placeId, gradeLabel = label,
         )
+        // Two places, each with its own local grades.
+        listOf(100L, 200L).forEach { id ->
+            db.placeDao().insertPlace(
+                com.hardtekpt.crux.data.local.PlaceEntity(id = id, name = "Gym $id", type = com.hardtekpt.crux.data.model.PlaceType.GYM, createdAtMillis = 0),
+            )
+        }
         climbs.logClimb(local(100, 4, "Red"))
         climbs.logClimb(local(200, 2, "7"))
 

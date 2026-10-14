@@ -6,6 +6,69 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+### Added
+
+- **Session sets count as personal records**, and a set that beats your best shows **New best**
+  in the session.
+- **Automatic backups**: daily or weekly to a folder you choose, keeping the newest few; your own
+  data only, never the demo.
+- **Live notification** while a session runs: on Android 16 a Live Update with a segmented
+  progress bar and a status-bar chip, on Android 8 to 15 a plain progress bar. It has a button for
+  the next step (Set done, Log climb, or Pause and Stop on the interval timer), and a rest shows as
+  a countdown with +30 s, −30 s and Skip rest. The Interval timer page gets the same card.
+- **Weekly schedule**: *Train → Week* lays out Monday to Sunday. Tap a day to put plans and a
+  climbing day on it; the week repeats. Days turn green as you finish them, and Home's Today's plan
+  follows the week, with a strip of the week and what's next on a rest day. Saved in backups with
+  your plans.
+- **Log more goes from a session**: tap a climb in a live session to add goes to it.
+- **Edit a finished session** from its summary: its day, start and finish time, how hard it felt
+  and the note.
+- **Rest after a climb**: set a rest in Settings (1 to 5 min) and logging a climb in a session
+  starts it.
+- **Exercise defaults on the exercise list**: each card shows its sets, reps or time, load and rest.
+- **Interval timer page**, under *You*: a full-screen timer for the gym. Pick Tabata, Repeaters,
+  Max hangs or 4×4s, or set your own; then the phase's colour fills the screen, the seconds are as
+  big as they can be, and big buttons pause, skip and go back. Works on its side too.
+- **More accent colours**: Magenta, Slate and Chalk, alongside Teal, Blue, Violet and Pink.
+
+### Changed
+
+- **Tighter privacy**: Crux asks only for approximate location (to centre the map), no longer
+  sends anything to Android's cloud backup (your own backups and phone-to-phone transfer still
+  work), and drops two permissions libraries asked for. PRIVACY.md lists every permission and why.
+- **Faster and smoother**: Crux starts faster (it ships a baseline profile), screens work out
+  their data off the main thread and fade in once it's ready instead of showing empty values,
+  the Journal scrolls more smoothly, and photos are decoded once. Light animations show what
+  changed: Journal entries slide into place, counts roll, tabs and the week's days blend to their
+  new state, and the go pads press in.
+- **Grades in one card** in Settings: bouldering and routes share a card.
+- **Measurements** no longer has a + in its header; the Log button under the weight does the same.
+- **Projects widget on Home** no longer has the **+1 go** button. Tapping a project on Home or Progress opens its log from today to add goes to, or a new log if you haven't tried it today. Progress and the problem page still have **+1 go**.
+- **Tidier "More about you" list**: row titles such as "Interval timer" stay on one line; the grey text beside them shortens instead.
+- **More room on Home**: no title bar; the dashboard starts with the date, and the edit button
+  sits at its end.
+- **No more board angle**: logging, places and walls no longer ask for an angle. Angles you logged
+  are kept: each climb's is added to its note ("Board angle 40°"), and a wall's to its name.
+- **A lighter Journal header**: search and filters sit in the top bar, the types are tabs, and
+  today is the first day on the timeline, so the timeline starts right under the tabs. Swipe
+  sideways to move between the tabs.
+
+### Fixed
+
+- **Live notification bar**: long interval timers showed one plain bar; the bar now keeps its
+  coloured segments within what Android draws (ten segments, four marks).
+- **Board climbs on the place page**: a facility with no walls, like a Moonboard, showed 0 climbs.
+  Each climb now belongs to a facility, so counts and the facility filter include climbs on no
+  wall, and logging more goes on a climb keeps it at its facility instead of the place's first.
+- Climbs with the same name at two facilities of a place stay separate climbs.
+- **A climb's name, grade and place are the climb's**: changing them while logging or editing a log
+  changes the climb, and all its logs follow. Editing where a log was no longer splits it off into
+  another climb. Logs saved at another facility than their climb's (like Moonboard climbs logged
+  under the gym) move to the climb's facility; nothing is deleted.
+
+
 ## [0.3.0] - 2026-10-10
 
 ### Added
@@ -141,7 +204,8 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.3.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.4.0...dev
+[0.4.0]: https://github.com/hardtekpt/crux/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/hardtekpt/crux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hardtekpt/crux/releases/tag/v0.1.0

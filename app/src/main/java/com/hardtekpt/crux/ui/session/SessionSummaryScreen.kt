@@ -13,13 +13,17 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -90,6 +95,17 @@ class SessionSummaryViewModel @Inject constructor(
 
     val zone get() = clock.zone
 
+    /** Saves the session's times (on [day]), how it felt and its note. */
+    fun edit(day: java.time.LocalDate, start: java.time.LocalTime, end: java.time.LocalTime, effort: Int?, notes: String) {
+        val startAt = day.atTime(start).atZone(clock.zone).toInstant().toEpochMilli()
+        // Finishing before it started means it ran past midnight.
+        val endDay = if (end.isBefore(start)) day.plusDays(1) else day
+        val endAt = endDay.atTime(end).atZone(clock.zone).toInstant().toEpochMilli()
+        viewModelScope.launch { sessions.edit(sessionId, startAt, endAt, effort, notes) }
+    }
+
+    fun today(): java.time.LocalDate = java.time.LocalDate.now(clock)
+
     fun delete(onDone: () -> Unit) {
         viewModelScope.launch {
             sessions.discard(sessionId)
@@ -109,6 +125,7 @@ fun SessionSummaryScreen(onBack: () -> Unit, onOpenClimb: (Long) -> Unit, viewMo
     val session by viewModel.session.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(false) }
     val space = CruxTheme.space
     val colors = MaterialTheme.colorScheme
     val imperial = LocalUnits.current == UnitSystem.IMPERIAL
@@ -118,6 +135,11 @@ fun SessionSummaryScreen(onBack: () -> Unit, onOpenClimb: (Long) -> Unit, viewMo
             title = session?.name.orEmpty(),
             onBack = onBack,
             actions = {
+                if (session != null) {
+                    IconButton(onClick = { editing = true }, modifier = Modifier.testTag("edit_session")) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "Edit session")
+                    }
+                }
                 IconButton(onClick = { confirmDelete = true }, modifier = Modifier.testTag("delete_session")) {
                     Icon(Icons.Rounded.Delete, contentDescription = "Delete session")
                 }
@@ -180,6 +202,24 @@ fun SessionSummaryScreen(onBack: () -> Unit, onOpenClimb: (Long) -> Unit, viewMo
                 }
             }
         }
+    }
+    val current = session
+    if (editing && current != null) {
+        val start = Instant.ofEpochMilli(current.startedAtMillis).atZone(viewModel.zone)
+        val end = Instant.ofEpochMilli(current.endedAtMillis ?: current.startedAtMillis).atZone(viewModel.zone)
+        EditSessionSheet(
+            day = start.toLocalDate(),
+            start = start.toLocalTime().withSecond(0).withNano(0),
+            end = end.toLocalTime().withSecond(0).withNano(0),
+            effort = current.effort,
+            notes = current.notes.orEmpty(),
+            today = viewModel.today(),
+            onSave = { day, from, to, effort, notes ->
+                viewModel.edit(day, from, to, effort, notes)
+                editing = false
+            },
+            onDismiss = { editing = false },
+        )
     }
     if (confirmDelete) {
         AlertDialog(
@@ -292,4 +332,99 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
             .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(16.dp))
             .padding(horizontal = CruxTheme.space.s3),
     ) { content() }
+}
+
+/**
+ * Changes a finished session: its day, when it started and finished, how hard it felt and the
+ * note. Climbs logged in it keep their own days.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun EditSessionSheet(
+    day: java.time.LocalDate,
+    start: java.time.LocalTime,
+    end: java.time.LocalTime,
+    effort: Int?,
+    notes: String,
+    today: java.time.LocalDate,
+    onSave: (java.time.LocalDate, java.time.LocalTime, java.time.LocalTime, Int?, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var pickedDay by remember { mutableStateOf(day) }
+    var from by remember { mutableStateOf(start) }
+    var to by remember { mutableStateOf(end) }
+    var felt by remember { mutableStateOf(effort) }
+    var text by remember { mutableStateOf(notes) }
+    var picking by remember { mutableStateOf<String?>(null) }
+    val space = CruxTheme.space
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("edit_session_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s4)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Text("Edit session", style = MaterialTheme.typography.headlineSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                WhenField("Day", pickedDay.dayLabel(), "edit_session_day", Modifier.weight(1.4f)) { picking = "day" }
+                WhenField("Started", from.format(TIME), "edit_session_start", Modifier.weight(1f)) { picking = "start" }
+                WhenField("Finished", to.format(TIME), "edit_session_end", Modifier.weight(1f)) { picking = "end" }
+            }
+            val minutes = java.time.Duration.between(from, to).toMinutes().let { if (it < 0) it + 24 * 60 else it }
+            Text(
+                "${durationLabel(minutes * 60_000L)} long" + if (to.isBefore(from)) ", past midnight" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            com.hardtekpt.crux.ui.components.input.EffortScale(felt, { felt = it })
+            com.hardtekpt.crux.ui.components.CruxTextField(
+                label = "Notes",
+                value = text,
+                onValueChange = { text = it.take(1000) },
+                placeholder = "How it went",
+                singleLine = false,
+                minLines = 2,
+                modifier = Modifier.testTag("edit_session_notes"),
+            )
+            com.hardtekpt.crux.ui.components.CruxButton(
+                "Save changes",
+                { onSave(pickedDay, from, to, felt, text) },
+                icon = Icons.Rounded.Check,
+                size = com.hardtekpt.crux.ui.components.CruxButtonSize.Large,
+                modifier = Modifier.fillMaxWidth().testTag("edit_session_save"),
+            )
+        }
+    }
+    when (picking) {
+        "day" -> com.hardtekpt.crux.ui.components.input.PastDayDialog(pickedDay, today, { pickedDay = it }) { picking = null }
+        "start" -> com.hardtekpt.crux.ui.components.input.TimeDialog("Started", from, { from = it }) { picking = null }
+        "end" -> com.hardtekpt.crux.ui.components.input.TimeDialog("Finished", to, { to = it }) { picking = null }
+    }
+}
+
+/** A labelled value that opens a picker. */
+@Composable
+private fun WhenField(label: String, value: String, tag: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier
+            .clip(shape)
+            .background(colors.surfaceContainer)
+            .border(CruxTheme.size.borderHairline, colors.outlineVariant, shape)
+            .clickable(onClickLabel = "Change $label", onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag(tag),
+    ) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+    }
 }

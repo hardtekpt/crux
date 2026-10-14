@@ -91,6 +91,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -100,7 +101,9 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class NotesViewModel @Inject constructor(repository: NoteRepository) : ViewModel() {
-    val notes: StateFlow<List<Note>?> = repository.observeNotes().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val notes: StateFlow<List<Note>?> = repository.observeNotes().flowOn(
+        kotlinx.coroutines.Dispatchers.Default,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /** Every note, pinned first, then newest first. */
@@ -170,7 +173,7 @@ class NoteEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle
     /** Tags already used on other notes, offered as one-tap picks. */
     val knownTags: StateFlow<List<String>> = repository.observeNotes()
         .map { notes -> notes.mapNotNull { it.tag }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         if (noteId != 0L) {
@@ -360,7 +363,9 @@ class RecordEditorViewModel @Inject constructor(
     private val today = LocalDate.now(clock)
     private val _draft = MutableStateFlow(RecordDraft(exerciseId = savedStateHandle.get<Long>("exerciseId") ?: 0L, date = today, today = today))
     val draft: StateFlow<RecordDraft> = _draft.asStateFlow()
-    val exercises: StateFlow<List<Exercise>> = exercises.observeExercises().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val exercises: StateFlow<List<Exercise>> = exercises.observeExercises().flowOn(
+        kotlinx.coroutines.Dispatchers.Default,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun update(change: (RecordDraft) -> RecordDraft) = _draft.update { change(it).copy(error = null) }
 
@@ -498,7 +503,7 @@ class ExerciseRecordsViewModel @Inject constructor(savedStateHandle: SavedStateH
     val exerciseId: Long = savedStateHandle.get<Long>("exerciseId") ?: 0L
     val state: StateFlow<Pair<Exercise?, List<ExerciseRecord>>> =
         combine(exercises.observeExercises(), records.observeRecords(exerciseId)) { list, mine -> list.firstOrNull { it.id == exerciseId } to mine }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null to emptyList())
+            .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null to emptyList())
 
     fun delete(id: Long) {
         viewModelScope.launch { records.deleteRecord(id) }
@@ -544,8 +549,11 @@ fun ExerciseRecordsScreen(onBack: () -> Unit, onAdd: (Long) -> Unit, viewModel: 
                 CruxListRow(
                     title = record.describe(ex.metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
                     supporting = listOfNotNull(record.date.dayLabel(), record.notes, "PR".takeIf { record.id == pr?.id }).joinToString(" · "),
-                    trailing = {
-                        IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }
+                    // A set from a session is changed in its session, so only hand-logged results can go here.
+                    trailing = if (record.fromSession) {
+                        null
+                    } else {
+                        { IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") } }
                     },
                     selected = record.id == pr?.id,
                     modifier = Modifier.heightIn(min = 56.dp).testTag("record_result"),

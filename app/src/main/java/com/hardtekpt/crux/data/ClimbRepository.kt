@@ -63,7 +63,7 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
         val db = dbs.current()
         return db.withTransaction {
             val id = db.climbDao().insert(climb.toEntity(clock.millis()))
-            if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            settle(db, id, climb)
             id
         }
     }
@@ -94,10 +94,26 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
             val dao = db.climbDao()
             val existing = dao.get(id) ?: return@withTransaction
             dao.update(climb.toEntity(existing.createdAtMillis).copy(id = id))
-            if (climb.problemId == null) ClimbLinks.linkUnlinked(db.openHelper.writableDatabase, clock.millis())
+            settle(db, id, climb)
             // Moved to another climb: the one it left goes if nothing else is logged on it.
             existing.problemId?.takeIf { it != dao.get(id)?.problemId }?.let { dropIfEmpty(db, it) }
         }
+    }
+
+    /**
+     * After a log is saved: on a climb picked in the form, the form's name, grade and where
+     * become the climb's; otherwise it joins the climb of its name there, as that climb is. Then
+     * all the climb's logs show it the same way.
+     */
+    private suspend fun settle(db: CruxDatabase, logId: Long, climb: NewClimb) {
+        val sql = db.openHelper.writableDatabase
+        if (climb.problemId != null) {
+            ClimbLinks.adoptLog(sql, logId)
+        } else {
+            ClimbLinks.linkUnlinked(sql, clock.millis())
+        }
+        ClimbLinks.settleSections(sql)
+        db.climbDao().get(logId)?.problemId?.let { ClimbLinks.syncLogs(sql, it) }
     }
 
     /** Deletes the log; its climb goes too when that was its last log. */
@@ -137,7 +153,6 @@ private fun NewClimb.toEntity(createdAtMillis: Long) = ClimbEntity(
     sectionId = sectionId,
     sessionId = sessionId,
     problemId = problemId,
-    angle = angle,
     effort = effort,
     gradeLabel = gradeLabel.takeIf { gradeScale.isLocal },
     gradeColour = gradeColour.takeIf { gradeScale.isLocal },
@@ -161,7 +176,6 @@ internal fun ClimbEntity.toModel() = Climb(
     sectionId = sectionId,
     sessionId = sessionId,
     problemId = problemId,
-    angle = angle,
     effort = effort,
     gradeLabel = gradeLabel.takeIf { gradeScale.isLocal },
     gradeColour = gradeColour.takeIf { gradeScale.isLocal },

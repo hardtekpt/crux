@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.aboutlibraries)
     alias(libs.plugins.roborazzi)
+    alias(libs.plugins.baselineprofile)
 }
 
 // Version lives in version.properties; versionCode follows from it so it always increases.
@@ -51,6 +52,15 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+        }
+        // The release build's speed under the debug app's id and key, so it installs over a
+        // phone's debug app and keeps its data. Not debuggable, so profiles and R8 apply.
+        create("internal") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isProfileable = true
         }
         release {
             isMinifyEnabled = true
@@ -96,12 +106,21 @@ android {
     }
 }
 
+baselineProfile {
+    // Profiles are generated on demand (./gradlew :app:generateReleaseBaselineProfile) and committed.
+    automaticGenerationDuringBuild = false
+    mergeIntoMain = true
+}
+
 room {
     schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    // Installs the baseline profile (src/main/baseline-prof.txt) so startup and scrolling are compiled ahead of time.
+    implementation(libs.androidx.profileinstaller)
+    "baselineProfile"(project(":baselineprofile"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

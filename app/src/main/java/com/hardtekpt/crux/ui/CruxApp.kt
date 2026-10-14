@@ -23,6 +23,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +61,7 @@ import com.hardtekpt.crux.ui.navigation.FloatingNavBar
 import com.hardtekpt.crux.ui.navigation.GradeConverterRoute
 import com.hardtekpt.crux.ui.navigation.HomeGraph
 import com.hardtekpt.crux.ui.navigation.HomeRoute
+import com.hardtekpt.crux.ui.navigation.IntervalTimerRoute
 import com.hardtekpt.crux.ui.navigation.JournalGraph
 import com.hardtekpt.crux.ui.navigation.JournalRoute
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -101,6 +103,7 @@ import com.hardtekpt.crux.ui.settings.AboutScreen
 import com.hardtekpt.crux.ui.settings.BackupScreen
 import com.hardtekpt.crux.ui.settings.SettingsScreen
 import com.hardtekpt.crux.ui.theme.CruxTheme
+import com.hardtekpt.crux.ui.timer.IntervalTimerScreen
 import com.hardtekpt.crux.ui.train.ExerciseEditorScreen
 import com.hardtekpt.crux.ui.train.PlanEditorScreen
 import com.hardtekpt.crux.ui.train.TemplateDetailScreen
@@ -118,7 +121,7 @@ import com.hardtekpt.crux.ui.you.RecordEditorScreen
 import com.hardtekpt.crux.ui.you.YouScreen
 
 @Composable
-fun CruxApp() {
+fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () -> Unit = {}) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -130,6 +133,32 @@ fun CruxApp() {
     val openSession = { id: Long -> navController.navigate(SessionRoute(id)) { launchSingleTop = true } }
     val startSession = { templateId: Long? -> sessionsViewModel.start(templateId) { openSession(it) } }
 
+    // Taps on the live notification: the session, the Interval timer page, or Log climb.
+    LaunchedEffect(openRequest) {
+        when (openRequest) {
+            is com.hardtekpt.crux.OpenRequest.Session -> openSession(openRequest.id)
+            com.hardtekpt.crux.OpenRequest.Timer -> navController.navigate(IntervalTimerRoute) { launchSingleTop = true }
+            com.hardtekpt.crux.OpenRequest.LogClimb -> navController.navigate(LogClimbRoute())
+            null -> return@LaunchedEffect
+        }
+        onOpened()
+    }
+
+    // Android 13 and newer ask once, when a session first runs, whether Crux may show its live notification.
+    val notifications = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) {
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(runningSession != null) {
+        if (runningSession != null && android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val onForm = currentDestination.isAny(
         SessionRoute::class,
         LogClimbRoute::class,
@@ -139,6 +168,7 @@ fun CruxApp() {
         PlaceEditorRoute::class,
         NoteEditorRoute::class,
         RecordEditorRoute::class,
+        IntervalTimerRoute::class,
     )
     // The current screen's tab; a page outside the tabs, like a problem, keeps the tab it was
     // opened from lit.
@@ -176,7 +206,7 @@ fun CruxApp() {
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
-                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) },
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
                             onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
@@ -244,7 +274,7 @@ fun CruxApp() {
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it)) }) }
+                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) }) }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {
@@ -259,6 +289,7 @@ fun CruxApp() {
                                 openNotes = { navController.navigate(NotesRoute) },
                                 openPlaces = { navController.navigate(PlacesRoute) },
                                 openConverter = { navController.navigate(GradeConverterRoute) },
+                                openTimer = { navController.navigate(IntervalTimerRoute) },
                             ),
                         )
                     }
@@ -276,6 +307,7 @@ fun CruxApp() {
                     }
                     page<CircumferencesRoute> { CircumferencesScreen(onBack = navController::popBackStack) }
                     page<GradeConverterRoute> { GradeConverterScreen(onBack = navController::popBackStack) }
+                    page<IntervalTimerRoute> { IntervalTimerScreen(onBack = navController::popBackStack) }
                     page<PlacesRoute> {
                         PlacesScreen(
                             onBack = navController::popBackStack,
@@ -329,6 +361,7 @@ fun CruxApp() {
                         onLeave = navController::popBackStack,
                         onLogClimb = { navController.navigate(LogClimbRoute()) },
                         onFinished = navController::popBackStack,
+                        onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
                     )
                 }
                 page<LogClimbRoute> {

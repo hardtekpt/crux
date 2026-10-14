@@ -37,6 +37,12 @@ data class IntervalSpec(
 
         /** Hangboard repeaters: 6 × 7 s on, 3 s off, three cycles with 3 min between. */
         val REPEATERS = IntervalSpec(prepSeconds = 10, workSeconds = 7, restSeconds = 3, repeats = 6, cycles = 3, cycleRestSeconds = 180)
+
+        /** Max hangs: 5 × 10 s on the edge, 3 min off. */
+        val MAX_HANGS = IntervalSpec(prepSeconds = 10, workSeconds = 10, restSeconds = 180, repeats = 5, cycles = 1, cycleRestSeconds = 60)
+
+        /** Bouldering 4×4s: 4 min climbing four problems back to back, 4 min off, four times. */
+        val FOUR_BY_FOURS = IntervalSpec(prepSeconds = 10, workSeconds = 240, restSeconds = 240, repeats = 4, cycles = 1, cycleRestSeconds = 60)
     }
 }
 
@@ -134,6 +140,18 @@ data class IntervalRun(
         val before = inCycle.filter { it.index < position.index }.sumOf { it.value.seconds * 1000L }
         val done = before + phase.seconds * 1000L - position.leftMillis
         return IntervalStretch(total - done, total)
+    }
+
+    /** Milliseconds from the start to the start of phase [index]. */
+    fun startOf(index: Int): Long = spec.phases.take(index.coerceIn(0, spec.phases.size)).sumOf { it.seconds * 1000L }
+
+    /**
+     * Jumps to the start of phase [index] (clamped to the phases; past the last one is the end),
+     * paused or not, by moving where the run started.
+     */
+    fun skipTo(index: Int, nowMillis: Long): IntervalRun {
+        val target = startOf(index.coerceIn(0, spec.phases.size))
+        return copy(startedAtMillis = (pausedAtMillis ?: nowMillis) - pausedMillis - target)
     }
 
     fun pause(nowMillis: Long): IntervalRun = if (paused) this else copy(pausedAtMillis = nowMillis)

@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -46,6 +47,15 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val today: LocalDate = LocalDate.now(),
     val todaysPlan: WorkoutTemplate? = null,
+    /** Today's plans from the weekly schedule, in order; [todaysPlan] is the first. */
+    val todaysPlans: List<WorkoutTemplate> = emptyList(),
+    /** Today is a climbing day on the schedule, at this place if it has one. */
+    val climbingToday: Boolean = false,
+    val climbingPlace: String? = null,
+    /** This week from the schedule; empty when nothing is scheduled. */
+    val schedule: List<com.hardtekpt.crux.ui.train.WeekDay> = emptyList(),
+    /** On a day with nothing planned: the next planned thing and its day. */
+    val nextUp: Pair<LocalDate, String>? = null,
     val week: WeekSummary = WeekSummary(),
     val latestBest: PersonalBest? = null,
     val weight: WeightSummary? = null,
@@ -70,12 +80,15 @@ class HomeViewModel @Inject constructor(
     bodyRepository: BodyRepository,
     templateRepository: TemplateRepository,
     placeRepository: PlaceRepository,
+    scheduleRepository: com.hardtekpt.crux.data.ScheduleRepository,
+    sessionRepository: com.hardtekpt.crux.data.SessionRepository,
     preferences: UserPreferencesRepository,
     private val dashboardRepository: DashboardRepository,
     clock: Clock,
 ) : ViewModel() {
 
     private val today = LocalDate.now(clock)
+    private val zone = clock.zone
     private val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
     private data class Inputs(
@@ -84,6 +97,8 @@ class HomeViewModel @Inject constructor(
         val weights: List<Measurement>,
         val scales: GradeScales,
         val projects: List<Project> = emptyList(),
+        val slots: List<com.hardtekpt.crux.data.ScheduleSlot> = emptyList(),
+        val sessions: List<com.hardtekpt.crux.data.Session> = emptyList(),
     )
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -93,14 +108,13 @@ class HomeViewModel @Inject constructor(
         preferences.gradeScales,
     ) { templates, climbs, weights, scales -> Inputs(templates, climbs, weights, scales) }
         .combine(placeRepository.observeProjects()) { inputs, projects -> inputs.copy(projects = projects) }
+        .combine(scheduleRepository.observeWeek()) { inputs, slots -> inputs.copy(slots = slots) }
+        .combine(sessionRepository.observeFinished()) { inputs, sessions -> inputs.copy(sessions = sessions) }
         .map(::buildState)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
-
-    /** "+1 go" on the Projects widget. */
-    val quickGo = com.hardtekpt.crux.data.QuickGoState(com.hardtekpt.crux.data.QuickGo(climbRepository, placeRepository, clock), viewModelScope)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
     val demoMode: StateFlow<Boolean> = preferences.demoMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _dashboard = MutableStateFlow(DashboardState())
     val dashboard: StateFlow<DashboardState> = _dashboard.asStateFlow()
@@ -118,11 +132,39 @@ class HomeViewModel @Inject constructor(
         val weekClimbs = inputs.climbs.filter { !it.date.isBefore(weekStart) }
         val climbDays = inputs.climbs.groupingBy { it.date }.eachCount()
         val (streak, bestStreak) = com.hardtekpt.crux.ui.you.weekStreaks(climbDays.keys, today)
+        // Today from the weekly schedule; with nothing scheduled at all, a rotation through the plans.
+        val scheduled = inputs.slots.isNotEmpty()
+        val schedule = if (scheduled) {
+            com.hardtekpt.crux.ui.train.buildWeek(today, inputs.slots, inputs.sessions, climbDays.keys, zone)
+        } else {
+            emptyList()
+        }
+        val todaySlots = inputs.slots.filter { it.day == today.dayOfWeek }
+        val byId = inputs.templates.associateBy { it.id }
+        val todaysPlans = if (scheduled) {
+            todaySlots.mapNotNull { slot -> slot.planId?.let(byId::get) }
+        } else {
+            listOfNotNull(inputs.templates.takeIf { it.isNotEmpty() }?.let { it[today.dayOfWeek.ordinal % it.size] })
+        }
+        val climbSlot = todaySlots.firstOrNull { it.kind == com.hardtekpt.crux.data.local.ScheduleKind.CLIMB }
+        val nextUp = if (scheduled && todaySlots.isEmpty()) {
+            (1L..7L).asSequence().map { today.plusDays(it) }.firstNotNullOfOrNull { date ->
+                inputs.slots.firstOrNull { it.day == date.dayOfWeek }?.let { slot ->
+                    date to (slot.planName ?: "Climbing day")
+                }
+            }
+        } else {
+            null
+        }
         return HomeUiState(
             isLoading = false,
             today = today,
-            // A fixed rotation through the plans by day of the week until scheduling exists.
-            todaysPlan = inputs.templates.takeIf { it.isNotEmpty() }?.let { it[today.dayOfWeek.ordinal % it.size] },
+            todaysPlan = todaysPlans.firstOrNull(),
+            todaysPlans = todaysPlans,
+            climbingToday = climbSlot != null,
+            climbingPlace = climbSlot?.placeName,
+            schedule = schedule,
+            nextUp = nextUp,
             week = WeekSummary(
                 climbs = weekClimbs.size,
                 sends = weekClimbs.count { it.style.isSend },

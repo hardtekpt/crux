@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -115,7 +116,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -138,6 +141,8 @@ class SessionViewModel @Inject constructor(
     private val places: PlaceRepository,
     private val preferences: UserPreferencesRepository,
     private val clock: Clock,
+    private val live: com.hardtekpt.crux.live.LiveTimers,
+    records: com.hardtekpt.crux.data.RecordRepository? = null,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -162,6 +167,14 @@ class SessionViewModel @Inject constructor(
         viewModelScope.launch { preferences.setTimerCompact(!timerCompact.value) }
     }
 
+    /** Exercises whose personal record is a set done in this session: they show "New best". */
+    val newBests: StateFlow<Set<Long>> = (records?.observeBests() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .combine(session) { bests, current ->
+            val sets = current?.items.orEmpty().flatMap { item -> item.sets.map { -it.id to item.id } }.toMap()
+            bests.mapNotNull { best -> best.best.takeIf { it.fromSession }?.let { sets[it.id] } }.toSet()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     /** The exercise on screen; null follows the first one with sets still to do. */
     private val _currentItem = MutableStateFlow<Long?>(null)
     val currentItem: StateFlow<Long?> = _currentItem.asStateFlow()
@@ -169,15 +182,31 @@ class SessionViewModel @Inject constructor(
     private val _draft = MutableStateFlow(SetDraft())
     val draft: StateFlow<SetDraft> = _draft.asStateFlow()
 
-    private val _rest = MutableStateFlow<Rest?>(null)
+    // The rest and timer outlive this screen: the live notification shows and changes them too.
+    private val _rest = live.rest.also { live.attach(sessionId) }
     val rest: StateFlow<Rest?> = _rest.asStateFlow()
 
-    private val _timer = MutableStateFlow<SessionTimer?>(null)
+    private val _timer = live.timer
     val timer: StateFlow<SessionTimer?> = _timer.asStateFlow()
 
     /** Counts timers that ran to the end, so the screen can sound the finish. */
     private val _timerEnds = MutableStateFlow(0)
     val timerEnds: StateFlow<Int> = _timerEnds.asStateFlow()
+
+    init {
+        // Logging a climb in the session starts the rest set in Settings, unless a timer runs.
+        viewModelScope.launch {
+            var seen: Int? = null
+            session.collect { current ->
+                val count = current?.climbs?.size ?: return@collect
+                val rest = preferences.climbRestSeconds.first()
+                if (seen != null && count > seen!! && rest > 0 && _timer.value == null) {
+                    _rest.value = Rest(clock.millis() + rest * 1000L, rest)
+                }
+                seen = count
+            }
+        }
+    }
 
     /** The last free timer, so the next one starts the same. */
     private var lastFreeSpec = IntervalSpec.TABATA
@@ -381,11 +410,18 @@ internal fun clockLabel(millis: Long): String {
  * exercise at a time and its sets; without one, the climbs. Leaving keeps the session running.
  */
 @Composable
-fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () -> Unit, viewModel: SessionViewModel = hiltViewModel()) {
+fun SessionScreen(
+    onLeave: () -> Unit,
+    onLogClimb: () -> Unit,
+    onFinished: () -> Unit,
+    onLogMore: (problemId: Long) -> Unit = {},
+    viewModel: SessionViewModel = hiltViewModel(),
+) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val place by viewModel.place.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val rest by viewModel.rest.collectAsStateWithLifecycle()
+    val newBests by viewModel.newBests.collectAsStateWithLifecycle()
     val timer by viewModel.timer.collectAsStateWithLifecycle()
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
@@ -518,7 +554,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 rest = runningRest,
                 nowMillis = now,
                 drainNowMillis = { drainNow },
-                next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "",
+                next = item?.let { i -> i.nextSet?.let { "Set ${it + 1} next" } ?: "Next: ${i.exercise.name}" } ?: "Before your next go",
                 segments = emptyList(),
                 compact = compactTimer,
                 onToggleCompact = viewModel::toggleTimerCompact,
@@ -541,6 +577,7 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                 val index = current.items.indexOf(item)
                 ExerciseView(
                     item = item,
+                    newBest = item.id in newBests,
                     step = listOfNotNull("${index + 1} of ${current.items.size}", item.blockName.takeIf { it.isNotBlank() }).joinToString(" · "),
                     draft = draft,
                     timerRunning = runningTimer?.itemId == item.id,
@@ -573,7 +610,9 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         modifier = Modifier.testTag("session_log_climb"),
                     )
                 }
-                current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) }
+                current.climbGroups.sortedByDescending {
+                    it.id
+                }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
             } else {
                 // A climbing day: the tally, the climbs, Log climb.
                 ClimbTally(current.climbGroups)
@@ -584,7 +623,11 @@ fun SessionScreen(onLeave: () -> Unit, onLogClimb: () -> Unit, onFinished: () ->
                         color = colors.onSurfaceVariant,
                     )
                 } else {
-                    Column { current.climbGroups.sortedByDescending { it.id }.forEach { SessionClimbLine(it) } }
+                    Column {
+                        current.climbGroups.sortedByDescending {
+                            it.id
+                        }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
+                    }
                 }
                 CruxButton(
                     "Log climb",
@@ -724,6 +767,7 @@ internal fun goalSentence(item: SessionItem, imperial: Boolean): AnnotatedString
 @Composable
 private fun ExerciseView(
     item: SessionItem,
+    newBest: Boolean,
     step: String,
     draft: SetDraft,
     timerRunning: Boolean,
@@ -753,6 +797,21 @@ private fun ExerciseView(
                 style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.4).sp),
                 modifier = Modifier.testTag("session_exercise_name"),
             )
+            // A set here beat every result before it: the moment gets a quiet badge.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = newBest,
+                enter = androidx.compose.animation.fadeIn(com.hardtekpt.crux.ui.components.CruxMotion.medium()) +
+                    androidx.compose.animation.expandVertically(com.hardtekpt.crux.ui.components.CruxMotion.medium()),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.testTag("session_new_best"),
+                ) {
+                    Icon(Icons.Rounded.Star, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(18.dp))
+                    Text("New best", style = MaterialTheme.typography.labelLarge, color = colors.secondary)
+                }
+            }
             Text(goalSentence(item, imperial), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
         }
 
@@ -970,15 +1029,20 @@ private fun TallyFigure(value: String, label: String, modifier: Modifier = Modif
     }
 }
 
+/** A climb logged in the session; tapping it logs more goes on it. */
 @Composable
-private fun SessionClimbLine(climb: Climb) {
+private fun SessionClimbLine(climb: Climb, onClick: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
     val sent = climb.style.isSend
     val tape = climb.gradeColour?.let { argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp).testTag("session_climb"),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClickLabel = "Log more goes", onClick = onClick) else Modifier)
+            .padding(vertical = 9.dp)
+            .testTag("session_climb"),
     ) {
         Box(Modifier.width(4.dp).height(28.dp).clip(RoundedCornerShape(2.dp)).background(tape))
         Text(climb.grade, style = CruxTheme.type.grade, modifier = Modifier.width(44.dp), maxLines = 1)

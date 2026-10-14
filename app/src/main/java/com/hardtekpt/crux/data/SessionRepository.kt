@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
 /** A set as logged: what was done, or that it was skipped. */
-data class SessionSet(val setIndex: Int, val reps: Int?, val seconds: Int?, val loadKg: Double?, val skipped: Boolean)
+data class SessionSet(val setIndex: Int, val reps: Int?, val seconds: Int?, val loadKg: Double?, val skipped: Boolean, val id: Long = 0)
 
 /** One exercise in a session: its target and the sets logged so far. */
 data class SessionItem(val id: Long, val exercise: Exercise, val blockName: String, val target: ExerciseTarget, val sets: List<SessionSet>) {
@@ -86,6 +86,9 @@ interface SessionRepository {
     suspend fun addExercise(sessionId: Long, exercise: Exercise): Long
     suspend fun setPlace(sessionId: Long, placeId: Long?, sectionId: Long?)
     suspend fun finish(sessionId: Long, effort: Int?, notes: String?)
+
+    /** Changes a finished session's times, how it felt and its note. */
+    suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?)
 
     /** Throws the session away; climbs logged in it stay in the journal. */
     suspend fun discard(sessionId: Long)
@@ -213,6 +216,20 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
         dao.getSession(sessionId)?.let { dao.updateSession(it.copy(placeId = placeId, sectionId = sectionId)) }
     }
 
+    override suspend fun edit(sessionId: Long, startedAtMillis: Long, endedAtMillis: Long, effort: Int?, notes: String?) {
+        val dao = dbs.current().sessionDao()
+        dao.getSession(sessionId)?.let {
+            dao.updateSession(
+                it.copy(
+                    startedAtMillis = startedAtMillis,
+                    endedAtMillis = endedAtMillis.coerceAtLeast(startedAtMillis),
+                    effort = effort?.coerceIn(1, 10),
+                    notes = notes?.trim()?.takeIf { n -> n.isNotEmpty() },
+                ),
+            )
+        }
+    }
+
     override suspend fun finish(sessionId: Long, effort: Int?, notes: String?) {
         val dao = dbs.current().sessionDao()
         dao.getSession(sessionId)?.let {
@@ -272,7 +289,9 @@ private fun SessionEntity.toModel(
                     restSeconds = item.restSeconds,
                     repRestSeconds = item.repRestSeconds,
                 ),
-                sets = setsByItem[item.id].orEmpty().sortedBy { it.setIndex }.map { SessionSet(it.setIndex, it.reps, it.seconds, it.loadKg, it.skipped) },
+                sets = setsByItem[item.id].orEmpty().sortedBy {
+                    it.setIndex
+                }.map { SessionSet(it.setIndex, it.reps, it.seconds, it.loadKg, it.skipped, it.id) },
             )
         },
         climbs = climbs,

@@ -167,7 +167,6 @@ data class PlaceDraft(
     /** The named parts of the place, in order: a kind and a name each. At least one. */
     val sections: List<SectionDraft> = listOf(SectionDraft(type = PlaceType.GYM)),
     val location: String = "",
-    val defaultAngle: Int = 40,
     val notes: String = "",
     val favourite: Boolean = false,
     val mapLocation: MapLocation? = null,
@@ -234,7 +233,6 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                                     )
                                 },
                             location = p.location.orEmpty(),
-                            defaultAngle = p.defaultAngle ?: 40,
                             notes = p.notes.orEmpty(),
                             favourite = p.favourite,
                             mapLocation = p.mapLocation,
@@ -288,7 +286,6 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                         )
                     },
                     location = d.location,
-                    defaultAngle = d.defaultAngle.takeIf { d.hasBoard },
                     notes = d.notes,
                     favourite = d.favourite,
                     mapLocation = d.mapLocation,
@@ -395,15 +392,6 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                             onClick = { viewModel.update { it.addSection(t) } },
                             modifier = Modifier.testTag("add_section_${t.name}"),
                         )
-                    }
-                }
-                if (draft.hasBoard) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Usual angle", style = MaterialTheme.typography.titleMedium)
-                            Text("Where new climbs here start", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        CruxStepper(draft.defaultAngle, { a -> viewModel.update { it.copy(defaultAngle = a) } }, 0..70, "deg", step = 5)
                     }
                 }
             }

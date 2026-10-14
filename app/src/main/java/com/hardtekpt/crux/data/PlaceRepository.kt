@@ -34,7 +34,6 @@ data class PlaceInput(
     /** Every kind of climbing here, main first; used when [sections] isn't given. */
     val types: List<PlaceType> = listOf(PlaceType.GYM),
     val location: String?,
-    val defaultAngle: Int?,
     val notes: String?,
     val favourite: Boolean = false,
     val mapLocation: MapLocation? = null,
@@ -85,7 +84,7 @@ interface PlaceRepository {
     suspend fun getProblem(id: Long): Problem?
     suspend fun savePlace(input: PlaceInput): Long
     suspend fun deletePlace(id: Long)
-    suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long? = null): Long
+    suspend fun saveArea(placeId: Long, areaId: Long, name: String, imagePath: String?, sectionId: Long? = null): Long
     suspend fun deleteArea(id: Long)
 
     suspend fun saveProblem(input: ProblemInput): Long
@@ -198,7 +197,6 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             type = kinds.first(),
             extraTypes = kinds.drop(1).joinToString(",") { it.name },
             location = input.location?.trim()?.takeIf { it.isNotEmpty() },
-            defaultAngle = input.defaultAngle,
             notes = input.notes?.trim()?.takeIf { it.isNotEmpty() },
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
             favourite = input.favourite,
@@ -253,19 +251,18 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         }
     }
 
-    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, angle: Int?, imagePath: String?, sectionId: Long?): Long {
+    override suspend fun saveArea(placeId: Long, areaId: Long, name: String, imagePath: String?, sectionId: Long?): Long {
         val dao = dbs.current().placeDao()
         val section = sectionId ?: dao.getSections(placeId).firstOrNull()?.id
         return if (areaId != 0L) {
             val existing = dao.getAllAreas().first { it.id == areaId }
-            dao.updateArea(existing.copy(name = name.trim(), angle = angle, imagePath = imagePath, sectionId = section))
+            dao.updateArea(existing.copy(name = name.trim(), imagePath = imagePath, sectionId = section))
             areaId
         } else {
             dao.insertArea(
                 AreaEntity(
                     placeId = placeId,
                     name = name.trim(),
-                    angle = angle,
                     position = dao.nextAreaPosition(placeId),
                     imagePath = imagePath,
                     sectionId = section,
@@ -342,7 +339,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
 }
 
 internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = Place(
-    id, name, type, location, defaultAngle, notes, favourite,
+    id, name, type, location, notes, favourite,
     mapLocation = if (latitude != null && longitude != null) MapLocation(latitude, longitude, address) else null,
     types = listOf(type) + PlaceEntity.parseTypes(extraTypes).filter { it != type },
     sections = sections.sortedWith(
@@ -355,7 +352,7 @@ internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = 
 internal fun PlaceEntity.Companion.parseTypes(text: String): List<PlaceType> =
     text.split(',').mapNotNull { name -> PlaceType.entries.firstOrNull { it.name == name.trim() } }.distinct()
 
-internal fun AreaEntity.toModel() = Area(id, placeId, name, angle, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath, type, sectionId)
+internal fun AreaEntity.toModel() = Area(id, placeId, name, resetEpochDay?.let(LocalDate::ofEpochDay), imagePath, type, sectionId)
 
 internal fun ProblemEntity.toModel() = Problem(
     id = id,

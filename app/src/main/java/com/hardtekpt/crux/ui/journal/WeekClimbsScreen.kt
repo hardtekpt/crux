@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -112,7 +113,9 @@ class WeekClimbsViewModel @Inject constructor(
                 },
             firstWeek = climbs.minOfOrNull { it.date }?.let(::monday),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekClimbsUiState(week = thisWeek, thisWeek = thisWeek))
+    }.flowOn(
+        kotlinx.coroutines.Dispatchers.Default,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekClimbsUiState(week = thisWeek, thisWeek = thisWeek))
 
     /** Moves a week back or on, never past this week. */
     fun page(by: Long) = week.update { it.plusWeeks(by).coerceAtMost(thisWeek) }

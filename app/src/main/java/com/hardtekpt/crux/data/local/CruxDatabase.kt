@@ -7,6 +7,25 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
+ * Schema 24: a climb's name, grade and where it is belong to the climb, so every log is made to
+ * show its climb (see [ClimbLinks.syncLogs]). Logs saved at another facility than their climb's
+ * move to it.
+ */
+class LogsFollowClimbMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) = ClimbLinks.syncLogs(db)
+}
+
+/** Schema 23 puts every climb at a place in one of its facilities; see [ClimbLinks.settleSections]. */
+class ClimbSectionsMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) = ClimbLinks.settleSections(db)
+}
+
+/** Schema 22 drops board angles; see [BoardAngles]. */
+class BoardAnglesMigration : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) = BoardAngles.migrate(db)
+}
+
+/**
  * Schema 21 drops problems as a separate idea: every log belongs to a climb (a `problems` row,
  * which no longer needs a place). Sends are counted on each log, and logs without a climb get
  * one, merged by name and place (see [ClimbLinks]). A flash logged after earlier goes on the
@@ -132,6 +151,7 @@ class PlacesMigration : AutoMigrationSpec {
         ClimbMediaEntity::class,
         com.hardtekpt.crux.data.NoteEntity::class,
         com.hardtekpt.crux.data.ExerciseRecordEntity::class,
+        ScheduleSlotEntity::class,
     ],
     version = CruxDatabase.VERSION,
     exportSchema = true,
@@ -154,6 +174,10 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 18, to = 19, spec = ExerciseDefaultsMigration::class),
         AutoMigration(from = 19, to = 20, spec = SectionGradesMigration::class),
         AutoMigration(from = 20, to = 21, spec = ClimbsMigration::class),
+        AutoMigration(from = 21, to = 22, spec = BoardAnglesMigration::class),
+        AutoMigration(from = 22, to = 23, spec = ClimbSectionsMigration::class),
+        AutoMigration(from = 23, to = 24, spec = LogsFollowClimbMigration::class),
+        AutoMigration(from = 24, to = 25),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -166,10 +190,11 @@ abstract class CruxDatabase : RoomDatabase() {
     abstract fun templateDao(): TemplateDao
     abstract fun exerciseDao(): ExerciseDao
     abstract fun sessionDao(): SessionDao
+    abstract fun scheduleDao(): ScheduleDao
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 21
+        const val VERSION = 25
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -49,6 +50,11 @@ class MainActivityTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        // The live notification's permission, so its prompt never covers a session test.
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            instrumentation.uiAutomation.grantRuntimePermission(instrumentation.targetContext.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         runBlocking {
             // The climber's own data set starts with the starter library; demo gets its full set.
             starterData.addStarterLibraryToCurrent()
@@ -146,6 +152,26 @@ class MainActivityTest {
     }
 
     @Test
+    fun theIntervalTimerRunsFullScreenAndStops() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        openFromProfileMenu("menu_timer", "screen_IntervalTimer")
+        composeRule.onNodeWithTag("timer_preset_Tabata").performClick()
+        composeRule.onNodeWithTag("timer_start").performClick()
+        composeRule.waitForTag("screen_IntervalTimerRunning")
+        composeRule.onNodeWithTag("timer_phase").assertTextEquals("GET READY")
+        // Skip the preparation, pause, and the pause holds.
+        composeRule.onNodeWithTag("timer_skip_next").performClick()
+        composeRule.onNodeWithTag("timer_phase").assertTextEquals("WORK")
+        composeRule.onNodeWithTag("timer_pause").performClick()
+        composeRule.onNodeWithTag("timer_resume").assertExists()
+        composeRule.onNodeWithTag("timer_restart").assertExists()
+        // Stop goes back to the setup, which kept Tabata.
+        composeRule.onNodeWithTag("timer_stop").performClick()
+        composeRule.waitForTag("screen_IntervalTimer")
+        composeRule.onNodeWithTag("timer_preset_Tabata").assertExists()
+    }
+
+    @Test
     fun theGradeConverterTranslatesBetweenSystems() {
         composeRule.onNodeWithTag("nav_You").performClick()
         openFromProfileMenu("menu_converter", "screen_GradeConverter")
@@ -206,6 +232,16 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
         composeRule.waitForTag("screen_Session")
         composeRule.waitForTag("session_climb")
+        // Tapping it logs more goes on the same climb; the session still shows it once.
+        composeRule.onNodeWithTag("session_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("go_fell").performClick()
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Session")
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_climb") and hasText("2", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(1, composeRule.onAllNodesWithTag("session_climb").fetchSemanticsNodes().size)
 
         // An interval exercise added on the spot: a cycle logged by hand, then changed.
         composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()
@@ -246,6 +282,13 @@ class MainActivityTest {
         composeRule.onNodeWithTag("journal_session").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.waitForTag("screen_SessionSummary")
         composeRule.waitForTag("session_summary_climb")
+
+        // A finished session can be edited: how it felt and its note.
+        composeRule.onNodeWithTag("edit_session").performClick()
+        composeRule.waitForTag("edit_session_sheet")
+        composeRule.textFieldIn("edit_session_notes").performTextInput("Felt strong")
+        composeRule.onNodeWithTag("edit_session_save").performScrollTo().performClick()
+        composeRule.waitForTag("session_summary_notes")
     }
 
     @Test
@@ -273,6 +316,7 @@ class MainActivityTest {
     @Test
     fun trainShowsStarterTemplatesAndTheirDetail() {
         composeRule.onNodeWithTag("nav_Train").performClick()
+        composeRule.onNodeWithTag("segment_Plans").performClick()
         composeRule.waitForTag("template_card")
         composeRule.onAllNodesWithTag("template_card")[0].performClick()
         composeRule.waitForTag("template_exercise")
@@ -410,11 +454,15 @@ class MainActivityTest {
         composeRule.onNodeWithTag("back").performClick()
         composeRule.waitForTag("screen_PlaceDetail")
 
-        // From Projects, come back and send it first go: a redpoint, and no longer a project.
+        // From Projects, open today's log of it and send it: a redpoint, and no longer a project.
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("project_row")
         composeRule.onNodeWithTag("project_row").performClick()
         composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Attempt") }.isSuccess
+        }
+        composeRule.onNodeWithTag("go_sent").performScrollTo().performClick()
         composeRule.waitUntil(5_000) {
             runCatching { composeRule.onNodeWithTag("go_style", useUnmergedTree = true).assertTextEquals("Redpoint") }.isSuccess
         }
@@ -457,9 +505,33 @@ class MainActivityTest {
     }
 
     @Test
+    fun aDayOfTheWeekCanHoldAPlanAndClimbingAndHomeShowsTheWeek() {
+        composeRule.onNodeWithTag("nav_Train").performClick()
+        composeRule.waitForTag("week_day_WEDNESDAY")
+        composeRule.onNodeWithTag("week_day_WEDNESDAY").performClick()
+        composeRule.waitForTag("day_sheet")
+        composeRule.onNodeWithTag("day_plan_Strength day").performClick()
+        composeRule.onNodeWithTag("day_climbing").performClick()
+        composeRule.onNodeWithTag("day_save").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(
+                hasTestTag("week_plan") and hasAnyDescendant(hasText("Strength day")),
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("week_climb", useUnmergedTree = true).assertIsDisplayed()
+
+        // Home's Today's plan now follows the schedule, with the week as a strip.
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.waitForTag("week_strip")
+    }
+
+    @Test
     fun swipingSidewaysMovesBetweenAPagesTabs() {
         composeRule.onNodeWithTag("nav_Train").performClick()
         composeRule.waitForTag("screen_Train")
+        composeRule.onNodeWithTag("segment_Plans").performClick()
+        composeRule.waitForTag("template_card")
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("screen_Train").performTouchInput { swipeLeft(startX = centerX + width * 0.35f, endX = centerX - width * 0.35f) }
         composeRule.waitForTag("exercise_row")
@@ -497,11 +569,16 @@ class MainActivityTest {
         composeRule.onNode(hasTestTag("journal_note") and hasText("INJURY", substring = true)).assertIsDisplayed()
         composeRule.onNodeWithTag("journal_filter_Climbs").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_note").fetchSemanticsNodes().isEmpty() }
+        // A sideways swipe moves between the tabs: from Climbs back to All.
+        composeRule.onNodeWithTag("screen_Journal").performTouchInput { swipeRight(startX = centerX - width * 0.35f, endX = centerX + width * 0.35f) }
+        composeRule.waitForTag("journal_note")
         // Search finds it by its text; a tag filter from the sheet keeps it.
         composeRule.onNodeWithTag("journal_filter_All").performClick()
+        composeRule.onNodeWithTag("journal_open_search").performClick()
         composeRule.onNodeWithTag("journal_search").performTextInput("ring finger")
         composeRule.waitForTag("journal_note")
         composeRule.onNodeWithTag("journal_search_clear").performClick()
+        composeRule.onNodeWithTag("journal_close_search").performClick()
         composeRule.onNodeWithTag("journal_open_filters").performClick()
         composeRule.onNodeWithTag("tag_filter_injury").performClick()
         composeRule.onNodeWithTag("journal_apply_filters").performClick()

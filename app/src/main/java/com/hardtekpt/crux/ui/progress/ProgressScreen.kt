@@ -36,6 +36,7 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.StatTile
+import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.ui.shortLabel
@@ -47,6 +48,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -127,7 +129,7 @@ class ProgressViewModel @Inject constructor(
             charts = progressCharts(climbs, scales, LocalDate.now(clock)),
         )
     }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 }
 
 @Composable
@@ -170,6 +172,7 @@ fun ProgressContent(
         LazyColumn(
             contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(space.s2),
+            modifier = Modifier.revealWhen(!uiState.isLoading),
         ) {
             item { Eyebrow("Hardest sends", Modifier.padding(bottom = space.s1)) }
             item {

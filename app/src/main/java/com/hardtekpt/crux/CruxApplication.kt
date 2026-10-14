@@ -11,6 +11,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @HiltAndroidApp
@@ -23,6 +25,10 @@ class CruxApplication :
     @Inject lateinit var starterData: StarterData
 
     @Inject lateinit var crashReports: CrashReports
+
+    @Inject lateinit var sessions: com.hardtekpt.crux.data.SessionRepository
+
+    @Inject lateinit var liveTimers: com.hardtekpt.crux.live.LiveTimers
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -37,6 +43,12 @@ class CruxApplication :
         }
         // Only the demo data set is pre-filled; the climber's own starts empty.
         appScope.launch { starterData.seedDemoIfEmpty() }
+        // A running session, or the Interval timer page's run, gets the live notification.
+        appScope.launch {
+            combine(sessions.observeRunning(), liveTimers.standalone) { session, standalone -> session != null || standalone != null }
+                .distinctUntilChanged()
+                .collect { live -> if (live) com.hardtekpt.crux.live.LiveService.start(this@CruxApplication) }
+        }
     }
 
     override val workManagerConfiguration: Configuration

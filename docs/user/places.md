@@ -16,7 +16,7 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 
 - **Name** and optional **Notes**.
 - **What's here**: one or more facilities. A gym can have its main walls *and* a board, for
-  example. Each facility is a gym, crag or board with its own name. Boards have a **usual angle**.
+  example. Each facility is a gym, crag or board with its own name.
 - **Grades for each facility**: the scales new climbs there start in, or **Local grades**, the
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests
@@ -30,11 +30,11 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 
 - **Numbers**: climbs logged and the last visit, climbs here and on how many walls, and open
   projects.
-- **Facilities**: tap one to show only its walls; tap again to show all.
+- **Facilities**, each with how many climbs it has: tap one to show only its walls and climbs; tap
+  again to show all. Climbs on no wall are listed under their facility.
 - **Log here**: starts *Log climb* at this place, and at the facility if one is selected.
 - **Walls** (areas), each with the climbs you've logged on it: grade, name, goes and when you sent
-  it. A wall can have an **image** (a photo of the wall, or a gym map with it marked) and an
-  **angle**.
+  it. A wall can have an **image** (a photo of the wall, or a gym map with it marked).
 - **Open in Maps** hands the pin to your maps app.
 
 ## Climbs
@@ -54,6 +54,6 @@ You don't mark projects; Crux finds them. A project is a climb that's still up, 
 tried and haven't sent yet, at a place or not. Projects show on Home, on Progress, and on each place. Send it, and it
 stops being a project.
 
-To log another go quickly, tap **+1 go** on the project in Home's Projects widget or in Progress.
+To log another go quickly, tap **+1 go** on the project in Progress or on its own page.
 It logs a fall today on that climb, at its place and wall; tap **Undo** in the next few seconds if
 it was a slip. To log a send, or goes with a note, tap the project itself.

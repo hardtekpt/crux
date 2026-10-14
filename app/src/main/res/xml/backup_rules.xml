@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 9–11 backup: same as the cloud-backup part of data_extraction_rules.xml. -->
+<!-- Android 9 to 11 backup, which can't tell cloud from phone-to-phone: nothing is backed up. -->
 <full-backup-content>
-    <include domain="database" path="crux-user.db" />
-    <include domain="database" path="crux-user.db-wal" />
-    <include domain="file" path="datastore/" />
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
 </full-backup-content>

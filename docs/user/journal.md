@@ -10,16 +10,22 @@ training results; and notes. Newest is at the top.
 
 ## Reading the timeline
 
-The panel at the top shows today: what you've logged so far and how the week looks. Below it:
+Days run newest first, each with a date tile and a tally; today's tile is filled in the accent.
 
-- **Type pills**: *All*, *Climbs*, *Training* or *Notes*, each with a count.
-- **Search**: finds climbs, places and notes by text.
-- **Filters** (the sliders button): the period (last 7 days, 30 days, 3 months, 12 months or all
+- **Tabs**: *All*, *Climbs*, *Training* or *Notes*, each with a count. Swipe sideways to move
+  between them.
+- **Search** (the magnifier in the top bar): finds climbs, places and notes by text. The back
+  arrow clears the search and closes it.
+- **Filters** (the sliders in the top bar): the period (last 7 days, 30 days, 3 months, 12 months or all
   time), the result (any, sends, or not sent yet), places, and note tags. Filters combine, and the
   button shows how many are on.
 
 Each climb shows its grade, name, style, goes and notes, with a colour bar: green for a send, grey
 for an attempt. Tap a climb to edit it. Tap a session for its summary.
+
+A **climb** has one name, grade and place (with its facility and wall); each **log** on it is a
+day's goes, with how it felt, a note and media. Changing the name, grade or where while editing a
+log changes the climb, and all its logs follow.
 
 ## Logging a climb
 
@@ -47,9 +53,9 @@ Journal. Coming back to a climb adds another log to it.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
    like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
    or typing its exact name, adds today's goes to it. Any other name starts a new climb.
-7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
-8. **Angle** for boards is set under *Where?*.
-9. **Log climb**.
+7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it. On a board,
+   note the angle here if it matters.
+8. **Log climb**.
 
 Photos are copied into Crux and scaled to at most 2048 px, so they survive the original being
 deleted. Videos are copied as they are.

@@ -17,7 +17,6 @@ data class Climb(
     val placeId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
-    val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
     /** Of [attempts], how many were sends. */
@@ -67,7 +66,6 @@ data class NewClimb(
     val placeId: Long? = null,
     val areaId: Long? = null,
     val problemId: Long? = null,
-    val angle: Int? = null,
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
     val gradeLabel: String? = null,
