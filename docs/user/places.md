@@ -18,6 +18,12 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 - **Name** and optional **Notes**.
 - **What's here**: one or more facilities. A gym can have its main walls *and* a board, for
   example. Each facility is a gym, crag or board with its own name.
+- **Board** (board facilities): which board it is. **Kilter Original** or **Kilter Homewall**
+  (then its **Size**, and for a Homewall its **Holds**: Full ride or Mainline only), **MoonBoard
+  2016, 2017, 2019 or 2024**, **Mini MoonBoard 2020 or 2025**, or **Custom board** for a spray wall,
+  a home board or anything else. Boards you set up before start as Custom board. The board and size
+  show on the place's page, in the Places list and on Log climb's Where card. Changing the board
+  never changes your climbs, and switching a facility to Gym and back keeps it.
 - **Grades for each facility**: the scales new climbs there start in, or **Local grades**, the
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests

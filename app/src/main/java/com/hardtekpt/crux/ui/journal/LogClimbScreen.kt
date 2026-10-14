@@ -145,6 +145,12 @@ fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel
                 onAttachVideo = viewModel::attachVideo,
                 onRemoveVideo = viewModel::removeVideo,
                 videoCaptureUri = viewModel::videoCaptureUri,
+                // On a board, the angle sits beside the photo and video.
+                angle = if (viewModel.onBoard(draft)) {
+                    AngleChoice(draft.angle, viewModel.boardOf(draft), viewModel::setAngle)
+                } else {
+                    null
+                },
             )
         },
     )
@@ -317,8 +323,10 @@ private fun ClimbMedia(
     onAttachVideo: (Uri) -> Unit,
     onRemoveVideo: () -> Unit,
     videoCaptureUri: () -> Uri,
+    angle: AngleChoice? = null,
 ) {
     val space = CruxTheme.space
+    var pickingAngle by rememberSaveable { mutableStateOf(false) }
     var capture by rememberSaveable { mutableStateOf<String?>(null) }
     var viewing by rememberSaveable { mutableStateOf(false) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(onAttach) }
@@ -382,6 +390,17 @@ private fun ClimbMedia(
                 recorder.launch(uri)
             }
         }
+        angle?.let { choice ->
+            com.hardtekpt.crux.ui.components.CruxFilterChip(
+                label = choice.angle?.let { "∠ $it°" } ?: "Angle",
+                selected = choice.angle != null,
+                onClick = { pickingAngle = true },
+                modifier = Modifier.testTag("climb_angle"),
+            )
+        }
+    }
+    if (pickingAngle && angle != null) {
+        AngleSheet(angle, onDismiss = { pickingAngle = false })
     }
     if (draft.videoFailed) {
         Text("That video could not be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -673,6 +692,97 @@ private fun EarlierLogs(logs: List<com.hardtekpt.crux.data.model.Climb>, onOpen:
                 leading = { com.hardtekpt.crux.ui.components.GradeBadge(log.grade, log.gradeState) },
                 onClick = { onOpen(log.id) },
                 modifier = Modifier.testTag("earlier_log"),
+            )
+        }
+    }
+}
+
+/** The board angle as the form has it, the board it's on (for its angles), and how to change it. */
+data class AngleChoice(val angle: Int?, val board: com.hardtekpt.crux.data.model.BoardModel?, val onChange: (Int?) -> Unit)
+
+/**
+ * The board's angle: a MoonBoard's two angles, or the stepper (0° to 70° in 5° steps, tap the
+ * number to type) with quick picks. Clear takes it off. It is saved as the note's first line.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AngleSheet(choice: AngleChoice, onDismiss: () -> Unit) {
+    val space = CruxTheme.space
+    val board = choice.board
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("angle_sheet"),
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Board angle", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                if (choice.angle != null) {
+                    androidx.compose.material3.TextButton(onClick = { choice.onChange(null) }, modifier = Modifier.testTag("angle_clear")) { Text("Clear") }
+                }
+            }
+            val angles = board?.angles
+            Text(
+                if (board != null &&
+                    angles != null
+                ) {
+                    "${board.label} is set at ${angles.joinToString(" or ") { "$it°" }}."
+                } else {
+                    "Saved as the first line of the note."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (angles != null) {
+                com.hardtekpt.crux.ui.components.CruxSegmentedButtons(
+                    options = angles,
+                    selected = choice.angle ?: -1,
+                    label = { "$it°" },
+                    onSelect = { choice.onChange(it) },
+                    modifier = Modifier.fillMaxWidth().testTag("angle_options"),
+                )
+            } else {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    com.hardtekpt.crux.ui.components.CruxStepper(
+                        choice.angle ?: 40,
+                        { choice.onChange(it) },
+                        com.hardtekpt.crux.data.model.BoardAngleNote.RANGE,
+                        "°",
+                        step = com.hardtekpt.crux.data.model.BoardAngleNote.STEP,
+                        testTagPrefix = "angle",
+                    )
+                }
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalArrangement = Arrangement.spacedBy(space.s2),
+                ) {
+                    listOf(20, 25, 30, 35, 40, 45, 50).forEach { quick ->
+                        com.hardtekpt.crux.ui.components.CruxFilterChip(
+                            label = "$quick°",
+                            selected = choice.angle == quick,
+                            onClick = { choice.onChange(quick) },
+                            modifier = Modifier.testTag("angle_$quick"),
+                        )
+                    }
+                }
+            }
+            com.hardtekpt.crux.ui.components.CruxButton(
+                "Done",
+                {
+                    // Opening the stepper and leaving it as it shows sets that angle.
+                    if (choice.angle == null && angles == null) choice.onChange(40)
+                    onDismiss()
+                },
+                variant = com.hardtekpt.crux.ui.components.CruxButtonVariant.Tonal,
+                modifier = Modifier.fillMaxWidth().testTag("angle_done"),
             )
         }
     }

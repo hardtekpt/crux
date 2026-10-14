@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -319,6 +320,28 @@ class MigrationTest {
             assertEquals(10, c.getInt(2))
             assertEquals("Seventh seal", c.getString(3))
             assertEquals(5, c.getInt(4))
+        }
+    }
+
+    @Test
+    fun migrate25To26AddsBoardsAsCustomAndKeepsEverythingElse() {
+        helper.createDatabase(DB, 25).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, 'BOARD')")
+            execSQL(
+                "INSERT INTO sections (id, placeId, type, name, position, boulderScale) VALUES (1, 1, 'GYM', 'Gym', 0, NULL), (2, 1, 'BOARD', 'Moonboard', 1, 'V_SCALE')",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 26, true)
+        // Every section starts as a custom board: no model, size or holds; the rest stays.
+        db.query("SELECT name, type, boulderScale, boardModel, boardSize, boardHolds FROM sections ORDER BY id").use { c ->
+            c.moveToFirst()
+            assertEquals("Gym", c.getString(0))
+            assertTrue(c.isNull(3) && c.isNull(4) && c.isNull(5))
+            c.moveToNext()
+            assertEquals("BOARD", c.getString(1))
+            assertEquals("V_SCALE", c.getString(2))
+            assertTrue(c.isNull(3) && c.isNull(4) && c.isNull(5))
         }
     }
 

@@ -68,6 +68,12 @@ data class SectionEntity(
     val routeScale: GradeScale? = null,
     /** This section's own grades as JSON ([com.hardtekpt.crux.data.model.LocalScale]). */
     val localScale: String? = null,
+    /** Board sections: which board ([com.hardtekpt.crux.data.model.BoardModel.key]); null is a custom board (schema 26). */
+    val boardModel: String? = null,
+    /** Kilter boards: the size, "12x12". */
+    val boardSize: String? = null,
+    /** Kilter Homewall: "full_ride" or "mainline". */
+    val boardHolds: String? = null,
 )
 
 /** A wall or sector inside a place; for a board, a named set. */

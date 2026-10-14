@@ -128,7 +128,9 @@ class BackupRepositoryTest {
         source.exerciseRecordDao().insert(ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2))
         // A board graded apart from the gym it's in.
         val kilterSection = source.placeDao().getAllSections().first { it.name == "Kilter board" }
-        source.placeDao().updateSection(kilterSection.copy(boulderScale = GradeScale.V_SCALE))
+        source.placeDao().updateSection(
+            kilterSection.copy(boulderScale = GradeScale.V_SCALE, boardModel = "kilter_homewall", boardSize = "10x12", boardHolds = "mainline"),
+        )
         addSession(source)
         val bytes = repo(source).exportBytes()
 
@@ -164,6 +166,10 @@ class BackupRepositoryTest {
         val sections = target.placeDao().getSections(blockLab.id)
         assertEquals(listOf("Main gym", "Kilter board"), sections.map { it.name })
         assertEquals(listOf(null, GradeScale.V_SCALE), sections.map { it.boulderScale })
+        // The board, its size and its holds come back; the gym stays a plain section.
+        assertEquals(listOf(null, "kilter_homewall"), sections.map { it.boardModel })
+        assertEquals(listOf(null, "10x12"), sections.map { it.boardSize })
+        assertEquals(listOf(null, "mainline"), sections.map { it.boardHolds })
         assertEquals(sections[1].id, target.placeDao().getAllAreas().first { it.name == "Benchmarks" }.sectionId)
         assertEquals(source.placeDao().getAllProblems().size, target.placeDao().getAllProblems().size)
         val linkedSource = source.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }

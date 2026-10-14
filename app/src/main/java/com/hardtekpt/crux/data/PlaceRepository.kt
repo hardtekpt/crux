@@ -51,6 +51,9 @@ data class SectionInput(
     val routeScale: GradeScale? = null,
     /** Kept only where a scale is local. */
     val localScale: LocalScale? = null,
+    val board: com.hardtekpt.crux.data.model.BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -228,6 +231,11 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                 boulderScale = section.boulderScale,
                 routeScale = route,
                 localScale = local,
+                // Kept whatever the type, so Board → Gym → Board brings it back; a size or holds
+                // the model doesn't have is dropped.
+                boardModel = section.board?.key,
+                boardSize = section.boardSize?.takeIf { section.board?.sizes?.contains(it) == true },
+                boardHolds = section.boardHolds?.key?.takeIf { section.board?.hasHolds == true },
             )
             if (old != null) {
                 dao.updateSection(fresh.copy(id = old.id))
@@ -346,7 +354,20 @@ internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = 
         compareBy({
             it.position
         }, { it.id }),
-    ).map { Section(it.id, it.placeId, it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) },
+    ).map {
+        Section(
+            it.id,
+            it.placeId,
+            it.type,
+            it.name,
+            it.boulderScale,
+            it.routeScale,
+            LocalScale.decode(it.localScale),
+            com.hardtekpt.crux.data.model.BoardModel.fromKey(it.boardModel),
+            it.boardSize,
+            com.hardtekpt.crux.data.model.BoardHolds.fromKey(it.boardHolds),
+        )
+    },
 )
 
 internal fun PlaceEntity.Companion.parseTypes(text: String): List<PlaceType> =

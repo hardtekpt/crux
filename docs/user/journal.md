@@ -55,9 +55,14 @@ Journal. Coming back to a climb adds another log to it.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
    like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
    or typing its exact name, adds today's goes to it. Any other name starts a new climb.
-7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it. On a board,
-   note the angle here if it matters.
-8. **Log climb**.
+7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
+8. **Angle** (on a board): a chip beside Photo and Video. It opens a stepper (0° to 70° in 5° steps;
+   tap the number to type) with quick picks; a MoonBoard offers only 25° and 40°, and a Mini
+   MoonBoard starts at 40°. It starts at the angle you last used on that board. The angle is saved
+   as the first line of the note, like "40°", so it shows wherever the note does; **Edit log** puts
+   it back on the chip. Logs from before (whose note ends "Board angle 40°") open with their angle
+   on the chip too.
+9. **Log climb**.
 
 Photos are copied into Crux and scaled to at most 2048 px, so they survive the original being
 deleted. Videos are copied as they are.

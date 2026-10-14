@@ -55,7 +55,14 @@ data class Section(
     val routeScale: GradeScale? = null,
     /** The section's own grades, used where a discipline's scale is local. */
     val localScale: LocalScale? = null,
+    /** Board sections: which board; null is a custom board. Kept when the type changes. */
+    val board: BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: BoardHolds? = null,
 ) {
+    /** "Kilter Original 12×12" on a board section that names its board; else null. */
+    val boardLabel: String? get() = if (type == PlaceType.BOARD) boardLabel(board, boardSize, boardHolds) else null
+
     /** Boards only hold boulders. */
     val disciplines: List<Discipline> get() = if (type == PlaceType.BOARD) listOf(Discipline.BOULDER) else Discipline.entries
 

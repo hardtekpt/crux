@@ -152,6 +152,8 @@ private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean,
             helper = "Name, optional: \"${section.type.label}\" if left blank",
             modifier = Modifier.testTag("section_name_$index"),
         )
+        // Which board it is, and for Kilter its size (and a Homewall's holds).
+        if (section.type == PlaceType.BOARD) BoardChoice(section, index, onChange)
         // The grades climbs here use; boards hold boulders only.
         val tag = if (index == 0) "" else "_$index"
         ScaleChoice("Boulder grades", Discipline.BOULDER, section.boulderScale, tag) { scale -> onChange { it.copy(boulderScale = scale) } }
@@ -202,6 +204,11 @@ data class SectionDraft(
     /** This part's own grades; kept while editing even if no discipline uses them. */
     val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
     val localError: String? = null,
+    /** Board sections: which board (null = custom), its Kilter size and Homewall holds. */
+    val board: com.hardtekpt.crux.data.model.BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
+    val boardError: String? = null,
 ) {
     /** Boards hold boulders only. */
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
@@ -230,6 +237,9 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                                         boulderScale = section.boulderScale,
                                         routeScale = section.routeScale,
                                         localScale = section.localScale ?: LocalScale.DEFAULT_COLOURS,
+                                        board = section.board,
+                                        boardSize = section.boardSize,
+                                        boardHolds = section.boardHolds,
                                     )
                                 },
                             location = p.location.orEmpty(),
@@ -244,7 +254,7 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
     }
 
     fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { d ->
-        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null) }) }
+        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null, boardError = null) }) }
     }
 
     fun save() {
@@ -264,9 +274,16 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                 local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
                 else -> null
             }
-            section.copy(localScale = local, localError = localError)
+            // A Kilter board needs its size; a Homewall its holds too.
+            val boardError = when {
+                section.type != PlaceType.BOARD -> null
+                section.board?.needsSize == true && section.boardSize !in section.board.sizes -> "Pick a size"
+                section.board?.hasHolds == true && section.boardHolds == null -> "Pick the holds"
+                else -> null
+            }
+            section.copy(localScale = local, localError = localError, boardError = boardError)
         }
-        if (error != null || sections.any { it.localError != null }) {
+        if (error != null || sections.any { it.localError != null || it.boardError != null }) {
             _draft.update { it.copy(nameError = error, sections = sections) }
             return
         }
@@ -283,6 +300,9 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                             boulderScale = it.boulderScale,
                             routeScale = it.routeScale,
                             localScale = it.localScale.takeIf { _ -> it.usesLocal },
+                            board = it.board,
+                            boardSize = it.boardSize,
+                            boardHolds = it.boardHolds,
                         )
                     },
                     location = d.location,
@@ -785,5 +805,179 @@ fun MapPreview(location: MapLocation, modifier: Modifier = Modifier) {
                 .size(32.dp)
                 .offset(y = (-16).dp),
         )
+    }
+}
+
+/**
+ * A board section's Board row ("Custom board" until one is picked) and, for Kilter, a Size row;
+ * each opens a sheet. A Homewall picks its holds in the Size sheet.
+ */
+@Composable
+private fun BoardChoice(section: SectionDraft, index: Int, onChange: ((SectionDraft) -> SectionDraft) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    var sizing by remember { mutableStateOf(false) }
+    val board = section.board
+    ChoiceRow("Board", board?.label ?: "Custom board", "board_$index") { picking = true }
+    if (board?.needsSize == true) {
+        ChoiceRow(
+            "Size",
+            listOfNotNull(
+                section.boardSize?.takeIf { it in board.sizes }?.let { com.hardtekpt.crux.data.model.boardSizeLabel(it) } ?: "Pick",
+                section.boardHolds?.takeIf { board.hasHolds }?.label,
+            ).joinToString(" · "),
+            "board_size_$index",
+        ) { sizing = true }
+    }
+    section.boardError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+    if (picking) {
+        BoardSheet(
+            selected = board,
+            onPick = { picked ->
+                picking = false
+                onChange {
+                    it.copy(
+                        board = picked,
+                        // A size or holds the new board doesn't have goes.
+                        boardSize = it.boardSize?.takeIf { size -> picked?.sizes?.contains(size) == true },
+                        boardHolds = it.boardHolds?.takeIf { _ -> picked?.hasHolds == true },
+                    )
+                }
+                if (picked?.needsSize == true && section.boardSize !in picked.sizes) sizing = true
+            },
+            onDismiss = { picking = false },
+        )
+    }
+    if (sizing && board?.needsSize == true) {
+        BoardSizeSheet(
+            board = board,
+            size = section.boardSize,
+            holds = section.boardHolds,
+            onChange = { size, holds -> onChange { it.copy(boardSize = size, boardHolds = holds) } },
+            onDismiss = { sizing = false },
+        )
+    }
+}
+
+/** A "label · value ▾" row like the grade rows. */
+@Composable
+private fun ChoiceRow(label: String, value: String, tag: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = "Change $label", onClick = onClick)
+            .padding(vertical = CruxTheme.space.s1)
+            .testTag(tag),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+        Icon(Icons.Rounded.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Which board: Kilter, then MoonBoard, then Custom board, each with a line on what it covers. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun BoardSheet(
+    selected: com.hardtekpt.crux.data.model.BoardModel?,
+    onPick: (com.hardtekpt.crux.data.model.BoardModel?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("board_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        ) {
+            Text("Board", style = MaterialTheme.typography.headlineSmall)
+            com.hardtekpt.crux.data.model.BoardModel.entries.groupBy { it.maker }.forEach { (maker, models) ->
+                Eyebrow(maker, Modifier.padding(top = CruxTheme.space.s2))
+                models.forEach { model ->
+                    CruxListRow(
+                        title = model.label,
+                        supporting = model.hint,
+                        selected = model == selected,
+                        onClick = { onPick(model) },
+                        modifier = Modifier.testTag("board_option_${model.key}"),
+                    )
+                }
+            }
+            Eyebrow("Other", Modifier.padding(top = CruxTheme.space.s2))
+            CruxListRow(
+                title = "Custom board",
+                supporting = "Spray wall, home board or anything else",
+                selected = selected == null,
+                onClick = { onPick(null) },
+                modifier = Modifier.testTag("board_option_custom"),
+            )
+        }
+    }
+}
+
+/** A Kilter board's size as chips; a Homewall adds Full ride or Mainline only in the same sheet. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun BoardSizeSheet(
+    board: com.hardtekpt.crux.data.model.BoardModel,
+    size: String?,
+    holds: com.hardtekpt.crux.data.model.BoardHolds?,
+    onChange: (String?, com.hardtekpt.crux.data.model.BoardHolds?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("board_size_sheet"),
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        ) {
+            Text("Size · ${board.label}", style = MaterialTheme.typography.headlineSmall)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                board.sizes.forEach { option ->
+                    CruxFilterChip(
+                        label = com.hardtekpt.crux.data.model.boardSizeLabel(option),
+                        selected = option == size,
+                        onClick = { onChange(option, holds) },
+                        modifier = Modifier.testTag("board_size_$option"),
+                    )
+                }
+            }
+            if (board.hasHolds) {
+                Eyebrow("Holds")
+                com.hardtekpt.crux.data.model.BoardHolds.entries.forEach { option ->
+                    CruxListRow(
+                        title = option.label,
+                        supporting = option.hint,
+                        selected = option == holds,
+                        onClick = { onChange(size, option) },
+                        modifier = Modifier.testTag("board_holds_${option.key}"),
+                    )
+                }
+            }
+            CruxButton(
+                "Done",
+                onDismiss,
+                variant = CruxButtonVariant.Tonal,
+                modifier = Modifier.fillMaxWidth().testTag("board_size_done"),
+            )
+        }
     }
 }

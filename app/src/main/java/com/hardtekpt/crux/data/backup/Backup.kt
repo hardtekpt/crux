@@ -200,6 +200,10 @@ data class SectionDto(
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
     val localScale: LocalScale? = null,
+    /** Board sections (app schema 26): the board's key, Kilter size and Homewall holds; older backups omit them. */
+    val boardModel: String? = null,
+    val boardSize: String? = null,
+    val boardHolds: String? = null,
 )
 
 @Serializable

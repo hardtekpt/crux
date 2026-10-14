@@ -128,7 +128,7 @@ fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: Place
         Box(Modifier.weight(1f)) {
             WhereRow(
                 summary = summary.ifBlank { null },
-                kind = place?.typeFor(draft)?.label ?: draft.venue.label,
+                kind = place?.sectionFor(draft)?.boardLabel?.let { "Board · $it" } ?: place?.typeFor(draft)?.label ?: draft.venue.label,
                 icon = place?.let { placeIcon(it.typeFor(draft)) } ?: Icons.Rounded.EditLocationAlt,
                 onClick = { open = true },
             )

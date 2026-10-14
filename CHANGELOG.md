@@ -8,6 +8,13 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
+  and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board
+  and size show on the place, in the Places list and when you log a climb.
+- **Board angle**: an Angle chip when you log a climb on a board. It remembers the last angle you
+  used there and saves it as the first line of the log's note, like "40°". MoonBoards offer 25°
+  and 40°.
+
 - **One page per exercise**: every list of exercises opens the same page, with your record, chart,
   how it's set up, the plans that use it and every day you trained it. Edit it from the pencil, log
   a result, or start an interval exercise's timer from there.

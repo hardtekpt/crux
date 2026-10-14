@@ -236,7 +236,20 @@ class BackupRepository(
                             area.toDto().copy(imageFile = photo(area.imagePath), section = area.sectionId?.let(partNames::get))
                         },
                         problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
-                    ).copy(sections = parts.map { SectionDto(it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) })
+                    ).copy(
+                        sections = parts.map {
+                            SectionDto(
+                                it.type,
+                                it.name,
+                                it.boulderScale,
+                                it.routeScale,
+                                LocalScale.decode(it.localScale),
+                                it.boardModel,
+                                it.boardSize,
+                                it.boardHolds,
+                            )
+                        },
+                    )
                 }
             } else {
                 null
@@ -633,7 +646,17 @@ class BackupRepository(
                 val local = (if (oldGrades) dto.localScale else section.localScale).takeIf { boulder?.isLocal == true || route?.isLocal == true }
                 val match = haveSections.firstOrNull { it.name.equals(section.name, ignoreCase = true) }
                 section to if (match != null) {
-                    dao.updateSection(match.copy(type = section.type, boulderScale = boulder, routeScale = route, localScale = local?.encode()))
+                    dao.updateSection(
+                        match.copy(
+                            type = section.type,
+                            boulderScale = boulder,
+                            routeScale = route,
+                            localScale = local?.encode(),
+                            boardModel = section.boardModel ?: match.boardModel,
+                            boardSize = section.boardSize ?: match.boardSize,
+                            boardHolds = section.boardHolds ?: match.boardHolds,
+                        ),
+                    )
                     match.id
                 } else {
                     dao.insertSection(
@@ -645,6 +668,9 @@ class BackupRepository(
                             boulderScale = boulder,
                             routeScale = route,
                             localScale = local?.encode(),
+                            boardModel = section.boardModel,
+                            boardSize = section.boardSize,
+                            boardHolds = section.boardHolds,
                         ),
                     )
                 }

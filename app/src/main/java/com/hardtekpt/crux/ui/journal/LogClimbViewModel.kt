@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -66,7 +67,14 @@ data class LogClimbDraft(
     val name: String = "",
     /** Free-text place, used when no saved place is picked. */
     val place: String = "",
+    /** The note without its angle line: the Angle chip owns that line. */
     val notes: String = "",
+    /** Board climbs: the board's angle, written as the note's first line on save. */
+    val angle: Int? = null,
+    /** Whether the climber set the angle, so picking a wall doesn't overwrite it. */
+    val angleTouched: Boolean = false,
+    /** The note as it was loaded for an edit, to keep an old-form angle line as it was. */
+    val loadedNote: com.hardtekpt.crux.data.model.BoardAngleNote.Parsed? = null,
     val placeId: Long? = null,
     /** Which part of the place (its main gym, its Moonboard). */
     val sectionId: Long? = null,
@@ -168,7 +176,27 @@ class LogClimbViewModel @Inject constructor(
         .flatMapLatest { id -> if (id == null) flowOf(null) else placeRepository.observePlaceDetail(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /**
+     * A new log on a board section starts at the angle last used there; a Mini MoonBoard, which is
+     * only built at 40°, starts at that. Off a board, the angle is cleared.
+     */
+    private fun followBoard() {
+        viewModelScope.launch {
+            combine(_draft.map { it.placeId to it.sectionId }.distinctUntilChanged(), placeDetail) { spot, _ -> spot }.collect { (_, sectionId) ->
+                val draft = _draft.value
+                if (draft.isEditing || draft.angleTouched) return@collect
+                val angle = if (onBoard(draft)) {
+                    sectionId?.let { preferences.boardAngle(it) } ?: boardOf(draft)?.fixedAngle
+                } else {
+                    null
+                }
+                _draft.update { if (it.angleTouched || it.isEditing) it else it.copy(angle = angle) }
+            }
+        }
+    }
+
     init {
+        followBoard()
         viewModelScope.launch {
             // Follow the scales chosen in Settings. A grade already picked in the same scale is kept.
             preferences.gradeScales.collect { scales ->
@@ -209,7 +237,11 @@ class LogClimbViewModel @Inject constructor(
                     date = climb.date,
                     name = climb.name.orEmpty(),
                     place = climb.place.orEmpty(),
-                    notes = climb.notes.orEmpty(),
+                    // The angle line goes to the chip; the field shows the rest.
+                    notes = com.hardtekpt.crux.data.model.BoardAngleNote.read(climb.notes).body,
+                    angle = com.hardtekpt.crux.data.model.BoardAngleNote.read(climb.notes).angle,
+                    angleTouched = true,
+                    loadedNote = com.hardtekpt.crux.data.model.BoardAngleNote.read(climb.notes),
                     placeId = climb.placeId,
                     sectionId = climb.sectionId,
                     sessionId = climb.sessionId,
@@ -476,6 +508,25 @@ class LogClimbViewModel @Inject constructor(
 
     fun setNotes(notes: String) = _draft.update { it.copy(notes = notes) }
 
+    /** Sets or clears the board angle. */
+    fun setAngle(angle: Int?) = _draft.update { it.copy(angle = angle, angleTouched = true) }
+
+    /** The board the climb is on, when its Where is a board section that names one. */
+    fun boardOf(draft: LogClimbDraft): com.hardtekpt.crux.data.model.BoardModel? = placeDetail.value?.place?.takeIf {
+        it.id == draft.placeId
+    }?.sections?.firstOrNull { it.id == draft.sectionId }?.takeIf { it.type == PlaceType.BOARD }?.board
+
+    /** Whether the climb is on a board: a board section, or no saved place with Board picked. */
+    fun onBoard(draft: LogClimbDraft): Boolean {
+        val place = placeDetail.value?.place?.takeIf { it.id == draft.placeId }
+        return if (draft.placeId == null) {
+            draft.venue == Venue.BOARD
+        } else {
+            place?.sections?.firstOrNull { it.id == draft.sectionId }?.type == PlaceType.BOARD ||
+                (place != null && place.sections.none { it.id == draft.sectionId } && place.types == listOf(PlaceType.BOARD))
+        }
+    }
+
     fun requestDelete() = _draft.update { it.copy(confirmDelete = true) }
     fun cancelDelete() = _draft.update { it.copy(confirmDelete = false) }
 
@@ -571,7 +622,8 @@ class LogClimbViewModel @Inject constructor(
                 date = draft.date,
                 name = draft.name,
                 place = place?.name ?: draft.place,
-                notes = draft.notes,
+                // On a board the angle is the note's first line; off a board it goes.
+                notes = com.hardtekpt.crux.data.model.BoardAngleNote.write(draft.angle.takeIf { onBoard(draft) }, draft.notes, draft.loadedNote),
                 placeId = place?.id,
                 areaId = draft.areaId.takeIf { place != null },
                 problemId = problemId,
@@ -594,6 +646,9 @@ class LogClimbViewModel @Inject constructor(
                 images.delete(draft.savedVideoPath)
             }
             _draft.update { it.copy(isSaving = false, saved = true) }
+            // The next log on this board section starts at the same angle.
+            val angle = draft.angle
+            if (angle != null && onBoard(draft)) draft.sectionId?.let { preferences.setBoardAngle(it, angle) }
             // The next new climb starts at the same place, facility and wall.
             if (!draft.isEditing) {
                 val sectionId = draft.sectionId.takeIf { place != null && place.sections.any { s -> s.id == it } }

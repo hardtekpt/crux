@@ -2,6 +2,7 @@ package com.hardtekpt.crux
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
@@ -542,6 +543,39 @@ class MainActivityTest {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_LogClimb").performClick()
         composeRule.waitForTag("favourite_Test Gym")
+    }
+
+    @Test
+    fun aBoardClimbsAngleIsTheFirstLineOfItsNote() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_LogClimb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        // No saved place, on a board: the Angle chip shows beside Photo and Video.
+        composeRule.onNodeWithTag("where_summary").performClick()
+        composeRule.waitForTag("venue")
+        composeRule.onNode(hasText("Board") and hasAnyAncestor(hasTestTag("venue"))).performClick()
+        androidx.test.espresso.Espresso.pressBack()
+        composeRule.waitForTag("climb_angle")
+        composeRule.onNodeWithTag("climb_angle").performScrollTo().performClick()
+        composeRule.waitForTag("angle_sheet")
+        composeRule.onNodeWithTag("angle_40").performClick()
+        composeRule.onNodeWithTag("angle_done").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("angle_sheet").fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithTag("add_note").performScrollTo().performClick()
+        composeRule.textFieldIn("field_notes").performTextInput("Heel hook")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Angle test")
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        // Edit log lifts the angle back into the chip; the note field shows only the note.
+        composeRule.waitForTag("screen_Home")
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_climb")
+        composeRule.onNodeWithTag("journal_climb").performClick()
+        composeRule.waitForTag("climb_angle")
+        composeRule.onNodeWithTag("climb_angle").performScrollTo().assertTextContains("40°", substring = true)
+        composeRule.textFieldIn("field_notes").assertTextContains("Heel hook", substring = true)
+        composeRule.textFieldIn("field_notes").assert(hasText("40°", substring = true).not())
     }
 
     @Test

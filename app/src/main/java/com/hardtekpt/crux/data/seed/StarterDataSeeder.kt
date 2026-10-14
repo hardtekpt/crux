@@ -335,7 +335,15 @@ class StarterDataSeeder(private val clock: Clock) {
         }.toMap()
         SAMPLE_PLACES.filter { it.boardAreas.isNotEmpty() }.forEach { sample ->
             val board = placeDao.insertSection(
-                SectionEntity(placeId = placeIds.getValue(sample.name), type = PlaceType.BOARD, name = sample.boardName, position = 1),
+                SectionEntity(
+                    placeId = placeIds.getValue(sample.name),
+                    type = PlaceType.BOARD,
+                    name = sample.boardName,
+                    position = 1,
+                    // The demo's Kilter board says which one it is.
+                    boardModel = com.hardtekpt.crux.data.model.BoardModel.KILTER_ORIGINAL.key.takeIf { sample.boardName.startsWith("Kilter") },
+                    boardSize = "12x12".takeIf { sample.boardName.startsWith("Kilter") },
+                ),
             )
             sample.boardAreas.forEachIndexed { index, area ->
                 placeDao.insertArea(
