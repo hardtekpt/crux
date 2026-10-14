@@ -6,10 +6,11 @@ Short walk-throughs of how Crux fits into a climbing week.
 
 1. On **Home**, *Today's plan* shows, for example, *Max hangs + limit bouldering*. Tap
    **Start session**.
-2. Work through the plan: the screen shows one exercise at a time. Tap **Done** after each set, and
-   the rest timer starts. If a set went differently (fewer reps, less load), change it before
-   tapping Done.
-3. For the bouldering block, tap **Log climb** for each boulder. The session already knows where
+2. Work through the plan: every exercise is in one list, with a table of its sets. Tap **Done** in
+   the dock after each set, and the rest timer starts. If a set went differently (fewer reps, less
+   load), tap that value and change it first.
+3. For the bouldering block, tap **+ → Log a climb** (or **Log climb** on the Climbs card) for each
+   boulder. The session already knows where
    you are.
 4. Tap **Finish**, rate how hard it felt, and add a note ("left ring finger tender").
 

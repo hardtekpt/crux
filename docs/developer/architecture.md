@@ -119,6 +119,12 @@ plan copies the plan's exercises and targets into `session_items`, so later edit
 rewrite history. Each logged or skipped set is a `session_sets` row. Climbs logged while a session
 runs carry its `sessionId`. Only one session runs at a time.
 
+The session screen (`ui/session`) lists every exercise as an `ExerciseCard` (`SessionList.kt`) with a
+table of sets. Values changed on a set not done yet are held in `SessionViewModel.pending` until the
+set is ticked (`tick` logs them and starts the rest); a logged set is saved at once. `nextUp` picks
+the set the dock's Done button logs, and `previous` gives each exercise's sets from the last
+finished session for the *Last* column.
+
 The interval and rest timers are computed from the clock (start time plus pause bookkeeping), not
 ticked, so they stay right when the screen is off or the app is in the background.
 

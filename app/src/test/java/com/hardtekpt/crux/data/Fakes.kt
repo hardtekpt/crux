@@ -265,6 +265,7 @@ class FakeSessionRepository(var runningSession: RunningSession? = null) : Sessio
         loggedSets += itemId to SessionSet(setIndex, reps, seconds, loadKg, skipped = false)
     }
     override suspend fun skipSet(itemId: Long, setIndex: Int) = Unit
+    override suspend fun removeExercise(itemId: Long) = Unit
     override suspend fun undoSet(itemId: Long, setIndex: Int) = Unit
     override suspend fun addExercise(sessionId: Long, exercise: com.hardtekpt.crux.data.model.Exercise): Long = 1
     val targets = mutableListOf<Pair<Long, com.hardtekpt.crux.data.model.ExerciseTarget>>()

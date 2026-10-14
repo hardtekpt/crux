@@ -80,6 +80,9 @@ interface SessionRepository {
     suspend fun start(templateId: Long?, placeId: Long?, sectionId: Long?): Long
     suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?)
     suspend fun skipSet(itemId: Long, setIndex: Int)
+
+    /** Takes an exercise out of the session; only one with nothing logged yet. */
+    suspend fun removeExercise(itemId: Long)
     suspend fun undoSet(itemId: Long, setIndex: Int)
 
     /** Changes an exercise's target for this session only; at least as many sets as are already logged. */
@@ -187,6 +190,8 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
             SessionSetEntity(itemId = itemId, setIndex = setIndex, reps = reps, seconds = seconds, loadKg = loadKg, completedAtMillis = clock.millis()),
         )
     }
+
+    override suspend fun removeExercise(itemId: Long) = dbs.current().sessionDao().deleteItemWithoutSets(itemId)
 
     override suspend fun skipSet(itemId: Long, setIndex: Int) {
         val dao = dbs.current().sessionDao()

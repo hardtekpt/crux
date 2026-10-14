@@ -226,7 +226,9 @@ class MainActivityTest {
         composeRule.onNodeWithTag("start_free").performClick()
         composeRule.waitForTag("screen_Session")
 
-        // A climb logged from the session belongs to it.
+        // A climb logged from the session (from its + menu) belongs to it.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_log_climb")
         composeRule.onNodeWithTag("session_log_climb").performClick()
         composeRule.waitForTag("screen_LogClimb")
         composeRule.onNodeWithTag("field_name").performScrollTo()
@@ -245,28 +247,35 @@ class MainActivityTest {
         }
         assertEquals(1, composeRule.onAllNodesWithTag("session_climb").fetchSemanticsNodes().size)
 
-        // An interval exercise added on the spot: a cycle logged by hand, then changed.
-        composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()
+        // An interval exercise added on the spot: a cycle ticked by hand, then changed in place.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_add_exercise")
+        composeRule.onNodeWithTag("session_add_exercise").performClick()
         composeRule.waitForTag("pick_Repeaters")
         composeRule.onNodeWithTag("pick_Repeaters").performScrollTo().performClick()
-        composeRule.waitForTag("session_log_cycle")
-        composeRule.onNodeWithTag("session_log_cycle").performScrollTo().performClick()
+        composeRule.waitForTag("session_tick_0")
+        composeRule.onNodeWithTag("session_tick_0").performScrollTo().performClick()
+        composeRule.waitForTag("session_rest_skip")
         composeRule.onNodeWithTag("session_rest_skip").performClick()
-        composeRule.onNodeWithTag("session_set_0").performScrollTo().performClick()
-        composeRule.waitForTag("set_edit")
-        composeRule.onNodeWithTag("edit_reps_minus").performClick()
-        composeRule.onNodeWithTag("set_edit_save").performClick()
-        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("set_edit").fetchSemanticsNodes().isEmpty() }
-        composeRule.onNodeWithTag("session_set_0").assertTextContains("5 × 7 s", substring = true)
+        composeRule.onNodeWithTag("session_value_0_REPS").performScrollTo().performClick()
+        composeRule.waitForTag("set_reps_minus")
+        composeRule.onNodeWithTag("set_reps_minus").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_value_0_REPS") and hasText("5")).fetchSemanticsNodes().isNotEmpty()
+        }
 
-        // Its targets change for this session: the tune button opens them; Done keeps them.
-        composeRule.onNodeWithTag("session_edit_target").performScrollTo().performClick()
+        // Its targets change for this session, from its ⋯ menu; Done keeps them.
+        composeRule.onNodeWithTag("session_exercise_menu").performScrollTo().performClick()
+        composeRule.waitForTag("session_edit_target")
+        composeRule.onNodeWithTag("session_edit_target").performClick()
         composeRule.waitForTag("target_sheet")
         composeRule.onNodeWithTag("target_done").performScrollTo().performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("target_sheet").fetchSemanticsNodes().isEmpty() }
 
-        // A timer of its own opens the band at the top; paused, it can be stopped.
-        composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
+        // A timer of its own opens the band in the dock; paused, it can be stopped.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_timer")
+        composeRule.onNodeWithTag("session_timer").performClick()
         composeRule.waitForTag("timer_start")
         composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
         composeRule.waitForTag("timer_band")

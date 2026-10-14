@@ -168,4 +168,7 @@ interface SessionDao {
     /** Its sets go with them. */
     @Query("DELETE FROM session_items WHERE sessionId = :sessionId")
     suspend fun deleteItems(sessionId: Long)
+
+    @Query("DELETE FROM session_items WHERE id = :itemId AND NOT EXISTS (SELECT 1 FROM session_sets WHERE itemId = :itemId)")
+    suspend fun deleteItemWithoutSets(itemId: Long)
 }

@@ -8,13 +8,18 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
-- **Change an exercise mid-session**: the tune button on an exercise changes its sets, reps or time,
-  load and rest for that session; your plan stays as it is.
+- **Change an exercise mid-session**: its ⋯ menu changes its sets, reps or time, load and rest for
+  that session; your plan stays as it is. **Add set** adds one more set, and an exercise with
+  nothing logged can be taken out.
 - **Export as a spreadsheet**: save your climbs or your session sets as a `.csv` file from
   *Settings → Backups*, to open in Excel, Google Sheets or any spreadsheet app.
 
 ### Changed
 
+- **A simpler live session**: every exercise in one list, each with a table of its sets showing
+  last time's values. Tap a value to change it in place and tick the set. A dock at the bottom
+  holds Done for the next set, the rest countdown and the interval timer; climbs, extra exercises
+  and timers sit behind the **+** in the top bar.
 - **Smoother Home and Journal**: Home builds only the widgets on screen as you scroll, and the
   Journal's search waits until you stop typing, then filters once.
 
