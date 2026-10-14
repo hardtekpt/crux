@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.ui.you
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -120,44 +122,48 @@ fun LogWeightScreen(onDone: () -> Unit, viewModel: LogWeightViewModel = hiltView
             .testTag("screen_LogWeight"),
     ) {
         CruxTopAppBar(title = "Log weight", onBack = onDone)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            CruxCard(Modifier.padding(horizontal = space.s4)) {
-                RulerInput(
-                    title = "Bodyweight",
-                    value = input.scale.valueAt(input.scale.indexOf(input.toDisplay(draft.kg))),
-                    onValueChange = { viewModel.setKg(input.toStored(it)) },
-                    scale = input.scale,
-                    display = input.display,
-                    unit = input.unit,
-                    delta = draft.previous?.let { last ->
-                        val change = draft.kg - last.value
-                        val text = if (kotlin.math.abs(units.weightValue(change)) < 0.05) "No change" else units.weightChange(change)
-                        "$text since ${last.date.shortLabel()}"
-                    } ?: "Drag the scale, or tap the number to type",
-                    parseTyped = input.parse,
-                    typeUnit = input.typeUnit,
-                    testTag = "ruler_weight",
+        // The input sits at the bottom, above the button, where a thumb reaches it; short content rests on the button
+        // and longer content (a small screen) scrolls.
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+            ) {
+                Eyebrow("Day · ${draft.date.dayLabel()}", Modifier.padding(start = space.s4))
+                DayStrip(
+                    selected = draft.date,
+                    today = draft.today,
+                    onSelect = viewModel::setDate,
+                    onOpenCalendar = { pickingDay = true },
                 )
-            }
-            Eyebrow("Day · ${draft.date.dayLabel()}", Modifier.padding(start = space.s4, top = space.s2))
-            DayStrip(
-                selected = draft.date,
-                today = draft.today,
-                onSelect = viewModel::setDate,
-                onOpenCalendar = { pickingDay = true },
-            )
-            draft.error?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = space.s4),
-                )
+                CruxCard(Modifier.padding(horizontal = space.s4)) {
+                    RulerInput(
+                        title = "Bodyweight",
+                        value = input.scale.valueAt(input.scale.indexOf(input.toDisplay(draft.kg))),
+                        onValueChange = { viewModel.setKg(input.toStored(it)) },
+                        scale = input.scale,
+                        display = input.display,
+                        unit = input.unit,
+                        delta = draft.previous?.let { last ->
+                            val change = draft.kg - last.value
+                            val text = if (kotlin.math.abs(units.weightValue(change)) < 0.05) "No change" else units.weightChange(change)
+                            "$text since ${last.date.shortLabel()}"
+                        } ?: "Drag the scale, or tap the number to type",
+                        parseTyped = input.parse,
+                        typeUnit = input.typeUnit,
+                        testTag = "ruler_weight",
+                    )
+                }
+                draft.error?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = space.s4),
+                    )
+                }
             }
         }
         CruxButton(

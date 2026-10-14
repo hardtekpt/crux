@@ -29,7 +29,8 @@ They're changed in their session, not here.
 ## Weight
 
 Your latest weigh-in, a sparkline of the trend, and **Log** for a new one (also in the **+**
-menu). Weight is stored in kilograms and shown in pounds under Imperial.
+menu). The ruler and the day strip sit at the bottom of the Log weight page, within reach of your thumb.
+Weight is stored in kilograms and shown in pounds under Imperial.
 
 ## More about you
 
