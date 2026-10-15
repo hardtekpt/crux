@@ -161,9 +161,17 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
 
     override fun observeProjects(): Flow<List<Project>> = dbs.observe { db ->
         val dao = db.placeDao()
-        combine(dao.observePlaces(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats()) { places, areas, problems, stats ->
+        combine(dao.observePlaces(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats(), dao.observeAllSections()) {
+                places,
+                areas,
+                problems,
+                stats,
+                sections,
+            ->
             val placeNames = places.associate { it.id to it.name }
             val areaNames = areas.associate { it.id to it.name }
+            val sectionsByPlace = sections.groupBy { it.placeId }
+            val sectionNames = sections.associate { it.id to it.name }
             val byId = problems.associateBy { it.id }
             stats.filter { it.firstSendEpochDay == null }
                 .mapNotNull { row ->
@@ -173,6 +181,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                         placeName = problem.placeId?.let(placeNames::get).orEmpty(),
                         areaName = problem.areaId?.let(areaNames::get),
                         stats = row.toModel(),
+                        sectionName = problem.sectionId?.takeIf { (problem.placeId?.let(sectionsByPlace::get)?.size ?: 0) > 1 }?.let(sectionNames::get),
                     )
                 }
                 .sortedByDescending { it.stats.lastGo }

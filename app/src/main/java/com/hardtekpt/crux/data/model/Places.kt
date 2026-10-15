@@ -151,7 +151,17 @@ data class PlaceSummary(
 data class PlaceDetail(val place: Place, val areas: List<Area>, val problems: List<ProblemWithStats>)
 
 /** An open project: a problem with goes but no send, and where it is. */
-data class Project(val problem: Problem, val placeName: String, val areaName: String?, val stats: ProblemStats)
+data class Project(
+    val problem: Problem,
+    val placeName: String,
+    val areaName: String?,
+    val stats: ProblemStats,
+    /** The facility (Gym, a MoonBoard) when the place has more than one, so projects at one place aren't confused. */
+    val sectionName: String? = null,
+) {
+    /** "Block Lab · MoonBoard · Cave": the place, its facility when it has several, and the wall. */
+    val whereLabel: String get() = listOfNotNull(placeName.ifBlank { null }, sectionName, areaName).joinToString(" · ")
+}
 
 /** A board's lights, paired on this phone: its Bluetooth address and name, its protocol, and a MoonBoard's LED order. */
 data class PairedLights(val address: String, val name: String, val protocol: Int, val order: Int = 0)

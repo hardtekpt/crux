@@ -20,7 +20,7 @@ dashboard. While editing, a bar at the top holds *Add widget* and *Done*.
 | **Sends per week** | A chart of sends over recent weeks. |
 | **Sends by style** | Flash, onsight and redpoint, side by side. |
 | **Recent climbs** | Your last few climbs. Tap one to log it: that opens today's log of it to add goes to, or a new log if you haven't tried it today. |
-| **Projects** | Climbs you've tried but not sent yet, with how many goes and when you last tried. Tap one to open it. |
+| **Projects** | Climbs you've tried but not sent yet, with how many goes and when you last tried. A place with several parts (a gym and a MoonBoard, say) shows which part each one is on. Tap one to open it. |
 | **My gym** | The place you climb at most lately: your days and climbs there in the last 30 days, when you were last there, its open projects, **Log here** and **Open** for the place. |
 | **Training** | A training figure you choose when you add it: **On plan** (sessions and climbing days done against your Week schedule), **Sessions**, **Sets**, **Time trained** or **New bests**. Small, it shows this week (On plan as a ring); wide or large, a chart of the last weeks. Tap it to open Progress. |
 | **Exercise** | An exercise you choose when you add it. Small, your best on it; wide or large, your best set each day over 3 months or a year. Tap it to open the exercise's page. |

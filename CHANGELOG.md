@@ -65,6 +65,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Projects name their part of the place**: on Home and in Progress, a project at a place with more than one part (a gym and a MoonBoard) shows which part it is on, so projects there aren't confused.
 - **Weight input at the bottom**: the weight ruler and the day strip now sit at the bottom of the screen, just above the Log weight button.
 - **Today's plan shows the plan**: each block with its exercises and their sets, reps, time and
   load, and the week strip shows the dates.

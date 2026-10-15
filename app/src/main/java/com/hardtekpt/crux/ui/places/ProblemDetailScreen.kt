@@ -77,7 +77,7 @@ fun ProjectRow(
     CruxListRow(
         title = project.problem.name,
         supporting = listOfNotNull(
-            listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { null },
+            project.whereLabel.ifBlank { null },
             "${stats.attempts} ${if (stats.attempts == 1) "go" else "goes"} over ${stats.sessions} ${if (stats.sessions == 1) "day" else "days"}",
         ).joinToString(" · "),
         leading = { GradeBadge(project.problem.grade, GradeState.Attempted) },

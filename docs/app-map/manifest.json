@@ -79,7 +79,7 @@
    "lane": "home",
    "col": 0,
    "row": 0,
-   "desc": "The dashboard: today’s plan from your weekly schedule (with Start session and View plan on a plan day), climbs and days this week, latest best, bodyweight, open projects and recent climbs. Tapping a project or a recent climb opens its log.",
+   "desc": "The dashboard: today’s plan from your weekly schedule (with Start session and View plan on a plan day), climbs and days this week, latest best, bodyweight, open projects (with the part of the place at places that have several) and recent climbs. Tapping a project or a recent climb opens its log.",
    "covers": [
     "HomeRoute"
    ],
@@ -1233,7 +1233,7 @@
    "lane": "progress",
    "col": 0,
    "row": 0,
-   "desc": "Hardest sends per scale, open projects with +1 go, sends per week and the boulder pyramid.",
+   "desc": "Hardest sends per scale, open projects with their place and, where a place has several parts, which part, and +1 go, sends per week and the boulder pyramid.",
    "covers": [
     "ProgressRoute"
    ],

@@ -469,7 +469,7 @@ private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActio
         Column(Modifier.weight(1f)) {
             Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { "No place" },
+                project.whereLabel.ifBlank { "No place" },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,

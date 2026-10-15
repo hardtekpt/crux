@@ -25,7 +25,7 @@ Local grades (a gym's own numbers or colour tapes) are kept per place, in that p
 ### Projects
 
 The climbs you've tried and not sent yet, most recently tried first, with how many goes and
-where. Tap one to log more goes on it (it opens today's log of the climb, or a new log if there isn't one), or tap **+1 go** to log a fall. See [Places → Projects](places.md#projects).
+where (at a place with several parts, which part too). Tap one to log more goes on it (it opens today's log of the climb, or a new log if there isn't one), or tap **+1 go** to log a fall. See [Places → Projects](places.md#projects).
 
 ## Training
 
