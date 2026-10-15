@@ -135,6 +135,7 @@ fun LogClimbScreen(
         newClimb = viewModel::newClimb,
         usesDatasets = { section -> com.hardtekpt.crux.data.datasetsFor(section, datasets, links[section.id].orEmpty()).isNotEmpty() },
         whereOpened = viewModel::whereOpened,
+        searchCatalogue = { dataset, query -> viewModel.searchCatalogue(dataset, query) },
     )
     val choices = remember(draft.placeId, draft.sectionId, detail, datasets, links, playlists) { viewModel.climbChoices(draft) }
     LogClimbContent(
@@ -142,7 +143,7 @@ fun LogClimbScreen(
         onBack = onDone,
         where = { dayButton -> WhereSection(draft, places, detail, whereActions, trailing = dayButton, choices = choices) },
         suggestions = remember(draft.placeId, draft.name, draft.problemId, detail) { viewModel.candidates() },
-        datasetSuggestions = remember(draft.name, choices) { datasetMatches(draft.name, choices) },
+        datasetSuggestions = catalogueAndDatasetMatches(draft.name, choices, viewModel),
         onPickDatasetClimb = viewModel::pickDatasetClimb,
         onUnlink = viewModel::unlinkSource,
         onPickClimb = viewModel::pickProblem,
@@ -640,6 +641,23 @@ private fun NameField(
             }
         }
     }
+}
+
+/** Name suggestions from the section's datasets, then its board catalogues (searched as you type), three at most. */
+@Composable
+private fun catalogueAndDatasetMatches(typed: String, choices: ClimbChoices?, viewModel: LogClimbViewModel): List<com.hardtekpt.crux.data.ClimbSource> {
+    val own = remember(typed, choices) { datasetMatches(typed, choices) }
+    val catalogues = choices?.datasets.orEmpty().filter { it.isCatalogue }
+    val fromCatalogues by androidx.compose.runtime.produceState(emptyList<com.hardtekpt.crux.data.ClimbSource>(), typed, catalogues) {
+        val query = typed.trim()
+        value = if (query.length < 2 || own.size >= 3) {
+            emptyList()
+        } else {
+            catalogues.flatMap { viewModel.searchCatalogue(it, query, limit = 3) }
+                .filter { !it.climb.name.trim().equals(query, ignoreCase = true) }
+        }
+    }
+    return (own + fromCatalogues).take(3)
 }
 
 /** Up to three climbs in the section's datasets whose name has what's typed. */

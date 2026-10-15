@@ -35,10 +35,11 @@ class PlaylistGoes @Inject constructor(
         val section = place?.sections?.firstOrNull { it.id == session.sectionId } ?: place?.sections?.firstOrNull()
         val here = places.climbsAt(place?.id).filter { place == null || place.sections.size <= 1 || it.sectionId == null || it.sectionId == section?.id }
         val climb = source.climb
-        val problem = here.firstOrNull { it.sourceDatasetClimbId == climb.id }
-            ?: here.firstOrNull { it.discipline == climb.discipline && it.name.trim().equals(climb.name.trim(), ignoreCase = true) }
+        val problem =
+            here.firstOrNull { if (climb.catalogueUuid != null) it.sourceCatalogueUuid == climb.catalogueUuid else it.sourceDatasetClimbId == climb.id }
+                ?: here.firstOrNull { it.discipline == climb.discipline && it.name.trim().equals(climb.name.trim(), ignoreCase = true) }
         val logs = problem?.let { climbs.observeClimbsForProblem(it.id).first() }.orEmpty()
-        val link = SourceChange(climb.id, climb.setter)
+        val link = SourceChange(climb.id.takeIf { climb.catalogueUuid == null }, climb.setter, climb.catalogueUuid)
         val inSession = logs.firstOrNull { it.sessionId == session.id }
         if (inSession != null) {
             val sends = inSession.sends + if (sent) 1 else 0

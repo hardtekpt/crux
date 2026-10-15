@@ -323,6 +323,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             // Where it was picked from stays; this form doesn't change it.
             setter = existing?.setter,
             sourceDatasetClimbId = existing?.sourceDatasetClimbId,
+            sourceCatalogueUuid = existing?.sourceCatalogueUuid,
         )
         return if (existing != null) {
             dao.updateProblem(entity)
@@ -402,6 +403,7 @@ internal fun ProblemEntity.toModel() = Problem(
     sectionId = sectionId,
     setter = setter,
     sourceDatasetClimbId = sourceDatasetClimbId,
+    sourceCatalogueUuid = sourceCatalogueUuid,
 )
 
 private fun ProblemStatsRow.toModel() = ProblemStats(

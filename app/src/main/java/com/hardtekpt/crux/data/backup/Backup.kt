@@ -218,7 +218,13 @@ data class SectionDto(
 
 /** The dataset climb a climb was picked from: its dataset's name, its name and type. */
 @Serializable
-data class SourceDto(val dataset: String, val name: String, val discipline: Discipline = Discipline.BOULDER)
+data class SourceDto(
+    val dataset: String,
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    /** A board catalogue's climb by the board's id (app schema 29); a re-imported catalogue finds it again. */
+    val catalogueUuid: String? = null,
+)
 
 @Serializable
 data class ProblemDto(
@@ -316,6 +322,8 @@ data class PlaylistItemDto(
     val discipline: Discipline = Discipline.BOULDER,
     val gradeScale: GradeScale? = null,
     val gradeIndex: Int? = null,
+    /** A board catalogue's climb by the board's id (app schema 29). */
+    val catalogueUuid: String? = null,
 )
 
 @Serializable

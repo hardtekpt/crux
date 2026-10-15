@@ -139,7 +139,9 @@ data class LogClimbDraft(
         }
 
     /** "Garage board says V6": the picked dataset climb's own grade, under the grade strip. */
-    val gradeHint: String? get() = source?.let { s -> s.climb.gradeLabel?.let { "${s.dataset.name} says $it" } }
+    val gradeHint: String? get() = source?.let { s ->
+        s.climb.gradeLabel?.let { grade -> "${s.dataset.name} says $grade" + (angle?.takeIf { s.climb.catalogueUuid != null }?.let { " at $it°" } ?: "") }
+    }
 
     /** The No beta switch only matters for a route sent first go. */
     val asksAboutBeta: Boolean get() = discipline == Discipline.ROUTE && sends > 0 && goesBefore == 0 && goes.first()
@@ -157,6 +159,7 @@ class LogClimbViewModel @Inject constructor(
     private val sessions: com.hardtekpt.crux.data.SessionRepository,
     private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
     playlistRepository: com.hardtekpt.crux.data.PlaylistRepository? = null,
+    private val catalogue: com.hardtekpt.crux.data.CatalogueRepository? = null,
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
@@ -166,6 +169,7 @@ class LogClimbViewModel @Inject constructor(
     private val routeSectionId: Long = savedStateHandle.get<Long>("sectionId") ?: 0L
     private val routeReuseToday: Boolean = savedStateHandle.get<Boolean>("reuseToday") ?: false
     private val routeDatasetClimbId: Long = savedStateHandle.get<Long>("datasetClimbId") ?: 0L
+    private val routeCatalogueUuid: String = savedStateHandle.get<String>("catalogueUuid").orEmpty()
 
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
@@ -321,7 +325,34 @@ class LogClimbViewModel @Inject constructor(
             refreshEarlierGoes(p.id, null)
             sourceOf(p)?.let { source -> _draft.update { it.copy(source = source) } }
         }
-        if (routeDatasetClimbId != 0L) logFromDataset(routeDatasetClimbId)
+        if (routeDatasetClimbId != 0L || routeCatalogueUuid.isNotEmpty()) logFromDataset(routeDatasetClimbId)
+    }
+
+    /** Log this climb from a board catalogue: the climb and its catalogue, graded at the setter's angle. */
+    private suspend fun catalogueSource(uuid: String, angle: Int?): com.hardtekpt.crux.data.ClimbSource? {
+        val (key, climb) = catalogue?.find(uuid) ?: return null
+        val dataset = datasetRepository?.observeDatasets()?.first()?.firstOrNull { it.catalogueKey == key } ?: return null
+        return com.hardtekpt.crux.data.ClimbSource(climb.asDatasetClimb(angle ?: climb.setterAngle), dataset)
+    }
+
+    /** Searches a board catalogue at the draft's angle, for the Climb step and name suggestions. */
+    suspend fun searchCatalogue(dataset: com.hardtekpt.crux.data.Dataset, query: String, limit: Int = 60): List<com.hardtekpt.crux.data.ClimbSource> {
+        val repo = catalogue ?: return emptyList()
+        val key = dataset.catalogueKey ?: return emptyList()
+        val angle = _draft.value.angle ?: repo.angles(key).let { angles -> if (40 in angles) 40 else angles.firstOrNull() } ?: return emptyList()
+        return repo.search(key, angle, query, limit = limit).map { row ->
+            val index = row.difficulty?.let(com.hardtekpt.crux.data.BoardseshBoards::fontIndex)
+            com.hardtekpt.crux.data.ClimbSource(
+                com.hardtekpt.crux.data.DatasetClimb(
+                    name = row.name,
+                    gradeScale = com.hardtekpt.crux.data.model.GradeScale.FONT.takeIf { index != null },
+                    gradeIndex = index,
+                    setter = row.setter,
+                    catalogueUuid = row.uuid,
+                ),
+                dataset,
+            )
+        }
     }
 
     /**
@@ -332,8 +363,11 @@ class LogClimbViewModel @Inject constructor(
     private suspend fun logFromDataset(datasetClimbId: Long) {
         val repo = datasetRepository ?: return
         val all = repo.observeDatasets().first()
-        val source =
-            all.firstNotNullOfOrNull { d -> d.climbs.firstOrNull { it.id == datasetClimbId }?.let { com.hardtekpt.crux.data.ClimbSource(it, d) } } ?: return
+        val source = if (routeCatalogueUuid.isNotEmpty()) {
+            catalogueSource(routeCatalogueUuid, _draft.value.angle)
+        } else {
+            all.firstNotNullOfOrNull { d -> d.climbs.firstOrNull { it.id == datasetClimbId }?.let { com.hardtekpt.crux.data.ClimbSource(it, d) } }
+        } ?: return
         routeSource = source
         if (routePlaceId == 0L) {
             val links = repo.observeLinks().first()
@@ -369,6 +403,7 @@ class LogClimbViewModel @Inject constructor(
 
     /** The dataset climb a climb was picked from, while it's still in its dataset. */
     private suspend fun sourceOf(problem: Problem?): com.hardtekpt.crux.data.ClimbSource? {
+        problem?.sourceCatalogueUuid?.let { return catalogueSource(it, _draft.value.angle) }
         val id = problem?.sourceDatasetClimbId ?: return null
         val all = datasetRepository?.observeDatasets()?.first() ?: return null
         return all.firstNotNullOfOrNull { d -> d.climbs.firstOrNull { it.id == id }?.let { com.hardtekpt.crux.data.ClimbSource(it, d) } }
@@ -409,7 +444,7 @@ class LogClimbViewModel @Inject constructor(
 
     private fun pickDatasetClimb(source: com.hardtekpt.crux.data.ClimbSource, here: List<Problem>) {
         val climb = source.climb
-        val match = here.firstOrNull { it.sourceDatasetClimbId == climb.id }
+        val match = here.firstOrNull { if (climb.catalogueUuid != null) it.sourceCatalogueUuid == climb.catalogueUuid else it.sourceDatasetClimbId == climb.id }
             ?: here.firstOrNull { it.discipline == climb.discipline && it.name.trim().equals(climb.name.trim(), ignoreCase = true) }
         if (match != null && !_draft.value.isEditing) {
             viewModelScope.launch {
@@ -423,7 +458,18 @@ class LogClimbViewModel @Inject constructor(
                 }
                 applyProblem(match)
                 refreshEarlierGoes(match.id, null)
-                _draft.update { it.copy(source = source, sourceTouched = match.sourceDatasetClimbId != climb.id) }
+                _draft.update {
+                    it.copy(
+                        source = source,
+                        sourceTouched = if (climb.catalogueUuid !=
+                            null
+                        ) {
+                            match.sourceCatalogueUuid != climb.catalogueUuid
+                        } else {
+                            match.sourceDatasetClimbId != climb.id
+                        },
+                    )
+                }
             }
             return
         }
@@ -720,7 +766,19 @@ class LogClimbViewModel @Inject constructor(
     fun setNotes(notes: String) = _draft.update { it.copy(notes = notes) }
 
     /** Sets or clears the board angle. */
-    fun setAngle(angle: Int?) = _draft.update { it.copy(angle = angle, angleTouched = true) }
+    fun setAngle(angle: Int?) {
+        _draft.update { it.copy(angle = angle, angleTouched = true) }
+        // A board catalogue's climb is graded at each angle: its grade follows.
+        val uuid = _draft.value.source?.climb?.catalogueUuid ?: return
+        viewModelScope.launch {
+            val source = catalogueSource(uuid, angle) ?: return@launch
+            _draft.update { d ->
+                if (d.source?.climb?.catalogueUuid != uuid) return@update d
+                val next = d.copy(source = source)
+                next.copy(gradeIndex = sourceGrade(next) ?: d.gradeIndex)
+            }
+        }
+    }
 
     /** The board the climb is on, when its Where is a board section that names one. */
     fun boardOf(draft: LogClimbDraft): com.hardtekpt.crux.data.model.BoardModel? = placeDetail.value?.place?.takeIf {
@@ -842,7 +900,11 @@ class LogClimbViewModel @Inject constructor(
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),
                 source = if (draft.sourceTouched) {
-                    com.hardtekpt.crux.data.model.SourceChange(draft.source?.climb?.id, draft.source?.climb?.setter)
+                    com.hardtekpt.crux.data.model.SourceChange(
+                        draft.source?.climb?.takeIf { it.catalogueUuid == null }?.id,
+                        draft.source?.climb?.setter,
+                        draft.source?.climb?.catalogueUuid,
+                    )
                 } else {
                     null
                 },

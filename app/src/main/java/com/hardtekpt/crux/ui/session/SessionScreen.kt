@@ -600,6 +600,8 @@ fun SessionScreen(
     onOpenExercise: (exerciseId: Long) -> Unit = {},
     /** Log climb on a playlist's climb, at the session's place and facility. */
     onLogDatasetClimb: (placeId: Long?, sectionId: Long?, datasetClimbId: Long) -> Unit = { _, _, _ -> },
+    /** The same for a board catalogue's climb, by the board's id for it. */
+    onLogCatalogueClimb: (placeId: Long?, sectionId: Long?, uuid: String) -> Unit = { _, _, _ -> },
     viewModel: SessionViewModel = hiltViewModel(),
     /** Opens a running rest or timer big from the start; for screenshots. */
     bigTimer: Boolean = false,
@@ -842,7 +844,18 @@ fun SessionScreen(
                     },
                     onMove = viewModel::movePlaylist,
                     onGo = viewModel::playlistGo,
-                    onOpen = { item?.climb?.let { onLogDatasetClimb(current.placeId, current.sectionId, it.id) } },
+                    onOpen = {
+                        item?.climb?.let { climb ->
+                            val uuid = climb.catalogueUuid
+                            if (uuid !=
+                                null
+                            ) {
+                                onLogCatalogueClimb(current.placeId, current.sectionId, uuid)
+                            } else {
+                                onLogDatasetClimb(current.placeId, current.sectionId, climb.id)
+                            }
+                        }
+                    },
                     onStop = { viewModel.climbPlaylist(null) },
                     onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
                 )

@@ -76,7 +76,12 @@ data class LogClimbRoute(
     val sectionId: Long = 0,
     val reuseToday: Boolean = false,
     val datasetClimbId: Long = 0,
+    /** Log this climb, from a board catalogue: the board's id for it. */
+    val catalogueUuid: String = "",
 )
+
+/** A board catalogue: browse its climbs. */
+@Serializable data class CatalogueRoute(val datasetId: Long)
 
 @Serializable data object LogWeightRoute
 

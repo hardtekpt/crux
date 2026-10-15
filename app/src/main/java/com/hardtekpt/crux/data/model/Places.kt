@@ -114,6 +114,8 @@ data class Problem(
     val setter: String? = null,
     /** The dataset climb it was picked from, while that still exists. */
     val sourceDatasetClimbId: Long? = null,
+    /** The board catalogue climb it was picked from. */
+    val sourceCatalogueUuid: String? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }

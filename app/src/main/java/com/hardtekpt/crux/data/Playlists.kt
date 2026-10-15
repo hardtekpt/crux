@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.hardtekpt.crux.data
 
 import androidx.room.Dao
@@ -17,6 +19,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -53,6 +56,8 @@ data class PlaylistItemEntity(
     val discipline: Discipline = Discipline.BOULDER,
     val gradeScale: GradeScale? = null,
     val gradeIndex: Int? = null,
+    /** A board catalogue's climb, by the board's id (schema 29); [datasetClimbId] is then null. */
+    val catalogueUuid: String? = null,
 )
 
 @Dao
@@ -99,7 +104,24 @@ interface PlaylistDao {
         """,
     )
     fun observeTriedOn(day: Long): Flow<List<TriedRow>>
+
+    /** The same for climbs picked from a board catalogue, by the board's id. */
+    @Query(
+        """
+        SELECT p.sourceCatalogueUuid AS uuid, MAX(c.sends > 0) AS sent
+        FROM climbs c JOIN problems p ON p.id = c.problemId
+        WHERE c.dateEpochDay = :day AND p.sourceCatalogueUuid IS NOT NULL
+        GROUP BY p.sourceCatalogueUuid
+        """,
+    )
+    fun observeCatalogueTriedOn(day: Long): Flow<List<CatalogueTriedRow>>
 }
+
+/** A catalogue climb tried on a day, and whether it was sent. */
+data class CatalogueTriedRow(val uuid: String, val sent: Boolean)
+
+/** How [observeTriedOn][PlaylistRepository.observeTriedOn] keys a climb. */
+fun DatasetClimb.triedKey(): String = catalogueUuid?.let { "c$it" } ?: "d$id"
 
 /** A dataset climb tried on a day, and whether it was sent. */
 data class TriedRow(val climbId: Long, val sent: Boolean)
@@ -116,6 +138,8 @@ data class PlaylistItem(
     val climb: DatasetClimb? = null,
     val dataset: Dataset? = null,
     val position: Int = 0,
+    /** A board catalogue's climb, by the board's id. */
+    val catalogueUuid: String? = null,
 ) {
     val matched: Boolean get() = climb != null
     val gradeLabel: String? get() = gradeScale?.takeIf { !it.isLocal }?.let { scale -> gradeIndex?.let(scale::label) }
@@ -156,11 +180,15 @@ interface PlaylistRepository {
     /** Makes a playlist from a file; returns its id and how many of its climbs found theirs. */
     suspend fun import(file: PlaylistFiles.Parsed): Pair<Long, Int>
 
-    /** Dataset climbs tried on [date] (by dataset climb id): true where one was sent. */
-    fun observeTriedOn(date: java.time.LocalDate): Flow<Map<Long, Boolean>>
+    /** Climbs tried on [date], by [triedKey]: true where one was sent. */
+    fun observeTriedOn(date: java.time.LocalDate): Flow<Map<String, Boolean>>
 }
 
-class OfflinePlaylistRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : PlaylistRepository {
+class OfflinePlaylistRepository @Inject constructor(
+    private val dbs: CruxDatabases,
+    private val clock: Clock,
+    private val catalogue: CatalogueRepository? = null,
+) : PlaylistRepository {
     override fun observePlaylists(): Flow<List<Playlist>> = dbs.observe { db ->
         combine(db.playlistDao().observePlaylists(), db.playlistDao().observeItems(), db.datasetDao().observeDatasets(), db.datasetDao().observeClimbs()) {
                 lists,
@@ -194,10 +222,36 @@ class OfflinePlaylistRepository @Inject constructor(private val dbs: CruxDatabas
                             climb = model,
                             dataset = dataset?.toModel(emptyList()),
                             position = item.position,
+                            catalogueUuid = item.catalogueUuid,
                         )
                     },
                 )
-            }
+            } to datasets
+        }.mapLatest { (lists, datasets) -> withCatalogueClimbs(lists, datasets) }
+    }
+
+    /** A board catalogue's climbs in [lists], found in the catalogue database while their catalogue is here. */
+    private suspend fun withCatalogueClimbs(lists: List<Playlist>, datasets: List<DatasetEntity>): List<Playlist> {
+        val repo = catalogue ?: return lists
+        val uuids = lists.flatMap { list -> list.items.mapNotNull { it.catalogueUuid } }.toSet()
+        if (uuids.isEmpty()) return lists
+        val byKey = datasets.filter { it.catalogueKey != null }.associateBy { it.catalogueKey }
+        val found = uuids.associateWith { uuid -> repo.find(uuid)?.let { (key, climb) -> byKey[key]?.let { it to climb } } }
+        return lists.map { list ->
+            list.copy(
+                items = list.items.map { item ->
+                    val (dataset, climb) = item.catalogueUuid?.let(found::get) ?: return@map item
+                    val model = climb.asDatasetClimb(climb.setterAngle)
+                    item.copy(
+                        name = model.name,
+                        gradeScale = model.gradeScale,
+                        gradeIndex = model.gradeIndex,
+                        datasetName = dataset.name,
+                        climb = model,
+                        dataset = dataset.toModel(emptyList()),
+                    )
+                },
+            )
         }
     }
 
@@ -234,17 +288,19 @@ class OfflinePlaylistRepository @Inject constructor(private val dbs: CruxDatabas
         return db.withTransaction {
             val dao = db.playlistDao()
             val items = dao.getItems(playlistId)
-            val have = items.mapNotNull { it.datasetClimbId }.toMutableSet()
+            val have = items.mapNotNull { it.catalogueUuid ?: it.datasetClimbId?.toString() }.toMutableSet()
             var position = (items.maxOfOrNull { it.position } ?: -1) + 1
             var added = 0
             climbs.forEach { (climb, dataset) ->
-                if (climb.id in have) return@forEach
-                have += climb.id
+                val key = climb.catalogueUuid ?: climb.id.toString()
+                if (key in have) return@forEach
+                have += key
                 dao.insertItem(
                     PlaylistItemEntity(
                         playlistId = playlistId,
                         position = position++,
-                        datasetClimbId = climb.id,
+                        datasetClimbId = climb.id.takeIf { climb.catalogueUuid == null },
+                        catalogueUuid = climb.catalogueUuid,
                         datasetName = dataset.name,
                         name = climb.name,
                         discipline = climb.discipline,
@@ -272,7 +328,8 @@ class OfflinePlaylistRepository @Inject constructor(private val dbs: CruxDatabas
                     id = item.id,
                     playlistId = playlistId,
                     position = item.position,
-                    datasetClimbId = item.climb?.id?.takeIf { db.datasetDao().getClimb(it) != null },
+                    datasetClimbId = item.climb?.id?.takeIf { it != 0L && db.datasetDao().getClimb(it) != null },
+                    catalogueUuid = item.catalogueUuid,
                     datasetName = item.datasetName,
                     name = item.name,
                     discipline = item.discipline,
@@ -320,8 +377,10 @@ class OfflinePlaylistRepository @Inject constructor(private val dbs: CruxDatabas
         }
     }
 
-    override fun observeTriedOn(date: java.time.LocalDate): Flow<Map<Long, Boolean>> = dbs.observe { db ->
-        db.playlistDao().observeTriedOn(date.toEpochDay()).map { rows -> rows.associate { it.climbId to it.sent } }
+    override fun observeTriedOn(date: java.time.LocalDate): Flow<Map<String, Boolean>> = dbs.observe { db ->
+        combine(db.playlistDao().observeTriedOn(date.toEpochDay()), db.playlistDao().observeCatalogueTriedOn(date.toEpochDay())) { own, board ->
+            own.associate { "d${it.climbId}" to it.sent } + board.associate { "c${it.uuid}" to it.sent }
+        }
     }
 
     private suspend fun touch(playlistId: Long) {

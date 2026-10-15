@@ -248,6 +248,60 @@ class ScreenshotTest {
         }
     }
 
+    // A board catalogue: its climbs at 40°, most sent first.
+    @Test
+    fun catalogue() {
+        val catalogueDb = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), com.hardtekpt.crux.data.CatalogueDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val catalogues = com.hardtekpt.crux.data.CatalogueDatabases(ApplicationProvider.getApplicationContext()).also { it.override = catalogueDb }
+        val datasets = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val key = "boardsesh:kilter:8:25"
+        val climbs = listOf(
+            Triple("Moon Landing", "KilterStudio", 16.0),
+            Triple("Guessing Games", "griffin", 18.0),
+            Triple("Half Mast", "KilterStudio", 16.0),
+            Triple("Angel Eyes", "jakey", 20.0),
+            Triple("Lightest Shorts", "KilterStudio", 18.0),
+            Triple("Crimp City", "tbagg", 21.0),
+            Triple("Swooped", "jwebxl", 22.0),
+        )
+        val id = runBlocking {
+            val dao = catalogueDb.catalogueDao()
+            dao.insertClimbs(
+                climbs.mapIndexed { i, (name, setter, _) ->
+                    com.hardtekpt.crux.data.CatalogueClimbEntity(key, "u$i", name, setter, setterAngle = 40)
+                },
+            )
+            dao.insertGrades(
+                climbs.mapIndexed { i, (_, _, d) ->
+                    com.hardtekpt.crux.data.CatalogueGradeEntity(key, "u$i", 40, d, benchmark = i % 3 == 0, ascents = 7500 - i * 900, quality = 3.2 - i * 0.05)
+                } + climbs.indices.map { com.hardtekpt.crux.data.CatalogueGradeEntity(key, "u$it", 30, 15.0, ascents = 10) },
+            )
+            datasets.saveCatalogue(
+                key,
+                "Kilter Homewall",
+                com.hardtekpt.crux.data.model.BoardModel.KILTER_HOMEWALL,
+                "10x12",
+                com.hardtekpt.crux.data.model.BoardHolds.FULL_RIDE,
+                28_979,
+            )
+        }
+        val vm = com.hardtekpt.crux.ui.datasets.CatalogueViewModel(
+            SavedStateHandle(mapOf("datasetId" to id)),
+            datasets,
+            com.hardtekpt.crux.data.CatalogueRepository(catalogues),
+            playlistRepo,
+            preferences,
+            FIXED_CLOCK,
+        )
+        loaded(vm.uiState) { it.rows.isNotEmpty() }
+        bothThemes("catalogue", readyText = "Moon Landing", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.CatalogueScreen(onBack = {}, onLogClimb = {}, viewModel = vm)
+        }
+        catalogueDb.close()
+    }
+
     // Log this climb, from the circuit: Block Lab's main gym, the linked name and the grade hint.
     @Test
     fun logClimbFromDataset() {

@@ -86,6 +86,8 @@ data class WhereActions(
     val usesDatasets: (com.hardtekpt.crux.data.model.Section) -> Boolean = { false },
     /** The sheet opened by itself, for Log this climb. */
     val whereOpened: () -> Unit = {},
+    /** A board catalogue's climbs whose name or setter has what's typed, at the draft's angle. */
+    val searchCatalogue: suspend (com.hardtekpt.crux.data.Dataset, String) -> List<com.hardtekpt.crux.data.ClimbSource> = { _, _ -> emptyList() },
 )
 
 /** The part of [this] place the draft is at: the picked section, else the first. */
@@ -449,6 +451,17 @@ private fun LazyListScope.climbStep(
     val dataset = choices.datasets.firstOrNull { "d${it.id}" == tab }
     val playlist = choices.playlists.firstOrNull { "p${it.id}" == tab }
     when {
+        dataset != null && dataset.isCatalogue -> item(key = "catalogue_${dataset.id}") {
+            // A board catalogue is searched, most sent first, rather than listed whole.
+            val found by androidx.compose.runtime.produceState<List<com.hardtekpt.crux.data.ClimbSource>?>(null, dataset.id, query) {
+                value = actions.searchCatalogue(dataset, query)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                found?.forEach { source -> DatasetClimbRow(source, choices, showDataset = false) { pick(it) } }
+                if (found?.isEmpty() == true) NothingRow(false)
+            }
+        }
+
         dataset != null -> {
             val climbs = com.hardtekpt.crux.ui.datasets.sorted(dataset.climbs, com.hardtekpt.crux.ui.datasets.ClimbSort.GRADE)
                 .filter { matches(it.name, it.setter, it.note) }
@@ -461,7 +474,7 @@ private fun LazyListScope.climbStep(
         playlist != null -> {
             val sources = playlist.items.mapNotNull { item -> item.climb?.let { c -> item.dataset?.let { d -> com.hardtekpt.crux.data.ClimbSource(c, d) } } }
                 .filter { matches(it.climb.name, it.climb.setter, it.dataset.name) }
-            items(sources, key = { "pc${it.climb.id}" }) { source ->
+            items(sources, key = { "pc${it.climb.catalogueUuid ?: it.climb.id}" }) { source ->
                 DatasetClimbRow(source, choices, showDataset = true) { pick(it) }
             }
             if (sources.isEmpty()) item(key = "climb_none") { NothingRow(false) }
@@ -507,7 +520,9 @@ private fun DatasetClimbRow(
 ) {
     val climb = source.climb
     // Yours here: linked to it, else of its name and type.
-    val yours = choices.yours.firstOrNull { it.problem.sourceDatasetClimbId == climb.id }
+    val yours = choices.yours.firstOrNull {
+        if (climb.catalogueUuid != null) it.problem.sourceCatalogueUuid == climb.catalogueUuid else it.problem.sourceDatasetClimbId == climb.id
+    }
         ?: choices.yours.firstOrNull { it.problem.discipline == climb.discipline && it.problem.name.trim().equals(climb.name.trim(), ignoreCase = true) }
     val grade = climb.gradeScale?.let { scale ->
         climb.gradeIndex?.let { index -> com.hardtekpt.crux.data.convertGrade(scale, index, choices.system.scale)?.let(choices.system::label) }

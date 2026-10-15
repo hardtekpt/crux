@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -143,11 +144,38 @@ data class DatasetsUiState(
 
 @HiltViewModel
 class DatasetsViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val repository: DatasetRepository,
     preferences: UserPreferencesRepository,
     private val playlists: com.hardtekpt.crux.data.PlaylistRepository,
+    private val catalogueImporter: com.hardtekpt.crux.data.CatalogueImporter? = null,
+    places: com.hardtekpt.crux.data.PlaceRepository? = null,
 ) : ViewModel() {
+    /** A board catalogue being read or imported. */
+    val catalogue: StateFlow<com.hardtekpt.crux.data.CatalogueImporter.State> =
+        catalogueImporter?.state ?: MutableStateFlow(com.hardtekpt.crux.data.CatalogueImporter.State.Idle)
+
+    /** Your board sections' boards, so a Kilter import starts at your size. */
+    val boards: StateFlow<List<Triple<com.hardtekpt.crux.data.model.BoardModel, String?, com.hardtekpt.crux.data.model.BoardHolds?>>> =
+        (places?.observePlaces() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+            .map { list -> list.flatMap { it.place.sections }.mapNotNull { s -> s.board?.let { Triple(it, s.boardSize, s.boardHolds) } } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Opens a file: a Boardsesh snapshot becomes a board catalogue; anything else is read as a dataset or playlist. */
+    fun openFile(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val header = withContext(Dispatchers.IO) {
+                runCatching { context.contentResolver.openInputStream(uri)?.use { it.readNBytesCompat(16) } }.getOrNull()
+            } ?: ByteArray(0)
+            val importer = catalogueImporter
+            if (importer != null && importer.looksLikeSnapshot(header)) importer.inspect(uri) else this@DatasetsViewModel.importer.open(uri)
+        }
+    }
+
+    fun importCatalogue(name: String, size: String?, holds: com.hardtekpt.crux.data.model.BoardHolds?) = catalogueImporter?.import(name, size, holds)
+
+    fun dismissCatalogue() = catalogueImporter?.dismiss()
+
     val uiState: StateFlow<DatasetsUiState> = combine(repository.observeDatasets(), preferences.gradeScales, playlists.observePlaylists()) {
             list,
             scales,
@@ -270,4 +298,16 @@ class DatasetViewModel @Inject constructor(
             }
         }
     }
+}
+
+/** Up to [n] bytes from the start of a stream. */
+internal fun java.io.InputStream.readNBytesCompat(n: Int): ByteArray {
+    val buffer = ByteArray(n)
+    var read = 0
+    while (read < n) {
+        val got = read(buffer, read, n - read)
+        if (got < 0) break
+        read += got
+    }
+    return buffer.copyOf(read)
 }

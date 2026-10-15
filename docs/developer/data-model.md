@@ -1,7 +1,7 @@
 # Data model
 
 Room database [`CruxDatabase`](../../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt),
-**schema 28** at the time of writing. The exported schemas live in
+**schema 29** at the time of writing. The exported schemas live in
 [`app/schemas/`](../../app/schemas/com.hardtekpt.crux.data.local.CruxDatabase); each version's JSON
 is the source of truth for its tables. To change the schema, see [Database](database.md).
 
@@ -40,6 +40,7 @@ erDiagram
 | `workout_templates` | Session plans | `name`, `description`, `position` |
 | `datasets` | Your lists of climbs to pick from (schema 27) | `name`, `kind` (`own`; `catalogue` comes with board catalogues), `boardModel` (a `BoardModel.key`, `custom` for a custom board, null for none), `boardSize`, `boardHolds`, `boulderScale`/`routeScale` (null = the climber's settings; never local), `createdAtMillis`, `updatedAtMillis` |
 | `dataset_climbs` | Entries in a dataset, not climbs in the journal | `datasetId` (cascade), `name`, `discipline`, `gradeScale` + `gradeIndex` (both null when ungraded), `setter`, `note`, `createdAtMillis`. `DatasetFiles` reads and writes them as CSV and `.crux-dataset.json` (format `crux-dataset`, version 1) |
+| `datasets` (schema 29) | Board catalogues | `kind` `catalogue`, `catalogueKey` (the catalogue database's key, `boardsesh:kilter:8:25`: layout and kept size), `climbCount`; their climbs are in the catalogue database below |
 | `section_datasets` | Datasets linked to a facility by hand (schema 28) | `sectionId` + `datasetId` (both cascade). A facility also uses every dataset made for its board (`Dataset.fitsBoard`: same model, and a Kilter's size and Homewall's holds), which needs no row; `datasetsFor` puts the two together |
 | `playlists` | Ordered picks of dataset climbs (schema 28) | `name`, `note`, `createdAtMillis`, `updatedAtMillis` |
 | `playlist_items` | A playlist's climbs | `playlistId` (cascade), `position`, `datasetClimbId` (cascade; null for an imported climb not matched yet), copies of `datasetName`, `name`, `discipline`, `gradeScale`/`gradeIndex` for matching. `PlaylistFiles` writes `.crux-playlist.json` (format `crux-playlist`, version 1) |
@@ -52,6 +53,26 @@ erDiagram
 | `body_measurements` | Weight, body stats, circumferences | `type` (`MeasurementType`), `value` (kg/cm), `dateEpochDay` |
 | `exercise_records` | Results for personal records | `exerciseId`, `dateEpochDay`, `reps`, `seconds`, `loadKg`, `notes` |
 | `notes` | Free notes | `text`, `pinned`, `tag` (lower case) |
+
+Schema 29 also adds `problems.sourceCatalogueUuid` (a board catalogue climb it was picked from,
+by the board's id, which a re-import keeps) and `playlist_items.catalogueUuid`.
+
+## The catalogue database
+
+Board catalogues live in a second Room database, `crux-catalogue.db`
+([`CatalogueDatabase`](../../app/src/main/java/com/hardtekpt/crux/data/Catalogue.kt)), shared by
+your data and the demo, never migrated (it is rebuilt on a schema change and imported again),
+never backed up or exported.
+
+| Table | Holds | Key columns |
+| --- | --- | --- |
+| `catalogue_climbs` | A catalogue's climbs | `catalogueKey` + `uuid` (the board's climb id), `name`, `setter`, `description`, `frames` (the board's hold string, for hold diagrams), `setterAngle`, `createdAt` |
+| `catalogue_grades` | A climb at each angle | `catalogueKey` + `uuid` + `angle`, `difficulty` (the board's number: 16 is 6a/V3, 22 is 7a/V6; `BoardseshBoards.fontIndex` reads it as Font), `benchmark`, `ascents`, `quality` |
+
+`CatalogueImporter` reads a Boardsesh snapshot (SQLite, gzipped or not; `board_climbs` and
+`board_climb_stats`, shape 1 or 2) with Android's own SQLite, keeps listed climbs whose
+`compatible_size_ids` include the chosen size (`BoardseshBoards.sizeIds`), and copies them in
+batches. `BoardseshBoards` maps Boardsesh's (board type, layout) pairs to `BoardModel`s.
 
 ## Conventions
 

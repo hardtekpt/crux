@@ -97,7 +97,14 @@ fun DatasetsScreen(
     onOpenPlaylist: (Long) -> Unit = {},
     viewModel: DatasetsViewModel = hiltViewModel(),
     initialTab: DatasetsTab = DatasetsTab.DATASETS,
+    onOpenCatalogue: (Long) -> Unit = {},
 ) {
+    val catalogueState by viewModel.catalogue.collectAsStateWithLifecycle()
+    val boards by viewModel.boards.collectAsStateWithLifecycle()
+    var catalogueSheet by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(catalogueState) {
+        if (catalogueState is com.hardtekpt.crux.data.CatalogueImporter.State.Reading) catalogueSheet = true
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importDraft by viewModel.importer.draft.collectAsStateWithLifecycle()
     val importError by viewModel.importer.error.collectAsStateWithLifecycle()
@@ -106,8 +113,8 @@ fun DatasetsScreen(
     var creating by rememberSaveable { mutableStateOf(false) }
     var creatingPlaylist by rememberSaveable { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(initialTab) }
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { viewModel.importer.open(it) } }
-    val openPicker = { pickFile.launch(arrayOf("text/*", "application/json", "application/octet-stream")) }
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { viewModel.openFile(it) } }
+    val openPicker = { pickFile.launch(arrayOf("*/*")) }
     val space = CruxTheme.space
     Column(Modifier.fillMaxSize().testTag("screen_Datasets")) {
         CruxTopAppBar(title = "Datasets", onBack = onBack) {
@@ -165,8 +172,33 @@ fun DatasetsScreen(
                 verticalArrangement = Arrangement.spacedBy(space.s2),
                 modifier = Modifier.testTag("datasets_list"),
             ) {
-                item(key = "yours") { Eyebrow("Yours", Modifier.padding(bottom = space.s1)) }
-                items(uiState.datasets, key = { it.id }) { dataset ->
+                // A catalogue being imported shows here too, so leaving its sheet loses nothing.
+                (catalogueState as? com.hardtekpt.crux.data.CatalogueImporter.State.Importing)?.let { importing ->
+                    item(key = "importing") {
+                        CruxListRow(
+                            title = "Importing ${importing.board.label}",
+                            supporting = "${"%,d".format(importing.done)} of ${"%,d".format(importing.total)} climbs read",
+                            onClick = { catalogueSheet = true },
+                            modifier = Modifier.testTag("catalogue_importing"),
+                        )
+                    }
+                }
+                val catalogues = uiState.datasets.filter { it.isCatalogue }
+                if (catalogues.isNotEmpty()) {
+                    item(key = "catalogues") { Eyebrow("Board catalogues", Modifier.padding(bottom = space.s1)) }
+                    items(catalogues, key = { "c${it.id}" }) { dataset ->
+                        CruxListRow(
+                            title = dataset.name,
+                            supporting = datasetLine(dataset),
+                            leading = { DatasetBadge(dataset) },
+                            trailing = { Text("read-only", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            onClick = { onOpenCatalogue(dataset.id) },
+                            modifier = Modifier.testTag("catalogue_row"),
+                        )
+                    }
+                }
+                item(key = "yours") { Eyebrow("Yours", Modifier.padding(top = space.s2, bottom = space.s1)) }
+                items(uiState.datasets.filter { !it.isCatalogue }, key = { it.id }) { dataset ->
                     CruxListRow(
                         title = dataset.name,
                         supporting = datasetLine(dataset),
@@ -177,7 +209,7 @@ fun DatasetsScreen(
                 }
                 item(key = "later") {
                     Text(
-                        "Board catalogues you import will appear here in a section of their own.",
+                        "Import a Kilter or MoonBoard catalogue from a Boardsesh snapshot file with + → Import a file.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = space.s2),
@@ -208,7 +240,7 @@ fun DatasetsScreen(
             )
             CruxListRow(
                 title = "Import a file",
-                supporting = "A CSV, a Crux dataset or a Crux playlist file",
+                supporting = "A CSV, a Crux dataset or playlist file, or a Boardsesh board catalogue",
                 onClick = {
                     adding = false
                     openPicker()
@@ -281,12 +313,33 @@ fun DatasetsScreen(
         )
     }
     importError?.let { message -> ErrorDialog(message, viewModel.importer::clearError) }
+    if (catalogueSheet && catalogueState !is com.hardtekpt.crux.data.CatalogueImporter.State.Idle &&
+        catalogueState !is com.hardtekpt.crux.data.CatalogueImporter.State.Failed
+    ) {
+        CatalogueImportSheet(
+            state = catalogueState,
+            yours = boards,
+            onImport = viewModel::importCatalogue,
+            onOpen = { id ->
+                catalogueSheet = false
+                viewModel.dismissCatalogue()
+                onOpenCatalogue(id)
+            },
+            onDismiss = {
+                catalogueSheet = false
+                if (catalogueState !is com.hardtekpt.crux.data.CatalogueImporter.State.Importing) viewModel.dismissCatalogue()
+            },
+        )
+    }
+    (catalogueState as? com.hardtekpt.crux.data.CatalogueImporter.State.Failed)?.let { failed ->
+        ErrorDialog(failed.message) { viewModel.dismissCatalogue() }
+    }
 }
 
 /** "Kilter Original 12×12 · 12 climbs · V scale". */
 private fun datasetLine(dataset: Dataset): String = listOfNotNull(
     dataset.boardLabel,
-    "${dataset.climbs.size} ${if (dataset.climbs.size == 1) "climb" else "climbs"}",
+    "${"%,d".format(dataset.size)} ${if (dataset.size == 1) "climb" else "climbs"}",
     dataset.boulderScale?.label,
 ).joinToString(" · ")
 

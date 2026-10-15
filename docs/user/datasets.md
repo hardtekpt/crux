@@ -56,6 +56,35 @@ Android's save dialog. Crux needs no storage permission for either.
 
 Datasets and playlists are in your backups (the **Datasets** switch, on by default).
 
+## Board catalogues
+
+A **board catalogue** is a board's whole list of climbs, for a Kilter (Original or Homewall) or a
+MoonBoard (2016, 2017, 2019, 2024, Mini 2020 or Mini 2025). Crux reads the snapshot files
+[Boardsesh](https://boardsesh.com) publishes: download the one for your board (a `.db` or `.db.gz`
+file) and pick it in **+ → Import a file**. Crux never goes online for it.
+
+- Crux reads which board the file is. A Kilter asks your board's size (and a Homewall's holds),
+  starting at your board facility's, and keeps only the climbs for it; a Kilter Original file holds
+  every size, so this cuts it down a lot. A big file takes a while: you can leave the page and the
+  import carries on.
+- Catalogues sit in their own section on the Datasets page, marked read-only. They're kept apart
+  from your data: they aren't in backups or exports. Climbs you logged from one remember which it
+  was, so importing it again links them back.
+- Open one to browse its climbs at an angle (a Kilter's grades and ascents change with the
+  angle; a MoonBoard has its one or two). Search names and setters, sort by **Popular**, **Grade** or
+  **Name**, or show **Benchmarks** only. Grades show in your boulder scale. A dot marks climbs you
+  tried today. A list shows 200 at a time: search to find the rest.
+- Tap a climb for its setter, description and grade at each angle, **Log this climb** and
+  **Playlist**.
+- A catalogue is used by every facility with the same board and size, like a dataset made for it.
+  In Log climb's Climb step its chip searches it, most sent first, at the angle on the Angle chip;
+  picking a climb grades it at that angle ("Kilter Homewall says 6C at 40°"), and changing the
+  angle follows. Typing a name suggests its climbs too.
+- **⋯ → Delete catalogue** removes it; import it again any time.
+
+Climbs and grades come from each board's community. Crux isn't affiliated with Kilter or Moon
+Climbing, and never shows their board images.
+
 ## Where a dataset is offered
 
 A facility uses:

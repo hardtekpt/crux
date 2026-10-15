@@ -147,6 +147,8 @@ data class ProblemEntity(
     val setter: String? = null,
     /** The dataset climb it was picked from; cleared when that goes (schema 28). Its name and grade are copies. */
     val sourceDatasetClimbId: Long? = null,
+    /** The board catalogue climb it was picked from, by the board's id, which a re-import keeps (schema 29). */
+    val sourceCatalogueUuid: String? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */

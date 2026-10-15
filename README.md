@@ -77,6 +77,8 @@ tests, so they always match the current version.
 - **Datasets and playlists**: your own lists of climbs (a home board, a spray wall, a gym circuit),
   offered at the facilities that use them so you pick a climb instead of typing it, and playlists
   to climb in a session with **+ Fell** and **+ Sent**.
+- **Board catalogues**: Kilter and MoonBoard climbs from a Boardsesh file you import, graded at
+  each angle, to browse, log and climb in playlists. No account, nothing online.
 - **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 
@@ -176,6 +178,7 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 - **Export as a spreadsheet** (CSV).
 - **Datasets and playlists**: lists of climbs to pick from when you log, and playlists to climb in
   a session.
+- **Kilter and MoonBoard catalogues** from Boardsesh files, kept to your board's size.
 
 **[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
 - **Weekly schedule** under *Train → Week*; Home follows it.

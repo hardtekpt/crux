@@ -38,9 +38,14 @@ data class DatasetEntity(
     val routeScale: GradeScale? = null,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
+    /** A board catalogue's key in the catalogue database ([CatalogueKey]); null for your own (schema 29). */
+    val catalogueKey: String? = null,
+    /** A catalogue's climb count, kept here since its climbs are in another file. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val climbCount: Int = 0,
 ) {
     companion object {
         const val KIND_OWN = "own"
+        const val KIND_CATALOGUE = "catalogue"
 
         /** [boardModel] of a dataset for a custom board; null is no board. */
         const val CUSTOM_BOARD = "custom"
@@ -151,6 +156,8 @@ data class DatasetClimb(
     val setter: String? = null,
     val note: String? = null,
     val createdAtMillis: Long = 0,
+    /** A board catalogue's climb: its id on the board (then [id] is 0). */
+    val catalogueUuid: String? = null,
 ) {
     /** "6C+", or null when ungraded. */
     val gradeLabel: String? get() = gradeScale?.takeIf { !it.isLocal }?.let { scale -> gradeIndex?.let(scale::label) }
@@ -167,7 +174,15 @@ data class Dataset(
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
     val climbs: List<DatasetClimb> = emptyList(),
+    /** A board catalogue: its key in the catalogue database, and how many climbs it has. */
+    val catalogueKey: String? = null,
+    val catalogueCount: Int = 0,
 ) {
+    val isCatalogue: Boolean get() = catalogueKey != null
+
+    /** How many climbs it has. */
+    val size: Int get() = if (isCatalogue) catalogueCount else climbs.size
+
     /** "Kilter Original 12×12", "Custom board", or "No board". */
     val boardLabel: String get() = com.hardtekpt.crux.data.model.boardLabel(board, boardSize, boardHolds) ?: if (customBoard) "Custom board" else "No board"
 
@@ -225,6 +240,9 @@ interface DatasetRepository {
      * the one with id [intoId]. A climb whose name and type are already there follows [clash].
      */
     suspend fun importClimbs(newDataset: Dataset?, intoId: Long?, climbs: List<DatasetClimb>, clash: ClashChoice): Pair<Long, ImportCount>
+
+    /** Adds or refreshes the board catalogue of [key] with [count] climbs; returns its id. */
+    suspend fun saveCatalogue(key: String, name: String, board: BoardModel, size: String?, holds: BoardHolds?, count: Int): Long = 0
 
     /** The datasets linked to each section by hand, by section id. */
     fun observeLinks(): Flow<Map<Long, Set<Long>>>
@@ -320,6 +338,27 @@ class OfflineDatasetRepository @Inject constructor(private val dbs: CruxDatabase
         }
     }
 
+    override suspend fun saveCatalogue(key: String, name: String, board: BoardModel, size: String?, holds: BoardHolds?, count: Int): Long {
+        val dao = dbs.current().datasetDao()
+        val now = clock.millis()
+        val existing = dao.getDatasets().firstOrNull { it.catalogueKey == key }
+        val entity = (existing ?: DatasetEntity(name = name, createdAtMillis = now, updatedAtMillis = now)).copy(
+            kind = DatasetEntity.KIND_CATALOGUE,
+            boardModel = board.key,
+            boardSize = size,
+            boardHolds = holds?.key,
+            catalogueKey = key,
+            climbCount = count,
+            updatedAtMillis = now,
+        )
+        return if (existing != null) {
+            dao.updateDataset(entity)
+            existing.id
+        } else {
+            dao.insertDataset(entity)
+        }
+    }
+
     override fun observeLinks(): Flow<Map<Long, Set<Long>>> = dbs.observe { db ->
         db.datasetDao().observeLinks().map { links -> links.groupBy({ it.sectionId }, { it.datasetId }).mapValues { it.value.toSet() } }
     }
@@ -364,6 +403,8 @@ internal fun DatasetEntity.toModel(climbs: List<DatasetClimbEntity>) = Dataset(
     boulderScale = boulderScale,
     routeScale = routeScale,
     climbs = climbs.map { DatasetClimb(it.id, it.name, it.discipline, it.gradeScale, it.gradeIndex, it.setter, it.note, it.createdAtMillis) },
+    catalogueKey = catalogueKey,
+    catalogueCount = climbCount,
 )
 
 /** One dataset as it changes; null once deleted. */

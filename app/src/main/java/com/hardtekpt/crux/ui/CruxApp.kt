@@ -382,6 +382,13 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onBack = navController::popBackStack,
                             onOpen = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetRoute(it)) },
                             onOpenPlaylist = { navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it)) },
+                            onOpenCatalogue = { navController.navigate(com.hardtekpt.crux.ui.navigation.CatalogueRoute(it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.CatalogueRoute> {
+                        com.hardtekpt.crux.ui.datasets.CatalogueScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(catalogueUuid = it)) },
                         )
                     }
                     page<com.hardtekpt.crux.ui.navigation.DatasetRoute> {
@@ -395,6 +402,7 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onBack = navController::popBackStack,
                             onLogClimb = { navController.navigate(LogClimbRoute(datasetClimbId = it)) },
                             onOpenSession = openSession,
+                            onLogCatalogueClimb = { navController.navigate(LogClimbRoute(catalogueUuid = it)) },
                             onOpenPlaylist = {
                                 navController.popBackStack()
                                 navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it))
@@ -420,6 +428,9 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                         onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
                         onLogDatasetClimb = { placeId, sectionId, climbId ->
                             navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, datasetClimbId = climbId))
+                        },
+                        onLogCatalogueClimb = { placeId, sectionId, uuid ->
+                            navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, catalogueUuid = uuid))
                         },
                     )
                 }

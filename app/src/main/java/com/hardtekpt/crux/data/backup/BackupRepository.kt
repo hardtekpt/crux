@@ -113,6 +113,7 @@ class BackupRepository(
         val finished = db.sessionDao().getFinished()
         val sessionStarts = finished.associate { it.id to it.startedAtMillis }
         // Datasets by id, and their climbs, for links and where climbs were picked from.
+        // Board catalogues are never backed up: only which of their climbs yours came from.
         val datasetNames = db.datasetDao().getDatasets().associate { it.id to it.name }
         val datasetClimbs = db.datasetDao().getAllClimbs().associateBy { it.id }
         val links = db.datasetDao().getLinks().groupBy({ it.sectionId }, { it.datasetId })
@@ -241,7 +242,12 @@ class BackupRepository(
                         areas = placeAreas.map { area ->
                             area.toDto().copy(imageFile = photo(area.imagePath), section = area.sectionId?.let(partNames::get))
                         },
-                        problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)).copy(source = source(it.sourceDatasetClimbId)) },
+                        problems = problems[place.id].orEmpty().map {
+                            it.toDto(it.areaId?.let(areaNames::get)).copy(
+                                source = source(it.sourceDatasetClimbId)
+                                    ?: it.sourceCatalogueUuid?.let { uuid -> SourceDto("", it.name, it.discipline, uuid) },
+                            )
+                        },
                     ).copy(
                         sections = parts.map {
                             SectionDto(
@@ -279,7 +285,7 @@ class BackupRepository(
             settings = if (BackupSection.SETTINGS in sections) settings?.read() else null,
             datasets = if (BackupSection.DATASETS in sections) {
                 val climbs = db.datasetDao().getAllClimbs().groupBy { it.datasetId }
-                db.datasetDao().getDatasets().map { d ->
+                db.datasetDao().getDatasets().filter { it.catalogueKey == null }.map { d ->
                     DatasetDto(
                         d.name,
                         d.kind,
@@ -314,6 +320,7 @@ class BackupRepository(
                                 discipline = climb?.discipline ?: item.discipline,
                                 gradeScale = if (climb != null) climb.gradeScale else item.gradeScale,
                                 gradeIndex = if (climb != null) climb.gradeIndex else item.gradeIndex,
+                                catalogueUuid = item.catalogueUuid,
                             )
                         },
                     )
@@ -801,6 +808,7 @@ class BackupRepository(
                     gradeColour = problem.gradeColour,
                     setter = problem.setter ?: match?.setter,
                     sourceDatasetClimbId = source(problem.source) ?: match?.sourceDatasetClimbId,
+                    sourceCatalogueUuid = problem.source?.catalogueUuid ?: match?.sourceCatalogueUuid,
                 )
                 if (match != null) dao.updateProblem(entity.copy(id = match.id)) else dao.insertProblem(entity)
             }
@@ -1126,11 +1134,15 @@ class BackupRepository(
                 )
                 dto.items.forEachIndexed { index, item ->
                     val grade = item.gradeScale?.takeIf { !it.isLocal }?.let { s -> item.gradeIndex?.let(s::label) }
-                    val climb = com.hardtekpt.crux.data.PlaylistFiles.match(
-                        com.hardtekpt.crux.data.PlaylistFiles.Item(item.dataset, item.name, item.discipline, grade),
-                        datasets,
-                        climbs,
-                    )
+                    val climb = if (item.catalogueUuid != null) {
+                        null
+                    } else {
+                        com.hardtekpt.crux.data.PlaylistFiles.match(
+                            com.hardtekpt.crux.data.PlaylistFiles.Item(item.dataset, item.name, item.discipline, grade),
+                            datasets,
+                            climbs,
+                        )
+                    }
                     dao.insertItem(
                         com.hardtekpt.crux.data.PlaylistItemEntity(
                             playlistId = id,
@@ -1141,6 +1153,7 @@ class BackupRepository(
                             discipline = item.discipline,
                             gradeScale = item.gradeScale,
                             gradeIndex = item.gradeIndex,
+                            catalogueUuid = item.catalogueUuid,
                         ),
                     )
                 }

@@ -74,6 +74,7 @@ import com.hardtekpt.crux.data.PlaylistFiles
 import com.hardtekpt.crux.data.PlaylistItem
 import com.hardtekpt.crux.data.PlaylistRepository
 import com.hardtekpt.crux.data.datasetsFor
+import com.hardtekpt.crux.data.triedKey
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxListRow
@@ -103,7 +104,7 @@ data class PlaylistUiState(
     val isLoading: Boolean = true,
     val playlist: Playlist? = null,
     /** Dataset climbs tried today: true where sent. */
-    val today: Map<Long, Boolean> = emptyMap(),
+    val today: Map<String, Boolean> = emptyMap(),
 )
 
 /** One playlist: reorder, remove, rename, export, and climb it in a session. */
@@ -212,6 +213,8 @@ fun PlaylistScreen(
     onOpenSession: (Long) -> Unit,
     onOpenPlaylist: (Long) -> Unit = {},
     viewModel: PlaylistViewModel = hiltViewModel(),
+    /** Log climb on a board catalogue's climb, by the board's id for it. */
+    onLogCatalogueClimb: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val undo by viewModel.undo.collectAsStateWithLifecycle()
@@ -264,7 +267,7 @@ fun PlaylistScreen(
                     today = uiState.today,
                     onMove = viewModel::move,
                     onRemove = viewModel::remove,
-                    onOpen = { item -> item.climb?.let { onLogClimb(it.id) } },
+                    onOpen = { item -> item.climb?.let { climb -> climb.catalogueUuid?.let(onLogCatalogueClimb) ?: onLogClimb(climb.id) } },
                 )
             }
         }
@@ -361,7 +364,7 @@ internal fun playlistLine(playlist: Playlist): String {
 @Composable
 private fun ReorderableItems(
     items: List<PlaylistItem>,
-    today: Map<Long, Boolean>,
+    today: Map<String, Boolean>,
     onMove: (List<Long>) -> Unit,
     onRemove: (PlaylistItem) -> Unit,
     onOpen: (PlaylistItem) -> Unit,
@@ -452,7 +455,7 @@ private fun ReorderableItems(
                                 }
                             },
                             trailing = item.climb?.let { climb ->
-                                today[climb.id]?.let { sent ->
+                                today[climb.triedKey()]?.let { sent ->
                                     {
                                         Box(
                                             Modifier

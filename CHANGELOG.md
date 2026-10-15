@@ -21,6 +21,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   file. **Climb this playlist** puts a card in your session with the climb that's up, Prev and
   Next, and **+ Fell** and **+ Sent** to log a go in one tap.
 - The climbs CSV export has a Setter column.
+- **Board catalogues**: import a Kilter (Original or Homewall) or MoonBoard catalogue from a
+  Boardsesh snapshot file you download; a Kilter keeps only your board's size. Browse its climbs at
+  each angle with search, Popular, Grade and Name sorts and Benchmarks, log them, add them to
+  playlists, and pick them in Log climb's Climb step, graded at your angle. Catalogues stay on the
+  phone apart from your data and are never backed up.
 
 - **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
   and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board

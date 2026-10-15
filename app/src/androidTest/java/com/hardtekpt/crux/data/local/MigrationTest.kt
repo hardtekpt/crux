@@ -413,6 +413,27 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate28To29AddsCatalogueFields() {
+        helper.createDatabase(DB, 28).apply {
+            execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Garage board', 'own', 0, 0)")
+            execSQL(
+                "INSERT INTO problems (id, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) VALUES (1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 29, true)
+        db.query("SELECT catalogueKey, climbCount FROM datasets").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals(0, c.getInt(1))
+        }
+        db.query("SELECT sourceCatalogueUuid FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 
