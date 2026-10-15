@@ -22,6 +22,12 @@
   `BackupViewModelTest` walks the duplicate questions.
 - **Database safety**: `DatabaseSnapshotsTest` (copies before migrations), `SchemaExportTest`
   (every schema version has its exported JSON).
+- **Boards and datasets**: `DatasetFilesTest` and `PlaylistFilesTest` (file formats, matching,
+  grade conversion, which datasets a facility uses), `CatalogueImporterTest` (a small Boardsesh-shaped
+  snapshot built in the test: size filtering, per-angle grades, re-import), `BoardGeometryTest` (the
+  built-in positions), `BoardLightsTest` (Aurora v2/v3 frames, including the known clear frame, and
+  the MoonBoard command and LED order), `BoardAngleNoteTest`. Real Boardsesh files are never
+  committed. Bluetooth itself can't run on the emulator: lighting is checked on Boss's boards.
 - **Compose components** (Robolectric): the input kit, list rows, and so on.
 
 ### Coroutines
