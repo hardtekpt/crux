@@ -50,11 +50,25 @@
    "note": "Your profile, body, places and settings."
   },
   {
+   "id": "datasets",
+   "name": "Datasets",
+   "tab": "You → Datasets",
+   "c": "--c-progress",
+   "note": "Your own lists of climbs, such as a gym circuit or a crag’s problems. Import them from a CSV or a Crux file, search and sort them, and export them again."
+  },
+  {
    "id": "states",
    "name": "Other states",
    "tab": "The same pages with other settings",
    "c": "--muted",
    "note": "Light theme, the largest text size, another accent colour, and Home before there is any data."
+  },
+  {
+   "id": "launcher",
+   "name": "Launcher shortcuts",
+   "tab": "Long-press the app icon",
+   "c": "--c-log",
+   "note": "Four shortcuts on the app icon jump straight to a page, without opening Home first."
   }
  ],
  "pages": [
@@ -65,7 +79,7 @@
    "lane": "home",
    "col": 0,
    "row": 0,
-   "desc": "The dashboard: today’s plan from your weekly schedule, climbs and days this week, latest best, bodyweight, open projects and recent climbs. Tapping a project or a recent climb opens its log.",
+   "desc": "The dashboard: today’s plan from your weekly schedule (with Start session and View plan on a plan day), climbs and days this week, latest best, bodyweight, open projects and recent climbs. Tapping a project or a recent climb opens its log.",
    "covers": [
     "HomeRoute"
    ],
@@ -107,7 +121,7 @@
    "lane": "home",
    "col": 3,
    "row": 0,
-   "desc": "The widget list: Today’s plan, This week, Days on the wall, Latest best, Bodyweight, Weight trend, Sends per week, Sends by style, Recent climbs, Projects, Consistency, Training and Exercise.",
+   "desc": "The widget list: Today’s plan, This week, Days on the wall, Latest best, Bodyweight, Weight trend, Sends per week, Sends by style, Recent climbs, Projects, Consistency, Training, Exercise and My gym.",
    "covers": [
     "AddWidgetSheet"
    ],
@@ -224,7 +238,7 @@
    "lane": "log",
    "col": 3,
    "row": 0,
-   "desc": "Pick a saved place, then a facility and wall, then a problem. Or skip and log without a place.",
+   "desc": "Pick a saved place, then a facility and area, then a climb from its datasets. Or skip and log without a place.",
    "covers": [
     "WhereSheet"
    ],
@@ -614,14 +628,15 @@
    "lane": "train",
    "col": 1,
    "row": 2,
-   "desc": "Category, how it is measured and its default sets, reps or time, load and rest.",
+   "desc": "Category, how it is measured and its default sets, reps or time, load and rest. Opened with the pencil on an exercise’s page; saving a new exercise lands on its page.",
    "covers": [
     "ExerciseEditorRoute"
    ],
    "steps": [
     "tab:Train",
     "tap:Exercises",
-    "tap:Half-crimp hang"
+    "tap:Half-crimp hang",
+    "tap:Edit Half-crimp hang"
    ],
    "cleanup": []
   },
@@ -637,7 +652,8 @@
    "steps": [
     "tab:Train",
     "tap:Exercises",
-    "tapc:Repeaters"
+    "tapc:Repeaters",
+    "tapc:Edit Repeaters"
    ],
    "cleanup": []
   },
@@ -672,6 +688,7 @@
     "tab:Train",
     "tap:Exercises",
     "tap:Half-crimp hang",
+    "tap:Edit Half-crimp hang",
     "tap:Delete exercise"
    ],
    "cleanup": []
@@ -786,7 +803,7 @@
    "lane": "session",
    "col": 5,
    "row": 0,
-   "desc": "The ⋯ on a card: change its sets, reps and rest for this session, skip the rest of it, or take it out.",
+   "desc": "The ⋯ on a card: About this exercise, change its sets, reps and rest, start its timer, skip the rest of it, or take it out.",
    "covers": [
     "ExerciseMenuSheet",
     "MenuSheet"
@@ -809,7 +826,7 @@
    "lane": "session",
    "col": 6,
    "row": 0,
-   "desc": "Sets, reps or time, load and rest for this session only. Your plan stays as it is.",
+   "desc": "Sets, reps or time, load and rest for this session. With a plan, an “Also change the plan” switch carries the change over to it; without it, your plan stays as it is.",
    "covers": [],
    "steps": [
     "tab:Train",
@@ -878,7 +895,7 @@
    "lane": "session",
    "col": 0,
    "row": 1,
-   "desc": "Log a climb, add an exercise, or start an interval timer.",
+   "desc": "Log a climb, climb a playlist, add an exercise, or start an interval timer.",
    "covers": [
     "AddToSessionSheet"
    ],
@@ -1051,7 +1068,7 @@
    "lane": "session",
    "col": 2,
    "row": 2,
-   "desc": "While a session runs, a notification shows progress with its next action: Set done, rest controls, interval Pause and Stop, or Log climb. On Android 16 it is a Live Update.",
+   "desc": "While a session runs, a notification shows progress with its next action: Set done, rest controls, interval Pause and Stop, or Log climb. On Android 16 it is a Live Update. A playlist’s notification has Prev, Light and Next.",
    "covers": [],
    "steps": [
     "tab:Train",
@@ -1073,7 +1090,7 @@
    "lane": "journal",
    "col": 0,
    "row": 0,
-   "desc": "Everything you did, newest first: climbs by place, sessions, personal records and notes. Filter by All, Climbs, Training or Notes.",
+   "desc": "Everything you did, newest first: climbs by place, sessions, personal records and notes. Filter by All, Climbs, Training, Notes or Places.",
    "covers": [
     "JournalRoute"
    ],
@@ -1264,7 +1281,7 @@
    "lane": "progress",
    "col": 3,
    "row": 0,
-   "desc": "One exercise: its personal record, a chart of the best set or the volume, and every day it was trained.",
+   "desc": "One page per exercise: a pencil to edit it, its kind, Log a result (and Timer for interval exercises), the personal record, a chart of the best set or the volume, three figures, how it is set up, the plans that use it, and every day it was trained. Reached from Train → Exercises, a plan’s exercise rows, the session ⋯ menu, Progress, You and the Journal.",
    "covers": [
     "ExerciseRecordsRoute"
    ],
@@ -1457,7 +1474,7 @@
    "lane": "you",
    "col": 2,
    "row": 1,
-   "desc": "Name, kinds of climbing, grade scales, location and notes.",
+   "desc": "Name, kinds of climbing, a Board, Size and Lights row on board facilities, the datasets offered when you log there, grade scales, location and notes.",
    "covers": [
     "PlaceEditorRoute"
    ],
@@ -1819,16 +1836,17 @@
     "tap:Settings",
     "scrollto:Backups",
     "tap:Backups",
-    "shell:rm -f /sdcard/Download/crux-backup-2026-10-14.zip",
+    "shell:rm -f /sdcard/Download/crux-backup-*.zip",
     "swipe:540,1700,540,900",
     "tap:Export",
     "wait:3",
     "tap:SAVE",
     "wait:3",
     "scrollto:Import",
-    "tap:Import#1",
+    "swipe:540,1700,540,1000",
+    "tap:Import#-1",
     "wait:2.5",
-    "tap:crux-backup-2026-10-14.zip",
+    "tap:crux-backup-{today}.zip",
     "wait:3"
    ],
    "cleanup": []
@@ -1850,16 +1868,17 @@
     "tap:Settings",
     "scrollto:Backups",
     "tap:Backups",
-    "shell:rm -f /sdcard/Download/crux-backup-2026-10-14.zip",
+    "shell:rm -f /sdcard/Download/crux-backup-*.zip",
     "swipe:540,1700,540,900",
     "tap:Export",
     "wait:3",
     "tap:SAVE",
     "wait:3",
     "scrollto:Import",
-    "tap:Import#1",
+    "swipe:540,1700,540,1000",
+    "tap:Import#-1",
     "wait:2.5",
-    "tap:crux-backup-2026-10-14.zip",
+    "tap:crux-backup-{today}.zip",
     "wait:3",
     "tap:Import",
     "wait:3"
@@ -1934,6 +1953,985 @@
     "tapc:Video taken",
     "tap:Climb video",
     "wait:2"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "exercise-progress-intervals",
+   "title": "Interval exercise",
+   "kind": "page",
+   "lane": "progress",
+   "col": 6,
+   "row": 0,
+   "desc": "An interval exercise’s page has a Timer button beside Log a result, which opens the interval timer set up as the exercise is.",
+   "covers": [],
+   "steps": [
+    "tab:Train",
+    "tap:Exercises",
+    "tapc:Repeaters"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "journal-places",
+   "title": "Journal, Places",
+   "kind": "page",
+   "lane": "journal",
+   "col": 4,
+   "row": 0,
+   "desc": "The fifth Journal tab lists your places with New place. A place opens its page; New place opens the place editor.",
+   "covers": [],
+   "steps": [
+    "tab:Journal",
+    "tap:Places"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "home-my-gym",
+   "title": "My gym widget",
+   "kind": "page",
+   "lane": "home",
+   "col": 5,
+   "row": 0,
+   "desc": "The My gym widget shows your favourite place, with Log here to log a climb there and Open for its place page.",
+   "covers": [],
+   "steps": [
+    "tap:Edit dashboard",
+    "tap:Add widget",
+    "scrollto:My gym",
+    "tap:My gym",
+    "tap:Done",
+    "scrollto:Log here"
+   ],
+   "cleanup": [
+    "scroll:up*3",
+    "tap:Edit dashboard",
+    "scrollto:Remove My gym",
+    "tap:Remove My gym",
+    "tap:Done"
+   ]
+  },
+  {
+   "id": "launcher-shortcuts",
+   "title": "App icon shortcuts",
+   "kind": "sheet",
+   "lane": "launcher",
+   "col": 0,
+   "row": 0,
+   "desc": "Long-press the Crux icon: Log a climb, Session (the running session, or the Start a session sheet), Log your weight and Interval timer.",
+   "covers": [],
+   "steps": [
+    "home",
+    "swipe:540,2100,540,500",
+    "longtap:Crux"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "place-board-sheet",
+   "title": "Board",
+   "kind": "sheet",
+   "lane": "you",
+   "col": 1,
+   "row": 3,
+   "desc": "Say which board a facility is: Kilter, MoonBoard (each year) or a custom board.",
+   "covers": [
+    "BoardSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Places",
+    "tap:Places",
+    "tap:Block Lab",
+    "tap:Edit place",
+    "scroll:down",
+    "tap:Kilter Original"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "place-board-size-sheet",
+   "title": "Board size",
+   "kind": "sheet",
+   "lane": "you",
+   "col": 2,
+   "row": 3,
+   "desc": "Kilter boards ask for a size; the Homewall also asks for Full ride or Mainline.",
+   "covers": [
+    "BoardSizeSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Places",
+    "tap:Places",
+    "tap:Block Lab",
+    "tap:Edit place",
+    "scroll:down",
+    "tap:12×12"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "log-climb-board",
+   "title": "Log climb on a board",
+   "kind": "page",
+   "lane": "log",
+   "col": 4,
+   "row": 2,
+   "desc": "When the place is a board, Log climb gets an Angle chip beside Photo and Video, and the Where card names the board.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Log climb",
+    "tap:Add",
+    "tap:No saved place",
+    "tap:Board",
+    "tap:Done"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "log-climb-angle",
+   "title": "Board angle",
+   "kind": "sheet",
+   "lane": "log",
+   "col": 5,
+   "row": 2,
+   "desc": "Dial the board’s angle, or pick a common one. It is saved as the first line of the note.",
+   "covers": [
+    "AngleSheet"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Log climb",
+    "tap:Add",
+    "tap:No saved place",
+    "tap:Board",
+    "tap:Done",
+    "tap:Angle"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "datasets-list",
+   "title": "Datasets",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 0,
+   "row": 0,
+   "desc": "Your lists of climbs in two tabs, Datasets and Playlists. Each dataset shows its board, climb count and grade scale; board catalogues you import get a section of their own.",
+   "covers": [
+    "DatasetsRoute"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "datasets-menu",
+   "title": "New dataset or import",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 1,
+   "row": 0,
+   "desc": "The + menu: start an empty dataset or a playlist, or import a CSV, a Crux dataset or playlist file, or a Boardsesh board snapshot.",
+   "covers": [
+    "MenuSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:New dataset or import"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-details-new",
+   "title": "New dataset",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 2,
+   "row": 0,
+   "desc": "Name it and, if it belongs to a board, pick the board; the grade scales are optional. The same sheet edits a dataset’s details.",
+   "covers": [
+    "DatasetDetailsSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:New dataset or import",
+    "tap:New dataset"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset",
+   "title": "Dataset",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 3,
+   "row": 0,
+   "desc": "One dataset: search by name, setter or note, sort by grade, name or newest, and tap a climb to edit it. Add climb adds another.",
+   "covers": [
+    "DatasetRoute"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-options",
+   "title": "Dataset options",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 4,
+   "row": 0,
+   "desc": "Edit details, Import climbs, Export or Delete dataset.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-export-format",
+   "title": "Export format",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 5,
+   "row": 0,
+   "desc": "CSV opens in any spreadsheet; a Crux dataset file keeps the board and grades and imports straight back.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options",
+    "tap:Export"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-delete",
+   "title": "Delete dataset?",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 6,
+   "row": 0,
+   "desc": "Asks before a dataset and its climbs are deleted.",
+   "covers": [
+    "DatasetScreen/dialog:Delete"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options",
+    "tap:Delete dataset"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-climb-sheet",
+   "title": "Edit climb",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 0,
+   "row": 1,
+   "desc": "Name, type, grade, setter and note for one climb, with Save, Log this climb, Playlist (add it to one) and Delete climb.",
+   "covers": [
+    "ClimbSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tapc:Yellow arete"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-add-climb",
+   "title": "Add climb",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 1,
+   "row": 1,
+   "desc": "The same sheet, empty, to add a climb to the dataset.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Add climb"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-climb-delete",
+   "title": "Delete this climb?",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 2,
+   "row": 1,
+   "desc": "Asks before a climb that has a note is deleted, since the note goes with it.",
+   "covers": [
+    "DatasetScreen/dialog:Its note goes with it."
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tapc:Yellow arete",
+    "tapc:Delete"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-import-error",
+   "title": "Can’t import this file",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 4,
+   "row": 1,
+   "desc": "A file Crux cannot read as climbs shows what is wrong, such as a missing name column.",
+   "covers": [
+    "ErrorDialog"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options",
+    "tap:Import climbs",
+    "wait:2.5",
+    "tap:broken.csv",
+    "wait:3"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-import-preview",
+   "title": "Import preview",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 3,
+   "row": 1,
+   "desc": "After you pick a file: how many climbs were found, what to do with climbs already there (skip, replace or keep both) and a preview.",
+   "covers": [
+    "ImportSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options",
+    "tap:Import climbs",
+    "wait:2.5",
+    "tap:new-climbs.csv",
+    "wait:3"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "datasets-playlists",
+   "title": "Playlists",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 0,
+   "row": 2,
+   "desc": "The Playlists tab lists your playlists: an ordered set of climbs from your datasets to work through in a session.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Playlists"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist-details-new",
+   "title": "New playlist",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 1,
+   "row": 2,
+   "desc": "Name a playlist and add a note. The same sheet renames it.",
+   "covers": [
+    "PlaylistDetailsSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:New dataset or import",
+    "tap:New playlist"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist",
+   "title": "Playlist",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 2,
+   "row": 2,
+   "desc": "The climbs of a playlist in order: hold and drag to move one. Climb this playlist starts them in a session.",
+   "covers": [
+    "PlaylistRoute"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Playlists",
+    "tap:Tonight"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist-options",
+   "title": "Playlist options",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 3,
+   "row": 2,
+   "desc": "Rename, Duplicate, Export (a Crux playlist file to share) or Delete playlist.",
+   "covers": [
+    "PlaylistMenuSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Playlists",
+    "tap:Tonight",
+    "tap:Playlist options"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist-rename",
+   "title": "Rename playlist",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 4,
+   "row": 2,
+   "desc": "Change a playlist’s name and note.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Playlists",
+    "tap:Tonight",
+    "tap:Playlist options",
+    "tapc:Rename"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist-delete",
+   "title": "Delete playlist?",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 5,
+   "row": 2,
+   "desc": "Asks before a playlist is deleted. The climbs stay in their datasets and logged climbs are never touched.",
+   "covers": [
+    "PlaylistScreen/dialog:Delete"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Playlists",
+    "tap:Tonight",
+    "tap:Playlist options",
+    "tapc:Delete"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-selection",
+   "title": "Select climbs",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 6,
+   "row": 2,
+   "desc": "Hold a climb to select it, then pick more. Add to playlist adds them all.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "longtap:Cave jugs"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "add-to-playlist",
+   "title": "Add to a playlist",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 0,
+   "row": 3,
+   "desc": "Pick a playlist, or make a new one, to add the selected climbs to.",
+   "covers": [
+    "AddToPlaylistSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "longtap:Cave jugs",
+    "tap:Add to playlist"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "log-climb-from-dataset",
+   "title": "Log this climb",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 1,
+   "row": 3,
+   "desc": "Log climb opens with the dataset climb’s name, grade and setter filled in, linked to it.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tapc:Cave jugs",
+    "tap:Log this climb",
+    "wait:1"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "place-dataset-links",
+   "title": "Datasets for a facility",
+   "kind": "sheet",
+   "lane": "you",
+   "col": 4,
+   "row": 3,
+   "desc": "Tick the datasets to offer when you log a climb at this facility, or make a new dataset for its board.",
+   "covers": [
+    "DatasetLinksSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Places",
+    "tap:Places",
+    "tap:Block Lab",
+    "tap:Edit place",
+    "scroll:down",
+    "tap:None"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "log-climb-where-climb",
+   "title": "Where, climb step",
+   "kind": "sheet",
+   "lane": "log",
+   "col": 7,
+   "row": 0,
+   "desc": "After the place and area, a Climb step lists the climbs of the datasets linked there, with search, your playlists and the board catalogue as chips. New climb types its name in the form.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Log climb",
+    "tap:Add",
+    "tap:Block Lab",
+    "tap:Cave"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "session-playlist-picker",
+   "title": "Climb a playlist",
+   "kind": "sheet",
+   "lane": "session",
+   "col": 3,
+   "row": 2,
+   "desc": "Pick one of your playlists to work through in this session.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Climb a playlist"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "session-playlist",
+   "title": "Playlist in the session",
+   "kind": "page",
+   "lane": "session",
+   "col": 4,
+   "row": 2,
+   "desc": "A card steps through the playlist: the climb, its grade and setter, a hold diagram for board climbs, Prev and Next, and + Fell and + Sent that log goes on it. With a paired board, a Light button lights the climb on the wall.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Climb a playlist",
+    "tap:Tonight",
+    "wait:1.5"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "catalogue-import",
+   "title": "Import a board catalogue",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 0,
+   "row": 4,
+   "desc": "Pick a Boardsesh snapshot (a .db or .db.gz) for Kilter or MoonBoard. The sheet reads it, asks for your board’s size (and holds on a Homewall), shows progress while it reads, then says what it kept.",
+   "covers": [
+    "CatalogueImportSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:New dataset or import",
+    "tap:Import a file",
+    "wait:3",
+    "tap:kilter-boardsesh.db",
+    "wait:3"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "dataset-imported",
+   "title": "Imported",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 5,
+   "row": 1,
+   "desc": "A summary of what was added and what was skipped.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Dataset options",
+    "tap:Import climbs",
+    "wait:2.5",
+    "tap:new-climbs.csv",
+    "wait:3",
+    "tap:Import",
+    "wait:2"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "playlist-imported",
+   "title": "Imported playlist",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 2,
+   "row": 3,
+   "desc": "After a Crux playlist file is imported: how many of its climbs were found in your datasets, with Open to go to the playlist.",
+   "covers": [
+    "DatasetsScreen/dialog:Open"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "shell:rm -f /sdcard/Download/tonight.crux-playlist.json",
+    "tapc:Playlists",
+    "tap:Tonight",
+    "tap:Playlist options",
+    "tap:Export",
+    "wait:3",
+    "tap:SAVE",
+    "wait:3",
+    "back",
+    "tap:New dataset or import",
+    "tap:Import a file",
+    "wait:3",
+    "tap:tonight.crux-playlist.json",
+    "wait:3"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue-imported",
+   "title": "Catalogue imported",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 1,
+   "row": 4,
+   "desc": "When the import finishes, the sheet says how many climbs were kept, with Open to browse them. The catalogue stays on this phone, apart from your data: it is not in backups or exports.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:New dataset or import",
+    "tap:Import a file",
+    "wait:3",
+    "tap:kilter-boardsesh.db",
+    "wait:3",
+    "tap:12×12",
+    "tap:Import",
+    "wait:3"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "datasets-catalogues",
+   "title": "Datasets with a catalogue",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 2,
+   "row": 4,
+   "desc": "Imported catalogues get a Board catalogues section above your datasets, each read-only with its board, size and climb count.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue",
+   "title": "Board catalogue",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 3,
+   "row": 4,
+   "desc": "The climbs of a board catalogue, read-only: search by name or setter, pick the angle (30°, 40°, 45°) and sort by popularity, grade or name, or show benchmarks only.",
+   "covers": [
+    "CatalogueRoute"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue-options",
+   "title": "Catalogue options",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 4,
+   "row": 4,
+   "desc": "Delete catalogue, which asks first; you can import it again any time.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tap:Catalogue options"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue-delete",
+   "title": "Delete catalogue?",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 5,
+   "row": 4,
+   "desc": "Its climbs leave Crux and your playlists lose them until you import it again. Climbs you logged from it stay.",
+   "covers": [
+    "CatalogueScreen/dialog:Delete"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tap:Catalogue options",
+    "tapc:Delete"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue-climb-sheet",
+   "title": "Catalogue climb",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 6,
+   "row": 4,
+   "desc": "One catalogue climb, led by the board diagram with a legend (start, hand, finish, foot): its setter, the angle you are on, its grade at each angle with the ascents, then Log this climb or Playlist. Tap the diagram to see the whole board. Once a board is paired, a Light button shows the climb’s holds on the wall.",
+   "covers": [
+    "CatalogueClimbSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tapc:Heel hook cave"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "log-climb-where-catalogue",
+   "title": "Where, catalogue chip",
+   "kind": "sheet",
+   "lane": "log",
+   "col": 8,
+   "row": 0,
+   "desc": "On a board facility the Climb step has a chip for the board’s catalogue; it lists the catalogue’s climbs to log.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Log climb",
+    "tap:Add",
+    "tap:Block Lab",
+    "tap:Kilter board",
+    "tap:Climb",
+    "tap:Kilter Original",
+    "wait:1"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "board-diagram",
+   "title": "Full board",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 7,
+   "row": 4,
+   "desc": "Tap any hold diagram to see the climb on the whole board, with every hold of the board as a faint dot and the climb’s holds ringed in their role’s colour.",
+   "covers": [
+    "BoardDiagramDialog"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tapc:Heel hook cave",
+    "tapc:13 holds",
+    "wait:1.5"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "catalogue-log-climb",
+   "title": "Log a catalogue climb",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 0,
+   "row": 5,
+   "desc": "Log climb opens with the catalogue climb’s hold diagram and name in the linked name row, and a hint of what the board says its grade is. A Light button sits under the linked name once a board is paired.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tapc:Heel hook cave",
+    "tap:Log this climb",
+    "wait:1.5"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "session-playlist-catalogue",
+   "title": "Playlist with a board climb",
+   "kind": "page",
+   "lane": "session",
+   "col": 5,
+   "row": 2,
+   "desc": "A playlist card for a catalogue climb draws its holds on the board. Tap the diagram for the full board. With a paired board there is a Light button too.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tapc:Heel hook cave",
+    "tap:Playlist",
+    "tap:New playlist",
+    "wait:1",
+    "tap:Tonight#1",
+    "type:Picks",
+    "tap:Create and add",
+    "wait:1.5",
+    "launch",
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Climb a playlist",
+    "tap:Picks",
+    "wait:1.5"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "log-climb-holds",
+   "title": "Edit log with holds",
+   "kind": "page",
+   "lane": "datasets",
+   "col": 1,
+   "row": 5,
+   "desc": "A climb logged from a catalogue keeps its holds: the log shows a Holds card with the diagram, the setter and the board’s grade.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tapc:Kilter Original 12×12",
+    "tapc:Heel hook cave",
+    "tap:Log this climb",
+    "wait:1.5",
+    "xy:574,2232",
+    "wait:1.5",
+    "tab:Journal",
+    "tapc:Heel hook cave",
+    "wait:1.5"
    ],
    "cleanup": []
   },
@@ -2034,6 +3032,29 @@
     "scrollto:Demo mode",
     "switch:Demo mode"
    ]
+  },
+  {
+   "id": "place-lights",
+   "title": "Board lights",
+   "kind": "sheet",
+   "lane": "you",
+   "col": 5,
+   "row": 3,
+   "desc": "Pair a Kilter or MoonBoard through Android’s companion picker (Crux asks for Nearby devices, never your location). Once paired the sheet offers Test lights, Check a hold on a MoonBoard, Lights off and Forget. Shown here unpaired, as on a phone without the board nearby.",
+   "covers": [
+    "LightsSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Places",
+    "tap:Places",
+    "tap:Block Lab",
+    "tap:Edit place",
+    "scroll:down",
+    "tap:Pair a board",
+    "wait:1.5"
+   ],
+   "cleanup": []
   }
  ],
  "edges": [
@@ -2198,18 +3219,6 @@
    "train-exercises",
    "Exercises tab",
    "tab"
-  ],
-  [
-   "train-exercises",
-   "exercise-editor",
-   "Open an exercise",
-   "nav"
-  ],
-  [
-   "train-exercises",
-   "exercise-editor-intervals",
-   "An interval exercise",
-   "nav"
   ],
   [
    "train-exercises",
@@ -2666,6 +3675,462 @@
    "state-empty-home",
    "Demo mode off",
    "tab"
+  ],
+  [
+   "train-exercises",
+   "exercise-progress",
+   "Open an exercise",
+   "nav"
+  ],
+  [
+   "train-exercises",
+   "exercise-progress-intervals",
+   "An interval exercise",
+   "nav"
+  ],
+  [
+   "exercise-progress",
+   "exercise-editor",
+   "Pencil",
+   "nav"
+  ],
+  [
+   "exercise-progress-intervals",
+   "exercise-editor-intervals",
+   "Pencil",
+   "nav"
+  ],
+  [
+   "exercise-progress-intervals",
+   "interval-timer-setup",
+   "Timer",
+   "nav"
+  ],
+  [
+   "exercise-new",
+   "exercise-progress",
+   "Save",
+   "nav"
+  ],
+  [
+   "plan-detail",
+   "exercise-progress",
+   "An exercise",
+   "nav"
+  ],
+  [
+   "session-exercise-menu",
+   "exercise-progress",
+   "About this exercise",
+   "nav"
+  ],
+  [
+   "journal-training",
+   "exercise-progress",
+   "A result",
+   "nav"
+  ],
+  [
+   "log-menu",
+   "start-session-sheet",
+   "Start a session",
+   "sheet"
+  ],
+  [
+   "home-top",
+   "session-live",
+   "Today’s plan: Start session",
+   "nav"
+  ],
+  [
+   "home-top",
+   "plan-detail",
+   "Today’s plan: View plan",
+   "nav"
+  ],
+  [
+   "you-top",
+   "settings-top",
+   "Gear",
+   "nav"
+  ],
+  [
+   "journal-top",
+   "journal-places",
+   "Places tab",
+   "tab"
+  ],
+  [
+   "journal-places",
+   "place-detail",
+   "A place",
+   "nav"
+  ],
+  [
+   "journal-places",
+   "place-new",
+   "New place",
+   "nav"
+  ],
+  [
+   "home-add-widget",
+   "home-my-gym",
+   "My gym",
+   "sheet"
+  ],
+  [
+   "home-my-gym",
+   "log-climb",
+   "Log here",
+   "nav"
+  ],
+  [
+   "home-my-gym",
+   "place-detail",
+   "Open",
+   "nav"
+  ],
+  [
+   "launcher-shortcuts",
+   "log-climb",
+   "Log a climb",
+   "nav"
+  ],
+  [
+   "launcher-shortcuts",
+   "start-session-sheet",
+   "Session",
+   "sheet"
+  ],
+  [
+   "launcher-shortcuts",
+   "session-live",
+   "Session, when one runs",
+   "nav"
+  ],
+  [
+   "launcher-shortcuts",
+   "log-weight",
+   "Log your weight",
+   "nav"
+  ],
+  [
+   "launcher-shortcuts",
+   "interval-timer-setup",
+   "Interval timer",
+   "nav"
+  ],
+  [
+   "place-editor",
+   "place-board-sheet",
+   "Board row on a board facility",
+   "sheet"
+  ],
+  [
+   "place-board-sheet",
+   "place-board-size-sheet",
+   "Pick a size",
+   "sheet"
+  ],
+  [
+   "log-climb-where",
+   "log-climb-board",
+   "A board",
+   "sheet"
+  ],
+  [
+   "log-climb-board",
+   "log-climb-angle",
+   "Angle",
+   "sheet"
+  ],
+  [
+   "you-more",
+   "datasets-list",
+   "Datasets",
+   "nav"
+  ],
+  [
+   "datasets-list",
+   "datasets-menu",
+   "+",
+   "sheet"
+  ],
+  [
+   "datasets-menu",
+   "dataset-details-new",
+   "New dataset",
+   "sheet"
+  ],
+  [
+   "dataset-details-new",
+   "place-board-sheet",
+   "Board row",
+   "sheet"
+  ],
+  [
+   "datasets-list",
+   "dataset",
+   "A dataset",
+   "nav"
+  ],
+  [
+   "dataset",
+   "dataset-options",
+   "Dataset options",
+   "sheet"
+  ],
+  [
+   "dataset-options",
+   "dataset-export-format",
+   "Export",
+   "sheet"
+  ],
+  [
+   "dataset-options",
+   "dataset-delete",
+   "Delete dataset",
+   "sheet"
+  ],
+  [
+   "dataset",
+   "dataset-climb-sheet",
+   "A climb",
+   "sheet"
+  ],
+  [
+   "dataset",
+   "dataset-add-climb",
+   "Add climb",
+   "sheet"
+  ],
+  [
+   "dataset-climb-sheet",
+   "dataset-climb-delete",
+   "Delete climb",
+   "sheet"
+  ],
+  [
+   "dataset-options",
+   "dataset-import-error",
+   "Import climbs, an unreadable file",
+   "sheet"
+  ],
+  [
+   "datasets-menu",
+   "dataset-import-preview",
+   "Import a file",
+   "sheet"
+  ],
+  [
+   "dataset-options",
+   "dataset-import-preview",
+   "Import climbs",
+   "sheet"
+  ],
+  [
+   "dataset-import-preview",
+   "dataset-imported",
+   "Import",
+   "sheet"
+  ],
+  [
+   "datasets-list",
+   "datasets-playlists",
+   "Playlists tab",
+   "tab"
+  ],
+  [
+   "datasets-menu",
+   "playlist-details-new",
+   "New playlist",
+   "sheet"
+  ],
+  [
+   "datasets-playlists",
+   "playlist",
+   "A playlist",
+   "nav"
+  ],
+  [
+   "playlist",
+   "playlist-options",
+   "Playlist options",
+   "sheet"
+  ],
+  [
+   "playlist-options",
+   "playlist-rename",
+   "Rename",
+   "sheet"
+  ],
+  [
+   "playlist-options",
+   "playlist-delete",
+   "Delete playlist",
+   "sheet"
+  ],
+  [
+   "dataset",
+   "dataset-selection",
+   "Hold a climb",
+   "tab"
+  ],
+  [
+   "dataset-selection",
+   "add-to-playlist",
+   "Add to playlist",
+   "sheet"
+  ],
+  [
+   "dataset-climb-sheet",
+   "add-to-playlist",
+   "Playlist",
+   "sheet"
+  ],
+  [
+   "dataset-climb-sheet",
+   "log-climb-from-dataset",
+   "Log this climb",
+   "nav"
+  ],
+  [
+   "place-editor",
+   "place-dataset-links",
+   "Datasets row",
+   "sheet"
+  ],
+  [
+   "log-climb-where-wall",
+   "log-climb-where-climb",
+   "Pick an area",
+   "sheet"
+  ],
+  [
+   "session-add-sheet",
+   "session-playlist-picker",
+   "Climb a playlist",
+   "sheet"
+  ],
+  [
+   "session-playlist-picker",
+   "session-playlist",
+   "A playlist",
+   "nav"
+  ],
+  [
+   "playlist",
+   "session-playlist",
+   "Climb this playlist",
+   "nav"
+  ],
+  [
+   "datasets-menu",
+   "playlist-imported",
+   "Import a file",
+   "sheet"
+  ],
+  [
+   "datasets-menu",
+   "catalogue-import",
+   "Import a Boardsesh file",
+   "sheet"
+  ],
+  [
+   "catalogue-import",
+   "catalogue-imported",
+   "Import",
+   "sheet"
+  ],
+  [
+   "catalogue-imported",
+   "catalogue",
+   "Open",
+   "nav"
+  ],
+  [
+   "datasets-list",
+   "datasets-catalogues",
+   "After an import",
+   "tab"
+  ],
+  [
+   "datasets-catalogues",
+   "catalogue",
+   "A catalogue",
+   "nav"
+  ],
+  [
+   "catalogue",
+   "catalogue-options",
+   "Catalogue options",
+   "sheet"
+  ],
+  [
+   "catalogue-options",
+   "catalogue-delete",
+   "Delete catalogue",
+   "sheet"
+  ],
+  [
+   "catalogue",
+   "catalogue-climb-sheet",
+   "A climb",
+   "sheet"
+  ],
+  [
+   "catalogue-climb-sheet",
+   "add-to-playlist",
+   "Playlist",
+   "sheet"
+  ],
+  [
+   "log-climb-where-climb",
+   "log-climb-where-catalogue",
+   "Catalogue chip",
+   "tab"
+  ],
+  [
+   "catalogue-climb-sheet",
+   "board-diagram",
+   "Tap the diagram",
+   "sheet"
+  ],
+  [
+   "catalogue-climb-sheet",
+   "catalogue-log-climb",
+   "Log this climb",
+   "nav"
+  ],
+  [
+   "catalogue-log-climb",
+   "log-climb-holds",
+   "Save, then open the log",
+   "nav"
+  ],
+  [
+   "log-climb-holds",
+   "board-diagram",
+   "Tap the diagram",
+   "sheet"
+  ],
+  [
+   "playlist",
+   "session-playlist-catalogue",
+   "A playlist with board climbs",
+   "nav"
+  ],
+  [
+   "session-playlist-catalogue",
+   "board-diagram",
+   "Tap the diagram",
+   "sheet"
+  ],
+  [
+   "place-editor",
+   "place-lights",
+   "Lights row",
+   "sheet"
   ]
  ],
  "ignore": {}

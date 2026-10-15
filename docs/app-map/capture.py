@@ -48,11 +48,14 @@ def dump(retries=4):
         adb('shell', 'uiautomator', 'dump', '/sdcard/u.xml')
         xml = adb('shell', 'cat', '/sdcard/u.xml')
         if '<?xml' in xml:
-            break
+            try:
+                root = ET.fromstring(xml[xml.index('<?xml'):])
+                break
+            except ET.ParseError:
+                pass  # read while the file was still being written
         time.sleep(0.6)
     else:
         return []
-    root = ET.fromstring(xml[xml.index('<?xml'):])
     nodes = []
     for n in root.iter('node'):
         x1, y1, x2, y2 = map(int, re.findall(r'\d+', n.get('bounds')))
@@ -75,7 +78,7 @@ def find(label, nodes=None, contains=False, index=0, bottom=None):
                 if bottom is None or (n['cy'] > NAV_Y) == bottom:
                     hits.append(n)
                     break
-    return hits[index] if len(hits) > index else None
+    return hits[index] if -len(hits) <= index < len(hits) else None
 
 
 def tap_xy(x, y, wait=1.0):
@@ -92,14 +95,15 @@ def launch():
     adb('shell', 'am', 'force-stop', PKG)
     for pkg in ('com.android.documentsui', 'com.google.android.documentsui'):
         adb('shell', 'am', 'force-stop', pkg)  # a file picker left open by the last page
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')  # closes the launcher's shortcut popup
     adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
     time.sleep(2.0)
-    for _ in range(12):  # until the first screen is drawn
+    for _ in range(30):  # until the first screen is drawn
         if find('Home', bottom=True):
             break
         time.sleep(1.0)
-    time.sleep(0.8)
+    time.sleep(2.0)
 
 
 def shot(path, crop=None):
@@ -122,7 +126,9 @@ def run_steps(steps, page_id=None):
     """Runs a list of step strings. Returns once they are done; takes the page's screenshot at "shot" or at the end."""
     crop = None
     shot_taken = False
+    import datetime
     for raw in steps:
+        raw = raw.replace('{today}', datetime.date.today().isoformat())
         step, _, arg = raw.partition(':')
         count = 1
         m = re.match(r'^(.*)\*(\d+)$', arg)
@@ -145,6 +151,15 @@ def run_steps(steps, page_id=None):
         elif step == 'xy':
             x, y = arg.split(',')
             tap_xy(int(x), int(y), 1.2)
+        elif step == 'longtap':
+            n = find(arg, bottom=False) or find(arg)
+            if not n:
+                raise Fail('not found: ' + arg)
+            adb('shell', 'input', 'swipe', str(n['cx']), str(n['cy']), str(n['cx']), str(n['cy']), '1000')
+            time.sleep(1.2)
+        elif step == 'home':
+            adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+            time.sleep(1.2)
         elif step == 'switch':
             n = find(arg, bottom=False) or find(arg)
             if not n:
@@ -230,6 +245,45 @@ def fixtures():
     im.save(tmp)
     subprocess.run([ADB, '-s', SER, 'push', tmp, '/sdcard/Pictures/wall-photo.png'], capture_output=True, env=env)
     os.remove(tmp)
+    # Two files for the dataset import pages: a small list of climbs, and a file that is not one.
+    csv = os.path.join(RAW, 'new-climbs.csv')
+    rows = ['name,grade,type,setter,note', 'Green jug ladder,5+,Boulder,Rita,warm-up', 'Orange arete,6B,Boulder,,', 'Slab of dreams,6A+,Boulder,Rita,smear the feet']
+    open(csv, 'w', encoding='utf-8', newline='').write((chr(13) + chr(10)).join(rows) + chr(13) + chr(10))
+    subprocess.run([ADB, '-s', SER, 'push', csv, '/sdcard/Download/new-climbs.csv'], capture_output=True, env=env)
+    open(csv, 'wb').write(b'\x00\x01\x02not a climb list')
+    subprocess.run([ADB, '-s', SER, 'push', csv, '/sdcard/Download/broken.csv'], capture_output=True, env=env)
+    os.remove(csv)
+    # A tiny board catalogue in Boardsesh's snapshot shape, for the catalogue import pages.
+    import sqlite3
+    db_path = os.path.join(RAW, 'kilter-boardsesh.db')
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    con = sqlite3.connect(db_path)
+    con.execute("CREATE TABLE board_climbs (uuid TEXT PRIMARY KEY, board_type TEXT, layout_id INTEGER, setter_username TEXT, name TEXT, description TEXT, "
+                "angle INTEGER, frames TEXT, is_draft INTEGER, is_listed INTEGER, is_hidden INTEGER, created_at TEXT, compatible_size_ids TEXT) WITHOUT ROWID")
+    con.execute("CREATE TABLE board_climb_stats (board_type TEXT NOT NULL, climb_uuid TEXT NOT NULL, angle INTEGER NOT NULL, display_difficulty REAL, "
+                "benchmark_difficulty REAL, ascensionist_count INTEGER, difficulty_average REAL, quality_average REAL, PRIMARY KEY (board_type, climb_uuid, angle)) WITHOUT ROWID")
+    # Hold placements that exist on a Kilter Original 12x12, so the hold diagram has something to draw.
+    import json as _json
+    import random
+    points = _json.load(open(os.path.join(HERE, '..', '..', 'app', 'src', 'main', 'assets', 'board_holes.json'), encoding='utf-8'))['kilter:1']['points']
+    inside = sorted(((int(k), xy) for k, xy in points.items() if 0 <= xy[0] <= 144 and 0 <= xy[1] <= 156), key=lambda t: t[1][1])
+
+    def route(seed):
+        rnd = random.Random(seed)
+        low, mid, high = inside[:90], inside[90:-90], inside[-90:]
+        picks = [(h, 12) for h in rnd.sample(low[40:], 2)] + [(h, 13) for h in rnd.sample(mid, 5)] + [(h, 14) for h in rnd.sample(high, 2)] + [(h, 15) for h in rnd.sample(low, 4)]
+        return ''.join('p%dr%d' % (h[0], role) for h, role in picks)
+
+    names = ['Roof to pinch', 'Big crimps', 'Slopey traverse', 'Corner dyno', 'Pocket ladder', 'Moon arete', 'Warm-up jugs', 'Pinch power', 'Heel hook cave', 'Slab dance', 'Compression squeeze', 'Finger roulette']
+    for i, name in enumerate(names):
+        con.execute("INSERT INTO board_climbs VALUES (?, 'kilter', 1, ?, ?, '', 40, ?, 0, 1, 0, '2025-01-01', '[10,27,28]')", ('U%02d' % i, ['ana', 'rui', 'kim'][i % 3], name, route(i)))
+        for angle, delta in ((40, 0.0), (30, -1.5), (45, 1.2)):
+            con.execute("INSERT INTO board_climb_stats VALUES ('kilter', ?, ?, ?, ?, ?, ?, ?)", ('U%02d' % i, angle, 14.0 + i * 0.8 + delta, 14.0 + i * 0.8 if i % 4 == 0 and angle == 40 else None, 40 + i * 25, 14.0 + i * 0.8 + delta, 2.4 + (i % 5) * 0.2))
+    con.commit()
+    con.close()
+    subprocess.run([ADB, '-s', SER, 'push', db_path, '/sdcard/Download/kilter-boardsesh.db'], capture_output=True, env=env)
+    os.remove(db_path)
     launch()  # a few seconds of the app itself for the video
     subprocess.run([ADB, '-s', SER, 'shell', 'screenrecord --time-limit 3 /sdcard/Movies/climb-video.mp4'], capture_output=True, env=env)
     for f in ('Pictures/wall-photo.png', 'Movies/climb-video.mp4'):

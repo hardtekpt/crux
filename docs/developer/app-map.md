@@ -27,7 +27,7 @@ Any change that adds, removes, renames or reshapes a screen, sheet or dialog:
 3. `python docs/app-map/build.py`, then commit `manifest.json` and `dist/`.
 4. Publish `docs/app-map/dist/index.html` (with its `shots/`) to the same artifact link.
 
-CI runs `python docs/app-map/check.py`. It looks at the code, not at screenshots: it fails when a navigation route
+CI runs `python docs/app-map/check.py` (set `CRUX_SRC` to another checkout's `app/src/main/java` to check a different commit, for instance the clean clone you built the APK from). It looks at the code, not at screenshots: it fails when a navigation route
 (`ui/navigation/Routes.kt`), a composable named `*Sheet` or `*Dialog`, or an `AlertDialog` / `ModalBottomSheet`
 opened from inside a screen has no page in the manifest, and when the manifest names something that is gone.
 A pure helper that is not a screen can go under `"ignore"` with a reason.
@@ -65,6 +65,11 @@ session) must clean up after themselves; pages that only open and close screens 
 | `shade`, `unshade` | Opens or closes the notification shade. `crop:x1,y1,x2,y2` crops the next screenshot. |
 | `rotate:1` | Rotates the screen (`0` upright, `1` landscape). |
 | `launch` | Restarts the app. |
+| `longtap:Label` | Presses and holds the element. `home` presses the Home key; the app drawer is `swipe:540,2100,540,500`. |
+| `switch:Label` | Taps the switch on the right of a settings row. |
+| `shell:rm -f /sdcard/Download/x` | Runs a command on the emulator. `{today}` in any step is today's date, for file names. |
+| `discard:Name` | Restarts, opens the running session named `Name` from its pill and discards it, so it does not stay in the demo data. |
+| `tap:Label#-1` | The last match, when the same label is on a heading and a button. |
 | `shot` | Takes the screenshot now (otherwise it is taken after the last step). |
 
 The screen is 1080 by 2400. Labels are what the Android accessibility tree shows (`adb shell uiautomator dump`
