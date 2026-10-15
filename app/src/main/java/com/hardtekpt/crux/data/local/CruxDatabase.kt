@@ -188,6 +188,7 @@ class PlacesMigration : AutoMigrationSpec {
         AutoMigration(from = 27, to = 28),
         AutoMigration(from = 28, to = 29),
         AutoMigration(from = 29, to = 30),
+        AutoMigration(from = 30, to = 31),
     ],
 )
 abstract class CruxDatabase : RoomDatabase() {
@@ -206,7 +207,7 @@ abstract class CruxDatabase : RoomDatabase() {
 
     companion object {
         /** The current schema; each bump needs an auto-migration below and its exported JSON. */
-        const val VERSION = 30
+        const val VERSION = 31
 
         /** The climber's own data. */
         const val NAME = "crux-user.db"

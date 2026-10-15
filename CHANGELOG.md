@@ -26,6 +26,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   each angle with search, Popular, Grade and Name sorts and Benchmarks, log them, add them to
   playlists, and pick them in Log climb's Climb step, graded at your angle. Catalogues stay on the
   phone apart from your data and are never backed up.
+- **Light your board**: pair your Kilter or MoonBoard's lights from its facility in Edit place,
+  then tap **Light** on a catalogue climb, in Log climb or on a session's playlist card to show its
+  holds on the wall. The live notification of a playlist gets Prev, Next and Light. Nothing lights
+  by itself. Uses Bluetooth (Nearby devices), never location.
 - **Hold diagrams**: board catalogue climbs show their holds on the board, drawn by Crux, on the
   climb sheet, in Log climb, on the session's playlist card and on climbs you logged from them. Tap
   one for the whole board.

@@ -30,6 +30,8 @@ data class BoardLayout(
     val sizes: Map<String, List<Float>> = emptyMap(),
     val rows: Int? = null,
     val columns: Int? = null,
+    /** Kilter: for each size, the LED that lights each hold. */
+    val leds: Map<String, Map<String, Int>> = emptyMap(),
 ) {
     val isGrid: Boolean get() = rows != null
 }
@@ -62,6 +64,7 @@ object BoardGeometry {
                 HoldPoint(a[0].jsonPrimitive.float, a[1].jsonPrimitive.float, a.getOrNull(2)?.jsonPrimitive?.contentOrNull)
             },
             sizes = (obj["sizes"] as? JsonObject)?.mapValues { (_, s) -> (s as JsonArray).map { it.jsonPrimitive.float } }.orEmpty(),
+            leds = (obj["leds"] as? JsonObject)?.mapValues { (_, size) -> size.jsonObject.mapValues { it.value.jsonPrimitive.int } }.orEmpty(),
             rows = obj["rows"]?.jsonPrimitive?.int,
             columns = obj["columns"]?.jsonPrimitive?.int,
         )

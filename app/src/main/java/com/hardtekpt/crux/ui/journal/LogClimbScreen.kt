@@ -323,6 +323,13 @@ fun LogClimbContent(
             }
             if (source != null) {
                 LinkedNameRow(source, onUnlink, Modifier.padding(top = space.s3))
+                val board = source.dataset.holdsBoard
+                val holds = source.climb.holds
+                if (board != null &&
+                    holds != null
+                ) {
+                    com.hardtekpt.crux.ui.components.LightButton(board, holds, source.climb.name, preferredSection = draft.sectionId)
+                }
             } else {
                 NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3), datasetSuggestions, onPickDatasetClimb)
             }

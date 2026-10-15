@@ -450,6 +450,22 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate30To31AddsBoardLights() {
+        helper.createDatabase(DB, 30).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Home', 'BOARD', 0, 0, '')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position, boardModel) VALUES (1, 1, 'BOARD', 'Kilter', 0, 'kilter_original')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 31, true)
+        db.query("SELECT boardModel, lightsAddress, lightsOrder FROM sections").use { c ->
+            c.moveToFirst()
+            assertEquals("kilter_original", c.getString(0))
+            assertEquals(true, c.isNull(1))
+            assertEquals(0, c.getInt(2))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

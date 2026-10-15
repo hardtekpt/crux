@@ -455,6 +455,7 @@ private fun CatalogueClimbSheet(
             if (board != null && frames != null) {
                 com.hardtekpt.crux.ui.components.BoardDiagramCard(board, frames, climb.name, Modifier.fillMaxWidth())
                 com.hardtekpt.crux.ui.components.HoldLegend(frames)
+                com.hardtekpt.crux.ui.components.LightButton(board, frames, climb.name)
             }
             climb.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Eyebrow("By angle", Modifier.padding(top = space.s2))

@@ -74,6 +74,11 @@ data class SectionEntity(
     val boardSize: String? = null,
     /** Kilter Homewall: "full_ride" or "mainline". */
     val boardHolds: String? = null,
+    /** The board's lights paired on this phone (schema 31): its Bluetooth address and name, the protocol it speaks, and a MoonBoard's LED order. */
+    val lightsAddress: String? = null,
+    val lightsName: String? = null,
+    val lightsProtocol: Int? = null,
+    @ColumnInfo(defaultValue = "0") val lightsOrder: Int = 0,
 )
 
 /** A wall or sector inside a place; for a board, a named set. */

@@ -128,6 +128,7 @@ private fun SectionEditor(
     onRemove: () -> Unit,
     datasets: List<com.hardtekpt.crux.data.Dataset> = emptyList(),
     onNewDataset: ((com.hardtekpt.crux.data.Dataset) -> Unit)? = null,
+    lights: LightsActions? = null,
 ) {
     val space = CruxTheme.space
     CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
@@ -170,6 +171,8 @@ private fun SectionEditor(
         }
         // The lists of climbs Log climb offers here: those for its board, and any linked by hand.
         if (onNewDataset != null) DatasetsChoice(section, index, datasets, onChange, onNewDataset)
+        // A Kilter or MoonBoard's lights, paired on this phone.
+        if (lights != null && section.type == PlaceType.BOARD && section.board != null) LightsChoice(section, index, lights)
     }
 }
 
@@ -182,6 +185,7 @@ internal fun SectionDraft.asSection() = com.hardtekpt.crux.data.model.Section(
     board = board,
     boardSize = boardSize,
     boardHolds = boardHolds,
+    lights = lights,
 )
 
 /** The Datasets row: "None", "Kilter warm-ups" or "2 datasets"; it opens the checkbox sheet. */
@@ -351,6 +355,8 @@ data class SectionDraft(
     val boardError: String? = null,
     /** Datasets linked by hand; null until the place's links have loaded. */
     val datasetIds: Set<Long>? = null,
+    /** The board's lights paired on this phone; saved as soon as they're paired, not with the place. */
+    val lights: com.hardtekpt.crux.data.model.PairedLights? = null,
 ) {
     /** Boards hold boulders only. */
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
@@ -361,7 +367,58 @@ class PlaceEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: PlaceRepository,
     private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
+    private val link: com.hardtekpt.crux.data.BoardLink? = null,
 ) : ViewModel() {
+    /** What the board's lights are doing, for the Lights sheet. */
+    val lightsState: StateFlow<com.hardtekpt.crux.data.BoardLink.State> =
+        link?.state ?: MutableStateFlow(com.hardtekpt.crux.data.BoardLink.State.Off)
+
+    /** Pairs a board section's lights; a Kilter's protocol comes from its name, a MoonBoard's is the text one. */
+    fun pairLights(sectionKey: Int, found: com.hardtekpt.crux.ui.components.FoundBoard) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        if (section.id == 0L) return
+        val kilter = section.board?.maker == "Kilter"
+        val lights = com.hardtekpt.crux.data.model.PairedLights(
+            address = found.address,
+            name = found.name,
+            protocol = if (kilter) com.hardtekpt.crux.data.BoardLights.auroraVersion(found.name) else com.hardtekpt.crux.data.BoardLights.MOONBOARD,
+        )
+        saveLights(section, lights)
+    }
+
+    fun forgetLights(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.clear(section.asSection()) }
+        saveLights(section, null)
+    }
+
+    /** The MoonBoard check: which corner LED 0 lit, so its LED order is known. */
+    fun setMoonOrder(sectionKey: Int, order: com.hardtekpt.crux.data.BoardLights.MoonOrder) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        val lights = section.lights ?: return
+        saveLights(section, lights.copy(order = order.ordinal))
+        viewModelScope.launch { link?.clear(section.asSection()) }
+    }
+
+    fun testLights(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.test(section.asSection()) }
+    }
+
+    fun lightFirst(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.lightFirst(section.asSection(), com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1) }
+    }
+
+    fun lightsOff(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.clear(section.asSection()) }
+    }
+
+    private fun saveLights(section: SectionDraft, lights: com.hardtekpt.crux.data.model.PairedLights?) {
+        _draft.update { d -> d.updateSection(section.key) { it.copy(lights = lights) } }
+        viewModelScope.launch { repository.setLights(section.id, lights) }
+    }
     private val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val _draft = MutableStateFlow(PlaceDraft(id = placeId))
     val draft: StateFlow<PlaceDraft> = _draft.asStateFlow()
@@ -403,6 +460,7 @@ class PlaceEditorViewModel @Inject constructor(
                                         boardSize = section.boardSize,
                                         boardHolds = section.boardHolds,
                                         datasetIds = links[section.id].orEmpty().takeIf { datasetRepository != null },
+                                        lights = section.lights,
                                     )
                                 },
                             location = p.location.orEmpty(),
@@ -496,6 +554,7 @@ class PlaceEditorViewModel @Inject constructor(
 fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: PlaceEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val datasets by viewModel.datasets.collectAsStateWithLifecycle()
+    val lightsState by viewModel.lightsState.collectAsStateWithLifecycle()
     var newDatasetFor by remember { mutableStateOf<Pair<Int, com.hardtekpt.crux.data.Dataset>?>(null) }
     LaunchedEffect(draft.doneId) { draft.doneId?.let(onSaved) }
     val space = CruxTheme.space
@@ -557,6 +616,15 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                         onRemove = { viewModel.update { it.removeSection(section.key) } },
                         datasets = datasets,
                         onNewDataset = { newDatasetFor = section.key to it },
+                        lights = LightsActions(
+                            state = lightsState,
+                            pair = { found -> viewModel.pairLights(section.key, found) },
+                            forget = { viewModel.forgetLights(section.key) },
+                            test = { viewModel.testLights(section.key) },
+                            lightFirst = { viewModel.lightFirst(section.key) },
+                            setOrder = { viewModel.setMoonOrder(section.key, it) },
+                            off = { viewModel.lightsOff(section.key) },
+                        ),
                     )
                     if (section.usesLocal) {
                         LocalScaleEditor(
@@ -1177,6 +1245,151 @@ internal fun BoardSizeSheet(
                 variant = CruxButtonVariant.Tonal,
                 modifier = Modifier.fillMaxWidth().testTag("board_size_done"),
             )
+        }
+    }
+}
+
+/** What a board section's Lights row can do. */
+class LightsActions(
+    val state: com.hardtekpt.crux.data.BoardLink.State,
+    val pair: (com.hardtekpt.crux.ui.components.FoundBoard) -> Unit,
+    val forget: () -> Unit,
+    val test: () -> Unit,
+    val lightFirst: () -> Unit,
+    val setOrder: (com.hardtekpt.crux.data.BoardLights.MoonOrder) -> Unit,
+    val off: () -> Unit,
+)
+
+/** The Lights row: "Pair a board", or the paired board's name; its sheet pairs, tests, checks and forgets. */
+@Composable
+private fun LightsChoice(section: SectionDraft, index: Int, actions: LightsActions) {
+    var open by remember { mutableStateOf(false) }
+    val lights = section.lights
+    ChoiceRow("Lights", lights?.name ?: if (section.id == 0L) "Save the place first" else "Pair a board", "section_lights_$index") { open = true }
+    if (open) LightsSheet(section, actions) { open = false }
+}
+
+/**
+ * Pairing a board's lights through Android's own picker, and once paired: Test lights (the four
+ * corners), for a MoonBoard the one-hold check that learns its LED order, and Forget.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun LightsSheet(section: SectionDraft, actions: LightsActions, onDismiss: () -> Unit) {
+    val space = CruxTheme.space
+    val kilter = section.board?.maker == "Kilter"
+    var error by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    val pair = com.hardtekpt.crux.ui.components.rememberBoardPairing(
+        onFound = {
+            error = null
+            actions.pair(it)
+        },
+        onFailed = { error = it },
+    )
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = {
+            if (checking) actions.off()
+            onDismiss()
+        },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("lights_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Text("Lights · ${section.name.ifBlank { section.board?.label.orEmpty() }}", style = MaterialTheme.typography.headlineSmall)
+            val lights = section.lights
+            when {
+                section.id == 0L -> Text("Save the place first, then pair its board here.", style = MaterialTheme.typography.bodyMedium)
+
+                lights == null -> {
+                    Text(
+                        "Crux lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
+                            "pick yours. Crux asks for Nearby devices, never your location.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    CruxButton("Pair a board", { pair(kilter) }, modifier = Modifier.fillMaxWidth().testTag("lights_pair"))
+                }
+
+                checking -> {
+                    Text("Crux has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
+                    val rows = if (section.board?.fixedAngle == 40) 12 else 18
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                        listOf(
+                            "A1, bottom left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1,
+                            "K1, bottom right" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_K1,
+                            "A$rows, top left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A_TOP,
+                        ).forEach { (label, order) ->
+                            CruxButton(label, {
+                                checking = false
+                                actions.setOrder(order)
+                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                        }
+                        CruxButton("None", {
+                            checking = false
+                            actions.off()
+                            error = "Nothing lit: check the board is on and close by, then try again."
+                        }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    }
+                }
+
+                else -> {
+                    Text(
+                        listOfNotNull(
+                            lights.name,
+                            when (lights.protocol) {
+                                com.hardtekpt.crux.data.BoardLights.AURORA_V3 -> "protocol 3"
+                                com.hardtekpt.crux.data.BoardLights.AURORA_V2 -> "protocol 2"
+                                else -> "MoonBoard LED box"
+                            },
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                        val small = CruxButtonSize.Small
+                        CruxButton("Test lights", actions.test, variant = CruxButtonVariant.Outlined, size = small, modifier = Modifier.testTag("lights_test"))
+                        if (!kilter) {
+                            CruxButton("Check a hold", {
+                                checking = true
+                                actions.lightFirst()
+                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small, modifier = Modifier.testTag("lights_check"))
+                        }
+                        CruxButton("Lights off", actions.off, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                        CruxButton("Forget", actions.forget, variant = CruxButtonVariant.Text, size = small, modifier = Modifier.testTag("lights_forget"))
+                    }
+                    Text(
+                        if (kilter) {
+                            "Test lights lights the four corners of your size."
+                        } else {
+                            "Test lights lights the four corners; Check a hold makes sure Crux counts your box's LEDs the right way round."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            when (val state = actions.state) {
+                is com.hardtekpt.crux.data.BoardLink.State.Failed -> Text(
+                    state.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+
+                is com.hardtekpt.crux.data.BoardLink.State.Sending -> Text("Sending…", style = MaterialTheme.typography.bodySmall)
+
+                is com.hardtekpt.crux.data.BoardLink.State.Lit -> Text("Lit ${state.climb}.", style = MaterialTheme.typography.bodySmall)
+
+                else -> Unit
+            }
+            error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
         }
     }
 }

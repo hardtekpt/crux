@@ -94,6 +94,9 @@ interface PlaceRepository {
 
     suspend fun saveProblem(input: ProblemInput): Long
     suspend fun deleteProblem(id: Long)
+
+    /** Pairs (or, with null, forgets) a board section's lights. */
+    suspend fun setLights(sectionId: Long, lights: com.hardtekpt.crux.data.model.PairedLights?) {}
 }
 
 class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : PlaceRepository {
@@ -240,7 +243,15 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                 boardHolds = section.boardHolds?.key?.takeIf { section.board?.hasHolds == true },
             )
             val sectionId = if (old != null) {
-                dao.updateSection(fresh.copy(id = old.id))
+                dao.updateSection(
+                    fresh.copy(
+                        id = old.id,
+                        lightsAddress = old.lightsAddress,
+                        lightsName = old.lightsName,
+                        lightsProtocol = old.lightsProtocol,
+                        lightsOrder = old.lightsOrder,
+                    ),
+                )
                 old.id
             } else {
                 dao.insertSection(fresh)
@@ -349,6 +360,20 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         }
     }
 
+    override suspend fun setLights(sectionId: Long, lights: com.hardtekpt.crux.data.model.PairedLights?) {
+        val dao = dbs.current().placeDao()
+        val section = dao.getAllSections().firstOrNull { it.id == sectionId } ?: return
+        dao.updateSection(
+            section.copy(
+                lightsAddress = lights?.address,
+                lightsName = lights?.name,
+                lightsProtocol = lights?.protocol,
+                lightsOrder =
+                    lights?.order ?: 0,
+            ),
+        )
+    }
+
     override suspend fun deleteProblem(id: Long) {
         val db = dbs.current()
         db.withTransaction {
@@ -379,6 +404,9 @@ internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = 
             com.hardtekpt.crux.data.model.BoardModel.fromKey(it.boardModel),
             it.boardSize,
             com.hardtekpt.crux.data.model.BoardHolds.fromKey(it.boardHolds),
+            it.lightsAddress?.let { address ->
+                com.hardtekpt.crux.data.model.PairedLights(address, it.lightsName.orEmpty(), it.lightsProtocol ?: 0, it.lightsOrder)
+            },
         )
     },
 )

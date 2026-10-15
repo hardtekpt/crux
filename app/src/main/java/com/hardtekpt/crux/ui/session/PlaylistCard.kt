@@ -44,6 +44,8 @@ internal fun PlaylistCard(
     onOpen: () -> Unit,
     onStop: () -> Unit,
     onUndo: (() -> Unit)?,
+    /** The session's facility, whose paired board Light uses first. */
+    sectionId: Long? = null,
 ) {
     val at = index.coerceIn(0, (playlist.items.size - 1).coerceAtLeast(0))
     val item = playlist.items.getOrNull(at)
@@ -90,6 +92,8 @@ internal fun PlaylistCard(
         val board = item.dataset?.holdsBoard
         if (holds != null && board != null) {
             com.hardtekpt.crux.ui.components.BoardDiagramCard(board, holds, item.name, Modifier.fillMaxWidth(), maxHeight = 260)
+            // Sends the climb to a paired board; it never lights by itself.
+            com.hardtekpt.crux.ui.components.LightButton(board, holds, item.name, preferredSection = sectionId)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically) {
             CruxButton(

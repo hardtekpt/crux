@@ -1,7 +1,8 @@
 """Builds app/src/main/assets/board_holes.json from a Boardsesh hardware catalogue.
 
 Crux draws board climbs from hold positions only: for each board it knows, where every hold a
-climb can name sits, and (for Kilter) the edges of each size. No climbs, names or images.
+climb can name sits, and (for Kilter) the edges of each size and the LED that lights each hold on
+it. No climbs, names or images.
 
 Usage: python -I scripts/board_holes.py <catalog.db> [out.json]
 
@@ -43,7 +44,17 @@ def build(path):
                     (board, product),
                 )
             }
-            out[key] = {"points": points, "sizes": sizes}
+            # Each size numbers its LEDs its own way: by placement, the LED that lights it.
+            leds = {}
+            for sid in sizes:
+                rows_ = db.execute(
+                    "SELECT p.id, l.position FROM board_placements p JOIN board_leds l "
+                    "ON l.hole_id = p.hole_id AND l.board_type = p.board_type WHERE p.board_type = ? AND p.layout_id = ? AND l.product_size_id = ?",
+                    (board, layout, int(sid)),
+                ).fetchall()
+                if rows_:
+                    leds[sid] = {str(pid): pos for pid, pos in rows_}
+            out[key] = {"points": points, "sizes": sizes, "leds": leds}
         else:
             # A MoonBoard climb names its holds by hole: a grid cell like F4.
             points = {str(hid): [x, y, name] for _, hid, x, y, name in rows}

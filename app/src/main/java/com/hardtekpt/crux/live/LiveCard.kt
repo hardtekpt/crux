@@ -23,7 +23,16 @@ enum class LiveAction(val label: String) {
     PAUSE("Pause"),
     RESUME("Resume"),
     STOP("Stop"),
+    PREV_CLIMB("Prev"),
+    LIGHT("Light"),
+    NEXT_CLIMB("Next"),
 }
+
+/**
+ * The playlist a climbing session is climbing, as the card shows it: the climb that's up, its
+ * place in the list, and whether a paired board can light it.
+ */
+data class LivePlaylist(val climb: String, val position: Int, val size: Int, val canLight: Boolean)
 
 data class LiveSegment(val length: Int, val color: LiveColor)
 
@@ -109,11 +118,26 @@ object LiveCards {
      * The card for a running [session]: a rest or the interval timer takes it over while they
      * run; otherwise a plan session shows its exercises and a climbing day its climbs.
      */
-    fun forSession(session: Session, rest: Rest?, timer: SessionTimer?, now: Long, usualMinutes: Int = USUAL_CLIMBING_MINUTES): LiveCard {
+    fun forSession(
+        session: Session,
+        rest: Rest?,
+        timer: SessionTimer?,
+        now: Long,
+        usualMinutes: Int = USUAL_CLIMBING_MINUTES,
+        playlist: LivePlaylist? = null,
+    ): LiveCard {
         timer?.let { return forInterval(it.run, now, session.name, session.id) }
         val minutes = durationMinutes(session, now)
         if (rest != null && rest.endsAtMillis > now) return forRest(session, rest, now, minutes)
-        return if (session.items.isNotEmpty()) forPlan(session, minutes) else forClimbing(session, now, usualMinutes, minutes)
+        if (session.items.isNotEmpty()) return forPlan(session, minutes)
+        val card = forClimbing(session, now, usualMinutes, minutes)
+        // A playlist: the climb that's up, with Prev and Next, and Light when a paired board can take it.
+        return playlist?.let {
+            card.copy(
+                text = "Up: ${it.climb} (${it.position} of ${it.size})",
+                actions = listOfNotNull(LiveAction.PREV_CLIMB, LiveAction.LIGHT.takeIf { _ -> it.canLight }, LiveAction.NEXT_CLIMB),
+            )
+        } ?: card
     }
 
     private fun durationMinutes(session: Session, now: Long) = ((now - session.startedAtMillis) / 60_000).coerceAtLeast(0)

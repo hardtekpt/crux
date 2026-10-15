@@ -13,7 +13,7 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.abspath(os.path.join(HERE, '..', '..', 'app', 'src', 'main', 'java'))
+SRC = os.environ.get('CRUX_SRC') or os.path.abspath(os.path.join(HERE, '..', '..', 'app', 'src', 'main', 'java'))
 
 
 def inline_dialogs(text):

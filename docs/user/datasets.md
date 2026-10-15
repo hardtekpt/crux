@@ -99,6 +99,30 @@ catalogue. The hold positions are built into Crux (positions only, no climbs or 
 Climbs and grades come from each board's community. Crux isn't affiliated with Kilter or Moon
 Climbing, and never shows their board images.
 
+## Lighting your board
+
+Crux can light a catalogue climb's holds on your own Kilter or MoonBoard over Bluetooth. It
+never lights anything by itself: a **Light** button sends the climb you're looking at.
+
+- **Pair once.** In **Edit place**, a Kilter or MoonBoard facility has a **Lights** row. **Pair a
+  board** opens Android's own device list (a Kilter shows only Kilter boards); pick yours. Crux asks
+  once for **Nearby devices** on Android 12 and up, and never for your location. The pairing stays
+  on this phone and isn't in backups.
+- **Test lights** lights the four corners of your size. On a MoonBoard, **Check a hold** lights one
+  corner and asks which one lit, so Crux counts your box's LEDs the right way round. **Lights off**
+  and **Forget** do what they say.
+- **Light** shows on the catalogue climb sheet, under the linked name in Log climb and on the
+  session's playlist card, whenever a paired board of that model and size can take the climb (the
+  facility you're at first). Lit, it says where, with **Off**. A climb for a bigger Kilter size
+  doesn't offer it.
+- **In a session**, the live notification of a playlist has **Prev**, **Next** and **Light**, so
+  you can move on and send the next climb from the mat.
+- If the board can't be reached, Crux says so ("Is it on and close by?") and nothing else waits on
+  it.
+
+Kilter boards speak Aurora's protocol 2 or 3, read from the board's name; MoonBoard LED boxes take
+the newer Nordic module or the first-generation one.
+
 ## Where a dataset is offered
 
 A facility uses:

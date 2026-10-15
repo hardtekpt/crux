@@ -78,7 +78,8 @@ tests, so they always match the current version.
   offered at the facilities that use them so you pick a climb instead of typing it, and playlists
   to climb in a session with **+ Fell** and **+ Sent**.
 - **Board catalogues**: Kilter and MoonBoard climbs from a Boardsesh file you import, graded at
-  each angle, with hold diagrams, to browse, log and climb in playlists. No account, nothing online.
+  each angle, with hold diagrams, to browse, log and climb in playlists, and **light on your own
+  board** over Bluetooth. No account, nothing online.
 - **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 

@@ -858,6 +858,7 @@ fun SessionScreen(
                     },
                     onStop = { viewModel.climbPlaylist(null) },
                     onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
+                    sectionId = current.sectionId,
                 )
             }
             if (current.climbGroups.isNotEmpty() || current.items.isEmpty()) {

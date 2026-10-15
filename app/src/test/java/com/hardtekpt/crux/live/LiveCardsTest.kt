@@ -108,6 +108,15 @@ class LiveCardsTest {
     }
 
     @Test
+    fun `a playlist shows the climb that's up with Prev, Next and Light only when a board can take it`() {
+        val lit = LiveCards.forSession(session(), rest = null, timer = null, now = now, playlist = LivePlaylist("Moon Landing", 2, 5, canLight = true))
+        assertEquals("Up: Moon Landing (2 of 5)", lit.text)
+        assertEquals(listOf(LiveAction.PREV_CLIMB, LiveAction.LIGHT, LiveAction.NEXT_CLIMB), lit.actions)
+        val unlit = LiveCards.forSession(session(), rest = null, timer = null, now = now, playlist = LivePlaylist("Moon Landing", 2, 5, canLight = false))
+        assertEquals(listOf(LiveAction.PREV_CLIMB, LiveAction.NEXT_CLIMB), unlit.actions)
+    }
+
+    @Test
     fun `the interval card shows work and rest with pause and stop`() {
         val spec = IntervalSpec.TABATA
         // One second into the first work phase, after the preparation.

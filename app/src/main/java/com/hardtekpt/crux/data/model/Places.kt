@@ -59,6 +59,8 @@ data class Section(
     val board: BoardModel? = null,
     val boardSize: String? = null,
     val boardHolds: BoardHolds? = null,
+    /** The board's lights paired on this phone, if any. */
+    val lights: PairedLights? = null,
 ) {
     /** "Kilter Original 12×12" on a board section that names its board; else null. */
     val boardLabel: String? get() = if (type == PlaceType.BOARD) boardLabel(board, boardSize, boardHolds) else null
@@ -150,3 +152,6 @@ data class PlaceDetail(val place: Place, val areas: List<Area>, val problems: Li
 
 /** An open project: a problem with goes but no send, and where it is. */
 data class Project(val problem: Problem, val placeName: String, val areaName: String?, val stats: ProblemStats)
+
+/** A board's lights, paired on this phone: its Bluetooth address and name, its protocol, and a MoonBoard's LED order. */
+data class PairedLights(val address: String, val name: String, val protocol: Int, val order: Int = 0)
