@@ -110,6 +110,10 @@ data class Problem(
     val gradeColour: Long? = null,
     /** The facility it's in, when the place has one picked. */
     val sectionId: Long? = null,
+    /** Who set it, when it was picked from a dataset. */
+    val setter: String? = null,
+    /** The dataset climb it was picked from, while that still exists. */
+    val sourceDatasetClimbId: Long? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }

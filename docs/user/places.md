@@ -28,6 +28,9 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests
   in them are kept per place.
+- **Datasets for each facility**: the lists of climbs Log climb offers there. Datasets made for
+  the facility's board are used automatically; tick others (a gym circuit, a custom board's list)
+  to link them. See [Datasets](datasets.md#where-a-dataset-is-offered).
 - **Where** (optional): *Add a map pin*. Search an address or place, or move the map so the pin
   sits on the spot, then *Use this spot*. *My location* centres the map on you; Crux asks for
   location permission only then. The map is OpenStreetMap.

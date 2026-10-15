@@ -25,7 +25,7 @@ enum class BackupSection(val label: String, val description: String, val noun: S
     BODY("Body stats", "Weigh-ins, body stats and circumferences", "body stats"),
     RECORDS("Personal records", "Results logged on exercises", "records"),
     NOTES("Notes", "Everything in your notes", "notes"),
-    DATASETS("Datasets", "Your lists of climbs, with every climb in them", "datasets"),
+    DATASETS("Datasets", "Your lists of climbs and your playlists", "datasets"),
     SETTINGS("Settings", "Grades, theme, units, timer and your Home layout", "settings"),
 }
 
@@ -60,6 +60,8 @@ data class BackupFile(
     val schedule: List<ScheduleSlotDto>? = null,
     /** Your datasets (app schema 27). Older backups omit them. */
     val datasets: List<DatasetDto>? = null,
+    /** Your playlists, with the datasets (app schema 28). Older backups omit them. */
+    val playlists: List<PlaylistDto>? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
@@ -177,6 +179,8 @@ data class ClimbDto(
     /** Version 2: the photo and video, by their file names under `media/` in the archive. */
     val photoFile: String? = null,
     val videoFile: String? = null,
+    /** Who set its climb, for the CSV export; the climb's own copy is in its place's problems. */
+    val setter: String? = null,
 )
 
 @Serializable
@@ -208,7 +212,13 @@ data class SectionDto(
     val boardModel: String? = null,
     val boardSize: String? = null,
     val boardHolds: String? = null,
+    /** The datasets linked to it by hand, by name (app schema 28); older backups omit them. */
+    val datasets: List<String> = emptyList(),
 )
+
+/** The dataset climb a climb was picked from: its dataset's name, its name and type. */
+@Serializable
+data class SourceDto(val dataset: String, val name: String, val discipline: Discipline = Discipline.BOULDER)
 
 @Serializable
 data class ProblemDto(
@@ -225,6 +235,9 @@ data class ProblemDto(
     val gradeColour: Long? = null,
     /** When it was added, epoch millis. Older backups omit it. */
     val createdAt: Long? = null,
+    /** Who set it, and the dataset climb it was picked from (app schema 28). Older backups omit them. */
+    val setter: String? = null,
+    val source: SourceDto? = null,
 )
 
 @Serializable
@@ -290,6 +303,19 @@ data class DatasetClimbDto(
     val setter: String? = null,
     val note: String? = null,
     val createdAt: Long,
+)
+
+/** One of your playlists: its climbs in order, each by its dataset's name, its name and type. */
+@Serializable
+data class PlaylistDto(val name: String, val note: String? = null, val createdAt: Long, val updatedAt: Long, val items: List<PlaylistItemDto> = emptyList())
+
+@Serializable
+data class PlaylistItemDto(
+    val dataset: String? = null,
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    val gradeScale: GradeScale? = null,
+    val gradeIndex: Int? = null,
 )
 
 @Serializable

@@ -54,6 +54,8 @@ data class SectionInput(
     val board: com.hardtekpt.crux.data.model.BoardModel? = null,
     val boardSize: String? = null,
     val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
+    /** The datasets linked to it by hand; null leaves the links as they are. */
+    val datasetIds: Set<Long>? = null,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -237,11 +239,16 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                 boardSize = section.boardSize?.takeIf { section.board?.sizes?.contains(it) == true },
                 boardHolds = section.boardHolds?.key?.takeIf { section.board?.hasHolds == true },
             )
-            if (old != null) {
+            val sectionId = if (old != null) {
                 dao.updateSection(fresh.copy(id = old.id))
-                kept += old.id
+                old.id
             } else {
-                kept += dao.insertSection(fresh)
+                dao.insertSection(fresh)
+            }
+            kept += sectionId
+            section.datasetIds?.let { ids ->
+                db.datasetDao().clearLinks(sectionId)
+                db.datasetDao().insertLinks(ids.map { com.hardtekpt.crux.data.SectionDatasetEntity(sectionId, it) })
             }
         }
         before.keys.filter { it !in kept }.forEach { id ->
@@ -313,6 +320,9 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
             gradeLabel = input.gradeLabel.takeIf { input.gradeScale.isLocal },
             gradeColour = input.gradeColour.takeIf { input.gradeScale.isLocal },
+            // Where it was picked from stays; this form doesn't change it.
+            setter = existing?.setter,
+            sourceDatasetClimbId = existing?.sourceDatasetClimbId,
         )
         return if (existing != null) {
             dao.updateProblem(entity)
@@ -390,6 +400,8 @@ internal fun ProblemEntity.toModel() = Problem(
     gradeLabel = gradeLabel,
     gradeColour = gradeColour,
     sectionId = sectionId,
+    setter = setter,
+    sourceDatasetClimbId = sourceDatasetClimbId,
 )
 
 private fun ProblemStatsRow.toModel() = ProblemStats(

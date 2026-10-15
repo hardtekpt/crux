@@ -1,8 +1,9 @@
 # Datasets
 
 A **dataset** is a list of climbs you keep to pick from: your home board's problems, a spray wall,
-a gym circuit or a crag's lines. Find them under **You → Datasets**, under Places. Picking a climb
-from a dataset when you log comes in a later update; for now you build and keep the lists.
+a gym circuit or a crag's lines. Find them under **You → Datasets**, under Places, with your
+**playlists** in the second tab. When you log a climb at a facility that uses a dataset, you can
+pick the climb from it instead of typing it.
 
 <img src="../../app/src/test/screenshots/dataset_dark.png" width="300" alt="A dataset: search, sort chips and a list of climbs with their grades">
 
@@ -53,4 +54,64 @@ lost. When climbs go into a dataset that already has one of the same name and ty
 **⋯ → Export** saves the dataset as a CSV (the same five columns) or a Crux dataset file, through
 Android's save dialog. Crux needs no storage permission for either.
 
-Datasets are in your backups (the **Datasets** switch, on by default).
+Datasets and playlists are in your backups (the **Datasets** switch, on by default).
+
+## Where a dataset is offered
+
+A facility uses:
+
+- every dataset made for its board: the same model and, for a Kilter, the same size (and a
+  Homewall's holds). Nothing to set up: a "Kilter warm-ups" list works at every Kilter of that size.
+- any dataset you link to it by hand, such as a gym circuit on the main gym or a list for your
+  custom board. In **Edit place**, each facility has a **Datasets** row: tick the datasets to use
+  there. Those made for its board are ticked and locked ("Same board"). **New dataset for this
+  board** makes one with the facility's board and grades.
+
+## Picking a climb when you log
+
+At a facility that uses datasets, the **Where** sheet in Log climb gets a last step, **Climb**
+(after the wall, at a gym). It lists your climbs there first, then a chip for each playlist and
+dataset, with a search. Rows show the grade in the facility's scale and how you've done on the
+climb here (sent, a project, or never logged). Done without picking works as before, and **New
+climb** leaves the name for you to type.
+
+<img src="../../app/src/test/screenshots/logclimb_dataset_dark.png" width="300" alt="Log climb with a climb picked from a dataset: a linked name row and the dataset's grade under the grade strip">
+
+Picking a climb fills in Boulder or Route, its grade (converted to the facility's scale) and its
+name, which becomes a linked row: the dataset's badge, "from Garage board · set by Ana", and ✕ to
+make it a plain name again. A line under the grade strip says the dataset's own grade, such as
+"Garage board says V6". If you already have a climb of that name here, picking it continues that
+climb, and opens its log when you climbed it today.
+
+Typing in the Name field also suggests up to three climbs from the facility's datasets.
+
+In a dataset, tap a climb and **Log this climb**: Where is filled in when one facility uses the
+dataset, and the Where sheet opens on them when several do.
+
+The climb you log is a normal Crux climb: it copies the name, grade and setter. Changing or
+deleting the dataset later never changes your climbs or logs; a deleted dataset climb just stops
+showing as linked.
+
+## Playlists
+
+A **playlist** is an ordered pick of climbs from your datasets, like "Tonight" or "7A benchmarks".
+
+<img src="../../app/src/test/screenshots/playlist_dark.png" width="300" alt="A playlist: five climbs in order, each with a drag handle, and Climb this playlist">
+
+- Make one from **+ → New playlist**, or while adding climbs. In a dataset, long-press climbs to
+  select several, then **Add to playlist**; or tap one climb and **Playlist**.
+- In a playlist, hold a climb's handle and drag it to move it, and swipe it away to remove it (with
+  Undo). A dot marks climbs you tried today, green once sent. Tap a climb to log it.
+- **⋯** holds Rename, Duplicate, Export (a `.crux-playlist.json` file to share) and Delete.
+  **+ → Import a file** reads a playlist file too: each climb is found again by its dataset and
+  name, and one whose dataset you don't have waits, greyed, until it's there.
+- A climb deleted from its dataset leaves your playlists too.
+
+**Climb this playlist** starts a session (at a facility that uses its datasets) or joins the one
+running. You can also start one from a session's **+ → Climb a playlist**.
+
+<img src="../../app/src/test/screenshots/session_playlist_dark.png" width="300" alt="A climbing session with a playlist card: the climb that's up, Prev and Next, and + Fell and + Sent">
+
+The session shows a playlist card: the climb that's up, its grade and how it's gone today, **Prev**
+and **Next**, and **+ Fell** and **+ Sent**, which add a go to it straight away (with Undo for a
+few seconds). Tap the climb to open Log climb on it; ✕ stops the playlist.

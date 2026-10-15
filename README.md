@@ -74,6 +74,9 @@ tests, so they always match the current version.
   the day, a photo and a video.
 - **Places**: gyms, crags and boards with their facilities, walls and climbs, an OpenStreetMap
   pin, and the gym's own grades (numbers or colour tapes).
+- **Datasets and playlists**: your own lists of climbs (a home board, a spray wall, a gym circuit),
+  offered at the facilities that use them so you pick a climb instead of typing it, and playlists
+  to climb in a session with **+ Fell** and **+ Sent**.
 - **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 
@@ -171,6 +174,8 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 - **A simpler live session**: every exercise in one list, sets changed in place, and a dock for
   rests and timers.
 - **Export as a spreadsheet** (CSV).
+- **Datasets and playlists**: lists of climbs to pick from when you log, and playlists to climb in
+  a session.
 
 **[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
 - **Weekly schedule** under *Train → Week*; Home follows it.

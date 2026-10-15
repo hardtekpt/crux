@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -55,7 +56,22 @@ data class ImportDraft(
  * Reads files into an [ImportDraft] and imports it. Shared by the Datasets page (into a new
  * dataset, or one you pick) and a dataset's own Import climbs.
  */
-class DatasetImport(private val context: Context, private val repository: DatasetRepository, private val scope: kotlinx.coroutines.CoroutineScope) {
+class DatasetImport(
+    private val context: Context,
+    private val repository: DatasetRepository,
+    private val scope: kotlinx.coroutines.CoroutineScope,
+    private val playlists: com.hardtekpt.crux.data.PlaylistRepository? = null,
+) {
+    /** A playlist file imported: its id, name, and how many of its climbs were found here. */
+    data class PlaylistImported(val id: Long, val name: String, val matched: Int, val total: Int)
+
+    private val _playlist = MutableStateFlow<PlaylistImported?>(null)
+    val playlist: StateFlow<PlaylistImported?> = _playlist.asStateFlow()
+
+    fun playlistSeen() {
+        _playlist.value = null
+    }
+
     private val _draft = MutableStateFlow<ImportDraft?>(null)
     val draft: StateFlow<ImportDraft?> = _draft.asStateFlow()
     private val _error = MutableStateFlow<String?>(null)
@@ -69,10 +85,18 @@ class DatasetImport(private val context: Context, private val repository: Datase
                         if (c.moveToFirst()) c.getString(0) else null
                     }
                     val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: error("unreadable")
+                    // A playlist file goes straight in: it only points at climbs.
+                    if (playlists != null && com.hardtekpt.crux.data.PlaylistFiles.isPlaylist(text)) {
+                        val parsed = com.hardtekpt.crux.data.PlaylistFiles.parse(text)
+                        val (id, matched) = playlists.import(parsed)
+                        _playlist.value = PlaylistImported(id, parsed.name, matched, parsed.items.size)
+                        return@runCatching null
+                    }
                     name to DatasetFiles.parse(name, text)
                 }
             }
-            read.onSuccess { (name, parsed) ->
+            read.onSuccess { result ->
+                val (name, parsed) = result ?: return@onSuccess
                 val base = name?.substringBefore('.')?.ifBlank { null } ?: "Imported"
                 val dataset = parsed.dataset ?: Dataset(name = base)
                 _draft.value = ImportDraft(fileName = name ?: "file", parsed = parsed, intoId = intoId, name = dataset.name, dataset = dataset)
@@ -110,23 +134,38 @@ class DatasetImport(private val context: Context, private val repository: Datase
     }
 }
 
-data class DatasetsUiState(val isLoading: Boolean = true, val datasets: List<Dataset> = emptyList(), val scales: GradeScales = GradeScales())
+data class DatasetsUiState(
+    val isLoading: Boolean = true,
+    val datasets: List<Dataset> = emptyList(),
+    val scales: GradeScales = GradeScales(),
+    val playlists: List<com.hardtekpt.crux.data.Playlist> = emptyList(),
+)
 
 @HiltViewModel
 class DatasetsViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val repository: DatasetRepository,
     preferences: UserPreferencesRepository,
+    private val playlists: com.hardtekpt.crux.data.PlaylistRepository,
 ) : ViewModel() {
-    val uiState: StateFlow<DatasetsUiState> = combine(repository.observeDatasets(), preferences.gradeScales) { list, scales ->
-        DatasetsUiState(isLoading = false, datasets = list, scales = scales)
+    val uiState: StateFlow<DatasetsUiState> = combine(repository.observeDatasets(), preferences.gradeScales, playlists.observePlaylists()) {
+            list,
+            scales,
+            lists,
+        ->
+        DatasetsUiState(isLoading = false, datasets = list, scales = scales, playlists = lists)
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DatasetsUiState())
 
-    val importer = DatasetImport(context, repository, viewModelScope)
+    val importer = DatasetImport(context, repository, viewModelScope, playlists)
 
     /** Creates a dataset; then [onCreated] with its id. */
     fun create(dataset: Dataset, onCreated: (Long) -> Unit) {
         viewModelScope.launch { onCreated(repository.saveDataset(dataset.copy(id = 0))) }
+    }
+
+    /** Creates a playlist; then [onCreated] with its id. */
+    fun createPlaylist(name: String, note: String?, onCreated: (Long) -> Unit) {
+        viewModelScope.launch { onCreated(playlists.savePlaylist(0, name, note)) }
     }
 }
 
@@ -138,6 +177,7 @@ data class DatasetUiState(
     val dataset: Dataset? = null,
     val datasets: List<Dataset> = emptyList(),
     val scales: GradeScales = GradeScales(),
+    val playlists: List<com.hardtekpt.crux.data.Playlist> = emptyList(),
 )
 
 @HiltViewModel
@@ -147,14 +187,42 @@ class DatasetViewModel @Inject constructor(
     private val repository: DatasetRepository,
     preferences: UserPreferencesRepository,
     private val clock: Clock,
+    private val playlists: com.hardtekpt.crux.data.PlaylistRepository,
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
 
-    val uiState: StateFlow<DatasetUiState> = combine(repository.observeDatasets(), preferences.gradeScales) { list, scales ->
-        DatasetUiState(isLoading = false, dataset = list.firstOrNull { it.id == datasetId }, datasets = list, scales = scales)
+    val uiState: StateFlow<DatasetUiState> = combine(repository.observeDatasets(), preferences.gradeScales, playlists.observePlaylists()) {
+            list,
+            scales,
+            lists,
+        ->
+        DatasetUiState(isLoading = false, dataset = list.firstOrNull { it.id == datasetId }, datasets = list, scales = scales, playlists = lists)
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DatasetUiState())
 
-    val importer = DatasetImport(context, repository, viewModelScope)
+    val importer = DatasetImport(context, repository, viewModelScope, playlists)
+
+    /** "Added 3 to Tonight", for the snackbar. */
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    fun messageShown() {
+        _message.value = null
+    }
+
+    /** Adds the dataset's climbs [ids] to a playlist, or to a new one named [newName]. */
+    fun addToPlaylist(playlistId: Long?, newName: String?, ids: Collection<Long>) {
+        val dataset = uiState.value.dataset ?: return
+        viewModelScope.launch {
+            val id = playlistId ?: playlists.savePlaylist(0, newName.orEmpty(), null)
+            val added = playlists.addClimbs(id, sourcesOf(dataset, ids))
+            val name = playlists.observePlaylists().first().firstOrNull { it.id == id }?.name.orEmpty()
+            _message.value = when {
+                added == 0 -> "Already in $name"
+                added == 1 -> "Added 1 climb to $name"
+                else -> "Added $added climbs to $name"
+            }
+        }
+    }
 
     /** The climb deleted last, to put back from the snackbar. */
     private val _undo = MutableStateFlow<DatasetClimb?>(null)

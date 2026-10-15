@@ -13,7 +13,7 @@ object CsvExport {
     private const val EOL = "\r\n"
 
     private val CLIMB_HEADER =
-        listOf("Date", "Name", "Grade", "Scale", "Discipline", "Style", "Attempts", "Sends", "Place", "Facility", "Wall", "Effort", "Notes")
+        listOf("Date", "Name", "Grade", "Scale", "Discipline", "Style", "Attempts", "Sends", "Place", "Facility", "Wall", "Effort", "Notes", "Setter")
     private val SESSION_HEADER = listOf("Started", "Session", "Finished", "Effort", "Exercise", "Set", "Reps", "Seconds", "Load (kg)", "Skipped")
 
     /** One row per climb, oldest first. */
@@ -34,6 +34,7 @@ object CsvExport {
                 climb.area,
                 climb.effort?.toString(),
                 climb.notes,
+                climb.setter,
             )
         },
     )

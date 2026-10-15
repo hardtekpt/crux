@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -81,17 +82,30 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 
 // ---- Datasets page -------------------------------------------------------------------------
 
+/** The Datasets page's two tabs. */
+enum class DatasetsTab(val label: String) { DATASETS("Datasets"), PLAYLISTS("Playlists") }
+
 /**
- * Your lists of climbs to pick from: a home board's problems, a spray wall, a gym circuit. + makes
- * a new one or imports a CSV or Crux dataset file. Tap one to open it.
+ * Your lists of climbs to pick from: a home board's problems, a spray wall, a gym circuit, and
+ * your playlists of them. + makes a dataset or a playlist, or imports a CSV, Crux dataset or Crux
+ * playlist file. Tap one to open it.
  */
 @Composable
-fun DatasetsScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, viewModel: DatasetsViewModel = hiltViewModel()) {
+fun DatasetsScreen(
+    onBack: () -> Unit,
+    onOpen: (Long) -> Unit,
+    onOpenPlaylist: (Long) -> Unit = {},
+    viewModel: DatasetsViewModel = hiltViewModel(),
+    initialTab: DatasetsTab = DatasetsTab.DATASETS,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importDraft by viewModel.importer.draft.collectAsStateWithLifecycle()
     val importError by viewModel.importer.error.collectAsStateWithLifecycle()
+    val playlistImported by viewModel.importer.playlist.collectAsStateWithLifecycle()
     var adding by rememberSaveable { mutableStateOf(false) }
     var creating by rememberSaveable { mutableStateOf(false) }
+    var creatingPlaylist by rememberSaveable { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(initialTab) }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { viewModel.importer.open(it) } }
     val openPicker = { pickFile.launch(arrayOf("text/*", "application/json", "application/octet-stream")) }
     val space = CruxTheme.space
@@ -101,7 +115,39 @@ fun DatasetsScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, viewModel: Datase
                 Icon(Icons.Rounded.Add, contentDescription = "New dataset or import")
             }
         }
-        if (!uiState.isLoading && uiState.datasets.isEmpty()) {
+        if (!uiState.isLoading && (uiState.datasets.isNotEmpty() || uiState.playlists.isNotEmpty())) {
+            CruxSegmentedButtons(
+                options = DatasetsTab.entries,
+                selected = tab,
+                label = { t ->
+                    val count = if (t == DatasetsTab.DATASETS) uiState.datasets.size else uiState.playlists.size
+                    "${t.label} · $count"
+                },
+                onSelect = { tab = it },
+                modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2).testTag("datasets_tabs"),
+            )
+        }
+        if (!uiState.isLoading && tab == DatasetsTab.PLAYLISTS) {
+            LazyColumn(
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(space.s2),
+                modifier = Modifier.testTag("playlists_list"),
+            ) {
+                if (uiState.playlists.isEmpty()) {
+                    item(key = "no_playlists") {
+                        Column(verticalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.padding(vertical = space.s4)) {
+                            Text(
+                                "A playlist is an ordered pick of climbs from your datasets, like Tonight. Climb it in a session, one climb after another.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            CruxButton("New playlist", { creatingPlaylist = true }, icon = Icons.Rounded.Add, modifier = Modifier.testTag("playlists_new"))
+                        }
+                    }
+                }
+                items(uiState.playlists, key = { it.id }) { list -> PlaylistRow(list) { onOpenPlaylist(list.id) } }
+            }
+        } else if (!uiState.isLoading && uiState.datasets.isEmpty()) {
             EmptyState(
                 icon = Icons.AutoMirrored.Rounded.ViewList,
                 headline = "No datasets yet",
@@ -124,7 +170,7 @@ fun DatasetsScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, viewModel: Datase
                     CruxListRow(
                         title = dataset.name,
                         supporting = datasetLine(dataset),
-                        leading = { BoardBadge(dataset) },
+                        leading = { DatasetBadge(dataset) },
                         onClick = { onOpen(dataset.id) },
                         modifier = Modifier.testTag("dataset_row"),
                     )
@@ -152,8 +198,17 @@ fun DatasetsScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, viewModel: Datase
                 modifier = Modifier.testTag("menu_new_dataset"),
             )
             CruxListRow(
+                title = "New playlist",
+                supporting = "Name it, then add climbs from your datasets",
+                onClick = {
+                    adding = false
+                    creatingPlaylist = true
+                },
+                modifier = Modifier.testTag("menu_new_playlist"),
+            )
+            CruxListRow(
                 title = "Import a file",
-                supporting = "A CSV, or a Crux dataset file",
+                supporting = "A CSV, a Crux dataset or a Crux playlist file",
                 onClick = {
                     adding = false
                     openPicker()
@@ -161,6 +216,42 @@ fun DatasetsScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, viewModel: Datase
                 modifier = Modifier.testTag("menu_import_dataset"),
             )
         }
+    }
+    if (creatingPlaylist) {
+        PlaylistDetailsSheet(
+            title = "New playlist",
+            confirm = "Create",
+            initialName = "",
+            initialNote = "",
+            onSave = { name, note ->
+                creatingPlaylist = false
+                viewModel.createPlaylist(name, note, onOpenPlaylist)
+            },
+            onDismiss = { creatingPlaylist = false },
+        )
+    }
+    playlistImported?.let { imported ->
+        AlertDialog(
+            onDismissRequest = viewModel.importer::playlistSeen,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text("Imported ${imported.name}", style = MaterialTheme.typography.headlineSmall) },
+            text = {
+                Text(
+                    if (imported.matched == imported.total) {
+                        "All ${imported.total} climbs were found in your datasets."
+                    } else {
+                        "${imported.matched} of ${imported.total} climbs were found in your datasets. The rest wait, greyed, until their dataset is here."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.importer.playlistSeen()
+                    onOpenPlaylist(imported.id)
+                }, modifier = Modifier.testTag("playlist_imported_open")) { Text("Open") }
+            },
+        )
     }
     if (creating) {
         DatasetDetailsSheet(
@@ -201,14 +292,14 @@ private fun datasetLine(dataset: Dataset): String = listOfNotNull(
 
 /** A square with the board's initials in its maker's colour: Kilter purple, MoonBoard amber, others teal. */
 @Composable
-private fun BoardBadge(dataset: Dataset) {
+internal fun DatasetBadge(dataset: Dataset, size: androidx.compose.ui.unit.Dp = 36.dp) {
     val (fill, ink) = when (dataset.board?.maker) {
         "Kilter" -> Color(0xFF43307A) to Color(0xFFE8DDFF)
         "MoonBoard" -> Color(0xFF6B3D0C) to Color(0xFFFFE0A8)
         else -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
     }
     val initials = dataset.name.split(' ', '-', '_').filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "·" }
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(fill)) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size).clip(RoundedCornerShape(10.dp)).background(fill)) {
         Text(initials, style = CruxTheme.type.code, color = ink)
     }
 }
@@ -220,8 +311,12 @@ private fun BoardBadge(dataset: Dataset) {
  * Add climb opens the climb sheet; ⋯ holds Edit details, Import climbs, Export and Delete.
  */
 @Composable
-fun DatasetScreen(onBack: () -> Unit, viewModel: DatasetViewModel = hiltViewModel()) {
+fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel: DatasetViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    // Long-press picks climbs to add to a playlist together.
+    var selected by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    var addingTo by remember { mutableStateOf<List<Long>?>(null) }
     val importDraft by viewModel.importer.draft.collectAsStateWithLifecycle()
     val importError by viewModel.importer.error.collectAsStateWithLifecycle()
     val undo by viewModel.undo.collectAsStateWithLifecycle()
@@ -247,6 +342,11 @@ fun DatasetScreen(onBack: () -> Unit, viewModel: DatasetViewModel = hiltViewMode
     if (dataset != null) seen = true
     if (seen && dataset == null && !uiState.isLoading) LaunchedEffect(Unit) { onBack() }
 
+    LaunchedEffect(message) {
+        val text = message ?: return@LaunchedEffect
+        viewModel.messageShown()
+        snackbar.showSnackbar(text, duration = SnackbarDuration.Short)
+    }
     LaunchedEffect(undo) {
         val climb = undo ?: return@LaunchedEffect
         val result = snackbar.showSnackbar("Deleted ${climb.name}", actionLabel = "Undo", duration = SnackbarDuration.Short)
@@ -255,9 +355,15 @@ fun DatasetScreen(onBack: () -> Unit, viewModel: DatasetViewModel = hiltViewMode
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().testTag("screen_Dataset")) {
-            CruxTopAppBar(title = dataset?.name.orEmpty(), onBack = onBack) {
-                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("dataset_menu")) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = "Dataset options")
+            if (selected.isNotEmpty()) {
+                CruxTopAppBar(title = "${selected.size} selected", onBack = { selected = emptyList() }) {
+                    TextButton(onClick = { addingTo = selected }, modifier = Modifier.testTag("selection_add_to_playlist")) { Text("Add to playlist") }
+                }
+            } else {
+                CruxTopAppBar(title = dataset?.name.orEmpty(), onBack = onBack) {
+                    IconButton(onClick = { menu = true }, modifier = Modifier.testTag("dataset_menu")) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "Dataset options")
+                    }
                 }
             }
             val ds = dataset ?: return@Column
@@ -326,13 +432,21 @@ fun DatasetScreen(onBack: () -> Unit, viewModel: DatasetViewModel = hiltViewMode
                                 modifier = Modifier.width(44.dp),
                             )
                         },
-                        onClick = { editing = climb },
+                        selected = climb.id in selected,
+                        onClick = {
+                            when {
+                                selected.isEmpty() -> editing = climb
+                                climb.id in selected -> selected = selected - climb.id
+                                else -> selected = selected + climb.id
+                            }
+                        },
+                        onLongClick = { selected = if (climb.id in selected) selected - climb.id else selected + climb.id },
                         modifier = Modifier.testTag("dataset_climb"),
                     )
                 }
             }
         }
-        if (dataset != null) {
+        if (dataset != null && selected.isEmpty()) {
             Box(
                 Modifier.align(
                     Alignment.BottomCenter,
@@ -433,6 +547,35 @@ fun DatasetScreen(onBack: () -> Unit, viewModel: DatasetViewModel = hiltViewMode
                 addingClimb = false
                 editing = null
             },
+            onLog = sheetClimb?.let { climb ->
+                {
+                    editing = null
+                    onLogClimb(climb.id)
+                }
+            },
+            onPlaylist = sheetClimb?.let { climb ->
+                {
+                    editing = null
+                    addingTo = listOf(climb.id)
+                }
+            },
+        )
+    }
+    addingTo?.let { ids ->
+        AddToPlaylistSheet(
+            count = ids.size,
+            playlists = uiState.playlists,
+            onPick = { id ->
+                addingTo = null
+                selected = emptyList()
+                viewModel.addToPlaylist(id, null, ids)
+            },
+            onNew = { name ->
+                addingTo = null
+                selected = emptyList()
+                viewModel.addToPlaylist(null, name, ids)
+            },
+            onDismiss = { addingTo = null },
         )
     }
     confirmClimbDelete?.let { climb ->
@@ -511,7 +654,7 @@ private fun MenuSheet(title: String, onDismiss: () -> Unit, content: @Composable
 /** A dataset's name, board (with Kilter size) and grade scales, for New dataset and Edit details. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DatasetDetailsSheet(initial: Dataset, title: String, confirm: String, onSave: (Dataset) -> Unit, onDismiss: () -> Unit) {
+internal fun DatasetDetailsSheet(initial: Dataset, title: String, confirm: String, onSave: (Dataset) -> Unit, onDismiss: () -> Unit) {
     var draft by remember { mutableStateOf(initial) }
     var nameError by remember { mutableStateOf<String?>(null) }
     var pickingBoard by remember { mutableStateOf(false) }
@@ -623,6 +766,9 @@ private fun ClimbSheet(
     onSave: (DatasetClimb) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
+    /** Log this climb, and add it to a playlist; only for a climb already saved. */
+    onLog: (() -> Unit)? = null,
+    onPlaylist: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var discipline by remember { mutableStateOf(initial?.discipline ?: Discipline.BOULDER) }
@@ -706,6 +852,22 @@ private fun ClimbSheet(
             CruxTextField(label = "Note", value = note, onValueChange = {
                 note = it.take(500)
             }, placeholder = "Optional", singleLine = false, minLines = 2, modifier = Modifier.testTag("field_climb_note"))
+            if (onLog != null || onPlaylist != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s2)) {
+                    onLog?.let {
+                        CruxButton("Log this climb", it, icon = Icons.Rounded.Check, modifier = Modifier.weight(1f).testTag("climb_sheet_log"))
+                    }
+                    onPlaylist?.let {
+                        CruxButton(
+                            "Playlist",
+                            it,
+                            icon = Icons.Rounded.Add,
+                            variant = CruxButtonVariant.Outlined,
+                            modifier = Modifier.weight(1f).testTag("climb_sheet_playlist"),
+                        )
+                    }
+                }
+            }
             onDelete?.let {
                 TextButton(onClick = it, modifier = Modifier.testTag("climb_sheet_delete")) { Text("Delete climb", color = MaterialTheme.colorScheme.error) }
             }

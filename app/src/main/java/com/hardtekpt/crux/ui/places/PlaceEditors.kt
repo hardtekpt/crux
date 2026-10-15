@@ -120,7 +120,15 @@ private const val MAX_NAME = 40
 
 /** One part of the place: its kind as chips, a name, and a remove button when there are others. */
 @Composable
-private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean, onChange: ((SectionDraft) -> SectionDraft) -> Unit, onRemove: () -> Unit) {
+private fun SectionEditor(
+    section: SectionDraft,
+    index: Int,
+    removable: Boolean,
+    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
+    onRemove: () -> Unit,
+    datasets: List<com.hardtekpt.crux.data.Dataset> = emptyList(),
+    onNewDataset: ((com.hardtekpt.crux.data.Dataset) -> Unit)? = null,
+) {
     val space = CruxTheme.space
     CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,6 +167,138 @@ private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean,
         ScaleChoice("Boulder grades", Discipline.BOULDER, section.boulderScale, tag) { scale -> onChange { it.copy(boulderScale = scale) } }
         if (section.type != PlaceType.BOARD) {
             ScaleChoice("Route grades", Discipline.ROUTE, section.routeScale, tag) { scale -> onChange { it.copy(routeScale = scale) } }
+        }
+        // The lists of climbs Log climb offers here: those for its board, and any linked by hand.
+        if (onNewDataset != null) DatasetsChoice(section, index, datasets, onChange, onNewDataset)
+    }
+}
+
+/** A section as the place it will be, for telling which datasets are made for its board. */
+internal fun SectionDraft.asSection() = com.hardtekpt.crux.data.model.Section(
+    id = id,
+    placeId = 0,
+    type = type,
+    name = name,
+    board = board,
+    boardSize = boardSize,
+    boardHolds = boardHolds,
+)
+
+/** The Datasets row: "None", "Kilter warm-ups" or "2 datasets"; it opens the checkbox sheet. */
+@Composable
+private fun DatasetsChoice(
+    section: SectionDraft,
+    index: Int,
+    datasets: List<com.hardtekpt.crux.data.Dataset>,
+    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
+    onNewDataset: (com.hardtekpt.crux.data.Dataset) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val used = com.hardtekpt.crux.data.datasetsFor(section.asSection(), datasets, section.datasetIds.orEmpty())
+    ChoiceRow(
+        "Datasets",
+        when (used.size) {
+            0 -> "None"
+            1 -> used.single().name
+            else -> "${used.size} datasets"
+        },
+        "section_datasets_$index",
+    ) { open = true }
+    if (open) {
+        DatasetLinksSheet(
+            section = section,
+            datasets = datasets,
+            onToggle = { id, on -> onChange { it.copy(datasetIds = it.datasetIds.orEmpty().let { ids -> if (on) ids + id else ids - id }) } },
+            onNew = onNewDataset,
+            onDismiss = { open = false },
+        )
+    }
+}
+
+/**
+ * Every dataset with a checkbox: ticked ones are offered when you log here. Those made for this
+ * section's board are ticked and locked ("Same board"); the rest are linked by hand.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DatasetLinksSheet(
+    section: SectionDraft,
+    datasets: List<com.hardtekpt.crux.data.Dataset>,
+    onToggle: (Long, Boolean) -> Unit,
+    onNew: (com.hardtekpt.crux.data.Dataset) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val asSection = section.asSection()
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("dataset_links_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Datasets · ${section.name.ifBlank { section.type.label }}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                CruxButton("Done", onDismiss, size = CruxButtonSize.Small, modifier = Modifier.testTag("dataset_links_done"))
+            }
+            Text(
+                "Ticked datasets are offered when you log a climb here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (datasets.isEmpty()) {
+                Text("You have no datasets yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = CruxTheme.space.s2))
+            }
+            datasets.forEach { dataset ->
+                val auto = dataset.fitsBoard(asSection)
+                val ticked = auto || dataset.id in section.datasetIds.orEmpty()
+                CruxListRow(
+                    title = dataset.name,
+                    supporting = listOfNotNull(
+                        "Same board".takeIf { auto },
+                        dataset.boardLabel,
+                        "${dataset.climbs.size} ${if (dataset.climbs.size == 1) "climb" else "climbs"}",
+                    ).joinToString(" · "),
+                    leading = {
+                        androidx.compose.material3.Checkbox(
+                            checked = ticked,
+                            onCheckedChange = null,
+                            enabled = !auto,
+                        )
+                    },
+                    onClick = if (auto) null else ({ onToggle(dataset.id, !ticked) }),
+                    modifier = Modifier.testTag("dataset_link_${dataset.name}"),
+                )
+            }
+            CruxListRow(
+                title = "New dataset for this ${if (section.type == PlaceType.BOARD) "board" else section.type.label.lowercase()}",
+                leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = {
+                    onNew(
+                        com.hardtekpt.crux.data.Dataset(
+                            name = section.name.ifBlank { section.type.label },
+                            board = section.board.takeIf { section.type == PlaceType.BOARD },
+                            customBoard = section.type == PlaceType.BOARD && section.board == null,
+                            boardSize = section.boardSize.takeIf { section.type == PlaceType.BOARD },
+                            boardHolds = section.boardHolds.takeIf { section.type == PlaceType.BOARD },
+                            boulderScale = section.boulderScale?.takeIf { !it.isLocal },
+                            routeScale = section.routeScale?.takeIf { !it.isLocal && section.type != PlaceType.BOARD },
+                        ),
+                    )
+                },
+                modifier = Modifier.testTag("dataset_link_new"),
+            )
         }
     }
 }
@@ -209,20 +349,42 @@ data class SectionDraft(
     val boardSize: String? = null,
     val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
     val boardError: String? = null,
+    /** Datasets linked by hand; null until the place's links have loaded. */
+    val datasetIds: Set<Long>? = null,
 ) {
     /** Boards hold boulders only. */
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
 }
 
 @HiltViewModel
-class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: PlaceRepository) : ViewModel() {
+class PlaceEditorViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: PlaceRepository,
+    private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
+) : ViewModel() {
     private val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val _draft = MutableStateFlow(PlaceDraft(id = placeId))
     val draft: StateFlow<PlaceDraft> = _draft.asStateFlow()
 
+    /** Every dataset, for the Datasets rows; empty where datasets aren't offered. */
+    val datasets: StateFlow<List<com.hardtekpt.crux.data.Dataset>> = (datasetRepository?.observeDatasets() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Makes a dataset from a section's sheet; one not made for its board is linked to it. */
+    fun createDataset(sectionKey: Int, dataset: com.hardtekpt.crux.data.Dataset) {
+        val repo = datasetRepository ?: return
+        viewModelScope.launch {
+            val id = repo.saveDataset(dataset.copy(id = 0))
+            update { d ->
+                d.updateSection(sectionKey) { s -> if (dataset.fitsBoard(s.asSection())) s else s.copy(datasetIds = s.datasetIds.orEmpty() + id) }
+            }
+        }
+    }
+
     init {
         if (placeId != 0L) {
             viewModelScope.launch {
+                val links = datasetRepository?.observeLinks()?.first().orEmpty()
                 repository.getPlace(placeId)?.let { p ->
                     _draft.update {
                         it.copy(
@@ -240,6 +402,7 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                                         board = section.board,
                                         boardSize = section.boardSize,
                                         boardHolds = section.boardHolds,
+                                        datasetIds = links[section.id].orEmpty().takeIf { datasetRepository != null },
                                     )
                                 },
                             location = p.location.orEmpty(),
@@ -303,6 +466,7 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                             board = it.board,
                             boardSize = it.boardSize,
                             boardHolds = it.boardHolds,
+                            datasetIds = it.datasetIds,
                         )
                     },
                     location = d.location,
@@ -331,6 +495,8 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
 @Composable
 fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: PlaceEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val datasets by viewModel.datasets.collectAsStateWithLifecycle()
+    var newDatasetFor by remember { mutableStateOf<Pair<Int, com.hardtekpt.crux.data.Dataset>?>(null) }
     LaunchedEffect(draft.doneId) { draft.doneId?.let(onSaved) }
     val space = CruxTheme.space
 
@@ -389,6 +555,8 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                         removable = draft.sections.size > 1,
                         onChange = change,
                         onRemove = { viewModel.update { it.removeSection(section.key) } },
+                        datasets = datasets,
+                        onNewDataset = { newDatasetFor = section.key to it },
                     )
                     if (section.usesLocal) {
                         LocalScaleEditor(
@@ -454,6 +622,18 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
         )
     }
 
+    newDatasetFor?.let { (key, initial) ->
+        com.hardtekpt.crux.ui.datasets.DatasetDetailsSheet(
+            initial = initial,
+            title = "New dataset",
+            confirm = "Create",
+            onSave = { dataset ->
+                newDatasetFor = null
+                viewModel.createDataset(key, dataset)
+            },
+            onDismiss = { newDatasetFor = null },
+        )
+    }
     if (draft.confirmDelete) {
         AlertDialog(
             onDismissRequest = viewModel::cancelDelete,

@@ -51,6 +51,9 @@ data class Session(
     val notes: String?,
     val items: List<SessionItem>,
     val climbs: List<Climb>,
+    /** The playlist being climbed, if any, and the position of the climb that's up. */
+    val playlistId: Long? = null,
+    val playlistIndex: Int = 0,
 ) {
     val hasPlan: Boolean get() = templateId != null
 
@@ -98,6 +101,9 @@ interface SessionRepository {
 
     /** Throws the session away; climbs logged in it stay in the journal. */
     suspend fun discard(sessionId: Long)
+
+    /** Climbs a playlist in the session from its [index]th climb; null stops. */
+    suspend fun setPlaylist(sessionId: Long, playlistId: Long?, index: Int = 0) {}
 }
 
 class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabases, private val templates: TemplateRepository, private val clock: Clock) :
@@ -266,6 +272,11 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
         }
     }
 
+    override suspend fun setPlaylist(sessionId: Long, playlistId: Long?, index: Int) {
+        val dao = dbs.current().sessionDao()
+        dao.getSession(sessionId)?.let { dao.updateSession(it.copy(playlistId = playlistId, playlistIndex = index.coerceAtLeast(0))) }
+    }
+
     override suspend fun discard(sessionId: Long) {
         val db = dbs.current()
         db.withTransaction {
@@ -317,5 +328,7 @@ private fun SessionEntity.toModel(
             )
         },
         climbs = climbs,
+        playlistId = playlistId,
+        playlistIndex = playlistIndex,
     )
 }

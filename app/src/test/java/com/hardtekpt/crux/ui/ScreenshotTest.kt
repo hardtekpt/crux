@@ -109,6 +109,7 @@ class ScreenshotTest {
         CruxDatabases(preferences, DatabaseFactory { db }, CoroutineScope(mainDispatcherRule.testDispatcher + SupervisorJob()))
     }
     private val climbs by lazy { OfflineClimbRepository(dbs, FIXED_CLOCK) }
+    private val playlistRepo by lazy { com.hardtekpt.crux.data.OfflinePlaylistRepository(dbs, FIXED_CLOCK) }
     private val places by lazy { OfflinePlaceRepository(dbs, FIXED_CLOCK) }
     private val notes by lazy { OfflineNoteRepository(dbs, FIXED_CLOCK) }
     private val records by lazy { OfflineRecordRepository(dbs, FIXED_CLOCK) }
@@ -203,10 +204,92 @@ class ScreenshotTest {
     fun datasets() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
-        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(context, repo, preferences)
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(context, repo, preferences, playlistRepo)
         loaded(vm.uiState) { !it.isLoading && it.datasets.isNotEmpty() }
         bothThemes("datasets", readyText = "Block Lab circuit", dark = DARK) {
             com.hardtekpt.crux.ui.datasets.DatasetsScreen(onBack = {}, onOpen = {}, viewModel = vm)
+        }
+    }
+
+    // The Playlists tab, and the demo's playlist for tonight.
+    @Test
+    fun datasetsPlaylists() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(
+            context,
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            preferences,
+            playlistRepo,
+        )
+        loaded(vm.uiState) { !it.isLoading && it.playlists.isNotEmpty() }
+        bothThemes("datasets_playlists", readyText = "Tonight", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.DatasetsScreen(onBack = {
+            }, onOpen = {}, viewModel = vm, initialTab = com.hardtekpt.crux.ui.datasets.DatasetsTab.PLAYLISTS)
+        }
+    }
+
+    @Test
+    fun playlist() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val id = runBlocking { db.playlistDao().getPlaylists().first().id }
+        val vm = com.hardtekpt.crux.ui.datasets.PlaylistViewModel(
+            SavedStateHandle(mapOf("playlistId" to id)),
+            context,
+            playlistRepo,
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            places,
+            sessions(),
+            preferences,
+            FIXED_CLOCK,
+        )
+        loaded(vm.uiState) { it.playlist != null }
+        bothThemes("playlist", readyText = "Cave crimps", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.PlaylistScreen(onBack = {}, onLogClimb = {}, onOpenSession = {}, viewModel = vm)
+        }
+    }
+
+    // Log this climb, from the circuit: Block Lab's main gym, the linked name and the grade hint.
+    @Test
+    fun logClimbFromDataset() {
+        val climbId = runBlocking { db.datasetDao().getAllClimbs().first { it.name == "Pinch roof" }.id }
+        val vm = LogClimbViewModel(
+            SavedStateHandle(mapOf("datasetClimbId" to climbId)),
+            climbs,
+            places,
+            FIXED_CLOCK,
+            preferences,
+            FakeImageFiles(),
+            sessions(),
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            playlistRepo,
+        )
+        loaded(vm.draft) { it.source != null }
+        bothThemes("logclimb_dataset", readyText = "from Block Lab circuit", dark = DARK) { LogClimbScreen(onDone = {}, viewModel = vm) }
+    }
+
+    // A climbing session with tonight's playlist: the climb that's up, with + Fell and + Sent.
+    @Test
+    fun sessionPlaylist() {
+        val sessions = sessions()
+        val sessionId = runBlocking {
+            val place = db.placeDao().getPlaces().first { it.name == "Block Lab" }
+            val id = sessions.start(null, place.id, db.placeDao().getSections(place.id).first().id)
+            sessions.setPlaylist(id, db.playlistDao().getPlaylists().first().id, 1)
+            id
+        }
+        val vm = SessionViewModel(
+            SavedStateHandle(mapOf("sessionId" to sessionId)),
+            sessions,
+            exercises,
+            places,
+            preferences,
+            FIXED_CLOCK,
+            com.hardtekpt.crux.live.LiveTimers(),
+            playlistRepository = playlistRepo,
+        )
+        loaded(vm.playlist) { it != null }
+        bothThemes("session_playlist", readyText = "Cave jugs", dark = DARK) {
+            SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm)
         }
     }
 
@@ -215,7 +298,14 @@ class ScreenshotTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
         val id = runBlocking { db.datasetDao().getDatasets().first().id }
-        val vm = com.hardtekpt.crux.ui.datasets.DatasetViewModel(SavedStateHandle(mapOf("datasetId" to id)), context, repo, preferences, FIXED_CLOCK)
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetViewModel(
+            SavedStateHandle(mapOf("datasetId" to id)),
+            context,
+            repo,
+            preferences,
+            FIXED_CLOCK,
+            playlistRepo,
+        )
         loaded(vm.uiState) { it.dataset != null }
         bothThemes("dataset", readyText = "Blue slab", dark = DARK) { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = {}, viewModel = vm) }
     }

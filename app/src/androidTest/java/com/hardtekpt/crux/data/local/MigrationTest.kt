@@ -367,6 +367,52 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate27To28AddsLinksSourcesAndPlaylists() {
+        helper.createDatabase(DB, 27).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Block Lab', 'GYM', 0, 0, '')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Main gym', 0)")
+            execSQL(
+                "INSERT INTO problems (id, placeId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) " +
+                    "VALUES (1, 1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            execSQL("INSERT INTO sessions (id, name, startedAtMillis, status) VALUES (1, 'Climbing session', 0, 'FINISHED')")
+            execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Block Lab circuit', 'own', 0, 0)")
+            execSQL("INSERT INTO dataset_climbs (id, datasetId, name, discipline, createdAtMillis) VALUES (1, 1, 'Pinch roof', 'BOULDER', 0)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 28, true)
+        // Climbs keep everything and have no source yet; sessions climb no playlist.
+        db.query("SELECT name, setter, sourceDatasetClimbId FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals("Pinch roof", c.getString(0))
+            assertEquals(true, c.isNull(1) && c.isNull(2))
+        }
+        db.query("SELECT playlistId, playlistIndex FROM sessions").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals(0, c.getInt(1))
+        }
+        // Deleting a dataset climb clears the climb's source and takes it out of playlists.
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("INSERT INTO section_datasets (sectionId, datasetId) VALUES (1, 1)")
+        db.execSQL("UPDATE problems SET sourceDatasetClimbId = 1, setter = 'Rita'")
+        db.execSQL("INSERT INTO playlists (id, name, createdAtMillis, updatedAtMillis) VALUES (1, 'Tonight', 0, 0)")
+        db.execSQL("INSERT INTO playlist_items (id, playlistId, position, datasetClimbId, name, discipline) VALUES (1, 1, 0, 1, 'Pinch roof', 'BOULDER')")
+        db.execSQL("DELETE FROM datasets WHERE id = 1")
+        db.query("SELECT sourceDatasetClimbId, setter FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals("Rita", c.getString(1))
+        }
+        listOf("section_datasets", "playlist_items").forEach { table ->
+            db.query("SELECT COUNT(*) FROM $table").use { c ->
+                c.moveToFirst()
+                assertEquals(0, c.getInt(0))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

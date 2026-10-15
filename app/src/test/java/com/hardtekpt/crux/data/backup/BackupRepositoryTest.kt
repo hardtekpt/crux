@@ -132,6 +132,11 @@ class BackupRepositoryTest {
             kilterSection.copy(boulderScale = GradeScale.V_SCALE, boardModel = "kilter_homewall", boardSize = "10x12", boardHolds = "mainline"),
         )
         addSession(source)
+        // A climb picked from the circuit, with its setter.
+        val pinch = source.datasetDao().getAllClimbs().first { it.name == "Pinch roof" }
+        source.placeDao().getAllProblems().first { it.name == "Pinch roof" }.let {
+            source.placeDao().updateProblem(it.copy(setter = "Rita", sourceDatasetClimbId = pinch.id))
+        }
         val bytes = repo(source).exportBytes()
 
         val target = newDb()
@@ -175,6 +180,17 @@ class BackupRepositoryTest {
                     it.gradeIndex
             },
         )
+        // The circuit stays linked to the main gym, the picked climb to its circuit climb, and the
+        // playlist comes back in order, each climb found again.
+        assertEquals(listOf(com.hardtekpt.crux.data.SectionDatasetEntity(sections[0].id, circuit.id)), target.datasetDao().getLinks())
+        val picked = target.placeDao().getAllProblems().first { it.name == "Pinch roof" }
+        assertEquals("Rita", picked.setter)
+        assertEquals(target.datasetDao().getClimbs(circuit.id).first { it.name == "Pinch roof" }.id, picked.sourceDatasetClimbId)
+        val tonight = target.playlistDao().getPlaylists().single()
+        assertEquals("Tonight", tonight.name)
+        val items = target.playlistDao().getItems(tonight.id)
+        assertEquals(listOf("Blue slab", "Cave jugs", "Pinch roof", "Cave crimps", "Black overhang"), items.map { it.name })
+        assertTrue(items.all { it.datasetClimbId != null })
         // The board, its size and its holds come back; the gym stays a plain section.
         assertEquals(listOf(null, "kilter_homewall"), sections.map { it.boardModel })
         assertEquals(listOf(null, "10x12"), sections.map { it.boardSize })

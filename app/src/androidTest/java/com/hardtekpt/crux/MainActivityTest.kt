@@ -610,6 +610,55 @@ class MainActivityTest {
     }
 
     @Test
+    fun aDatasetClimbIsLoggedAndClimbedFromAPlaylist() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("menu_datasets"))
+        composeRule.onNodeWithTag("menu_datasets").performClick()
+        composeRule.waitForTag("datasets_new")
+        composeRule.onNodeWithTag("datasets_new").performClick()
+        composeRule.waitForTag("dataset_details")
+        composeRule.textFieldIn("field_dataset_name").performTextInput("Garage board")
+        composeRule.onNodeWithTag("dataset_details_save").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Roof to pinch")
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitForTag("dataset_climb")
+        // Into a new playlist, from the climb's sheet.
+        composeRule.onNodeWithTag("dataset_climb").performClick()
+        composeRule.waitForTag("climb_sheet_playlist")
+        composeRule.onNodeWithTag("climb_sheet_playlist").performClick()
+        composeRule.waitForTag("add_to_playlist")
+        composeRule.textFieldIn("field_new_playlist").performTextInput("Tonight")
+        composeRule.onNodeWithTag("new_playlist_add").performClick()
+        // Log this climb: the form takes its name, linked to the dataset.
+        composeRule.onNodeWithTag("dataset_climb").performClick()
+        composeRule.waitForTag("climb_sheet_log")
+        composeRule.onNodeWithTag("climb_sheet_log").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("linked_name").performScrollTo()
+        composeRule.onNode(hasAnyAncestor(hasTestTag("linked_name")) and hasText("from Garage board", substring = true)).assertExists()
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        // The playlist, climbed in a session: + Fell adds a go to its climb.
+        androidx.test.espresso.Espresso.pressBack()
+        composeRule.waitForTag("datasets_tabs")
+        composeRule.onNode(hasText("Playlists · 1")).performClick()
+        composeRule.waitForTag("playlist_row")
+        composeRule.onNodeWithTag("playlist_row").performClick()
+        composeRule.waitForTag("playlist_climb")
+        composeRule.onNodeWithTag("playlist_climb").performClick()
+        composeRule.waitForTag("session_playlist")
+        composeRule.onNodeWithTag("session_playlist_climb").assertTextContains("not tried yet", substring = true)
+        composeRule.onNodeWithTag("session_playlist_fell").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_playlist_climb") and hasText("1 go", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
     fun aLoggedClimbCanBeEditedAndDeleted() {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_LogClimb").performClick()

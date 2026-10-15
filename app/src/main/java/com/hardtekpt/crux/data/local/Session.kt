@@ -33,6 +33,9 @@ data class SessionEntity(
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
     val notes: String? = null,
+    /** A playlist being climbed in the session, and which of its climbs is up (schema 28). */
+    val playlistId: Long? = null,
+    @ColumnInfo(defaultValue = "0") val playlistIndex: Int = 0,
 )
 
 /** One exercise in a session, with its target as planned (or as added on the fly). */

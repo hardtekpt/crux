@@ -29,6 +29,9 @@ session. Only one session runs at a time; starting another ends the first.
 - **Logging a set**: each set starts at the target, or at what your last set was. Tap a value to
   change it with a stepper right under the row, then tick the box. Change a set you already ticked
   the same way; tick it again to take it back. **Add set** adds one more for this session.
+- **A playlist** (from **+ → Climb a playlist**, or *Climb this playlist* on a playlist) shows as
+  a card with the climb that's up, **Prev** and **Next**, and **+ Fell** and **+ Sent** to add a go
+  in one tap. See [Playlists](datasets.md#playlists).
 - **The dock** at the bottom always shows what's next: **Done · Exercise, set N** ticks the next
   set, **Start timer** runs the next interval exercise, and **Log climb** on a climbing day.
 - **The ⋯ menu** on an exercise opens **About this exercise** (its page, with your record and

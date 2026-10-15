@@ -153,11 +153,57 @@ class SessionViewModel @Inject constructor(
     private val live: com.hardtekpt.crux.live.LiveTimers,
     records: com.hardtekpt.crux.data.RecordRepository? = null,
     private val templates: com.hardtekpt.crux.data.TemplateRepository? = null,
+    playlistRepository: com.hardtekpt.crux.data.PlaylistRepository? = null,
+    private val playlistGoes: com.hardtekpt.crux.data.PlaylistGoes? = null,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
     val session: StateFlow<Session?> = sessions.observeSession(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Every playlist, to start one; and the one being climbed in this session. */
+    val playlists: StateFlow<List<com.hardtekpt.crux.data.Playlist>> = (playlistRepository?.observePlaylists() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val playlist: StateFlow<com.hardtekpt.crux.data.Playlist?> = session.map { it?.playlistId }.distinctUntilChanged()
+        .combine(playlists) { id, lists -> id?.let { wanted -> lists.firstOrNull { it.id == wanted } } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The last go added from the playlist card, which can still be taken back for a few seconds. */
+    private val _playlistUndo = MutableStateFlow<com.hardtekpt.crux.data.PlaylistGoes.Undo?>(null)
+    val playlistUndo: StateFlow<com.hardtekpt.crux.data.PlaylistGoes.Undo?> = _playlistUndo.asStateFlow()
+
+    /** Climbs a playlist from its first climb; null stops. */
+    fun climbPlaylist(playlistId: Long?) {
+        viewModelScope.launch { sessions.setPlaylist(sessionId, playlistId, 0) }
+    }
+
+    /** Prev and Next on the playlist card. */
+    fun movePlaylist(index: Int) {
+        val current = session.value ?: return
+        val size = playlist.value?.items?.size ?: return
+        viewModelScope.launch { sessions.setPlaylist(sessionId, current.playlistId, index.coerceIn(0, (size - 1).coerceAtLeast(0))) }
+    }
+
+    /** + Fell or + Sent on the playlist's climb that's up. */
+    fun playlistGo(sent: Boolean) {
+        val current = session.value ?: return
+        val goes = playlistGoes ?: return
+        val item = playlist.value?.items?.getOrNull(current.playlistIndex) ?: return
+        val climb = item.climb ?: return
+        val dataset = item.dataset ?: return
+        viewModelScope.launch {
+            val undo = goes.add(current, com.hardtekpt.crux.data.ClimbSource(climb, dataset), sent)
+            _playlistUndo.value = undo
+            kotlinx.coroutines.delay(com.hardtekpt.crux.data.QuickGoState.UNDO_MILLIS)
+            _playlistUndo.compareAndSet(undo, null)
+        }
+    }
+
+    fun undoPlaylistGo() {
+        val undo = _playlistUndo.value ?: return
+        _playlistUndo.value = null
+        viewModelScope.launch { playlistGoes?.undo(undo) }
+    }
 
     val place: StateFlow<Place?> = session.map { it?.placeId }.distinctUntilChanged().map { id ->
         id?.let { places.getPlace(it) }
@@ -552,6 +598,8 @@ fun SessionScreen(
     onFinished: () -> Unit,
     onLogMore: (problemId: Long) -> Unit = {},
     onOpenExercise: (exerciseId: Long) -> Unit = {},
+    /** Log climb on a playlist's climb, at the session's place and facility. */
+    onLogDatasetClimb: (placeId: Long?, sectionId: Long?, datasetClimbId: Long) -> Unit = { _, _, _ -> },
     viewModel: SessionViewModel = hiltViewModel(),
     /** Opens a running rest or timer big from the start; for screenshots. */
     bigTimer: Boolean = false,
@@ -565,6 +613,10 @@ fun SessionScreen(
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
+    val playlist by viewModel.playlist.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistUndo by viewModel.playlistUndo.collectAsStateWithLifecycle()
+    var pickingPlaylist by rememberSaveable { mutableStateOf(false) }
     viewModel.currentItem.collectAsStateWithLifecycle()
     // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
     // once a second; `drainNow` moves every tick but is read only where the bands draw their drain.
@@ -780,6 +832,21 @@ fun SessionScreen(
                     }
                 }
             }
+            playlist?.let { list ->
+                val item = list.items.getOrNull(current.playlistIndex)
+                PlaylistCard(
+                    playlist = list,
+                    index = current.playlistIndex,
+                    today = item?.let { up ->
+                        current.climbGroups.firstOrNull { it.discipline == up.discipline && it.name?.trim().equals(up.name.trim(), ignoreCase = true) }
+                    },
+                    onMove = viewModel::movePlaylist,
+                    onGo = viewModel::playlistGo,
+                    onOpen = { item?.climb?.let { onLogDatasetClimb(current.placeId, current.sectionId, it.id) } },
+                    onStop = { viewModel.climbPlaylist(null) },
+                    onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
+                )
+            }
             if (current.climbGroups.isNotEmpty() || current.items.isEmpty()) {
                 ClimbsCard(current.climbGroups, onLogMore, onLogClimb)
             }
@@ -898,6 +965,20 @@ fun SessionScreen(
                 freeTimer = true
             }.takeIf { runningTimer == null },
             onDismiss = { adding = false },
+            onPlaylist = {
+                adding = false
+                pickingPlaylist = true
+            }.takeIf { playlists.isNotEmpty() },
+        )
+    }
+    if (pickingPlaylist) {
+        PlaylistPicker(
+            playlists = playlists,
+            onPick = {
+                pickingPlaylist = false
+                viewModel.climbPlaylist(it)
+            },
+            onDismiss = { pickingPlaylist = false },
         )
     }
     if (picking) {

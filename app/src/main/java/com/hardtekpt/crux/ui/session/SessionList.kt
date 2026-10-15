@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
@@ -460,7 +461,13 @@ internal fun ExerciseMenuSheet(
 /** The + by Finish: log a climb, add an exercise, or run a timer of its own. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddToSessionSheet(onLogClimb: () -> Unit, onAddExercise: () -> Unit, onTimer: (() -> Unit)?, onDismiss: () -> Unit) {
+internal fun AddToSessionSheet(
+    onLogClimb: () -> Unit,
+    onAddExercise: () -> Unit,
+    onTimer: (() -> Unit)?,
+    onDismiss: () -> Unit,
+    onPlaylist: (() -> Unit)? = null,
+) {
     MenuSheet("Add to this session", onDismiss) {
         CruxListRow(
             title = "Log a climb",
@@ -468,6 +475,15 @@ internal fun AddToSessionSheet(onLogClimb: () -> Unit, onAddExercise: () -> Unit
             onClick = onLogClimb,
             modifier = Modifier.testTag("session_log_climb"),
         )
+        onPlaylist?.let {
+            CruxListRow(
+                title = "Climb a playlist",
+                supporting = "One climb after another, with + Fell and + Sent",
+                leading = { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = null) },
+                onClick = it,
+                modifier = Modifier.testTag("session_playlist_start"),
+            )
+        }
         CruxListRow(
             title = "Add an exercise",
             leading = { Icon(Icons.Rounded.FitnessCenter, contentDescription = null) },
@@ -482,6 +498,21 @@ internal fun AddToSessionSheet(onLogClimb: () -> Unit, onAddExercise: () -> Unit
             onClick = onTimer ?: {},
             modifier = Modifier.testTag("session_timer"),
         )
+    }
+}
+
+/** Which playlist to climb in the session. */
+@Composable
+internal fun PlaylistPicker(playlists: List<com.hardtekpt.crux.data.Playlist>, onPick: (Long) -> Unit, onDismiss: () -> Unit) {
+    MenuSheet("Climb a playlist", onDismiss) {
+        playlists.forEach { list ->
+            CruxListRow(
+                title = list.name,
+                supporting = com.hardtekpt.crux.ui.datasets.playlistLine(list),
+                onClick = { onPick(list.id) },
+                modifier = Modifier.testTag("session_pick_${list.name}"),
+            )
+        }
     }
 }
 

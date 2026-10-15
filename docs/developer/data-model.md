@@ -1,7 +1,7 @@
 # Data model
 
 Room database [`CruxDatabase`](../../app/src/main/java/com/hardtekpt/crux/data/local/CruxDatabase.kt),
-**schema 27** at the time of writing. The exported schemas live in
+**schema 28** at the time of writing. The exported schemas live in
 [`app/schemas/`](../../app/schemas/com.hardtekpt.crux.data.local.CruxDatabase); each version's JSON
 is the source of truth for its tables. To change the schema, see [Database](database.md).
 
@@ -35,15 +35,18 @@ erDiagram
 | `places` | Gyms, crags, boards | `name`, `type` (main kind), `extraTypes`, `favourite`, `latitude`/`longitude`/`address`, legacy place-wide scales |
 | `sections` | A place's facilities | `placeId`, `type` (`GYM`/`CRAG`/`BOARD`), `name`, `position`, `boulderScale`/`routeScale`/`localScale`; board facilities (schema 26): `boardModel` (a `BoardModel.key`, null = custom board), `boardSize` (Kilter, `"12x12"`), `boardHolds` (Kilter Homewall, `full_ride`/`mainline`). A board's angle is never stored as a field: it is the first line of the log's `notes` (`BoardAngleNote`); schema 22 logs carry it as a last line, `Board angle 40°` |
 | `areas` | Walls and boards | `placeId`, `sectionId`, `name`, `resetEpochDay` (legacy, unused), `imagePath`; `angle` is unused since schema 22, which added it to `name` |
-| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId` (at a place, `sectionId` is always set since schema 23; `ClimbLinks` matches logs by place, facility and name). Name, discipline, grade and where belong to the climb: saving a log on a climb writes them to it (`ClimbLinks.adoptLog`) and every log keeps a copy in step (`ClimbLinks.syncLogs`, run on all logs by schema 24), `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused) |
+| `problems` | Climbs: what's tried, by name and grade | optional `placeId`/`sectionId`/`areaId` (at a place, `sectionId` is always set since schema 23; `ClimbLinks` matches logs by place, facility and name). Name, discipline, grade and where belong to the climb: saving a log on a climb writes them to it (`ClimbLinks.adoptLog`) and every log keeps a copy in step (`ClimbLinks.syncLogs`, run on all logs by schema 24), `name`, `discipline`, grade, `tape`, `setEpochDay`, `retired` (legacy, unused); schema 28 adds `setter` and `sourceDatasetClimbId` (the dataset climb it was picked from, set null when that goes; name, grade and setter are copies) |
 | `exercises` | The exercise library | `name`, `category`, `metric`, defaults (`defaultSets`…`defaultRepRestSeconds`, `prepSeconds`) |
 | `workout_templates` | Session plans | `name`, `description`, `position` |
 | `datasets` | Your lists of climbs to pick from (schema 27) | `name`, `kind` (`own`; `catalogue` comes with board catalogues), `boardModel` (a `BoardModel.key`, `custom` for a custom board, null for none), `boardSize`, `boardHolds`, `boulderScale`/`routeScale` (null = the climber's settings; never local), `createdAtMillis`, `updatedAtMillis` |
 | `dataset_climbs` | Entries in a dataset, not climbs in the journal | `datasetId` (cascade), `name`, `discipline`, `gradeScale` + `gradeIndex` (both null when ungraded), `setter`, `note`, `createdAtMillis`. `DatasetFiles` reads and writes them as CSV and `.crux-dataset.json` (format `crux-dataset`, version 1) |
+| `section_datasets` | Datasets linked to a facility by hand (schema 28) | `sectionId` + `datasetId` (both cascade). A facility also uses every dataset made for its board (`Dataset.fitsBoard`: same model, and a Kilter's size and Homewall's holds), which needs no row; `datasetsFor` puts the two together |
+| `playlists` | Ordered picks of dataset climbs (schema 28) | `name`, `note`, `createdAtMillis`, `updatedAtMillis` |
+| `playlist_items` | A playlist's climbs | `playlistId` (cascade), `position`, `datasetClimbId` (cascade; null for an imported climb not matched yet), copies of `datasetName`, `name`, `discipline`, `gradeScale`/`gradeIndex` for matching. `PlaylistFiles` writes `.crux-playlist.json` (format `crux-playlist`, version 1) |
 | `schedule_slots` | The weekly schedule (schema 25), repeating every week | `dayOfWeek` (1 Monday to 7 Sunday), `position`, `kind` (`PLAN`/`CLIMB`), `templateId` (cascade), `placeId` (set null); a day with none is rest |
 | `template_blocks` | A plan's blocks | `templateId`, `position`, `name` |
 | `template_exercises` | An exercise's target in a block | `blockId`, `exerciseId`, `sets`, `reps`, `seconds`, `loadKg`, `restSeconds`, `repRestSeconds` |
-| `sessions` | Live and finished sessions | `templateId`, `placeId`, `sectionId`, `startedAtMillis`, `endedAtMillis`, `status` (`RUNNING`/`FINISHED`/`DISCARDED`), `effort`, `notes` |
+| `sessions` | Live and finished sessions | `templateId`, `placeId`, `sectionId`, `startedAtMillis`, `endedAtMillis`, `status` (`RUNNING`/`FINISHED`/`DISCARDED`), `effort`, `notes`; schema 28: `playlistId` and `playlistIndex`, the playlist being climbed and the climb that's up |
 | `session_items` | A session's exercises (copied from the plan) | `sessionId`, `exerciseId`, `blockName`, target columns |
 | `session_sets` | What was done | `itemId`, `setIndex`, `reps`, `seconds`, `loadKg`, `skipped`, `completedAtMillis` |
 | `body_measurements` | Weight, body stats, circumferences | `type` (`MeasurementType`), `value` (kg/cm), `dateEpochDay` |

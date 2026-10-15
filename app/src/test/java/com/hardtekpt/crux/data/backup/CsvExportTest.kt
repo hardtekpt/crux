@@ -38,9 +38,9 @@ class CsvExportTest {
         val csv = CsvExport.climbs(file(climbs = listOf(climb("2026-10-12", 2), climb("2026-10-10", 1, style = AscentStyle.ATTEMPT))))
 
         assertEquals(
-            "Date,Name,Grade,Scale,Discipline,Style,Attempts,Sends,Place,Facility,Wall,Effort,Notes\r\n" +
-                "2026-10-10,Pink crimps,6A,Font,Boulder,Attempt,3,0,Test Gym,Boulders,Cave,7,\r\n" +
-                "2026-10-12,Pink crimps,6A,Font,Boulder,Redpoint,3,1,Test Gym,Boulders,Cave,7,\r\n",
+            "Date,Name,Grade,Scale,Discipline,Style,Attempts,Sends,Place,Facility,Wall,Effort,Notes,Setter\r\n" +
+                "2026-10-10,Pink crimps,6A,Font,Boulder,Attempt,3,0,Test Gym,Boulders,Cave,7,,\r\n" +
+                "2026-10-12,Pink crimps,6A,Font,Boulder,Redpoint,3,1,Test Gym,Boulders,Cave,7,,\r\n",
             csv,
         )
     }
@@ -49,13 +49,13 @@ class CsvExportTest {
     fun `a note with a comma, a quote and a line break is quoted`() {
         val csv = CsvExport.climbs(file(climbs = listOf(climb("2026-10-12", 1, notes = "Heel hook, \"sloper\"\nrest after"))))
 
-        assertEquals(true, csv.endsWith(",7,\"Heel hook, \"\"sloper\"\"\nrest after\"\r\n"))
+        assertEquals(true, csv.endsWith(",7,\"Heel hook, \"\"sloper\"\"\nrest after\",\r\n"))
     }
 
     @Test
     fun `an empty file is just the header`() {
         assertEquals(
-            "Date,Name,Grade,Scale,Discipline,Style,Attempts,Sends,Place,Facility,Wall,Effort,Notes\r\n",
+            "Date,Name,Grade,Scale,Discipline,Style,Attempts,Sends,Place,Facility,Wall,Effort,Notes,Setter\r\n",
             CsvExport.climbs(file()),
         )
     }

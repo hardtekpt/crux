@@ -98,6 +98,13 @@ data class LogClimbDraft(
     val earlierGoes: List<Boolean> = emptyList(),
     val dateError: String? = null,
     val nameError: String? = null,
+    /** The dataset climb this climb was picked from, shown as the linked name row. */
+    val source: com.hardtekpt.crux.data.ClimbSource? = null,
+    /** Whether the link changed in this form, so saving sets it on the climb. */
+    val sourceTouched: Boolean = false,
+    /** Log this climb from a dataset used at several sections: the Where sheet opens on those. */
+    val whereLimit: Set<Long>? = null,
+    val openWhere: Boolean = false,
     val confirmDelete: Boolean = false,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
@@ -131,6 +138,9 @@ data class LogClimbDraft(
             else -> AscentStyle.REDPOINT
         }
 
+    /** "Garage board says V6": the picked dataset climb's own grade, under the grade strip. */
+    val gradeHint: String? get() = source?.let { s -> s.climb.gradeLabel?.let { "${s.dataset.name} says $it" } }
+
     /** The No beta switch only matters for a route sent first go. */
     val asksAboutBeta: Boolean get() = discipline == Discipline.ROUTE && sends > 0 && goesBefore == 0 && goes.first()
 }
@@ -145,6 +155,8 @@ class LogClimbViewModel @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val images: ImageFiles,
     private val sessions: com.hardtekpt.crux.data.SessionRepository,
+    private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
+    playlistRepository: com.hardtekpt.crux.data.PlaylistRepository? = null,
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
@@ -153,9 +165,25 @@ class LogClimbViewModel @Inject constructor(
     private val routeProblemId: Long = savedStateHandle.get<Long>("problemId") ?: 0L
     private val routeSectionId: Long = savedStateHandle.get<Long>("sectionId") ?: 0L
     private val routeReuseToday: Boolean = savedStateHandle.get<Boolean>("reuseToday") ?: false
+    private val routeDatasetClimbId: Long = savedStateHandle.get<Long>("datasetClimbId") ?: 0L
 
     private val _draft = MutableStateFlow(LogClimbDraft(climbId = climbId, date = LocalDate.now(clock)))
     val draft: StateFlow<LogClimbDraft> = _draft.asStateFlow()
+
+    /** Your datasets, the sections they're linked to by hand, and your playlists, for picking a climb. */
+    val datasets: StateFlow<List<com.hardtekpt.crux.data.Dataset>> = (datasetRepository?.observeDatasets() ?: flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val datasetLinks: StateFlow<Map<Long, Set<Long>>> = (datasetRepository?.observeLinks() ?: flowOf(emptyMap()))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val playlists: StateFlow<List<com.hardtekpt.crux.data.Playlist>> = (playlistRepository?.observePlaylists() ?: flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Set when picking a climb finds it logged today: the screen opens that log instead. */
+    private val _openLog = MutableStateFlow<Long?>(null)
+    val openLog: StateFlow<Long?> = _openLog.asStateFlow()
+
+    /** A climb from Log this climb, kept until Where is a section that uses its dataset. */
+    private var routeSource: com.hardtekpt.crux.data.ClimbSource? = null
 
     /** Climbs logged with no place, for suggestions when no place is picked. */
     private val unplaced = MutableStateFlow<List<Problem>>(emptyList())
@@ -255,6 +283,9 @@ class LogClimbViewModel @Inject constructor(
                 )
             }
             climb.problemId?.let { refreshEarlierGoes(it, climb) }
+            // Picked from a dataset: the linked name row.
+            val source = sourceOf(climb.problemId?.let { placeRepository.getProblem(it) })
+            if (source != null) _draft.update { it.copy(source = source) }
             // Local grades need the place's list to show the strip.
             climb.placeId?.let { placeRepository.getPlace(it) }?.section(climb.sectionId)?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
             return
@@ -288,6 +319,174 @@ class LogClimbViewModel @Inject constructor(
             // The place's walls and facilities, loaded here since the form's own may not be yet.
             applyProblem(p, p.placeId?.let { placeRepository.observePlaceDetail(it).first() })
             refreshEarlierGoes(p.id, null)
+            sourceOf(p)?.let { source -> _draft.update { it.copy(source = source) } }
+        }
+        if (routeDatasetClimbId != 0L) logFromDataset(routeDatasetClimbId)
+    }
+
+    /**
+     * Log this climb, from a dataset: Where becomes the one section using the dataset (or the
+     * route's place), and the climb is picked there. With several sections, the Where sheet opens
+     * on them; with none, Where stays empty.
+     */
+    private suspend fun logFromDataset(datasetClimbId: Long) {
+        val repo = datasetRepository ?: return
+        val all = repo.observeDatasets().first()
+        val source =
+            all.firstNotNullOfOrNull { d -> d.climbs.firstOrNull { it.id == datasetClimbId }?.let { com.hardtekpt.crux.data.ClimbSource(it, d) } } ?: return
+        routeSource = source
+        if (routePlaceId == 0L) {
+            val links = repo.observeLinks().first()
+            val using = placeRepository.observePlaces().first().map { it.place }.flatMap { place ->
+                place.sections.filter { section ->
+                    com.hardtekpt.crux.data.datasetsFor(section, all, links[section.id].orEmpty()).any {
+                        it.id ==
+                            source.dataset.id
+                    }
+                }
+                    .map { place to it }
+            }
+            when {
+                using.size == 1 -> {
+                    val (place, section) = using.single()
+                    applyPlace(place.id)
+                    _draft.update { regrade(it.copy(sectionId = section.id, venue = section.type.venue, areaId = null), place) }
+                }
+
+                using.size > 1 -> {
+                    applyPlace(null)
+                    _draft.update { it.copy(whereLimit = using.map { u -> u.second.id }.toSet(), openWhere = true) }
+                }
+
+                else -> applyPlace(null)
+            }
+        }
+        val draft = _draft.value
+        val detail = draft.placeId?.let { placeRepository.observePlaceDetail(it).first() }
+        pickDatasetClimb(source, here = detail?.let { candidatesIn(draft, it) } ?: placeRepository.climbsAt(null))
+        if (draft.placeId != null) routeSource = null
+    }
+
+    /** The dataset climb a climb was picked from, while it's still in its dataset. */
+    private suspend fun sourceOf(problem: Problem?): com.hardtekpt.crux.data.ClimbSource? {
+        val id = problem?.sourceDatasetClimbId ?: return null
+        val all = datasetRepository?.observeDatasets()?.first() ?: return null
+        return all.firstNotNullOfOrNull { d -> d.climbs.firstOrNull { it.id == id }?.let { com.hardtekpt.crux.data.ClimbSource(it, d) } }
+    }
+
+    /** The datasets the draft's section uses: those for its board, and any linked to it. */
+    fun sectionDatasets(draft: LogClimbDraft = _draft.value): List<com.hardtekpt.crux.data.Dataset> {
+        val place = placeDetail.value?.place?.takeIf { it.id == draft.placeId } ?: return emptyList()
+        val section = place.sections.firstOrNull { it.id == draft.sectionId } ?: return emptyList()
+        return com.hardtekpt.crux.data.datasetsFor(section, datasets.value, datasetLinks.value[section.id].orEmpty())
+    }
+
+    /**
+     * What the Where sheet's Climb step offers: your climbs at the section, its datasets, and the
+     * playlists with climbs from them. Null when the section uses no dataset.
+     */
+    fun climbChoices(draft: LogClimbDraft = _draft.value): ClimbChoices? {
+        val used = sectionDatasets(draft).takeIf { it.isNotEmpty() } ?: return null
+        val ids = used.map { it.id }.toSet()
+        val detail = placeDetail.value?.takeIf { it.place.id == draft.placeId }
+        val several = (detail?.place?.sections?.size ?: 0) > 1
+        return ClimbChoices(
+            datasets = used,
+            playlists = playlists.value.mapNotNull { list ->
+                list.copy(items = list.items.filter { it.dataset?.id in ids }).takeIf { it.items.isNotEmpty() }
+            },
+            yours = detail?.problems.orEmpty().filter { !several || it.problem.sectionId == null || it.problem.sectionId == draft.sectionId },
+            system = draft.system,
+        )
+    }
+
+    /**
+     * Picks a climb from a dataset. The climb here of that name and type (or already linked to
+     * it) is continued, and opens as its log when it was logged today; otherwise the form takes
+     * its type, name and grade (converted to the section's scale) for a new climb.
+     */
+    fun pickDatasetClimb(source: com.hardtekpt.crux.data.ClimbSource) = pickDatasetClimb(source, candidates())
+
+    private fun pickDatasetClimb(source: com.hardtekpt.crux.data.ClimbSource, here: List<Problem>) {
+        val climb = source.climb
+        val match = here.firstOrNull { it.sourceDatasetClimbId == climb.id }
+            ?: here.firstOrNull { it.discipline == climb.discipline && it.name.trim().equals(climb.name.trim(), ignoreCase = true) }
+        if (match != null && !_draft.value.isEditing) {
+            viewModelScope.launch {
+                val running = sessions.running()
+                val today = LocalDate.now(clock)
+                val logged = climbRepository.observeClimbsForProblem(match.id).first()
+                    .firstOrNull { it.date == today || (running != null && it.sessionId == running.id) }
+                if (logged != null) {
+                    _openLog.value = logged.id
+                    return@launch
+                }
+                applyProblem(match)
+                refreshEarlierGoes(match.id, null)
+                _draft.update { it.copy(source = source, sourceTouched = match.sourceDatasetClimbId != climb.id) }
+            }
+            return
+        }
+        if (_draft.value.discipline != climb.discipline) setDiscipline(climb.discipline)
+        _draft.update { draft ->
+            draft.copy(
+                name = climb.name,
+                nameError = null,
+                problemId = draft.problemId.takeIf { draft.isEditing },
+                earlierGoes = if (draft.isEditing) draft.earlierGoes else emptyList(),
+                gradeIndex = sourceGrade(draft.copy(source = source)) ?: draft.gradeIndex,
+                source = source,
+                sourceTouched = true,
+            )
+        }
+    }
+
+    /** The picked dataset climb's grade in the draft's scale, when it converts. */
+    private fun sourceGrade(draft: LogClimbDraft): Int? {
+        val climb = draft.source?.climb ?: return null
+        val scale = climb.gradeScale ?: return null
+        val index = climb.gradeIndex ?: return null
+        return com.hardtekpt.crux.data.convertGrade(scale, index, draft.gradeScale)
+    }
+
+    /** ✕ on the linked name row: a plain name again, the same text. */
+    fun unlinkSource() {
+        routeSource = null
+        _draft.update { it.copy(source = null, sourceTouched = true) }
+    }
+
+    /** New climb in the Climb step: nothing picked, an empty name to type. */
+    fun newClimb() = _draft.update {
+        routeSource = null
+        if (it.isEditing) it else it.copy(problemId = null, earlierGoes = emptyList(), name = "", source = null, sourceTouched = false)
+    }
+
+    /** The screen opened the log picking found. */
+    fun logOpened() {
+        _openLog.value = null
+    }
+
+    /** The Where sheet opened for Log this climb. */
+    fun whereOpened() = _draft.update { it.copy(openWhere = false) }
+
+    /**
+     * After Where changes: a link to a dataset the new section doesn't use is dropped (the name
+     * stays); a climb from Log this climb is picked once Where is a section that uses it.
+     */
+    private fun followSource(place: com.hardtekpt.crux.data.model.Place?) {
+        val draft = _draft.value
+        val source = draft.source ?: routeSource ?: return
+        val section = place?.sections?.firstOrNull { it.id == draft.sectionId }
+        val fits = place == null ||
+            (
+                section != null &&
+                    com.hardtekpt.crux.data.datasetsFor(section, datasets.value, datasetLinks.value[section.id].orEmpty()).any { it.id == source.dataset.id }
+                )
+        if (fits) {
+            if (draft.source == null && routeSource != null) pickDatasetClimb(source)
+            if (place != null) routeSource = null
+        } else if (draft.source != null) {
+            _draft.update { it.copy(source = null, sourceTouched = false) }
         }
     }
 
@@ -331,8 +530,9 @@ class LogClimbViewModel @Inject constructor(
                     scaleOverride = override,
                     local = section?.localScale,
                 )
-                if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
+                if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = sourceGrade(next) ?: next.system.defaultIndex)
             }
+            followSource(place)
         }
     }
 
@@ -363,7 +563,7 @@ class LogClimbViewModel @Inject constructor(
             ),
             detail?.place,
         )
-    }
+    }.also { followSource(placeDetail.value?.place) }
 
     /** At a place with several parts: which one this climb was at. A wall in another part is dropped. */
     fun selectSection(sectionId: Long) = _draft.update {
@@ -380,7 +580,7 @@ class LogClimbViewModel @Inject constructor(
             ),
             detail.place,
         )
-    }
+    }.also { followSource(placeDetail.value?.place) }
 
     /**
      * Each part of a place grades in its own scale: after the part changes, the grades follow it.
@@ -390,13 +590,18 @@ class LogClimbViewModel @Inject constructor(
         if (place == null || draft.problemId != null) return draft
         val section = place.section(draft.sectionId)
         val next = draft.copy(scaleOverride = section?.scaleFor(draft.discipline), local = section?.localScale)
-        return if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = next.system.defaultIndex)
+        return if (next.gradeScale == draft.gradeScale) next else next.copy(gradeIndex = sourceGrade(next) ?: next.system.defaultIndex)
     }
 
     /** Continues a climb: the form takes its name, grade and where it is; everything stays editable. */
     fun pickProblem(problem: Problem) {
         applyProblem(problem)
-        viewModelScope.launch { refreshEarlierGoes(problem.id, null) }
+        _draft.update { it.copy(source = null, sourceTouched = false) }
+        viewModelScope.launch {
+            refreshEarlierGoes(problem.id, null)
+            val source = sourceOf(problem)
+            _draft.update { if (it.problemId == problem.id && it.source == null) it.copy(source = source) else it }
+        }
     }
 
     /**
@@ -443,6 +648,12 @@ class LogClimbViewModel @Inject constructor(
             match != null && match.id != draft.problemId -> pickProblem(match)
             match == null && draft.problemId != null -> _draft.update { it.copy(problemId = null, earlierGoes = emptyList()) }
         }
+    }
+
+    /** The climbs at [detail]'s place a log at the draft's facility can continue. */
+    private fun candidatesIn(draft: LogClimbDraft, detail: PlaceDetail): List<Problem> {
+        val several = detail.place.sections.size > 1
+        return detail.problems.map { it.problem }.filter { !several || it.sectionId == null || it.sectionId == draft.sectionId }
     }
 
     /** The climbs a new log can continue: those at the picked place, or those with no place. */
@@ -630,6 +841,11 @@ class LogClimbViewModel @Inject constructor(
                 effort = draft.effort,
                 gradeLabel = draft.system.label(draft.gradeIndex),
                 gradeColour = draft.system.colour(draft.gradeIndex),
+                source = if (draft.sourceTouched) {
+                    com.hardtekpt.crux.data.model.SourceChange(draft.source?.climb?.id, draft.source?.climb?.setter)
+                } else {
+                    null
+                },
             )
             val id = if (draft.isEditing) {
                 climbRepository.updateClimb(draft.climbId, climb)
@@ -676,3 +892,11 @@ internal fun goesOf(climb: com.hardtekpt.crux.data.model.Climb): List<Boolean> {
         List(falls) { false } + List(sends) { true }
     }.ifEmpty { listOf(false) }
 }
+
+/** The Where sheet's Climb step: your climbs at the section, its datasets and playlists, graded in [system]. */
+data class ClimbChoices(
+    val datasets: List<com.hardtekpt.crux.data.Dataset>,
+    val playlists: List<com.hardtekpt.crux.data.Playlist>,
+    val yours: List<com.hardtekpt.crux.data.model.ProblemWithStats>,
+    val system: GradeSystem,
+)

@@ -112,6 +112,11 @@ class BackupRepository(
         val allProblems = placeDao.getAllProblems()
         val finished = db.sessionDao().getFinished()
         val sessionStarts = finished.associate { it.id to it.startedAtMillis }
+        // Datasets by id, and their climbs, for links and where climbs were picked from.
+        val datasetNames = db.datasetDao().getDatasets().associate { it.id to it.name }
+        val datasetClimbs = db.datasetDao().getAllClimbs().associateBy { it.id }
+        val links = db.datasetDao().getLinks().groupBy({ it.sectionId }, { it.datasetId })
+        fun source(id: Long?) = id?.let(datasetClimbs::get)?.let { c -> datasetNames[c.datasetId]?.let { SourceDto(it, c.name, c.discipline) } }
 
         fun photo(name: String?) = name?.takeIf { media.photos && images?.file(it)?.isFile == true }
         fun video(name: String?) = name?.takeIf { media.videos && images?.file(it)?.isFile == true }
@@ -176,6 +181,7 @@ class BackupRepository(
                         area = climb.areaId?.let(areas::get)?.name,
                         section = climb.sectionId?.let(sectionNames::get),
                         problem = climb.problemId?.let(problems::get)?.name,
+                        setter = climb.problemId?.let(problems::get)?.setter,
                         session = climb.sessionId?.let(sessionStarts::get),
                         sends = climb.sends,
                         photoFile = photo(photos[climb.id]),
@@ -235,7 +241,7 @@ class BackupRepository(
                         areas = placeAreas.map { area ->
                             area.toDto().copy(imageFile = photo(area.imagePath), section = area.sectionId?.let(partNames::get))
                         },
-                        problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)) },
+                        problems = problems[place.id].orEmpty().map { it.toDto(it.areaId?.let(areaNames::get)).copy(source = source(it.sourceDatasetClimbId)) },
                     ).copy(
                         sections = parts.map {
                             SectionDto(
@@ -247,6 +253,7 @@ class BackupRepository(
                                 it.boardModel,
                                 it.boardSize,
                                 it.boardHolds,
+                                links[it.id].orEmpty().mapNotNull(datasetNames::get),
                             )
                         },
                     )
@@ -285,6 +292,29 @@ class BackupRepository(
                         d.updatedAtMillis,
                         climbs[d.id].orEmpty().map {
                             DatasetClimbDto(it.name, it.discipline, it.gradeScale, it.gradeIndex, it.setter, it.note, it.createdAtMillis)
+                        },
+                    )
+                }
+            } else {
+                null
+            },
+            playlists = if (BackupSection.DATASETS in sections) {
+                val items = db.playlistDao().getAllItems().groupBy { it.playlistId }
+                db.playlistDao().getPlaylists().map { list ->
+                    PlaylistDto(
+                        name = list.name,
+                        note = list.note,
+                        createdAt = list.createdAtMillis,
+                        updatedAt = list.updatedAtMillis,
+                        items = items[list.id].orEmpty().sortedWith(compareBy({ it.position }, { it.id })).map { item ->
+                            val climb = item.datasetClimbId?.let(datasetClimbs::get)
+                            PlaylistItemDto(
+                                dataset = climb?.let { datasetNames[it.datasetId] } ?: item.datasetName,
+                                name = climb?.name ?: item.name,
+                                discipline = climb?.discipline ?: item.discipline,
+                                gradeScale = if (climb != null) climb.gradeScale else item.gradeScale,
+                                gradeIndex = if (climb != null) climb.gradeIndex else item.gradeIndex,
+                            )
                         },
                     )
                 }
@@ -446,6 +476,8 @@ class BackupRepository(
             db.exerciseDao().getAll().forEach { exercises.putIfAbsent(nameKey(it.name), it) }
             if (BackupSection.EXERCISES in sections) importExercises()
             if (BackupSection.PLANS in sections) importPlans()
+            // Datasets go in before places, so facilities and climbs can link to them.
+            if (BackupSection.DATASETS in sections) importDatasets()
             // Places, plans and sessions go in before the journal so climbs can link to them.
             if (BackupSection.PLACES in sections) importPlaces()
             if (BackupSection.SESSIONS in sections) importSessions()
@@ -453,7 +485,6 @@ class BackupRepository(
             if (BackupSection.BODY in sections) importBody()
             if (BackupSection.RECORDS in sections) importRecords()
             if (BackupSection.NOTES in sections) importNotes()
-            if (BackupSection.DATASETS in sections) importDatasets()
             // The schedule names plans and places, so it goes in once they are.
             if (BackupSection.PLANS in sections) importSchedule()
             return ImportResult(added, skipped, replaced, copied, unreadable)
@@ -700,6 +731,18 @@ class BackupRepository(
                     )
                 }
             }
+            // Datasets linked by hand, by name: those here once datasets are in.
+            val datasetIds = db.datasetDao().getDatasets().groupBy { nameKey(it.name) }.mapValues { it.value.first().id }
+            sectionIds.forEach { (section, id) ->
+                val linked = section.datasets.mapNotNull { datasetIds[nameKey(it)] }
+                if (linked.isNotEmpty()) db.datasetDao().insertLinks(linked.map { com.hardtekpt.crux.data.SectionDatasetEntity(id, it) })
+            }
+            val datasetClimbs = db.datasetDao().getAllClimbs()
+            fun source(dto: SourceDto?): Long? = dto?.let { s ->
+                val dataset = datasetIds[nameKey(s.dataset)] ?: return@let null
+                datasetClimbs.firstOrNull { it.datasetId == dataset && it.discipline == s.discipline && nameKey(it.name) == nameKey(s.name) }?.id
+            }
+
             fun sectionFor(name: String?, type: PlaceType?): Long? =
                 sectionIds.firstOrNull { (section, _) -> name != null && section.name.equals(name, ignoreCase = true) }?.second
                     ?: sectionIds.firstOrNull { (section, _) -> section.type == (type ?: dto.type) }?.second
@@ -756,6 +799,8 @@ class BackupRepository(
                     createdAtMillis = problem.createdAt ?: match?.createdAtMillis ?: now,
                     gradeLabel = problem.grade.takeIf { problem.gradeScale.isLocal },
                     gradeColour = problem.gradeColour,
+                    setter = problem.setter ?: match?.setter,
+                    sourceDatasetClimbId = source(problem.source) ?: match?.sourceDatasetClimbId,
                 )
                 if (match != null) dao.updateProblem(entity.copy(id = match.id)) else dao.insertProblem(entity)
             }
@@ -1059,6 +1104,47 @@ class BackupRepository(
                     }
                 }
             }
+            importPlaylists()
+        }
+
+        /** Playlists, once their datasets are in: one with a name already here is left as it is. */
+        private suspend fun importPlaylists() {
+            val dao = db.playlistDao()
+            val have = dao.getPlaylists().map { nameKey(it.name) }.toMutableSet()
+            val datasets = db.datasetDao().getDatasets()
+            val climbs = db.datasetDao().getAllClimbs()
+            file.playlists?.forEach { dto ->
+                if (nameKey(dto.name) in have) return@forEach
+                have += nameKey(dto.name)
+                val id = dao.insertPlaylist(
+                    com.hardtekpt.crux.data.PlaylistEntity(
+                        name = dto.name.trim(),
+                        note = dto.note,
+                        createdAtMillis = dto.createdAt,
+                        updatedAtMillis = dto.updatedAt,
+                    ),
+                )
+                dto.items.forEachIndexed { index, item ->
+                    val grade = item.gradeScale?.takeIf { !it.isLocal }?.let { s -> item.gradeIndex?.let(s::label) }
+                    val climb = com.hardtekpt.crux.data.PlaylistFiles.match(
+                        com.hardtekpt.crux.data.PlaylistFiles.Item(item.dataset, item.name, item.discipline, grade),
+                        datasets,
+                        climbs,
+                    )
+                    dao.insertItem(
+                        com.hardtekpt.crux.data.PlaylistItemEntity(
+                            playlistId = id,
+                            position = index,
+                            datasetClimbId = climb?.id,
+                            datasetName = item.dataset,
+                            name = item.name,
+                            discipline = item.discipline,
+                            gradeScale = item.gradeScale,
+                            gradeIndex = item.gradeIndex,
+                        ),
+                    )
+                }
+            }
         }
 
         private suspend fun importNotes() {
@@ -1295,6 +1381,7 @@ private fun ProblemEntity.toDto(area: String?) = ProblemDto(
     gradeIndex = gradeIndex.takeIf { gradeScale.isLocal },
     gradeColour = gradeColour,
     createdAt = createdAtMillis,
+    setter = setter,
 )
 
 private fun BodyMeasurementEntity.toDto() = MeasurementDto(

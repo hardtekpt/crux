@@ -68,8 +68,43 @@ data class DatasetClimbEntity(
     val createdAtMillis: Long,
 )
 
+/**
+ * A dataset linked by hand to a section of a place (schema 28), such as a gym circuit on the
+ * main gym. Datasets made for a board need no link: they belong to every section on that board.
+ */
+@Entity(
+    tableName = "section_datasets",
+    primaryKeys = ["sectionId", "datasetId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = com.hardtekpt.crux.data.local.SectionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sectionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(entity = DatasetEntity::class, parentColumns = ["id"], childColumns = ["datasetId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("datasetId")],
+)
+data class SectionDatasetEntity(val sectionId: Long, val datasetId: Long)
+
 @Dao
 interface DatasetDao {
+    @Query("SELECT * FROM section_datasets")
+    fun observeLinks(): Flow<List<SectionDatasetEntity>>
+
+    @Query("SELECT * FROM section_datasets")
+    suspend fun getLinks(): List<SectionDatasetEntity>
+
+    @Query("DELETE FROM section_datasets WHERE sectionId = :sectionId")
+    suspend fun clearLinks(sectionId: Long)
+
+    @Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE)
+    suspend fun insertLinks(links: List<SectionDatasetEntity>)
+
+    @Query("SELECT * FROM dataset_climbs WHERE id = :id")
+    suspend fun getClimb(id: Long): DatasetClimbEntity?
+
     @Query("SELECT * FROM datasets ORDER BY name COLLATE NOCASE")
     fun observeDatasets(): Flow<List<DatasetEntity>>
 
@@ -137,6 +172,30 @@ data class Dataset(
     val boardLabel: String get() = com.hardtekpt.crux.data.model.boardLabel(board, boardSize, boardHolds) ?: if (customBoard) "Custom board" else "No board"
 
     fun scaleFor(discipline: Discipline): GradeScale? = if (discipline == Discipline.BOULDER) boulderScale else routeScale
+
+    /**
+     * Whether this dataset is made for [section]'s board: a board section of the same model and,
+     * for Kilter, the same size (and a Homewall's holds). A custom board matches nothing.
+     */
+    fun fitsBoard(section: com.hardtekpt.crux.data.model.Section): Boolean {
+        val model = board ?: return false
+        return section.type == com.hardtekpt.crux.data.model.PlaceType.BOARD &&
+            section.board == model &&
+            (!model.needsSize || boardSize == section.boardSize) &&
+            (!model.hasHolds || boardHolds == section.boardHolds)
+    }
+}
+
+/** Which dataset a climb came from, as Log climb shows it: "from Garage board · set by Ana". */
+data class ClimbSource(val climb: DatasetClimb, val dataset: Dataset)
+
+/**
+ * The datasets a section uses: those made for its board, then those linked to it by hand
+ * ([linked], the section's links), each once.
+ */
+fun datasetsFor(section: com.hardtekpt.crux.data.model.Section?, datasets: List<Dataset>, linked: Set<Long>): List<Dataset> {
+    section ?: return emptyList()
+    return datasets.filter { it.fitsBoard(section) } + datasets.filter { it.id in linked && !it.fitsBoard(section) }
 }
 
 /** What to do with an imported climb whose name and type are already in the dataset. */
@@ -166,6 +225,12 @@ interface DatasetRepository {
      * the one with id [intoId]. A climb whose name and type are already there follows [clash].
      */
     suspend fun importClimbs(newDataset: Dataset?, intoId: Long?, climbs: List<DatasetClimb>, clash: ClashChoice): Pair<Long, ImportCount>
+
+    /** The datasets linked to each section by hand, by section id. */
+    fun observeLinks(): Flow<Map<Long, Set<Long>>>
+
+    /** Sets the datasets linked to a section by hand. */
+    suspend fun setLinks(sectionId: Long, datasetIds: Set<Long>)
 }
 
 class OfflineDatasetRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : DatasetRepository {
@@ -255,6 +320,18 @@ class OfflineDatasetRepository @Inject constructor(private val dbs: CruxDatabase
         }
     }
 
+    override fun observeLinks(): Flow<Map<Long, Set<Long>>> = dbs.observe { db ->
+        db.datasetDao().observeLinks().map { links -> links.groupBy({ it.sectionId }, { it.datasetId }).mapValues { it.value.toSet() } }
+    }
+
+    override suspend fun setLinks(sectionId: Long, datasetIds: Set<Long>) {
+        val db = dbs.current()
+        db.withTransaction {
+            db.datasetDao().clearLinks(sectionId)
+            db.datasetDao().insertLinks(datasetIds.map { SectionDatasetEntity(sectionId, it) })
+        }
+    }
+
     private suspend fun touch(db: com.hardtekpt.crux.data.local.CruxDatabase, datasetId: Long) {
         val dao = db.datasetDao()
         dao.getDataset(datasetId)?.let { dao.updateDataset(it.copy(updatedAtMillis = clock.millis())) }
@@ -291,3 +368,23 @@ internal fun DatasetEntity.toModel(climbs: List<DatasetClimbEntity>) = Dataset(
 
 /** One dataset as it changes; null once deleted. */
 fun DatasetRepository.observeDataset(id: Long): Flow<Dataset?> = observeDatasets().map { list -> list.firstOrNull { it.id == id } }
+
+/**
+ * Grade [index] of [from] as a grade of [to]: the same one in the same scale, else through the
+ * grade converter (the easier end of a range). Null when it can't be: local grades, another
+ * discipline, or a grade the converter doesn't know.
+ */
+fun convertGrade(from: GradeScale, index: Int, to: GradeScale): Int? {
+    if (from == to) return index.takeIf { it in from.grades.indices }
+    if (from.isLocal || to.isLocal || from.discipline != to.discipline) return null
+    fun system(scale: GradeScale) = when (scale) {
+        GradeScale.FONT -> com.hardtekpt.crux.data.model.GradeConversion.System.FONT
+        GradeScale.V_SCALE -> com.hardtekpt.crux.data.model.GradeConversion.System.V
+        GradeScale.FRENCH -> com.hardtekpt.crux.data.model.GradeConversion.System.FRENCH
+        GradeScale.YDS -> com.hardtekpt.crux.data.model.GradeConversion.System.YDS
+        else -> null
+    }
+    val label = from.grades.getOrNull(index) ?: return null
+    val converted = com.hardtekpt.crux.data.model.GradeConversion.convert(system(from) ?: return null, label, system(to) ?: return null) ?: return null
+    return to.grades.indexOf(converted.substringBefore('–')).takeIf { it >= 0 }
+}

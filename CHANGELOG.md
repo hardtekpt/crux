@@ -11,6 +11,16 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Datasets**: keep your own lists of climbs under *You → Datasets*, for a home board, a spray
   wall or a gym circuit. Add, edit, search and sort climbs, import a CSV or a Crux dataset file
   (with a preview first), and export either. Datasets are in your backups.
+- **Pick climbs from your datasets when you log**: a facility uses the datasets made for its board,
+  and any you link to it in Edit place. Log climb's Where sheet then ends with a **Climb** step:
+  your climbs there, then each dataset and playlist, with a search. Picking fills in the name and
+  grade (in the facility's scale, with the dataset's grade shown under the strip), and typing a name
+  suggests climbs from them too. A dataset climb also has **Log this climb**.
+- **Playlists**: ordered picks of climbs from your datasets, like "Tonight". Add climbs from a
+  dataset (long-press to pick several), drag to reorder, swipe to remove, and share them as a
+  file. **Climb this playlist** puts a card in your session with the climb that's up, Prev and
+  Next, and **+ Fell** and **+ Sent** to log a go in one tap.
+- The climbs CSV export has a Setter column.
 
 - **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
   and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board

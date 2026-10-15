@@ -91,6 +91,7 @@ class StarterDataSeeder(private val clock: Clock) {
             if (includeSampleData && db.scheduleDao().getAll().isEmpty()) insertSampleSchedule(db)
             if (includeSampleData && db.sessionDao().countAll() == 0) insertSampleSessions(db)
             if (includeSampleData && db.datasetDao().getDatasets().isEmpty()) insertSampleDataset(db)
+            if (includeSampleData && db.playlistDao().getPlaylists().isEmpty()) insertSamplePlaylist(db)
         }
     }
 
@@ -228,6 +229,40 @@ class StarterDataSeeder(private val clock: Clock) {
                 ),
             )
         }
+    }
+
+    /**
+     * The demo's circuit linked to Block Lab's main gym, so Log climb offers it there, and a
+     * playlist of five of its climbs for tonight.
+     */
+    private suspend fun insertSamplePlaylist(db: CruxDatabase) {
+        val dataset = db.datasetDao().getDatasets().firstOrNull { it.name == "Block Lab circuit" } ?: return
+        val climbs = db.datasetDao().getClimbs(dataset.id)
+        val gym = db.placeDao().getPlaces().firstOrNull { it.name == "Block Lab" }?.let { place ->
+            db.placeDao().getSections(place.id).firstOrNull { it.type == com.hardtekpt.crux.data.model.PlaceType.GYM }
+        }
+        if (gym != null && db.datasetDao().getLinks().isEmpty()) {
+            db.datasetDao().insertLinks(listOf(com.hardtekpt.crux.data.SectionDatasetEntity(gym.id, dataset.id)))
+        }
+        val now = clock.millis()
+        val id = db.playlistDao().insertPlaylist(
+            com.hardtekpt.crux.data.PlaylistEntity(name = "Tonight", note = "Warm up, then the cave.", createdAtMillis = now, updatedAtMillis = now),
+        )
+        listOf("Blue slab", "Cave jugs", "Pinch roof", "Cave crimps", "Black overhang").mapNotNull { name -> climbs.firstOrNull { it.name == name } }
+            .forEachIndexed { position, climb ->
+                db.playlistDao().insertItem(
+                    com.hardtekpt.crux.data.PlaylistItemEntity(
+                        playlistId = id,
+                        position = position,
+                        datasetClimbId = climb.id,
+                        datasetName = dataset.name,
+                        name = climb.name,
+                        discipline = climb.discipline,
+                        gradeScale = climb.gradeScale,
+                        gradeIndex = climb.gradeIndex,
+                    ),
+                )
+            }
     }
 
     /** Adds the starter exercises and plans to a database that may already hold the climber's own. */

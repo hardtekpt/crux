@@ -114,8 +114,14 @@ data class AreaEntity(
         ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = AreaEntity::class, parentColumns = ["id"], childColumns = ["areaId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = SectionEntity::class, parentColumns = ["id"], childColumns = ["sectionId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(
+            entity = com.hardtekpt.crux.data.DatasetClimbEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sourceDatasetClimbId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("placeId"), Index("areaId"), Index("sectionId")],
+    indices = [Index("placeId"), Index("areaId"), Index("sectionId"), Index("sourceDatasetClimbId")],
 )
 data class ProblemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -137,6 +143,10 @@ data class ProblemEntity(
     val gradeColour: Long? = null,
     /** The facility it's in (schema 21); the wall's when it has one. */
     val sectionId: Long? = null,
+    /** Who set it, copied from the dataset climb it was picked from (schema 28). */
+    val setter: String? = null,
+    /** The dataset climb it was picked from; cleared when that goes (schema 28). Its name and grade are copies. */
+    val sourceDatasetClimbId: Long? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */

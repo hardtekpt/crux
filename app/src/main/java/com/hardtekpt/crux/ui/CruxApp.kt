@@ -381,9 +381,26 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                         com.hardtekpt.crux.ui.datasets.DatasetsScreen(
                             onBack = navController::popBackStack,
                             onOpen = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetRoute(it)) },
+                            onOpenPlaylist = { navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it)) },
                         )
                     }
-                    page<com.hardtekpt.crux.ui.navigation.DatasetRoute> { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = navController::popBackStack) }
+                    page<com.hardtekpt.crux.ui.navigation.DatasetRoute> {
+                        com.hardtekpt.crux.ui.datasets.DatasetScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(datasetClimbId = it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.PlaylistRoute> {
+                        com.hardtekpt.crux.ui.datasets.PlaylistScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(datasetClimbId = it)) },
+                            onOpenSession = openSession,
+                            onOpenPlaylist = {
+                                navController.popBackStack()
+                                navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it))
+                            },
+                        )
+                    }
                     page<ExerciseRecordsRoute> {
                         ExerciseRecordsScreen(
                             onBack = navController::popBackStack,
@@ -401,10 +418,20 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                         onLogClimb = { navController.navigate(LogClimbRoute()) },
                         onFinished = navController::popBackStack,
                         onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
+                        onLogDatasetClimb = { placeId, sectionId, climbId ->
+                            navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, datasetClimbId = climbId))
+                        },
                     )
                 }
                 page<LogClimbRoute> {
-                    LogClimbScreen(onDone = navController::popBackStack, onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) })
+                    LogClimbScreen(
+                        onDone = navController::popBackStack,
+                        onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) },
+                        onSwitchToLog = {
+                            navController.popBackStack()
+                            navController.navigate(LogClimbRoute(climbId = it))
+                        },
+                    )
                 }
                 page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
                 page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }

@@ -66,9 +66,17 @@ import kotlinx.serialization.Serializable
 /**
  * Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where.
  * [reuseToday]: with a [problemId], open its log from today or the running session if there is one.
+ * [datasetClimbId]: Log this climb, from a dataset.
  */
 @Serializable
-data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0, val sectionId: Long = 0, val reuseToday: Boolean = false)
+data class LogClimbRoute(
+    val climbId: Long = 0,
+    val placeId: Long = 0,
+    val problemId: Long = 0,
+    val sectionId: Long = 0,
+    val reuseToday: Boolean = false,
+    val datasetClimbId: Long = 0,
+)
 
 @Serializable data object LogWeightRoute
 
@@ -90,6 +98,9 @@ data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val probl
 @Serializable data object DatasetsRoute
 
 @Serializable data class DatasetRoute(val datasetId: Long)
+
+/** A playlist of climbs from your datasets. */
+@Serializable data class PlaylistRoute(val playlistId: Long)
 
 /** The five root destinations from the app blueprint. */
 enum class TopLevelDestination(val graph: Any, val label: String, val icon: ImageVector) {

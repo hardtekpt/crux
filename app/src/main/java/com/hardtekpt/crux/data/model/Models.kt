@@ -74,7 +74,15 @@ data class NewClimb(
     val sessionId: Long? = null,
     /** Of [attempts], how many were sends; the rest were falls. */
     val sends: Int = if (style.isSend) 1 else 0,
+    /** Where the climb was picked from, to set on it; null leaves it as it is. */
+    val source: SourceChange? = null,
 )
+
+/**
+ * Sets where a climb came from: the dataset climb it was picked from and its setter, both
+ * copied onto the climb; a null [datasetClimbId] unlinks it (the setter stays).
+ */
+data class SourceChange(val datasetClimbId: Long?, val setter: String? = null)
 
 data class PersonalBest(
     val discipline: Discipline,
