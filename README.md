@@ -44,6 +44,18 @@ tracking: your data stays on your phone.
     <td align="center"><b>Train</b><br>plans and exercises</td>
     <td align="center"><b>You</b><br>records, consistency, body</td>
   </tr>
+  <tr>
+    <td><img src="app/src/test/screenshots/catalogue_dark.png" alt="A Kilter board catalogue"></td>
+    <td><img src="app/src/test/screenshots/board_diagrams_dark.png" alt="Hold diagrams"></td>
+    <td><img src="app/src/test/screenshots/session_playlist_dark.png" alt="A playlist in a session"></td>
+    <td><img src="app/src/test/screenshots/progress_training_dark.png" alt="Training progress"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Boards</b><br>Kilter and MoonBoard catalogues</td>
+    <td align="center"><b>Hold diagrams</b><br>drawn from the board</td>
+    <td align="center"><b>Playlists</b><br>climb one after another</td>
+    <td align="center"><b>Training</b><br>plan against done</td>
+  </tr>
 </table>
 
 <details>
@@ -171,15 +183,15 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 
 ## Changelog
 
-**Unreleased**:
+**[0.5.0](https://github.com/hardtekpt/crux/releases/tag/v0.5.0)** (2026-10-15):
+- **Board climbing**: which board a facility is and the angle you climbed it at, your own climb
+  lists and playlists, **Kilter and MoonBoard catalogues** from Boardsesh files, picking climbs in
+  Log climb, **hold diagrams**, and **lighting your board** over Bluetooth (not yet tried on a real
+  board).
 - **Training progress** in Progress, with a chart for each exercise, and **Training** and
   **Exercise** widgets for Home that show what you pick.
 - **A simpler live session**: every exercise in one list, sets changed in place, and a dock for
-  rests and timers.
-- **Export as a spreadsheet** (CSV).
-- **Datasets and playlists**: lists of climbs to pick from when you log, and playlists to climb in
-  a session.
-- **Kilter and MoonBoard catalogues** from Boardsesh files, kept to your board's size.
+  rests and timers; **one page per exercise**, launcher shortcuts and **export as a spreadsheet**.
 
 **[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
 - **Weekly schedule** under *Train → Week*; Home follows it.

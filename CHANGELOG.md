@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-15
+
 ### Added
 
 - **Datasets**: keep your own lists of climbs under *You → Datasets*, for a home board, a spray
@@ -29,7 +31,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Light your board**: pair your Kilter or MoonBoard's lights from its facility in Edit place,
   then tap **Light** on a catalogue climb, in Log climb or on a session's playlist card to show its
   holds on the wall. The live notification of a playlist gets Prev, Next and Light. Nothing lights
-  by itself. Uses Bluetooth (Nearby devices), never location.
+  by itself. Uses Bluetooth (Nearby devices), never location. Not yet tried on a real board: tell
+  us how it goes.
 - **Hold diagrams**: board catalogue climbs show their holds on the board, drawn by Crux, on the
   climb sheet, in Log climb, on the session's playlist card and on climbs you logged from them. Tap
   one for the whole board.
@@ -282,7 +285,8 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.4.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.5.0...dev
+[0.5.0]: https://github.com/hardtekpt/crux/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/hardtekpt/crux/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/hardtekpt/crux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0
