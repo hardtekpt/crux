@@ -51,6 +51,11 @@ data class SectionInput(
     val routeScale: GradeScale? = null,
     /** Kept only where a scale is local. */
     val localScale: LocalScale? = null,
+    val board: com.hardtekpt.crux.data.model.BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
+    /** The datasets linked to it by hand; null leaves the links as they are. */
+    val datasetIds: Set<Long>? = null,
 )
 
 /** What the problem form edits. `id == 0` creates. */
@@ -89,6 +94,9 @@ interface PlaceRepository {
 
     suspend fun saveProblem(input: ProblemInput): Long
     suspend fun deleteProblem(id: Long)
+
+    /** Pairs (or, with null, forgets) a board section's lights. */
+    suspend fun setLights(sectionId: Long, lights: com.hardtekpt.crux.data.model.PairedLights?) {}
 }
 
 class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : PlaceRepository {
@@ -153,9 +161,17 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
 
     override fun observeProjects(): Flow<List<Project>> = dbs.observe { db ->
         val dao = db.placeDao()
-        combine(dao.observePlaces(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats()) { places, areas, problems, stats ->
+        combine(dao.observePlaces(), dao.observeAllAreas(), dao.observeAllProblems(), dao.observeProblemStats(), dao.observeAllSections()) {
+                places,
+                areas,
+                problems,
+                stats,
+                sections,
+            ->
             val placeNames = places.associate { it.id to it.name }
             val areaNames = areas.associate { it.id to it.name }
+            val sectionsByPlace = sections.groupBy { it.placeId }
+            val sectionNames = sections.associate { it.id to it.name }
             val byId = problems.associateBy { it.id }
             stats.filter { it.firstSendEpochDay == null }
                 .mapNotNull { row ->
@@ -165,6 +181,7 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                         placeName = problem.placeId?.let(placeNames::get).orEmpty(),
                         areaName = problem.areaId?.let(areaNames::get),
                         stats = row.toModel(),
+                        sectionName = problem.sectionId?.takeIf { (problem.placeId?.let(sectionsByPlace::get)?.size ?: 0) > 1 }?.let(sectionNames::get),
                     )
                 }
                 .sortedByDescending { it.stats.lastGo }
@@ -228,12 +245,30 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
                 boulderScale = section.boulderScale,
                 routeScale = route,
                 localScale = local,
+                // Kept whatever the type, so Board → Gym → Board brings it back; a size or holds
+                // the model doesn't have is dropped.
+                boardModel = section.board?.key,
+                boardSize = section.boardSize?.takeIf { section.board?.sizes?.contains(it) == true },
+                boardHolds = section.boardHolds?.key?.takeIf { section.board?.hasHolds == true },
             )
-            if (old != null) {
-                dao.updateSection(fresh.copy(id = old.id))
-                kept += old.id
+            val sectionId = if (old != null) {
+                dao.updateSection(
+                    fresh.copy(
+                        id = old.id,
+                        lightsAddress = old.lightsAddress,
+                        lightsName = old.lightsName,
+                        lightsProtocol = old.lightsProtocol,
+                        lightsOrder = old.lightsOrder,
+                    ),
+                )
+                old.id
             } else {
-                kept += dao.insertSection(fresh)
+                dao.insertSection(fresh)
+            }
+            kept += sectionId
+            section.datasetIds?.let { ids ->
+                db.datasetDao().clearLinks(sectionId)
+                db.datasetDao().insertLinks(ids.map { com.hardtekpt.crux.data.SectionDatasetEntity(sectionId, it) })
             }
         }
         before.keys.filter { it !in kept }.forEach { id ->
@@ -305,6 +340,12 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
             createdAtMillis = existing?.createdAtMillis ?: clock.millis(),
             gradeLabel = input.gradeLabel.takeIf { input.gradeScale.isLocal },
             gradeColour = input.gradeColour.takeIf { input.gradeScale.isLocal },
+            // Where it was picked from stays; this form doesn't change it.
+            setter = existing?.setter,
+            sourceDatasetClimbId = existing?.sourceDatasetClimbId,
+            sourceCatalogueUuid = existing?.sourceCatalogueUuid,
+            holds = existing?.holds,
+            holdsBoard = existing?.holdsBoard,
         )
         return if (existing != null) {
             dao.updateProblem(entity)
@@ -328,6 +369,20 @@ class OfflinePlaceRepository @Inject constructor(private val dbs: CruxDatabases,
         }
     }
 
+    override suspend fun setLights(sectionId: Long, lights: com.hardtekpt.crux.data.model.PairedLights?) {
+        val dao = dbs.current().placeDao()
+        val section = dao.getAllSections().firstOrNull { it.id == sectionId } ?: return
+        dao.updateSection(
+            section.copy(
+                lightsAddress = lights?.address,
+                lightsName = lights?.name,
+                lightsProtocol = lights?.protocol,
+                lightsOrder =
+                    lights?.order ?: 0,
+            ),
+        )
+    }
+
     override suspend fun deleteProblem(id: Long) {
         val db = dbs.current()
         db.withTransaction {
@@ -346,7 +401,23 @@ internal fun PlaceEntity.toModel(sections: List<SectionEntity> = emptyList()) = 
         compareBy({
             it.position
         }, { it.id }),
-    ).map { Section(it.id, it.placeId, it.type, it.name, it.boulderScale, it.routeScale, LocalScale.decode(it.localScale)) },
+    ).map {
+        Section(
+            it.id,
+            it.placeId,
+            it.type,
+            it.name,
+            it.boulderScale,
+            it.routeScale,
+            LocalScale.decode(it.localScale),
+            com.hardtekpt.crux.data.model.BoardModel.fromKey(it.boardModel),
+            it.boardSize,
+            com.hardtekpt.crux.data.model.BoardHolds.fromKey(it.boardHolds),
+            it.lightsAddress?.let { address ->
+                com.hardtekpt.crux.data.model.PairedLights(address, it.lightsName.orEmpty(), it.lightsProtocol ?: 0, it.lightsOrder)
+            },
+        )
+    },
 )
 
 internal fun PlaceEntity.Companion.parseTypes(text: String): List<PlaceType> =
@@ -369,6 +440,11 @@ internal fun ProblemEntity.toModel() = Problem(
     gradeLabel = gradeLabel,
     gradeColour = gradeColour,
     sectionId = sectionId,
+    setter = setter,
+    sourceDatasetClimbId = sourceDatasetClimbId,
+    sourceCatalogueUuid = sourceCatalogueUuid,
+    holds = holds,
+    holdsBoard = holdsBoard,
 )
 
 private fun ProblemStatsRow.toModel() = ProblemStats(

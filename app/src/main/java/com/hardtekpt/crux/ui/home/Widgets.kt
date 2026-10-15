@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,12 +24,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hardtekpt.crux.data.TrainingStat
 import com.hardtekpt.crux.data.dashboard.DashboardWidget
 import com.hardtekpt.crux.data.dashboard.WidgetSize
 import com.hardtekpt.crux.data.dashboard.WidgetType
 import com.hardtekpt.crux.data.model.Project
 import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.charts.BarChart
+import com.hardtekpt.crux.ui.charts.BarDatum
 import com.hardtekpt.crux.ui.charts.ChartCard
 import com.hardtekpt.crux.ui.charts.DonutChart
 import com.hardtekpt.crux.ui.charts.SeriesPoint
@@ -46,6 +49,12 @@ import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.gradeState
 import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.outcomeLine
+import com.hardtekpt.crux.ui.progress.ProgressRing
+import com.hardtekpt.crux.ui.progress.TrainingWeek
+import com.hardtekpt.crux.ui.progress.WeekBars
+import com.hardtekpt.crux.ui.progress.headlineShown
+import com.hardtekpt.crux.ui.progress.headlineUnit
+import com.hardtekpt.crux.ui.progress.minutesLabel
 import com.hardtekpt.crux.ui.relativeLabel
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.signedOneDecimal
@@ -54,6 +63,7 @@ import com.hardtekpt.crux.ui.weight
 import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightUnit
 import com.hardtekpt.crux.ui.weightValue
+import com.hardtekpt.crux.ui.you.describe
 import java.time.LocalDate
 
 /** Where a widget's taps lead. Ignored while the dashboard is being edited. */
@@ -67,6 +77,9 @@ data class WidgetActions(
     val openWeekClimbs: () -> Unit = {},
     val openMeasurements: () -> Unit = {},
     val startPlan: (Long) -> Unit = {},
+    val openExercise: (Long) -> Unit = {},
+    val openPlace: (Long) -> Unit = {},
+    val logAtPlace: (Long) -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -163,6 +176,22 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
 
         WidgetType.CONSISTENCY -> ConsistencyWidget(state, large, actions.openYou, modifier)
+
+        WidgetType.MY_GYM -> MyGymWidget(state, large, actions, modifier)
+
+        WidgetType.TRAINING -> TrainingWidget(
+            widget.stat ?: TrainingStat.ON_PLAN,
+            state,
+            widget.size,
+            modifier.clickable(onClick = actions.openProgress).testTag("widget_training"),
+        )
+
+        WidgetType.EXERCISE -> ExerciseWidget(
+            widget.exerciseId,
+            state,
+            widget.size,
+            modifier.clickable { widget.exerciseId?.let(actions.openExercise) }.testTag("widget_exercise"),
+        )
     }
 }
 
@@ -212,25 +241,54 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (large) {
-            Column(Modifier.padding(top = CruxTheme.space.s2), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                plan.blocks.flatMap { it.items }.forEach { item ->
-                    Row {
-                        Text(item.exercise.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        // The day's plan in detail: each block, and each exercise with what it asks for. Wide shows
+        // the first few exercises; large shows them all.
+        val imperial = LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+        val total = plan.blocks.sumOf { it.items.size }
+        var budget = if (large) Int.MAX_VALUE else WIDE_PLAN_ROWS
+        Column(
+            Modifier.padding(top = CruxTheme.space.s2).testTag("todays_plan_detail"),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            plan.blocks.forEach { block ->
+                if (budget <= 0 || block.items.isEmpty()) return@forEach
+                if (block.name.isNotBlank()) {
+                    Text(
+                        block.name.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                block.items.take(budget).forEach { item ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            item.prescription(LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+                            item.exercise.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text(
+                            item.prescription(imperial),
                             style = CruxTheme.type.code,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // Each side keeps at least half the row, so neither shrinks to a letter.
+                            modifier = Modifier.weight(1f, fill = false).padding(start = CruxTheme.space.s2),
                         )
                     }
                 }
+                budget -= block.items.size
             }
-        } else {
-            Text(
-                plan.blocks.joinToString(" · ") { it.name },
-                style = CruxTheme.type.code,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (!large && total > WIDE_PLAN_ROWS) {
+                Text(
+                    "and ${total - WIDE_PLAN_ROWS} more",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (state.schedule.isNotEmpty()) com.hardtekpt.crux.ui.train.WeekStrip(state.schedule, state.today, Modifier.padding(top = CruxTheme.space.s3))
         Row(
@@ -411,7 +469,7 @@ private fun ProjectLine(project: Project, today: LocalDate, actions: WidgetActio
         Column(Modifier.weight(1f)) {
             Text(project.problem.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(project.placeName.ifBlank { null }, project.areaName).joinToString(" · ").ifBlank { "No place" },
+                project.whereLabel.ifBlank { "No place" },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,
@@ -468,6 +526,175 @@ private fun ConsistencyWidget(state: HomeUiState, large: Boolean, onOpen: () -> 
                 com.hardtekpt.crux.ui.you.ProfileStat("${state.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
                 com.hardtekpt.crux.ui.you.ProfileStat(state.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
             }
+        }
+    }
+}
+
+/** A training figure this week as text: "3/4" on plan, "1 h 20 min" trained, else a count. */
+private fun TrainingWeek.figure(stat: TrainingStat, scheduled: Boolean): String = when (stat) {
+    TrainingStat.ON_PLAN -> if (scheduled) "$done/$planned" else sessions.toString()
+    TrainingStat.TIME -> minutesLabel(minutes)
+    else -> formatTick(value(stat))
+}
+
+/**
+ * One training figure, chosen when it's added: small, this week's figure (On plan as a ring);
+ * wide and large, the figure week by week.
+ */
+@Composable
+private fun TrainingWidget(stat: TrainingStat, state: HomeUiState, size: WidgetSize, modifier: Modifier) {
+    val training = state.training
+    val week = training.thisWeek
+    val lastWeek = training.weeks.getOrNull(training.weeks.size - 2)
+    val scheduled = training.scheduled
+    if (size == WidgetSize.SMALL) {
+        if (stat == TrainingStat.ON_PLAN && scheduled && week != null) {
+            CruxCard(modifier = modifier.fillMaxWidth()) {
+                Text(stat.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ProgressRing(
+                    week.done.toFloat() / week.planned.coerceAtLeast(1),
+                    "${week.done}/${week.planned}",
+                    Modifier.padding(vertical = CruxTheme.space.s1).testTag("training_ring"),
+                )
+                Text("this week", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            StatTile(
+                label = if (stat == TrainingStat.ON_PLAN && !scheduled) "Sessions" else stat.label,
+                value = if (state.isLoading || week == null) "–" else week.figure(stat, scheduled),
+                delta = lastWeek?.let { "this week · ${it.figure(stat, scheduled)} last" } ?: "this week",
+                isPersonalBest = stat == TrainingStat.NEW_BESTS && (week?.newBests ?: 0) > 0,
+                modifier = modifier,
+                valueModifier = Modifier.testTag("training_figure"),
+            )
+        }
+        return
+    }
+    val weeks = if (size == WidgetSize.LARGE) training.weeks else training.weeks.takeLast(6)
+    ChartCard(
+        title = if (stat == TrainingStat.ON_PLAN && !scheduled) "Sessions per week" else "${stat.label} per week",
+        trailing = week?.let { "${it.figure(stat, scheduled)} this week" },
+        modifier = modifier,
+    ) {
+        when {
+            training.isEmpty -> EmptyWidgetText("Finish a session to see your training here.")
+
+            stat == TrainingStat.ON_PLAN -> WeekBars(weeks, scheduled, height = if (size == WidgetSize.LARGE) 120.dp else 72.dp)
+
+            else -> BarChart(
+                bars = weeks.map { BarDatum(it.start.shortLabel(), it.value(stat)) },
+                formatValue = { if (stat == TrainingStat.TIME) minutesLabel(it.toInt()) else formatTick(it) },
+                height = if (size == WidgetSize.LARGE) 170.dp else 110.dp,
+                description = "${stat.label} per week",
+            )
+        }
+    }
+}
+
+/**
+ * One exercise, chosen when it's added: small, its best; wide and large, its best set per day over
+ * 3 months or a year.
+ */
+@Composable
+private fun ExerciseWidget(exerciseId: Long?, state: HomeUiState, size: WidgetSize, modifier: Modifier) {
+    val progress = state.training.exercises.firstOrNull { it.exercise.id == exerciseId }
+    val imperial = LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+    if (progress == null) {
+        StatTile(
+            label = "Exercise",
+            value = "–",
+            delta = if (exerciseId == null) "choose an exercise" else "no results yet",
+            modifier = modifier,
+        )
+        return
+    }
+    val metric = progress.exercise.metric
+    if (size == WidgetSize.SMALL) {
+        StatTile(
+            label = progress.exercise.name,
+            value = formatTick(metric.headlineShown(progress.best, imperial)),
+            unit = metric.headlineUnit(imperial),
+            delta = "best · ${progress.best.date.shortLabel()}",
+            isPersonalBest = progress.bestIsNew(state.today),
+            modifier = modifier,
+            valueModifier = Modifier.testTag("exercise_best"),
+        )
+        return
+    }
+    val large = size == WidgetSize.LARGE
+    val start = state.today.minusDays(if (large) 365 else 91)
+    val days = progress.days.filter { !it.date.isBefore(start) }.sortedBy { it.date }
+    ChartCard(title = progress.exercise.name, trailing = "best " + progress.best.describe(metric, imperial), modifier = modifier) {
+        if (days.size < 2) {
+            EmptyWidgetText("Train it on two days to see how it moves.")
+        } else {
+            TimeSeriesChart(
+                points = days.map { SeriesPoint(it.date.toEpochDay().toDouble(), metric.headlineShown(it.best, imperial)) },
+                formatX = { LocalDate.ofEpochDay(it.toLong()).shortLabel() },
+                formatY = { formatTick(it) },
+                unit = " " + metric.headlineUnit(imperial),
+                height = if (large) 190.dp else 120.dp,
+                description = "${progress.exercise.name}: best set per day",
+            )
+        }
+    }
+}
+
+/** How many of today's exercises the wide Today's plan widget lists before "and N more". */
+private const val WIDE_PLAN_ROWS = 4
+
+/**
+ * The place you climb at most: your days and climbs there this month, when you were last there,
+ * its open projects (three, or six when large), Log here and a way into the place.
+ */
+@Composable
+private fun MyGymWidget(state: HomeUiState, large: Boolean, actions: WidgetActions, modifier: Modifier) {
+    val gym = state.myGym
+    CruxCard(modifier = modifier.fillMaxWidth().testTag("widget_my_gym")) {
+        Text("My gym".uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (gym == null) {
+            EmptyWidgetText("Log a climb at a place and it shows here, with its projects and Log here.")
+            return@CruxCard
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(gym.name, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        }
+        Text(
+            listOf(
+                "${gym.daysLast30} ${if (gym.daysLast30 == 1) "day" else "days"} and ${gym.climbsLast30} ${if (gym.climbsLast30 == 1) "climb" else "climbs"} in 30 days",
+                "last here ${gym.lastVisit.relativeLabel(state.today).lowercase()}",
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val projects = gym.projects.take(if (large) 6 else 3)
+        if (projects.isNotEmpty()) {
+            Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
+                projects.forEachIndexed { index, project ->
+                    if (index > 0) {
+                        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                    }
+                    ProjectLine(project, state.today, actions)
+                }
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = CruxTheme.space.s2),
+        ) {
+            CruxButton(
+                text = "Log here",
+                onClick = { actions.logAtPlace(gym.placeId) },
+                icon = Icons.Rounded.Add,
+                modifier = Modifier.testTag("my_gym_log"),
+            )
+            CruxButton(
+                text = "Open",
+                onClick = { actions.openPlace(gym.placeId) },
+                variant = CruxButtonVariant.Outlined,
+                modifier = Modifier.testTag("my_gym_open"),
+            )
         }
     }
 }

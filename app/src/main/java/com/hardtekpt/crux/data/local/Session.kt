@@ -33,6 +33,9 @@ data class SessionEntity(
     /** How hard it felt, 1 to 10. */
     val effort: Int? = null,
     val notes: String? = null,
+    /** A playlist being climbed in the session, and which of its climbs is up (schema 28). */
+    val playlistId: Long? = null,
+    @ColumnInfo(defaultValue = "0") val playlistIndex: Int = 0,
 )
 
 /** One exercise in a session, with its target as planned (or as added on the fly). */
@@ -98,6 +101,9 @@ interface SessionDao {
     @Insert
     suspend fun insertSession(session: SessionEntity): Long
 
+    @Query("SELECT COUNT(*) FROM sessions")
+    suspend fun countAll(): Int
+
     @Update
     suspend fun updateSession(session: SessionEntity)
 
@@ -140,6 +146,13 @@ interface SessionDao {
     @Query("DELETE FROM session_sets WHERE itemId = :itemId AND setIndex = :setIndex")
     suspend fun deleteSet(itemId: Long, setIndex: Int)
 
+    /** Changes what an exercise in a session asks for; the plan it came from stays as it is. */
+    @Query(
+        "UPDATE session_items SET sets = :sets, reps = :reps, seconds = :seconds, loadKg = :loadKg, " +
+            "restSeconds = :restSeconds, repRestSeconds = :repRestSeconds WHERE id = :itemId",
+    )
+    suspend fun updateTarget(itemId: Long, sets: Int, reps: Int, seconds: Int, loadKg: Double, restSeconds: Int, repRestSeconds: Int)
+
     @Query("SELECT s.* FROM session_sets s JOIN session_items i ON i.id = s.itemId WHERE i.sessionId = :sessionId ORDER BY s.itemId, s.setIndex")
     fun observeSets(sessionId: Long): Flow<List<SessionSetEntity>>
 
@@ -161,4 +174,7 @@ interface SessionDao {
     /** Its sets go with them. */
     @Query("DELETE FROM session_items WHERE sessionId = :sessionId")
     suspend fun deleteItems(sessionId: Long)
+
+    @Query("DELETE FROM session_items WHERE id = :itemId AND NOT EXISTS (SELECT 1 FROM session_sets WHERE itemId = :itemId)")
+    suspend fun deleteItemWithoutSets(itemId: Long)
 }

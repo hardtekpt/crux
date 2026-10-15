@@ -2,6 +2,9 @@
 # Runs on PRs into main, by hand, before every release (release.yml calls it), and on pushes to
 # ci/* branches (git push origin HEAD:ci/device-tests) for a run from any commit.
 # Not on every dev push: an emulator run takes ~15 minutes of the Actions allowance.
+# Before a release it also runs the startup and scrolling benchmarks (:baselineprofile), for
+# numbers to compare between releases; an emulator's are only a rough guide, so they never fail
+# the run.
 name: Device tests
 
 on:
@@ -10,7 +13,16 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      benchmarks:
+        description: Also run the startup and scrolling benchmarks
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      benchmarks:
+        type: boolean
+        default: false
 
 jobs:
   device-tests:
@@ -59,6 +71,15 @@ jobs:
           script: |
             ./gradlew connectedDebugAndroidTest
             ./scripts/release-smoke.sh
+            if [ "${{ inputs.benchmarks }}" = "true" ]; then ./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR || echo "Benchmarks didn't finish; see the report"; fi
+
+      - name: Upload benchmark results
+        if: ${{ inputs.benchmarks }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks
+          path: baselineprofile/build/outputs/connected_android_test_additional_output/
+          if-no-files-found: warn
 
       - name: Upload reports
         if: failure()

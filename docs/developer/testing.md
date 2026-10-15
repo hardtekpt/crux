@@ -22,6 +22,12 @@
   `BackupViewModelTest` walks the duplicate questions.
 - **Database safety**: `DatabaseSnapshotsTest` (copies before migrations), `SchemaExportTest`
   (every schema version has its exported JSON).
+- **Boards and datasets**: `DatasetFilesTest` and `PlaylistFilesTest` (file formats, matching,
+  grade conversion, which datasets a facility uses), `CatalogueImporterTest` (a small Boardsesh-shaped
+  snapshot built in the test: size filtering, per-angle grades, re-import), `BoardGeometryTest` (the
+  built-in positions), `BoardLightsTest` (Aurora v2/v3 frames, including the known clear frame, and
+  the MoonBoard command and LED order), `BoardAngleNoteTest`. Real Boardsesh files are never
+  committed. Bluetooth itself can't run on the emulator: lighting is checked on Boss's boards.
 - **Compose components** (Robolectric): the input kit, list rows, and so on.
 
 ### Coroutines
@@ -40,6 +46,11 @@ Pixel 7 size. Goldens:
 - Dark Home, Journal, Progress, You, Train, Session, Log climb and Place are the **store
   screenshots**: `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 - Everything else (light themes, Settings) is in `app/src/test/screenshots/`.
+- `session_resting_dark` and `session_timer_big_dark` show a rest in the dock and an exercise's
+  interval timer made big.
+- `progress_training_*`, `exercise_progress_dark` and `home_training_dark` show the Training tab, an
+  exercise's page and Home with the Training and Exercise widgets. The demo data has six weeks of
+  finished sessions for them.
 - `*_text_largest_dark` render Home, Log climb, Session and Settings with 1.69× text
   (`@Config(fontScale = …)`), to catch text that clips or overlaps when the font is large.
 - `home_{blue,violet,pink,chalk}_{dark,light}` show Home in some of the accents other than teal.

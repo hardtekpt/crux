@@ -109,6 +109,12 @@ abstract class RepositoryModule {
     abstract fun bindClimbRepository(impl: OfflineClimbRepository): ClimbRepository
 
     @Binds
+    abstract fun bindDatasetRepository(impl: com.hardtekpt.crux.data.OfflineDatasetRepository): com.hardtekpt.crux.data.DatasetRepository
+
+    @Binds
+    abstract fun bindPlaylistRepository(impl: com.hardtekpt.crux.data.OfflinePlaylistRepository): com.hardtekpt.crux.data.PlaylistRepository
+
+    @Binds
     abstract fun bindNoteRepository(impl: com.hardtekpt.crux.data.OfflineNoteRepository): com.hardtekpt.crux.data.NoteRepository
 
     @Binds

@@ -68,6 +68,17 @@ data class SectionEntity(
     val routeScale: GradeScale? = null,
     /** This section's own grades as JSON ([com.hardtekpt.crux.data.model.LocalScale]). */
     val localScale: String? = null,
+    /** Board sections: which board ([com.hardtekpt.crux.data.model.BoardModel.key]); null is a custom board (schema 26). */
+    val boardModel: String? = null,
+    /** Kilter boards: the size, "12x12". */
+    val boardSize: String? = null,
+    /** Kilter Homewall: "full_ride" or "mainline". */
+    val boardHolds: String? = null,
+    /** The board's lights paired on this phone (schema 31): its Bluetooth address and name, the protocol it speaks, and a MoonBoard's LED order. */
+    val lightsAddress: String? = null,
+    val lightsName: String? = null,
+    val lightsProtocol: Int? = null,
+    @ColumnInfo(defaultValue = "0") val lightsOrder: Int = 0,
 )
 
 /** A wall or sector inside a place; for a board, a named set. */
@@ -108,8 +119,14 @@ data class AreaEntity(
         ForeignKey(entity = PlaceEntity::class, parentColumns = ["id"], childColumns = ["placeId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = AreaEntity::class, parentColumns = ["id"], childColumns = ["areaId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = SectionEntity::class, parentColumns = ["id"], childColumns = ["sectionId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(
+            entity = com.hardtekpt.crux.data.DatasetClimbEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sourceDatasetClimbId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("placeId"), Index("areaId"), Index("sectionId")],
+    indices = [Index("placeId"), Index("areaId"), Index("sectionId"), Index("sourceDatasetClimbId")],
 )
 data class ProblemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -131,6 +148,16 @@ data class ProblemEntity(
     val gradeColour: Long? = null,
     /** The facility it's in (schema 21); the wall's when it has one. */
     val sectionId: Long? = null,
+    /** Who set it, copied from the dataset climb it was picked from (schema 28). */
+    val setter: String? = null,
+    /** The dataset climb it was picked from; cleared when that goes (schema 28). Its name and grade are copies. */
+    val sourceDatasetClimbId: Long? = null,
+    /** The board catalogue climb it was picked from, by the board's id, which a re-import keeps (schema 29). */
+    val sourceCatalogueUuid: String? = null,
+    /** Its holds as the board lists them ("p4125r42…"), copied when picked from a catalogue (schema 30). */
+    val holds: String? = null,
+    /** Whose hold positions [holds] are: "kilter:8:25" (layout and size), "moonboard:7". */
+    val holdsBoard: String? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */

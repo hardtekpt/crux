@@ -89,6 +89,9 @@ class StarterDataSeeder(private val clock: Clock) {
                 insertProfileSamples(db)
             }
             if (includeSampleData && db.scheduleDao().getAll().isEmpty()) insertSampleSchedule(db)
+            if (includeSampleData && db.sessionDao().countAll() == 0) insertSampleSessions(db)
+            if (includeSampleData && db.datasetDao().getDatasets().isEmpty()) insertSampleDataset(db)
+            if (includeSampleData && db.playlistDao().getPlaylists().isEmpty()) insertSamplePlaylist(db)
         }
     }
 
@@ -119,6 +122,147 @@ class StarterDataSeeder(private val clock: Clock) {
                 climb(java.time.DayOfWeek.SATURDAY, 0, place),
             ),
         )
+    }
+
+    /**
+     * Six weeks of finished sessions for the demo, so Training progress has something to show:
+     * hangs on Mondays and strength on Tuesdays (two Tuesdays missed), each a little heavier.
+     */
+    private suspend fun insertSampleSessions(db: CruxDatabase) {
+        val zone = clock.zone
+        val today = LocalDate.now(clock)
+        val monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val exercises = db.exerciseDao().getAll().associate { it.name to it.id }
+        val plans = db.templateDao().getAll().associate { it.template.name to it.template.id }
+        val dao = db.sessionDao()
+
+        suspend fun session(date: LocalDate, plan: String, minutes: Int, work: List<Triple<String, Int, (Int) -> Triple<Int?, Int?, Double?>>>) {
+            if (!date.isBefore(today)) return
+            val start = date.atTime(18, 30).atZone(zone).toInstant().toEpochMilli()
+            val id = dao.insertSession(
+                com.hardtekpt.crux.data.local.SessionEntity(
+                    name = plan,
+                    templateId = plans[plan],
+                    startedAtMillis = start,
+                    endedAtMillis = start + minutes * 60_000L,
+                    status = com.hardtekpt.crux.data.local.SessionStatus.FINISHED,
+                    effort = 7,
+                ),
+            )
+            work.forEachIndexed { position, (name, sets, values) ->
+                val exerciseId = exercises[name] ?: return@forEachIndexed
+                val (reps, seconds, load) = values(0)
+                val itemId = dao.insertItem(
+                    com.hardtekpt.crux.data.local.SessionItemEntity(
+                        sessionId = id,
+                        exerciseId = exerciseId,
+                        position = position,
+                        sets = sets,
+                        reps = reps ?: 0,
+                        seconds = seconds ?: 0,
+                        loadKg = load ?: 0.0,
+                        restSeconds = 180,
+                    ),
+                )
+                (0 until sets).forEach { index ->
+                    val (r, t, l) = values(index)
+                    dao.insertSet(
+                        com.hardtekpt.crux.data.local.SessionSetEntity(
+                            itemId = itemId,
+                            setIndex = index,
+                            reps = r,
+                            seconds = t,
+                            loadKg = l,
+                            completedAtMillis = start + (position * sets + index + 1) * 4 * 60_000L,
+                        ),
+                    )
+                }
+            }
+        }
+
+        (6 downTo 1).forEach { back ->
+            val week = monday.minusWeeks(back.toLong())
+            val step = 6 - back
+            session(
+                week,
+                "Max hangs + limit bouldering",
+                55 + step,
+                listOf(Triple("Half-crimp hang", 5) { _: Int -> Triple(null, 10, 10.0 + step * 1.25) }),
+            )
+            if (back != 4 && back != 2) {
+                session(
+                    week.plusDays(1),
+                    "Strength day",
+                    48 + step,
+                    listOf(
+                        Triple("Weighted pull-ups", 5) { set: Int -> Triple(if (set == 4) 4 else 5, null, 15.0 + step * 1.25) },
+                        Triple("Front lever tucks", 3) { _: Int -> Triple(null, 8 + step, null) },
+                    ),
+                )
+            }
+        }
+    }
+
+    /** A gym circuit as a dataset for the demo: 12 climbs at Block Lab, no board, in Font. */
+    private suspend fun insertSampleDataset(db: CruxDatabase) {
+        val now = clock.millis()
+        val dao = db.datasetDao()
+        val id = dao.insertDataset(
+            com.hardtekpt.crux.data.DatasetEntity(
+                name = "Block Lab circuit",
+                boulderScale = com.hardtekpt.crux.data.model.GradeScale.FONT,
+                createdAtMillis = now,
+                updatedAtMillis = now,
+            ),
+        )
+        val grades = com.hardtekpt.crux.data.model.GradeScale.FONT.grades
+        SAMPLE_CIRCUIT.forEachIndexed { index, (name, grade, note) ->
+            dao.insertClimb(
+                com.hardtekpt.crux.data.DatasetClimbEntity(
+                    datasetId = id,
+                    name = name,
+                    gradeScale = com.hardtekpt.crux.data.model.GradeScale.FONT.takeIf { grade != null },
+                    gradeIndex = grade?.let(grades::indexOf),
+                    setter = if (index % 3 == 0) "Rita" else null,
+                    note = note,
+                    createdAtMillis = now + index,
+                ),
+            )
+        }
+    }
+
+    /**
+     * The demo's circuit linked to Block Lab's main gym, so Log climb offers it there, and a
+     * playlist of five of its climbs for tonight.
+     */
+    private suspend fun insertSamplePlaylist(db: CruxDatabase) {
+        val dataset = db.datasetDao().getDatasets().firstOrNull { it.name == "Block Lab circuit" } ?: return
+        val climbs = db.datasetDao().getClimbs(dataset.id)
+        val gym = db.placeDao().getPlaces().firstOrNull { it.name == "Block Lab" }?.let { place ->
+            db.placeDao().getSections(place.id).firstOrNull { it.type == com.hardtekpt.crux.data.model.PlaceType.GYM }
+        }
+        if (gym != null && db.datasetDao().getLinks().isEmpty()) {
+            db.datasetDao().insertLinks(listOf(com.hardtekpt.crux.data.SectionDatasetEntity(gym.id, dataset.id)))
+        }
+        val now = clock.millis()
+        val id = db.playlistDao().insertPlaylist(
+            com.hardtekpt.crux.data.PlaylistEntity(name = "Tonight", note = "Warm up, then the cave.", createdAtMillis = now, updatedAtMillis = now),
+        )
+        listOf("Blue slab", "Cave jugs", "Pinch roof", "Cave crimps", "Black overhang").mapNotNull { name -> climbs.firstOrNull { it.name == name } }
+            .forEachIndexed { position, climb ->
+                db.playlistDao().insertItem(
+                    com.hardtekpt.crux.data.PlaylistItemEntity(
+                        playlistId = id,
+                        position = position,
+                        datasetClimbId = climb.id,
+                        datasetName = dataset.name,
+                        name = climb.name,
+                        discipline = climb.discipline,
+                        gradeScale = climb.gradeScale,
+                        gradeIndex = climb.gradeIndex,
+                    ),
+                )
+            }
     }
 
     /** Adds the starter exercises and plans to a database that may already hold the climber's own. */
@@ -255,7 +399,15 @@ class StarterDataSeeder(private val clock: Clock) {
         }.toMap()
         SAMPLE_PLACES.filter { it.boardAreas.isNotEmpty() }.forEach { sample ->
             val board = placeDao.insertSection(
-                SectionEntity(placeId = placeIds.getValue(sample.name), type = PlaceType.BOARD, name = sample.boardName, position = 1),
+                SectionEntity(
+                    placeId = placeIds.getValue(sample.name),
+                    type = PlaceType.BOARD,
+                    name = sample.boardName,
+                    position = 1,
+                    // The demo's Kilter board says which one it is.
+                    boardModel = com.hardtekpt.crux.data.model.BoardModel.KILTER_ORIGINAL.key.takeIf { sample.boardName.startsWith("Kilter") },
+                    boardSize = "12x12".takeIf { sample.boardName.startsWith("Kilter") },
+                ),
             )
             sample.boardAreas.forEachIndexed { index, area ->
                 placeDao.insertArea(
@@ -345,6 +497,22 @@ private val SAMPLE_RECORDS = listOf(
     SampleRecord("Weighted pull-ups", 21, reps = 5, loadKg = 20.0),
     SampleRecord("Weighted pull-ups", 6, reps = 5, loadKg = 22.5),
     SampleRecord("Front lever tucks", 9, seconds = 14),
+)
+
+/** The demo's gym circuit: name, Font grade (null for one not graded yet) and a note. */
+private val SAMPLE_CIRCUIT = listOf(
+    Triple("Blue slab", "5+", "warm-up"),
+    Triple("Cave jugs", "6A", null),
+    Triple("Pinch roof", "6B", null),
+    Triple("Yellow arete", "6B+", "heel hook on the left"),
+    Triple("Cave crimps", "6B+", null),
+    Triple("Pink sloper traverse", "6C", null),
+    Triple("Comp wall dyno", "6C", "jump from the two pinches"),
+    Triple("Black overhang", "6C+", null),
+    Triple("Purple compression", "7A", null),
+    Triple("Red mono", "7A", "careful on the finger"),
+    Triple("Slab of doom", "7A+", null),
+    Triple("New set in the cave", null, "no grade yet"),
 )
 
 private val SAMPLE_NOTE_TAGS = listOf("injury", "beta", "training")

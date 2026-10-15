@@ -14,8 +14,8 @@ consistency). Built for Boss's Pixel 8a, with an emulator for testing.
 - **The phone runs the `internal` build** (release-like: R8, baseline profile, not debuggable; same
   app id and key as debug, so data stays). Install it with `./gradlew :app:assembleInternal` and
   `adb install -r app/build/outputs/apk/internal/app-internal.apk` to `192.168.1.128:<port>` over
-  wireless debugging (the port changes, last one was **40799**; ask Boss when `adb connect` is
-  refused). Never install `app-debug.apk` on the phone. Because it isn't debuggable, `run-as`
+  wireless debugging. The phone's address changes between `192.168.1.128` and `192.168.1.242`, and the
+  port changes every time wireless debugging restarts: ask Boss for it when `adb connect` is refused. Never install `app-debug.apk` on the phone. Because it isn't debuggable, `run-as`
   backups don't work: ask Boss to export from Settings → Backups before a risky install.
 - Gradle from a shell needs `JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'`.
 - **Never run device tests on the phone**: connected tests uninstall the app (wipes data).
@@ -25,18 +25,57 @@ consistency). Built for Boss's Pixel 8a, with an emulator for testing.
   Input kit preview: https://claude.ai/artifact/XGd4dKtVPqvnSBhZerD7Ea
 
 ## Process (current)
-Test runs and installs go through two dedicated project threads, relayed by the coordinator
-session (`send_message` to `@parent`): **Tests** and **Phone and emulator**. Commit before any
-handoff (the runners use the shared checkout or a clean clone of the commit). Ask for device
-tests first and the install only after they finish (tests uninstall the app from the emulator).
+- The main app thread builds features, runs `spotlessCheck verifyRoborazziDebug lintDebug` and the
+  device tests on `emulator-5554` (`ANDROID_SERIAL`), commits on `dev`, pushes, and installs the
+  `internal` build on the emulator and the phone.
+- The **Crux quick fixes** thread takes small doc, test and app map pieces, relayed by the
+  coordinator session (`send_message` to `@parent`). It owns `docs/app-map/` and captures on the
+  second emulator (`emulator-5556`); report page changes to it so the map stays complete.
+- The shared checkout is used by several sessions at once: pull before starting, and commit with
+  explicit paths when someone else has work in progress.
+- **Before installing a build that changes the database on the phone, Boss makes a backup**
+  (Settings → Backups). Never merge or push `main` without an explicit release ask.
 
 ## Stack
 Kotlin 2.4, AGP 9.4 (built-in Kotlin), Compose (BOM 2026.09), Material 3, Navigation Compose
 (type-safe, nested graph per tab), Hilt, Room 2.8 with exported schemas and auto-migrations
-(now **schema 25**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
-Two databases: the climber's own and a demo one (Settings → Demo mode).
+(now **schema 31**), DataStore prefs, kotlinx.serialization, osmdroid (OpenStreetMap, no key).
+Two databases: the climber's own and a demo one (Settings → Demo mode), plus a separate catalogue
+database (`crux-catalogue.db`) for imported board catalogues, which is never backed up.
 
 ## What's done (latest first)
+
+Since 0.4.0 (all on `dev`, not released yet; see CHANGELOG *Unreleased*):
+- **Board integrations** (plan: https://claude.ai/artifact/MFD5uiGt6EB7SgMN1y3Hkv):
+  - **Board lights** (schema 31, `91a042c`): pair a Kilter or MoonBoard from its facility in Edit
+    place (`CompanionDeviceManager`, Nearby devices only, no location), and tap **Light** on a
+    catalogue climb, in Log climb or on the session playlist card; the playlist's live notification
+    has Prev, Light and Next. Nothing lights by itself (Boss's choice). `BoardLights` encodes Aurora v2/v3
+    and the MoonBoard text command (unit-tested); `BoardLink` owns the Bluetooth link. **Not yet tried
+    on real boards**: Boss will test on a Kilter Original and a MoonBoard.
+  - **Hold diagrams** (schema 30, `a00d84c`): `BoardDiagram` draws a climb's holds from
+    `assets/board_holes.json` (positions, sizes and LED numbers, made by `scripts/board_holes.py`
+    from Boardsesh's hardware catalogue; built in by Boss's choice). Logging copies holds onto the climb.
+  - **Board catalogues** (schema 29, `2e281ae`): import a Boardsesh snapshot (`.db`/`.db.gz`) for a
+    Kilter Original/Homewall (kept to your size) or any MoonBoard; browse at each angle, log, add to
+    playlists, pick in the Climb step. Climbs live in the catalogue database; backups keep only which
+    catalogue climb yours came from (by the board's uuid).
+  - **Climb step and playlists** (schema 28, `37aae2b`): datasets link to facilities (same board
+    automatically, others by hand); Log climb's Where sheet ends with a Climb step, a linked name row
+    and a grade hint; playlists with a session card (+ Fell, + Sent, Prev, Next).
+  - **Datasets** (schema 27, `c35e9f4`): your own climb lists under You → Datasets, CSV and
+    `.crux-dataset.json` import and export, in backups.
+  - **Boards on facilities** (schema 26, `2d30bc7`): board model and size, and the Angle chip that
+    writes the angle as the log note's first line.
+- **One page per exercise**, Also change the plan, Places in the Journal, a My gym widget and
+  launcher shortcuts (`0699482`).
+- **Training progress**: a Training tab in Progress, exercise charts, Training and Exercise widgets.
+- **A simpler live session**: one list of exercise cards, a dock for Done, rests and timers, the rail.
+- **App map** (`docs/app-map/`, https://claude.ai/artifact/KGk3CtYtKBdnFbf6dfopov): a screenshot of
+  every screen, sheet and dialog with arrows; CI's `check.py` fails when one is missing.
+- **CSV export**, a faster Home and Journal, and the release benchmarks.
+
+Released in 0.4.0 and before:
 - **Live notifications** (`crux.live`): while a session runs, a Live Update on Android 16 (segmented
   bar, status-bar chip) or a plain progress notification on 8 to 15. Plan sessions (Set done, then the
   rest countdown with +30 s, −30 s, Skip), climbing days (Log climb), and the interval timer (Pause,
@@ -97,10 +136,22 @@ Two databases: the climber's own and a demo one (Settings → Demo mode).
 - Personal records are results logged by hand plus sets done in sessions (merged on read; session
   sets have negative ids and can only be changed in their session).
 
+- **Board data**: Crux never bundles climb catalogues or board images and never logs into board
+  accounts; catalogues come from files Boss downloads. Only hole positions and LED numbers are
+  built in. Board angle is the log note's first line, never a field.
+- A climb picked from a dataset or catalogue is a normal Crux climb: name, grade, setter and holds
+  are copied; deleting the dataset or catalogue never touches logs.
+
 ## What's left / next steps
-1. **Release 0.4.0**, next up per Boss (`version.properties` is still 0.3.0): follow the release
-   procedure in CLAUDE.md once Boss says go; device tests and the CHANGELOG move happen then.
-2. Optional ideas offered to Boss, not yet asked for: manual "project" flag on problems; swipe on
-   the Places type filters; Google Maps tiles (needs a key); add the input-kit components to the
-   design system artifact (step 5 of that plan).
-3. Housekeeping: `MainActivityTest` dashboard drag test was flaky before `33bdbc3`; keep an eye on it.
+1. **Install tier 7 and board lights on the phone** (needs the new debugging port), then Boss's
+   hardware checks on a Kilter Original and a MoonBoard: pair, Test lights, light a climb, the
+   MoonBoard *Check a hold*, and Prev/Light/Next from the notification. Expect fixes on the
+   MoonBoard side (less proven).
+2. **Kilter history import** (the last board plan item): old ascents from an Aurora JSON export or a
+   BoardLib CSV as normal Crux logs. Needs a sample file from Boss.
+3. **Release 0.5.0** when Boss asks: everything above is unreleased (`version.properties` is 0.4.0).
+4. Roadmap (https://claude.ai/artifact/H57FewvRiW8Sryeci5vg7G): first run setup, accessibility
+   pass, goals, Android home screen widgets; later boards (Tension and other Aurora boards), setting
+   holds on your own board climbs, custom boards from a photo, smart playlists. Training cycles are
+   parked by Boss.
+5. Housekeeping: keep the app map complete (report page changes to the quick fixes thread).

@@ -12,6 +12,7 @@ import com.hardtekpt.crux.data.model.IntervalSettings
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 enum class ThemeMode(val label: String) { DARK("Dark"), LIGHT("Light"), SYSTEM("System") }
@@ -187,6 +188,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
 
     /** Where in the last place the last climb was: its facility and wall. */
     val lastSpot: Flow<Pair<Long?, Long?>> = dataStore.data.map { it[LAST_SECTION] to it[LAST_AREA] }
+
+    /** The angle last logged on a board section, so the next log there starts at it. Kept on the phone, not in the database. */
+    suspend fun boardAngle(sectionId: Long): Int? = dataStore.data.first()[androidx.datastore.preferences.core.intPreferencesKey("board_angle_$sectionId")]
+
+    suspend fun setBoardAngle(sectionId: Long, angle: Int) {
+        dataStore.edit { it[androidx.datastore.preferences.core.intPreferencesKey("board_angle_$sectionId")] = angle }
+    }
 
     /** Remembers the place, facility and wall of the last climb logged. */
     suspend fun setLastSpot(placeId: Long?, sectionId: Long?, areaId: Long?) {

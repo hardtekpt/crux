@@ -1,7 +1,8 @@
 # Places
 
-Places are the gyms, crags and boards you climb at, with their walls and the climbs on them. Find them under
-**You → Places**.
+Places are the gyms, crags and boards you climb at, with their walls and the climbs on them. Find them in
+the **Journal's Places tab**, or under **You → Places**. The **My gym** widget on Home opens the place
+you climb at most, and logs there in one tap.
 
 <img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/8_place.png" width="300" alt="A place page with numbers, facilities, Log here and walls of climbs">
 
@@ -17,10 +18,21 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
 - **Name** and optional **Notes**.
 - **What's here**: one or more facilities. A gym can have its main walls *and* a board, for
   example. Each facility is a gym, crag or board with its own name.
+- **Board** (board facilities): which board it is. **Kilter Original** or **Kilter Homewall**
+  (then its **Size**, and for a Homewall its **Holds**: Full ride or Mainline only), **MoonBoard
+  2016, 2017, 2019 or 2024**, **Mini MoonBoard 2020 or 2025**, or **Custom board** for a spray wall,
+  a home board or anything else. Boards you set up before start as Custom board. The board and size
+  show on the place's page, in the Places list and on Log climb's Where card. Changing the board
+  never changes your climbs, and switching a facility to Gym and back keeps it.
 - **Grades for each facility**: the scales new climbs there start in, or **Local grades**, the
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests
   in them are kept per place.
+- **Lights** (Kilter and MoonBoard facilities): pair your board's lights on this phone, so Crux can
+  light a climb's holds. See [Datasets](datasets.md#lighting-your-board).
+- **Datasets for each facility**: the lists of climbs Log climb offers there. Datasets made for
+  the facility's board are used automatically; tick others (a gym circuit, a custom board's list)
+  to link them. See [Datasets](datasets.md#where-a-dataset-is-offered).
 - **Where** (optional): *Add a map pin*. Search an address or place, or move the map so the pin
   sits on the spot, then *Use this spot*. *My location* centres the map on you; Crux asks for
   location permission only then. The map is OpenStreetMap.

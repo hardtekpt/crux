@@ -23,6 +23,8 @@ class LiveActionReceiver : BroadcastReceiver() {
 
     @Inject lateinit var clock: Clock
 
+    @Inject lateinit var playlists: LivePlaylists
+
     override fun onReceive(context: Context, intent: Intent) {
         val action = runCatching { LiveAction.valueOf(intent.action.orEmpty()) }.getOrNull() ?: return
         val pending = goAsync()
@@ -62,6 +64,12 @@ class LiveActionReceiver : BroadcastReceiver() {
             }
 
             LiveAction.LOG_CLIMB -> Unit
+
+            LiveAction.PREV_CLIMB -> playlists.move(-1)
+
+            LiveAction.NEXT_CLIMB -> playlists.move(1)
+
+            LiveAction.LIGHT -> playlists.light()
         }
     }
 

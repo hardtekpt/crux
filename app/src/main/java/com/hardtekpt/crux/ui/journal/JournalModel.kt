@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Landscape
+import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.hardtekpt.crux.data.LoggedResult
@@ -73,6 +74,9 @@ enum class JournalFilter(val label: String, val icon: ImageVector) {
     Climbs("Climbs", Icons.Rounded.Landscape),
     Training("Training", Icons.Rounded.FitnessCenter),
     Notes("Notes", Icons.AutoMirrored.Rounded.Notes),
+
+    /** Not timeline entries: the places you climb at, as You → Places lists them. */
+    Places("Places", Icons.Rounded.Place),
 }
 
 enum class JournalPeriod(val label: String, val days: Long?) {

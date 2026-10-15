@@ -44,6 +44,18 @@ tracking: your data stays on your phone.
     <td align="center"><b>Train</b><br>plans and exercises</td>
     <td align="center"><b>You</b><br>records, consistency, body</td>
   </tr>
+  <tr>
+    <td><img src="app/src/test/screenshots/catalogue_dark.png" alt="A Kilter board catalogue"></td>
+    <td><img src="app/src/test/screenshots/board_diagrams_dark.png" alt="Hold diagrams"></td>
+    <td><img src="app/src/test/screenshots/session_playlist_dark.png" alt="A playlist in a session"></td>
+    <td><img src="app/src/test/screenshots/progress_training_dark.png" alt="Training progress"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Boards</b><br>Kilter and MoonBoard catalogues</td>
+    <td align="center"><b>Hold diagrams</b><br>drawn from the board</td>
+    <td align="center"><b>Playlists</b><br>climb one after another</td>
+    <td align="center"><b>Training</b><br>plan against done</td>
+  </tr>
 </table>
 
 <details>
@@ -74,12 +86,19 @@ tests, so they always match the current version.
   the day, a photo and a video.
 - **Places**: gyms, crags and boards with their facilities, walls and climbs, an OpenStreetMap
   pin, and the gym's own grades (numbers or colour tapes).
+- **Datasets and playlists**: your own lists of climbs (a home board, a spray wall, a gym circuit),
+  offered at the facilities that use them so you pick a climb instead of typing it, and playlists
+  to climb in a session with **+ Fell** and **+ Sent**.
+- **Board catalogues**: Kilter and MoonBoard climbs from a Boardsesh file you import, graded at
+  each angle, with hold diagrams, to browse, log and climb in playlists, and **light on your own
+  board** over Bluetooth. No account, nothing online.
 - **Projects** found for you: climbs you've tried and not sent yet, with **+1 go**.
 - Font, V, French and YDS grades, **never converted**, plus a grade converter for reference.
 
 **Track**
 - **Journal**: one timeline of climbs, sessions, results and notes, with search and filters.
-- **Progress**: hardest sends per scale and style, grade pyramids, sends per week and by style.
+- **Progress**: hardest sends per scale and style, grade pyramids, sends per week and by style;
+  and training: plan against done, sessions, time and new bests, and each exercise over time.
 - **You**: a consistency grid with weekly streaks, personal records, weight, body stats with ape
   index, circumferences, and notes with tags.
 - **Home**: a dashboard of widgets you add, resize and arrange.
@@ -163,6 +182,16 @@ You need JDK 21 and the Android SDK (platform 37). On Windows, `.\crux run` buil
 app on an emulator in one step. See [Development setup](docs/developer/setup.md).
 
 ## Changelog
+
+**[0.5.0](https://github.com/hardtekpt/crux/releases/tag/v0.5.0)** (2026-10-15):
+- **Board climbing**: which board a facility is and the angle you climbed it at, your own climb
+  lists and playlists, **Kilter and MoonBoard catalogues** from Boardsesh files, picking climbs in
+  Log climb, **hold diagrams**, and **lighting your board** over Bluetooth (not yet tried on a real
+  board).
+- **Training progress** in Progress, with a chart for each exercise, and **Training** and
+  **Exercise** widgets for Home that show what you pick.
+- **A simpler live session**: every exercise in one list, sets changed in place, and a dock for
+  rests and timers; **one page per exercise**, launcher shortcuts and **export as a spreadsheet**.
 
 **[0.4.0](https://github.com/hardtekpt/crux/releases/tag/v0.4.0)** (2026-10-14):
 - **Weekly schedule** under *Train → Week*; Home follows it.

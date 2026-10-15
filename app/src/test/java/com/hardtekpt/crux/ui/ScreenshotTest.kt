@@ -1,6 +1,8 @@
 package com.hardtekpt.crux.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -109,6 +112,7 @@ class ScreenshotTest {
         CruxDatabases(preferences, DatabaseFactory { db }, CoroutineScope(mainDispatcherRule.testDispatcher + SupervisorJob()))
     }
     private val climbs by lazy { OfflineClimbRepository(dbs, FIXED_CLOCK) }
+    private val playlistRepo by lazy { com.hardtekpt.crux.data.OfflinePlaylistRepository(dbs, FIXED_CLOCK) }
     private val places by lazy { OfflinePlaceRepository(dbs, FIXED_CLOCK) }
     private val notes by lazy { OfflineNoteRepository(dbs, FIXED_CLOCK) }
     private val records by lazy { OfflineRecordRepository(dbs, FIXED_CLOCK) }
@@ -120,18 +124,21 @@ class ScreenshotTest {
     @Test
     fun home() = home("home")
 
+    private fun homeViewModel() = HomeViewModel(
+        climbs,
+        body,
+        OfflineTemplateRepository(dbs),
+        places,
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
+        preferences,
+        DashboardRepository(dataStore),
+        FIXED_CLOCK,
+        training(),
+    )
+
     private fun home(name: String, dark: List<Boolean> = BOTH, accent: Accent = Accent.TEAL) {
-        val vm = HomeViewModel(
-            climbs,
-            body,
-            OfflineTemplateRepository(dbs),
-            places,
-            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
-            OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK),
-            preferences,
-            DashboardRepository(dataStore),
-            FIXED_CLOCK,
-        )
+        val vm = homeViewModel()
         val state = loaded(vm.uiState) { !it.isLoading }
         val dashboard = loaded(vm.dashboard) { it.widgets.isNotEmpty() }
         bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
@@ -157,6 +164,17 @@ class ScreenshotTest {
         bothThemes("journal") { JournalContent(uiState = state) }
     }
 
+    // The Journal's Places tab: every place, as You → Places lists them.
+    @Test
+    fun journalPlaces() {
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val vm = JournalViewModel(climbs, records, notes, sessions, FIXED_CLOCK)
+        vm.update { it.copy(kind = com.hardtekpt.crux.ui.journal.JournalFilter.Places) }
+        val state = loaded(vm.uiState) { !it.isLoading && it.query.kind == com.hardtekpt.crux.ui.journal.JournalFilter.Places }
+        val placeList = loaded(places.observePlaces()) { it.isNotEmpty() }
+        bothThemes("journal_places", readyText = "Block Lab", dark = DARK) { JournalContent(uiState = state, places = placeList) }
+    }
+
     @Test
     fun daysOnWall() {
         val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
@@ -173,9 +191,274 @@ class ScreenshotTest {
 
     @Test
     fun progress() {
-        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK).uiState) { !it.isLoading }
+        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK, training()).uiState) { !it.isLoading }
         bothThemes("progress") { ProgressContent(uiState = state) }
     }
+
+    // Progress's Training tab: plan against done, three figures, then each exercise.
+    @Test
+    fun progressTraining() {
+        val state = loaded(ProgressViewModel(climbs, places, preferences, FIXED_CLOCK, training()).uiState) { !it.isLoading && !it.training.isEmpty }
+        bothThemes("progress_training") { ProgressContent(uiState = state, initialView = com.hardtekpt.crux.ui.progress.ProgressView.Training) }
+    }
+
+    // Your datasets, and the demo's gym circuit as a list of climbs.
+    @Test
+    fun datasets() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(context, repo, preferences, playlistRepo)
+        loaded(vm.uiState) { !it.isLoading && it.datasets.isNotEmpty() }
+        bothThemes("datasets", readyText = "Block Lab circuit", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.DatasetsScreen(onBack = {}, onOpen = {}, viewModel = vm)
+        }
+    }
+
+    // The Playlists tab, and the demo's playlist for tonight.
+    @Test
+    fun datasetsPlaylists() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetsViewModel(
+            context,
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            preferences,
+            playlistRepo,
+        )
+        loaded(vm.uiState) { !it.isLoading && it.playlists.isNotEmpty() }
+        bothThemes("datasets_playlists", readyText = "Tonight", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.DatasetsScreen(onBack = {
+            }, onOpen = {}, viewModel = vm, initialTab = com.hardtekpt.crux.ui.datasets.DatasetsTab.PLAYLISTS)
+        }
+    }
+
+    @Test
+    fun playlist() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val id = runBlocking { db.playlistDao().getPlaylists().first().id }
+        val vm = com.hardtekpt.crux.ui.datasets.PlaylistViewModel(
+            SavedStateHandle(mapOf("playlistId" to id)),
+            context,
+            playlistRepo,
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            places,
+            sessions(),
+            preferences,
+            FIXED_CLOCK,
+        )
+        loaded(vm.uiState) { it.playlist != null }
+        bothThemes("playlist", readyText = "Cave crimps", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.PlaylistScreen(onBack = {}, onLogClimb = {}, onOpenSession = {}, viewModel = vm)
+        }
+    }
+
+    // Hold diagrams: a Kilter Homewall climb, its thumbnail, and a Mini MoonBoard climb with its grid.
+    @Test
+    fun boardDiagrams() {
+        bothThemes("board_diagrams", dark = DARK) {
+            androidx.compose.foundation.layout.Column(
+                androidx.compose.ui.Modifier.padding(16.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+            ) {
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                        "kilter:8:25",
+                        "p4125r42p4146r45p4149r45p4180r45p4212r43p4214r43p4235r45p4238r42p4268r45p4272r43p4274r43p4334r44p4363r44",
+                        "Moon Landing",
+                        androidx.compose.ui.Modifier.weight(1f),
+                        maxHeight = 300,
+                    )
+                    com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                        "moonboard:7",
+                        "p45r43p124r44p37r43p93r43p127r43p62r42p95r43p53r42",
+                        "Easy Does It",
+                        androidx.compose.ui.Modifier.weight(1f),
+                        maxHeight = 300,
+                    )
+                }
+                com.hardtekpt.crux.ui.components.HoldLegend("p4125r42p4146r45p4212r43p4334r44")
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                    "kilter:8:25",
+                    "p4125r42p4146r45p4149r45p4180r45p4212r43p4214r43p4235r45p4238r42p4268r45p4272r43p4274r43p4334r44p4363r44",
+                    "Moon Landing",
+                    androidx.compose.ui.Modifier.size(width = 40.dp, height = 52.dp),
+                    small = true,
+                )
+            }
+        }
+    }
+
+    // A board catalogue: its climbs at 40°, most sent first.
+    @Test
+    fun catalogue() {
+        val catalogueDb = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), com.hardtekpt.crux.data.CatalogueDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val catalogues = com.hardtekpt.crux.data.CatalogueDatabases(ApplicationProvider.getApplicationContext()).also { it.override = catalogueDb }
+        val datasets = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val key = "boardsesh:kilter:8:25"
+        val climbs = listOf(
+            Triple("Moon Landing", "KilterStudio", 16.0),
+            Triple("Guessing Games", "griffin", 18.0),
+            Triple("Half Mast", "KilterStudio", 16.0),
+            Triple("Angel Eyes", "jakey", 20.0),
+            Triple("Lightest Shorts", "KilterStudio", 18.0),
+            Triple("Crimp City", "tbagg", 21.0),
+            Triple("Swooped", "jwebxl", 22.0),
+        )
+        val id = runBlocking {
+            val dao = catalogueDb.catalogueDao()
+            dao.insertClimbs(
+                climbs.mapIndexed { i, (name, setter, _) ->
+                    com.hardtekpt.crux.data.CatalogueClimbEntity(key, "u$i", name, setter, setterAngle = 40)
+                },
+            )
+            dao.insertGrades(
+                climbs.mapIndexed { i, (_, _, d) ->
+                    com.hardtekpt.crux.data.CatalogueGradeEntity(key, "u$i", 40, d, benchmark = i % 3 == 0, ascents = 7500 - i * 900, quality = 3.2 - i * 0.05)
+                } + climbs.indices.map { com.hardtekpt.crux.data.CatalogueGradeEntity(key, "u$it", 30, 15.0, ascents = 10) },
+            )
+            datasets.saveCatalogue(
+                key,
+                "Kilter Homewall",
+                com.hardtekpt.crux.data.model.BoardModel.KILTER_HOMEWALL,
+                "10x12",
+                com.hardtekpt.crux.data.model.BoardHolds.FULL_RIDE,
+                28_979,
+            )
+        }
+        val vm = com.hardtekpt.crux.ui.datasets.CatalogueViewModel(
+            SavedStateHandle(mapOf("datasetId" to id)),
+            datasets,
+            com.hardtekpt.crux.data.CatalogueRepository(catalogues),
+            playlistRepo,
+            preferences,
+            FIXED_CLOCK,
+        )
+        loaded(vm.uiState) { it.rows.isNotEmpty() }
+        bothThemes("catalogue", readyText = "Moon Landing", dark = DARK) {
+            com.hardtekpt.crux.ui.datasets.CatalogueScreen(onBack = {}, onLogClimb = {}, viewModel = vm)
+        }
+        catalogueDb.close()
+    }
+
+    // Log this climb, from the circuit: Block Lab's main gym, the linked name and the grade hint.
+    @Test
+    fun logClimbFromDataset() {
+        val climbId = runBlocking { db.datasetDao().getAllClimbs().first { it.name == "Pinch roof" }.id }
+        val vm = LogClimbViewModel(
+            SavedStateHandle(mapOf("datasetClimbId" to climbId)),
+            climbs,
+            places,
+            FIXED_CLOCK,
+            preferences,
+            FakeImageFiles(),
+            sessions(),
+            com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK),
+            playlistRepo,
+        )
+        loaded(vm.draft) { it.source != null }
+        bothThemes("logclimb_dataset", readyText = "from Block Lab circuit", dark = DARK) { LogClimbScreen(onDone = {}, viewModel = vm) }
+    }
+
+    // A climbing session with tonight's playlist: the climb that's up, with + Fell and + Sent.
+    @Test
+    fun sessionPlaylist() {
+        val sessions = sessions()
+        val sessionId = runBlocking {
+            val place = db.placeDao().getPlaces().first { it.name == "Block Lab" }
+            val id = sessions.start(null, place.id, db.placeDao().getSections(place.id).first().id)
+            sessions.setPlaylist(id, db.playlistDao().getPlaylists().first().id, 1)
+            id
+        }
+        val vm = SessionViewModel(
+            SavedStateHandle(mapOf("sessionId" to sessionId)),
+            sessions,
+            exercises,
+            places,
+            preferences,
+            FIXED_CLOCK,
+            com.hardtekpt.crux.live.LiveTimers(),
+            playlistRepository = playlistRepo,
+        )
+        loaded(vm.playlist) { it != null }
+        bothThemes("session_playlist", readyText = "Cave jugs", dark = DARK) {
+            SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm)
+        }
+    }
+
+    @Test
+    fun dataset() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repo = com.hardtekpt.crux.data.OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val id = runBlocking { db.datasetDao().getDatasets().first().id }
+        val vm = com.hardtekpt.crux.ui.datasets.DatasetViewModel(
+            SavedStateHandle(mapOf("datasetId" to id)),
+            context,
+            repo,
+            preferences,
+            FIXED_CLOCK,
+            playlistRepo,
+        )
+        loaded(vm.uiState) { it.dataset != null }
+        bothThemes("dataset", readyText = "Blue slab", dark = DARK) { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = {}, viewModel = vm) }
+    }
+
+    // An exercise's page: its best, its chart and each day it was trained.
+    @Test
+    fun exerciseProgress() {
+        val exerciseId = runBlocking { db.exerciseDao().getAll().first { it.name == "Half-crimp hang" }.id }
+        val vm = com.hardtekpt.crux.ui.you.ExerciseRecordsViewModel(
+            SavedStateHandle(mapOf("exerciseId" to exerciseId)),
+            exercises,
+            records,
+            OfflineTemplateRepository(dbs),
+            com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        )
+        loaded(vm.state) { it.results.isNotEmpty() && it.plans.isNotEmpty() }
+        bothThemes("exercise_progress", readyText = "Half-crimp hang", dark = DARK) {
+            com.hardtekpt.crux.ui.you.ExerciseRecordsScreen(onBack = {}, onAdd = {}, viewModel = vm)
+        }
+    }
+
+    // Home with the Training and Exercise widgets, each showing what was chosen for it.
+    @Test
+    fun homeTraining() {
+        val vm = homeViewModel()
+        val state = loaded(vm.uiState) { !it.isLoading && it.training.exercises.isNotEmpty() }
+        val hangs = state.training.exercises.first { it.exercise.name == "Half-crimp hang" }.exercise.id
+        val pullUps = state.training.exercises.first { it.exercise.name == "Weighted pull-ups" }.exercise.id
+        val widgets = listOf(
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(type = com.hardtekpt.crux.data.dashboard.WidgetType.MY_GYM),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.TRAINING,
+                stat = com.hardtekpt.crux.data.TrainingStat.ON_PLAN,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.EXERCISE,
+                exerciseId = pullUps,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.EXERCISE,
+                size = com.hardtekpt.crux.data.dashboard.WidgetSize.WIDE,
+                exerciseId = hangs,
+            ),
+            com.hardtekpt.crux.data.dashboard.DashboardWidget(
+                type = com.hardtekpt.crux.data.dashboard.WidgetType.TRAINING,
+                size = com.hardtekpt.crux.data.dashboard.WidgetSize.WIDE,
+                stat = com.hardtekpt.crux.data.TrainingStat.SETS,
+            ),
+        )
+        bothThemes("home_training", dark = DARK) { HomeContent(uiState = state, dashboard = com.hardtekpt.crux.ui.home.DashboardState(widgets)) }
+    }
+
+    private fun training() = com.hardtekpt.crux.ui.progress.TrainingProgressSource(
+        sessions(),
+        records,
+        exercises,
+        com.hardtekpt.crux.data.OfflineScheduleRepository(dbs),
+        climbs,
+        FIXED_CLOCK,
+    )
 
     @Test
     fun you() {
@@ -244,7 +527,27 @@ class ScreenshotTest {
     @Test
     fun session() = session("session")
 
-    private fun session(name: String, dark: List<Boolean> = BOTH) {
+    // A rest running in the dock after a set.
+    @Test
+    fun sessionResting() = session("session_resting", dark = DARK) { live, _ ->
+        live.rest.value = com.hardtekpt.crux.ui.session.Rest(FIXED_CLOCK.millis() + 48_000, 90)
+    }
+
+    // An exercise's interval timer, made big.
+    @Test
+    fun sessionTimerBig() = session("session_timer_big", dark = DARK, bigTimer = true) { live, itemId ->
+        live.timer.value = com.hardtekpt.crux.ui.session.SessionTimer(
+            com.hardtekpt.crux.ui.session.IntervalRun(com.hardtekpt.crux.ui.session.IntervalSpec.REPEATERS, FIXED_CLOCK.millis() - 26_000),
+            itemId,
+        )
+    }
+
+    private fun session(
+        name: String,
+        dark: List<Boolean> = BOTH,
+        bigTimer: Boolean = false,
+        running: (com.hardtekpt.crux.live.LiveTimers, Long) -> Unit = { _, _ -> },
+    ) {
         val sessions = sessions()
         val sessionId = runBlocking {
             val plan = OfflineTemplateRepository(dbs).observeTemplates().first().first()
@@ -255,6 +558,7 @@ class ScreenshotTest {
             repeat(warmUp.target.sets) { sessions.logSet(warmUp.id, it, warmUp.target.reps, warmUp.target.seconds, warmUp.target.loadKg) }
             id
         }
+        val live = com.hardtekpt.crux.live.LiveTimers()
         val vm =
             SessionViewModel(
                 SavedStateHandle(mapOf("sessionId" to sessionId)),
@@ -263,9 +567,13 @@ class ScreenshotTest {
                 places,
                 preferences,
                 FIXED_CLOCK,
-                com.hardtekpt.crux.live.LiveTimers(),
+                live,
             )
-        bothThemes(name, readyText = "Max hangs", dark = dark) { SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm) }
+        // The session's second exercise is the one a timer runs for.
+        running(live, runBlocking { sessions.observeSession(sessionId).first { it != null }!!.items[1].id })
+        bothThemes(name, readyText = "Max hangs", dark = dark) {
+            SessionScreen(onLeave = {}, onLogClimb = {}, onFinished = {}, viewModel = vm, bigTimer = bigTimer)
+        }
     }
 
     @Test

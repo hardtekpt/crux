@@ -51,6 +51,8 @@ class LiveService : Service() {
 
     @Inject lateinit var clock: Clock
 
+    @Inject lateinit var lights: LivePlaylists
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var started = false
 
@@ -109,7 +111,7 @@ class LiveService : Service() {
             return
         }
         val card = when {
-            s.session != null -> LiveCards.forSession(s.session, s.rest, s.timer, s.now, usualMinutes)
+            s.session != null -> LiveCards.forSession(s.session, s.rest, s.timer, s.now, usualMinutes, lights.card(s.session))
             s.standalone != null -> LiveCards.forInterval(s.standalone, s.now, "Interval timer", null)
             else -> null
         }

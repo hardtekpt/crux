@@ -112,6 +112,18 @@ class SessionTimerViewModelTest {
     }
 
     @Test
+    fun `changing an exercise's targets is saved for the session, and an unchanged target is not`() {
+        val vm = viewModel()
+        val changed = item.target.copy(sets = 4, loadKg = 7.5)
+
+        vm.updateTarget(item, changed)
+        assertEquals(listOf(item.id to changed), sessions.targets)
+
+        vm.updateTarget(item, item.target)
+        assertEquals(1, sessions.targets.size)
+    }
+
+    @Test
     fun `stopping keeps the cycles already done, and a free timer logs nothing`() {
         val vm = viewModel()
         vm.startTimer(IntervalSpec.TABATA, null)

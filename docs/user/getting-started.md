@@ -51,6 +51,12 @@ The **+** Log menu has four entries:
 Inside pages that have their own tabs (*Train*: Plans / Exercises), swipe sideways to switch.
 Swipe back, or use the back arrow, to leave a page.
 
+## Shortcuts
+
+Long-press Crux's icon on your home screen for **Log climb**, **Session** (back into the running
+session, or the choice of what to start), **Log weight** and **Timer**. You can drag one onto your
+home screen as its own icon.
+
 ## Where your data lives
 
 Everything is stored on your phone, in Crux's private storage. Make a backup now and then from

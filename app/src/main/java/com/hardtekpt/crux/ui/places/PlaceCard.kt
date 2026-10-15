@@ -141,7 +141,7 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                             Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(16.dp))
                             Text(section.name, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
                             Text(
-                                section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current),
+                                listOfNotNull(section.boardLabel, section.gradesLabel(com.hardtekpt.crux.ui.LocalGradeScales.current)).joinToString(" · "),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = colors.onSurfaceVariant,
                                 maxLines = 1,

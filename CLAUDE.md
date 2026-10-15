@@ -27,6 +27,10 @@ Project context, stack and current state are in [HANDOFF.md](HANDOFF.md).
     number in `data-model.md`), backup format, tests, CI or release changes.
   - **CHANGELOG.md** under *Unreleased*, written for climbers.
   - The README's feature list and *Unreleased* summary when a notable feature lands.
+- **App map** in `docs/app-map/`: a screenshot of every screen, sheet and dialog with arrows for how they connect.
+  A change that adds, removes or reshapes one updates `docs/app-map/manifest.json`, re-captures the pages it touches
+  and rebuilds `dist/` (see `docs/developer/app-map.md`). CI runs `docs/app-map/check.py`, which fails when a route,
+  sheet or dialog in the code is missing from the map.
 - Screenshots in the README and docs come from the screenshot tests. Re-record them
   (`.\crux.cmd screenshots`) rather than adding hand-made images. A new main screen gets a test
   in `ScreenshotTest`.

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -139,6 +140,9 @@ data class YouUiState(
     val records: List<ExerciseBest> = emptyList(),
     val notes: List<Note> = emptyList(),
     val places: Int = 0,
+    /** Your datasets, and the climbs in them all. */
+    val datasets: Int = 0,
+    val datasetClimbs: Int = 0,
     val units: UnitSystem = UnitSystem.METRIC,
     val scales: GradeScales = GradeScales(),
     val theme: ThemeMode = ThemeMode.DARK,
@@ -185,6 +189,7 @@ class YouViewModel @Inject constructor(
     placeRepository: com.hardtekpt.crux.data.PlaceRepository,
     preferences: UserPreferencesRepository,
     clock: Clock,
+    datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
 
@@ -232,6 +237,8 @@ class YouViewModel @Inject constructor(
             scales = prefs.scales,
             theme = prefs.theme,
         )
+    }.combine(datasetRepository?.observeDatasets() ?: kotlinx.coroutines.flow.flowOf(emptyList())) { state, datasets ->
+        state.copy(datasets = datasets.size, datasetClimbs = datasets.sumOf { it.climbs.size })
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YouUiState(today = today))
 
     fun setMeasurement(type: MeasurementType, value: Double) {
@@ -259,6 +266,7 @@ data class ProfileActions(
     val openCircumferences: () -> Unit = {},
     val openNotes: () -> Unit = {},
     val openPlaces: () -> Unit = {},
+    val openDatasets: () -> Unit = {},
     val openConverter: () -> Unit = {},
     val openTimer: () -> Unit = {},
 )
@@ -394,6 +402,17 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
                             },
                             actions.openPlaces,
                             Modifier.testTag("menu_places"),
+                        )
+                        PreferenceRow(
+                            Icons.AutoMirrored.Rounded.ViewList,
+                            "Datasets",
+                            if (uiState.datasets == 0) {
+                                "Lists of climbs: a home board, a circuit"
+                            } else {
+                                "${uiState.datasets} ${if (uiState.datasets == 1) "list" else "lists"} · ${uiState.datasetClimbs} ${if (uiState.datasetClimbs == 1) "climb" else "climbs"}"
+                            },
+                            actions.openDatasets,
+                            Modifier.testTag("menu_datasets"),
                         )
                         PreferenceRow(
                             Icons.Rounded.SwapHoriz,

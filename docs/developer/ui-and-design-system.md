@@ -81,7 +81,9 @@ Wheels expose semantics actions, so TalkBack can set them directly.
   `stateIn`, so only the result reaches the main thread. In lazy lists, give items keys and a
   `contentType`, and draw decorations like the Journal's rail (`drawBehind`) rather than
   measuring rows with `IntrinsicSize`. Stored photos go through `rememberLocalImage`, which
-  caches decoded bitmaps.
+  caches decoded bitmaps. Home's dashboard is a `LazyColumn` of widget rows (`toRows()`) except while
+  editing, where the drag-to-arrange grid lays out every widget. The Journal builds its timeline
+  only when data changes, and waits 150 ms after the last keystroke before searching.
 
 ## Conventions
 

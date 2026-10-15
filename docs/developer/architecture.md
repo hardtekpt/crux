@@ -39,7 +39,7 @@ flowchart TB
 ### `ui/`: Compose screens and ViewModels
 
 - One package per area: `home`, `train`, `journal`, `session`, `progress`, `you`, `places`,
-  `settings`, `quicklog`. Shared code lives in `components` (the design system's building blocks
+  `datasets` (datasets, playlists and board catalogues), `settings`, `quicklog`. Shared code lives in `components` (the design system's building blocks
   and the touch input kit), `charts`, `navigation` and `theme`.
 - A screen is a `@HiltViewModel` plus composables. The ViewModel exposes `StateFlow`s built with
   `combine(…).stateIn(viewModelScope, WhileSubscribed(5_000), initial)`, and plain functions for
@@ -55,8 +55,10 @@ flowchart TB
 ### `data/`: repositories over Room and DataStore
 
 - Repositories behind interfaces: `ClimbRepository`, `PlaceRepository`, `BodyRepository`,
-  `TemplateRepository`, `ExerciseRepository`, `SessionRepository`, `NoteRepository` and
-  `RecordRepository`. Each has an `Offline…` implementation over Room, bound in `di/DataModule.kt`.
+  `TemplateRepository`, `ExerciseRepository`, `SessionRepository`, `NoteRepository`,
+  `RecordRepository`, `DatasetRepository` and `PlaylistRepository`. Each has an `Offline…`
+  implementation over Room, bound in `di/DataModule.kt`. `CatalogueRepository` reads the separate
+  catalogue database.
   Tests use the fakes in `app/src/test/.../data/Fakes.kt` or the real ones on in-memory Room.
 - `model/` holds the domain types (`Climb`, `Place`, `WorkoutTemplate`, `Session`, `GradeScale`,
   and so on). `local/` holds Room entities, DAOs and the database. Repositories map between them.
@@ -119,6 +121,12 @@ plan copies the plan's exercises and targets into `session_items`, so later edit
 rewrite history. Each logged or skipped set is a `session_sets` row. Climbs logged while a session
 runs carry its `sessionId`. Only one session runs at a time.
 
+The session screen (`ui/session`) lists every exercise as an `ExerciseCard` (`SessionList.kt`) with a
+table of sets. Values changed on a set not done yet are held in `SessionViewModel.pending` until the
+set is ticked (`tick` logs them and starts the rest); a logged set is saved at once. `nextUp` picks
+the set the dock's Done button logs, and `previous` gives each exercise's sets from the last
+finished session for the *Last* column.
+
 The interval and rest timers are computed from the clock (start time plus pause bookkeeping), not
 ticked, so they stay right when the screen is off or the app is in the background.
 
@@ -131,6 +139,48 @@ and a plain progress bar before. It ends a rest that ran out and buzzes. `LiveAc
 handles the buttons (Set done, ±30 s, Skip rest, Pause/Resume, Stop); Log climb and tapping the
 card go through `MainActivity`'s `OpenRequest`. `CruxApplication` starts the service when a
 session starts.
+
+Training progress (`ui/progress/TrainingProgress.kt`) is worked out, not stored: `trainingProgress`
+takes the finished sessions, every exercise result (`RecordRepository.observeAll`: hand-logged and
+session sets), the exercise library, the Week schedule and the days with climbs, and gives the last
+8 weeks (planned, done, sessions, sets, minutes, new bests), 30-day figures and each exercise's best
+per day. `TrainingProgressSource` combines the flows for Progress and Home. The Home widgets
+`TRAINING` and `EXERCISE` are configurable: `DashboardWidget` keeps the chosen `TrainingStat` or
+`exerciseId`, and the layout JSON carries them (older layouts read as before).
+
+An exercise has one page, `ExerciseRecordsRoute` (`ui/you/ExercisePage.kt`): its record, chart,
+setup, the plans that use it (from `TemplateRepository` and the week) and its days. Every exercise
+list opens it; the editor (`ExerciseEditorRoute`) is behind its pencil. `IntervalTimerRoute` takes an
+optional `exerciseId` to start from that exercise's timer. Launcher shortcuts are dynamic
+(`LauncherShortcuts` in `MainActivity.kt`), so they point at whichever build is installed; they open
+through the same `OpenRequest` path as the live notification.
+
+## Boards, datasets and catalogues
+
+- **Boards** (`data/model/Boards.kt`): a board section names its `BoardModel` (Kilter Original or
+  Homewall with a size and holds, a MoonBoard year, or custom). The board angle is never a field: the
+  Angle chip writes it as the log note's first line (`BoardAngleNote`).
+- **Datasets** (`data/DatasetRepository.kt`, `ui/datasets/`): your own lists of climbs. A facility
+  uses every dataset made for its board (`Dataset.fitsBoard`) and those linked by hand
+  (`section_datasets`); `datasetsFor` combines them. Log climb's Where sheet ends with a Climb step
+  (`LogClimbWhere.kt`) when the facility has any; `LogClimbViewModel.pickDatasetClimb` continues the
+  climb of that name there, or fills the form, converting the grade with `convertGrade`. The climb
+  keeps a copy (setter, `sourceDatasetClimbId`), never a dependency.
+- **Playlists** (`data/Playlists.kt`): ordered items pointing at dataset or catalogue climbs. A
+  session can climb one (`sessions.playlistId`/`playlistIndex`); `PlaylistGoes` logs + Fell and
+  + Sent on the climb that's up.
+- **Board catalogues** (`data/Catalogue.kt`, `data/CatalogueImporter.kt`): a Boardsesh snapshot
+  is read with Android's SQLite and copied into the catalogue database (`crux-catalogue.db`,
+  `CatalogueDatabase`), keyed by catalogue (`boardsesh:kilter:8:25`) and the board's climb uuid. The
+  main database keeps a `datasets` row (`kind` `catalogue`) for the list; climbs and per-angle grades
+  stay in the catalogue file, which is rebuilt rather than migrated and never backed up.
+- **Hold diagrams** (`data/BoardGeometry.kt`, `ui/components/BoardDiagram.kt`): positions from the
+  built-in `assets/board_holes.json` (regenerate with `scripts/board_holes.py`); a climb's holds are
+  copied onto it when logged (`problems.holds`, `holdsBoard`).
+- **Board lights** (`data/BoardLights.kt`, `data/BoardLink.kt`, `ui/components/BoardLightsUi.kt`):
+  pairing through `CompanionDeviceManager` (no scanning, no location), the pairing kept on the section
+  (never backed up), messages built in pure Kotlin and written over Bluetooth only when Light is
+  tapped. `live/LivePlaylists.kt` gives the live notification Prev, Light and Next.
 
 ## Domain decisions worth knowing
 

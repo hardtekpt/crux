@@ -25,6 +25,7 @@ enum class BackupSection(val label: String, val description: String, val noun: S
     BODY("Body stats", "Weigh-ins, body stats and circumferences", "body stats"),
     RECORDS("Personal records", "Results logged on exercises", "records"),
     NOTES("Notes", "Everything in your notes", "notes"),
+    DATASETS("Datasets", "Your lists of climbs and your playlists", "datasets"),
     SETTINGS("Settings", "Grades, theme, units, timer and your Home layout", "settings"),
 }
 
@@ -57,6 +58,10 @@ data class BackupFile(
     val settings: SettingsDto? = null,
     /** The weekly schedule, saved with the plans. Older backups omit it. */
     val schedule: List<ScheduleSlotDto>? = null,
+    /** Your datasets (app schema 27). Older backups omit them. */
+    val datasets: List<DatasetDto>? = null,
+    /** Your playlists, with the datasets (app schema 28). Older backups omit them. */
+    val playlists: List<PlaylistDto>? = null,
 ) {
     /** How many records each section holds; null when the section is not in the file. */
     fun count(section: BackupSection): Int? = when (section) {
@@ -68,6 +73,7 @@ data class BackupFile(
         BackupSection.BODY -> bodyMeasurements?.size
         BackupSection.RECORDS -> records?.size
         BackupSection.NOTES -> notes?.size
+        BackupSection.DATASETS -> datasets?.size
         BackupSection.SETTINGS -> settings?.let { 1 }
     }
 
@@ -173,6 +179,8 @@ data class ClimbDto(
     /** Version 2: the photo and video, by their file names under `media/` in the archive. */
     val photoFile: String? = null,
     val videoFile: String? = null,
+    /** Who set its climb, for the CSV export; the climb's own copy is in its place's problems. */
+    val setter: String? = null,
 )
 
 @Serializable
@@ -200,6 +208,22 @@ data class SectionDto(
     val boulderScale: GradeScale? = null,
     val routeScale: GradeScale? = null,
     val localScale: LocalScale? = null,
+    /** Board sections (app schema 26): the board's key, Kilter size and Homewall holds; older backups omit them. */
+    val boardModel: String? = null,
+    val boardSize: String? = null,
+    val boardHolds: String? = null,
+    /** The datasets linked to it by hand, by name (app schema 28); older backups omit them. */
+    val datasets: List<String> = emptyList(),
+)
+
+/** The dataset climb a climb was picked from: its dataset's name, its name and type. */
+@Serializable
+data class SourceDto(
+    val dataset: String,
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    /** A board catalogue's climb by the board's id (app schema 29); a re-imported catalogue finds it again. */
+    val catalogueUuid: String? = null,
 )
 
 @Serializable
@@ -217,6 +241,12 @@ data class ProblemDto(
     val gradeColour: Long? = null,
     /** When it was added, epoch millis. Older backups omit it. */
     val createdAt: Long? = null,
+    /** Who set it, and the dataset climb it was picked from (app schema 28). Older backups omit them. */
+    val setter: String? = null,
+    val source: SourceDto? = null,
+    /** A board climb's holds and whose positions they are (app schema 30). Older backups omit them. */
+    val holds: String? = null,
+    val holdsBoard: String? = null,
 )
 
 @Serializable
@@ -257,6 +287,47 @@ data class RecordDto(
 
 @Serializable
 data class NoteDto(val text: String, val createdAt: Long, val updatedAt: Long, val pinned: Boolean = false, val tag: String? = null)
+
+/** One of your datasets with its climbs. Its name tells one from another. */
+@Serializable
+data class DatasetDto(
+    val name: String,
+    val kind: String = "own",
+    val boardModel: String? = null,
+    val boardSize: String? = null,
+    val boardHolds: String? = null,
+    val boulderScale: GradeScale? = null,
+    val routeScale: GradeScale? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val climbs: List<DatasetClimbDto> = emptyList(),
+)
+
+@Serializable
+data class DatasetClimbDto(
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    val gradeScale: GradeScale? = null,
+    val gradeIndex: Int? = null,
+    val setter: String? = null,
+    val note: String? = null,
+    val createdAt: Long,
+)
+
+/** One of your playlists: its climbs in order, each by its dataset's name, its name and type. */
+@Serializable
+data class PlaylistDto(val name: String, val note: String? = null, val createdAt: Long, val updatedAt: Long, val items: List<PlaylistItemDto> = emptyList())
+
+@Serializable
+data class PlaylistItemDto(
+    val dataset: String? = null,
+    val name: String,
+    val discipline: Discipline = Discipline.BOULDER,
+    val gradeScale: GradeScale? = null,
+    val gradeIndex: Int? = null,
+    /** A board catalogue's climb by the board's id (app schema 29). */
+    val catalogueUuid: String? = null,
+)
 
 @Serializable
 data class MeasurementDto(val type: MeasurementType, val value: Double, val date: String, val loggedAt: Long)

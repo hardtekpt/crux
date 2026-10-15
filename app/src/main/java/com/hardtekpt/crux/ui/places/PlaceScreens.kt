@@ -586,7 +586,8 @@ private fun FacilityTile(
         }
         Text(
             listOfNotNull(
-                section.type.label.takeIf { !it.equals(section.name, ignoreCase = true) },
+                // A board names itself ("Kilter Original 12×12"); a custom board says Board as before.
+                (section.boardLabel ?: section.type.label).takeIf { !it.equals(section.name, ignoreCase = true) },
                 "$areas ${if (areas == 1) section.type.areaLabel.lowercase() else section.type.areaLabel.lowercase() + "s"}",
             ).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,

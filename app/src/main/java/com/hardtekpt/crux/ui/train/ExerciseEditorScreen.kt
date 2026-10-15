@@ -81,6 +81,8 @@ data class ExerciseDraft(
     /** Set when the climber asks to delete: how many plans would lose this exercise. */
     val confirmDeleteInPlans: Int? = null,
     val done: Boolean = false,
+    /** A new exercise, once saved: its id, to open its page. */
+    val createdId: Long? = null,
 ) {
     val isNew: Boolean get() = id == 0L
 }
@@ -137,7 +139,7 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
             return
         }
         viewModelScope.launch {
-            repository.saveExercise(
+            val savedId = repository.saveExercise(
                 ExerciseInput(
                     id = draft.id,
                     name = name,
@@ -148,7 +150,7 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
                     prepSeconds = draft.prepSeconds,
                 ),
             )
-            _draft.update { it.copy(done = true) }
+            _draft.update { it.copy(done = true, createdId = savedId.takeIf { _ -> draft.isNew }) }
         }
     }
 
@@ -175,9 +177,14 @@ class ExerciseEditorViewModel @Inject constructor(savedStateHandle: SavedStateHa
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ExerciseEditorScreen(onDone: () -> Unit, viewModel: ExerciseEditorViewModel = hiltViewModel()) {
+fun ExerciseEditorScreen(onDone: () -> Unit, viewModel: ExerciseEditorViewModel = hiltViewModel(), onCreated: ((Long) -> Unit)? = null) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
-    LaunchedEffect(draft.done) { if (draft.done) onDone() }
+    LaunchedEffect(draft.done) {
+        if (draft.done) {
+            val created = draft.createdId
+            if (created != null && onCreated != null) onCreated(created) else onDone()
+        }
+    }
     val space = CruxTheme.space
 
     Column(

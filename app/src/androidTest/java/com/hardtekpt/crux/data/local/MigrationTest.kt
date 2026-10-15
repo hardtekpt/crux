@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -319,6 +320,149 @@ class MigrationTest {
             assertEquals(10, c.getInt(2))
             assertEquals("Seventh seal", c.getString(3))
             assertEquals(5, c.getInt(4))
+        }
+    }
+
+    @Test
+    fun migrate25To26AddsBoardsAsCustomAndKeepsEverythingElse() {
+        helper.createDatabase(DB, 25).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, 'BOARD')")
+            execSQL(
+                "INSERT INTO sections (id, placeId, type, name, position, boulderScale) VALUES (1, 1, 'GYM', 'Gym', 0, NULL), (2, 1, 'BOARD', 'Moonboard', 1, 'V_SCALE')",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 26, true)
+        // Every section starts as a custom board: no model, size or holds; the rest stays.
+        db.query("SELECT name, type, boulderScale, boardModel, boardSize, boardHolds FROM sections ORDER BY id").use { c ->
+            c.moveToFirst()
+            assertEquals("Gym", c.getString(0))
+            assertTrue(c.isNull(3) && c.isNull(4) && c.isNull(5))
+            c.moveToNext()
+            assertEquals("BOARD", c.getString(1))
+            assertEquals("V_SCALE", c.getString(2))
+            assertTrue(c.isNull(3) && c.isNull(4) && c.isNull(5))
+        }
+    }
+
+    @Test
+    fun migrate26To27AddsEmptyDatasets() {
+        helper.createDatabase(DB, 26).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Gravity', 'GYM', 0, 0, '')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 27, true)
+        db.query("SELECT COUNT(*) FROM datasets").use { c ->
+            c.moveToFirst()
+            assertEquals(0, c.getInt(0))
+        }
+        // A dataset's climbs go with it.
+        db.execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Garage board', 'own', 0, 0)")
+        db.execSQL("INSERT INTO dataset_climbs (id, datasetId, name, discipline, createdAtMillis) VALUES (1, 1, 'Roof to pinch', 'BOULDER', 0)")
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("DELETE FROM datasets WHERE id = 1")
+        db.query("SELECT COUNT(*) FROM dataset_climbs").use { c ->
+            c.moveToFirst()
+            assertEquals(0, c.getInt(0))
+        }
+    }
+
+    @Test
+    fun migrate27To28AddsLinksSourcesAndPlaylists() {
+        helper.createDatabase(DB, 27).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Block Lab', 'GYM', 0, 0, '')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position) VALUES (1, 1, 'GYM', 'Main gym', 0)")
+            execSQL(
+                "INSERT INTO problems (id, placeId, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) " +
+                    "VALUES (1, 1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            execSQL("INSERT INTO sessions (id, name, startedAtMillis, status) VALUES (1, 'Climbing session', 0, 'FINISHED')")
+            execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Block Lab circuit', 'own', 0, 0)")
+            execSQL("INSERT INTO dataset_climbs (id, datasetId, name, discipline, createdAtMillis) VALUES (1, 1, 'Pinch roof', 'BOULDER', 0)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 28, true)
+        // Climbs keep everything and have no source yet; sessions climb no playlist.
+        db.query("SELECT name, setter, sourceDatasetClimbId FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals("Pinch roof", c.getString(0))
+            assertEquals(true, c.isNull(1) && c.isNull(2))
+        }
+        db.query("SELECT playlistId, playlistIndex FROM sessions").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals(0, c.getInt(1))
+        }
+        // Deleting a dataset climb clears the climb's source and takes it out of playlists.
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("INSERT INTO section_datasets (sectionId, datasetId) VALUES (1, 1)")
+        db.execSQL("UPDATE problems SET sourceDatasetClimbId = 1, setter = 'Rita'")
+        db.execSQL("INSERT INTO playlists (id, name, createdAtMillis, updatedAtMillis) VALUES (1, 'Tonight', 0, 0)")
+        db.execSQL("INSERT INTO playlist_items (id, playlistId, position, datasetClimbId, name, discipline) VALUES (1, 1, 0, 1, 'Pinch roof', 'BOULDER')")
+        db.execSQL("DELETE FROM datasets WHERE id = 1")
+        db.query("SELECT sourceDatasetClimbId, setter FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals("Rita", c.getString(1))
+        }
+        listOf("section_datasets", "playlist_items").forEach { table ->
+            db.query("SELECT COUNT(*) FROM $table").use { c ->
+                c.moveToFirst()
+                assertEquals(0, c.getInt(0))
+            }
+        }
+    }
+
+    @Test
+    fun migrate28To29AddsCatalogueFields() {
+        helper.createDatabase(DB, 28).apply {
+            execSQL("INSERT INTO datasets (id, name, kind, createdAtMillis, updatedAtMillis) VALUES (1, 'Garage board', 'own', 0, 0)")
+            execSQL(
+                "INSERT INTO problems (id, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) VALUES (1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 29, true)
+        db.query("SELECT catalogueKey, climbCount FROM datasets").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+            assertEquals(0, c.getInt(1))
+        }
+        db.query("SELECT sourceCatalogueUuid FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals(true, c.isNull(0))
+        }
+    }
+
+    @Test
+    fun migrate29To30AddsClimbHolds() {
+        helper.createDatabase(DB, 29).apply {
+            execSQL(
+                "INSERT INTO problems (id, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) VALUES (1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 30, true)
+        db.query("SELECT name, holds, holdsBoard FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals("Pinch roof", c.getString(0))
+            assertEquals(true, c.isNull(1) && c.isNull(2))
+        }
+    }
+
+    @Test
+    fun migrate30To31AddsBoardLights() {
+        helper.createDatabase(DB, 30).apply {
+            execSQL("INSERT INTO places (id, name, type, createdAtMillis, favourite, extraTypes) VALUES (1, 'Home', 'BOARD', 0, 0, '')")
+            execSQL("INSERT INTO sections (id, placeId, type, name, position, boardModel) VALUES (1, 1, 'BOARD', 'Kilter', 0, 'kilter_original')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 31, true)
+        db.query("SELECT boardModel, lightsAddress, lightsOrder FROM sections").use { c ->
+            c.moveToFirst()
+            assertEquals("kilter_original", c.getString(0))
+            assertEquals(true, c.isNull(1))
+            assertEquals(0, c.getInt(2))
         }
     }
 

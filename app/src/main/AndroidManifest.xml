@@ -18,6 +18,13 @@
     <!-- Keeps the session's clock and rests running while you train with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Lights a climb's holds on a board you paired. Android 12+ asks for Nearby devices first;
+         older versions grant Bluetooth without asking. Android's pairing picker does the finding,
+         so Crux never scans and never needs location for it. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
 
     <application
         android:name=".CruxApplication"

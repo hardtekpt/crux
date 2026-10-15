@@ -58,6 +58,8 @@ class PlaceRepositoryTest {
         assertEquals(8, overhang.stats.attempts)
         assertEquals("The Arch", overhang.placeName)
         assertEquals("Overhang", overhang.areaName)
+        // The Arch has one facility, so its projects don't repeat it.
+        assertNull(overhang.sectionName)
     }
 
     @Test
@@ -105,5 +107,36 @@ class PlaceRepositoryTest {
         val localBests = climbs.observePersonalBests().first().filter { it.gradeScale.isLocal }
         assertEquals(setOf("Red", "7"), localBests.map { it.grade }.toSet())
         assertEquals(setOf(100L, 200L), localBests.map { it.placeId }.toSet())
+    }
+
+    @Test
+    fun `a project names its facility when the place has several`() = runTest {
+        val dbs = databases()
+        val places = OfflinePlaceRepository(dbs, FIXED_CLOCK)
+        val climbs = OfflineClimbRepository(dbs, FIXED_CLOCK)
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Two parts",
+                location = null,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = com.hardtekpt.crux.data.model.PlaceType.GYM, name = "Main gym"),
+                    SectionInput(type = com.hardtekpt.crux.data.model.PlaceType.BOARD, name = "MoonBoard"),
+                ),
+            ),
+        )
+        val moon = places.getPlace(placeId)!!.sections[1]
+        climbs.logClimb(
+            com.hardtekpt.crux.data.model.NewClimb(
+                com.hardtekpt.crux.data.model.Discipline.BOULDER, com.hardtekpt.crux.data.model.GradeScale.FONT, 10,
+                com.hardtekpt.crux.data.model.AscentStyle.ATTEMPT, 2, com.hardtekpt.crux.data.model.Venue.BOARD, java.time.LocalDate.now(FIXED_CLOCK),
+                "Moon thing", "Two parts", null, placeId = placeId, sectionId = moon.id,
+            ),
+        )
+
+        val project = places.observeProjects().first().single { it.problem.name == "Moon thing" }
+
+        assertEquals("MoonBoard", project.sectionName)
+        assertEquals("Two parts · MoonBoard", project.whereLabel)
     }
 }

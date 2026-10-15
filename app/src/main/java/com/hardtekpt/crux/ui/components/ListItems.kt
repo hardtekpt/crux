@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,8 @@ fun CruxListRow(
     selected: Boolean = false,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
+    /** A long press, such as starting a selection. */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val contentAlpha = if (enabled) 1f else DISABLED_CONTENT
@@ -84,7 +87,14 @@ fun CruxListRow(
                 if (selected) colors.primary else colors.outlineVariant,
                 MaterialTheme.shapes.medium,
             )
-            .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                when {
+                    !enabled -> Modifier
+                    onLongClick != null -> Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick)
+                    onClick != null -> Modifier.clickable(onClick = onClick)
+                    else -> Modifier
+                },
+            )
             .heightIn(min = CruxTheme.size.touchTarget)
             .padding(horizontal = CruxTheme.space.s4, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),

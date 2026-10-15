@@ -3,7 +3,7 @@
 A session is a workout you log as you go: either one of your plans, set by set, or a climbing day
 without a plan, where you log climbs.
 
-<img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/6_session.png" width="300" alt="A live session showing the current exercise, its sets and a Done button">
+<img src="../../fastlane/metadata/android/en-US/images/phoneScreenshots/6_session.png" width="300" alt="A live session: each exercise as a card with a table of sets to tick, and a Done button in the dock">
 
 ## Starting a session
 
@@ -16,33 +16,51 @@ session. Only one session runs at a time; starting another ends the first.
 
 ## While it runs
 
-- The top bar shows the session's name, a quiet clock and **Finish**. Below it, a progress strip
-  has one segment per exercise; tap a segment to jump to that exercise.
-- **One exercise at a time**: its place in the plan, its goal as a sentence (for example
-  "6 hangs of 10 s with +17.5 kg, 3 min rest"), and a row per set.
-- **Logging a set**: the next set starts at the target, or at what your last set was. Change what
-  went differently, then tap **Done**. *Skip this set* marks it skipped. Tap a logged set to change
-  it or take it out.
-- **Rest timer**: after a set, a band opens with the rest counting down, with **+30 s** and
-  **Skip**. It beeps for the last three seconds and buzzes when the rest is over. After the last
-  set, Crux moves on to the next exercise.
-- **Interval timer**: interval exercises run a timer with preparation, work and rest phases, the
-  repeats and cycles left, and pause, play and stop. Each finished cycle is logged as a set. You
-  can also log cycles by hand.
-- **Extras**: **+ Exercise** adds an exercise from your library, and **Timer** runs an interval
-  timer of its own. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
+- The top bar shows the session's name, a quiet clock with how many exercises are done, **+** and
+  **Finish**.
+- **The rail** under it has a segment per exercise that fills as its sets go in and turns green
+  once it's done. Tap a segment to scroll to that exercise.
+- **Every exercise in one list**, in plan order. Each card shows the target (for example
+  "6 × 10 s · +17.5 kg · 3 min rest") and a table of its sets: the set number, what you did last
+  time, the values (load, reps, time) and a tick box. The exercise with the next set is outlined in
+  the accent colour (in the timer's colour while its timer runs), and its next set is highlighted.
+  Once every set is in, the card folds to one line with a green tick ("✓ 3 sets"); tap its name to
+  open or fold it.
+- **Logging a set**: each set starts at the target, or at what your last set was. Tap a value to
+  change it with a stepper right under the row, then tick the box. Change a set you already ticked
+  the same way; tick it again to take it back. **Add set** adds one more for this session.
+- **A playlist** (from **+ → Climb a playlist**, or *Climb this playlist* on a playlist) shows as
+  a card with the climb that's up, **Prev** and **Next**, and **+ Fell** and **+ Sent** to add a go
+  in one tap. See [Playlists](datasets.md#playlists).
+- **The dock** at the bottom always shows what's next: **Done · Exercise, set N** ticks the next
+  set, **Start timer** runs the next interval exercise, and **Log climb** on a climbing day.
+- **The ⋯ menu** on an exercise opens **About this exercise** (its page, with your record and
+  chart), changes its sets, reps or time, load and rest, starts its timer, skips the rest of it, or
+  takes it out while nothing is logged on it. A change is for this session only, unless you switch
+  on **Also change the plan**: then the plan changes too, so next time starts from it.
+- **Rest timer**: after a set, the dock turns amber with the rest counting down, what's next, a bar
+  that drains as it runs out, **+30 s** and **Skip**. It beeps for the last three seconds and
+  buzzes when the rest is over.
+- **Interval timer**: interval exercises run a timer in the dock: the time left in the phase, the
+  phase with its rep and cycle ("Work · rep 3 of 6 · cycle 2 of 3"), the cycle's repeats as dots,
+  pause and next phase (stop once paused). The dock fills with the work colour while you work and
+  is tinted for rests. Each finished cycle is logged as a set. You can also tick cycles by hand.
+- **Big timer**: tap the dock and the rest or timer fills the top of the screen with one big
+  number, for when your phone is on the floor across the mat. A big rest has **−30 s**, **+30 s**
+  and **Skip rest**; a big timer has back, pause, next and stop. **Make small** puts it back in
+  the dock. It stays big for the next rest until you make it small.
+- **+ in the top bar**: log a climb, add an exercise from your library, or run an interval timer of
+  its own. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
   (6 × 7 s on, 3 s off, three cycles, 3 min between). Outside a session, *You → Interval timer* is
   a full-screen timer of its own: see [You](you.md#interval-timer).
-- **Climbs**: **Log climb** inside a session adds the climb to the session and to your journal. The
-  session shows your climbs, sends and hardest send so far. Several logs on the same climb show
+- **Climbs**: a climb logged inside a session goes into the session and your journal, and shows on
+  the session's **Climbs** card under the exercises, outlined in amber, with your hardest send and
+  **Log climb** on it. Each climb shows its grade, how it went and **+ go** to log another go. On a
+  climbing day three tiles on top show your climbs, sends and hardest send so far. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the
   Journal and in the session's summary. Tap a climb in the session to log more goes on it. If
   **Rest after a climb** is set in Settings, logging a
-  climb starts that rest in the band, so you know when to pull on again.
-
-The arrows at the end of the band make it **compact**: one slim line with the number, what's left
-and the controls, so more of the exercise shows. Tap them again for the large band. Crux remembers
-which you chose.
+  climb starts that rest in the dock, so you know when to pull on again.
 
 The screen stays on while something counts down. Timers are worked out from the clock, so they stay
 right if the screen turns off or you switch apps.

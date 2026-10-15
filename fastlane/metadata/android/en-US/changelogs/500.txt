@@ -1,0 +1,1 @@
+Board climbing: say which board a facility is, keep your own climb lists and playlists, import Kilter and MoonBoard catalogues from Boardsesh files, pick climbs in Log climb, see their holds, and light them on your board (not yet tried on a real one). Training progress in Progress, one page per exercise, a simpler live session, launcher shortcuts and CSV export.

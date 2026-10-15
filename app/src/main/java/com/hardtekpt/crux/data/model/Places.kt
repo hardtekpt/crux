@@ -55,7 +55,16 @@ data class Section(
     val routeScale: GradeScale? = null,
     /** The section's own grades, used where a discipline's scale is local. */
     val localScale: LocalScale? = null,
+    /** Board sections: which board; null is a custom board. Kept when the type changes. */
+    val board: BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: BoardHolds? = null,
+    /** The board's lights paired on this phone, if any. */
+    val lights: PairedLights? = null,
 ) {
+    /** "Kilter Original 12×12" on a board section that names its board; else null. */
+    val boardLabel: String? get() = if (type == PlaceType.BOARD) boardLabel(board, boardSize, boardHolds) else null
+
     /** Boards only hold boulders. */
     val disciplines: List<Discipline> get() = if (type == PlaceType.BOARD) listOf(Discipline.BOULDER) else Discipline.entries
 
@@ -103,6 +112,15 @@ data class Problem(
     val gradeColour: Long? = null,
     /** The facility it's in, when the place has one picked. */
     val sectionId: Long? = null,
+    /** Who set it, when it was picked from a dataset. */
+    val setter: String? = null,
+    /** The dataset climb it was picked from, while that still exists. */
+    val sourceDatasetClimbId: Long? = null,
+    /** The board catalogue climb it was picked from. */
+    val sourceCatalogueUuid: String? = null,
+    /** Its holds and whose positions they are, for the hold diagram. */
+    val holds: String? = null,
+    val holdsBoard: String? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }
@@ -133,4 +151,17 @@ data class PlaceSummary(
 data class PlaceDetail(val place: Place, val areas: List<Area>, val problems: List<ProblemWithStats>)
 
 /** An open project: a problem with goes but no send, and where it is. */
-data class Project(val problem: Problem, val placeName: String, val areaName: String?, val stats: ProblemStats)
+data class Project(
+    val problem: Problem,
+    val placeName: String,
+    val areaName: String?,
+    val stats: ProblemStats,
+    /** The facility (Gym, a MoonBoard) when the place has more than one, so projects at one place aren't confused. */
+    val sectionName: String? = null,
+) {
+    /** "Block Lab · MoonBoard · Cave": the place, its facility when it has several, and the wall. */
+    val whereLabel: String get() = listOfNotNull(placeName.ifBlank { null }, sectionName, areaName).joinToString(" · ")
+}
+
+/** A board's lights, paired on this phone: its Bluetooth address and name, its protocol, and a MoonBoard's LED order. */
+data class PairedLights(val address: String, val name: String, val protocol: Int, val order: Int = 0)

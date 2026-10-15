@@ -2,6 +2,7 @@ package com.hardtekpt.crux
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
@@ -192,8 +193,10 @@ class MainActivityTest {
 
     @Test
     fun bodyweightWidgetOpensMeasurements() {
-        composeRule.waitForTag("widget_bodyweight")
-        composeRule.onNodeWithTag("widget_bodyweight").performScrollTo().performClick()
+        // Home is a lazy list: scroll the widget into view before tapping it.
+        composeRule.waitForTag("home_list")
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_bodyweight"))
+        composeRule.onNodeWithTag("widget_bodyweight").performClick()
         composeRule.waitForTag("screen_Measurements")
     }
 
@@ -224,7 +227,9 @@ class MainActivityTest {
         composeRule.onNodeWithTag("start_free").performClick()
         composeRule.waitForTag("screen_Session")
 
-        // A climb logged from the session belongs to it.
+        // A climb logged from the session (from its + menu) belongs to it.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_log_climb")
         composeRule.onNodeWithTag("session_log_climb").performClick()
         composeRule.waitForTag("screen_LogClimb")
         composeRule.onNodeWithTag("field_name").performScrollTo()
@@ -243,28 +248,43 @@ class MainActivityTest {
         }
         assertEquals(1, composeRule.onAllNodesWithTag("session_climb").fetchSemanticsNodes().size)
 
-        // An interval exercise added on the spot: a cycle logged by hand, then changed.
-        composeRule.onNodeWithTag("session_add_exercise").performScrollTo().performClick()
+        // An interval exercise added on the spot: a cycle ticked by hand, then changed in place.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_add_exercise")
+        composeRule.onNodeWithTag("session_add_exercise").performClick()
         composeRule.waitForTag("pick_Repeaters")
         composeRule.onNodeWithTag("pick_Repeaters").performScrollTo().performClick()
-        composeRule.waitForTag("session_log_cycle")
-        composeRule.onNodeWithTag("session_log_cycle").performScrollTo().performClick()
+        composeRule.waitForTag("session_tick_0")
+        composeRule.onNodeWithTag("session_tick_0").performScrollTo().performClick()
+        composeRule.waitForTag("session_rest_skip")
         composeRule.onNodeWithTag("session_rest_skip").performClick()
-        composeRule.onNodeWithTag("session_set_0").performScrollTo().performClick()
-        composeRule.waitForTag("set_edit")
-        composeRule.onNodeWithTag("edit_reps_minus").performClick()
-        composeRule.onNodeWithTag("set_edit_save").performClick()
-        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("set_edit").fetchSemanticsNodes().isEmpty() }
-        composeRule.onNodeWithTag("session_set_0").assertTextContains("5 × 7 s", substring = true)
+        composeRule.onNodeWithTag("session_value_0_REPS").performScrollTo().performClick()
+        composeRule.waitForTag("set_reps_minus")
+        composeRule.onNodeWithTag("set_reps_minus").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_value_0_REPS") and hasText("5")).fetchSemanticsNodes().isNotEmpty()
+        }
 
-        // A timer of its own opens the band at the top; paused, it can be stopped.
-        composeRule.onNodeWithTag("session_timer").performScrollTo().performClick()
+        // Its targets change for this session, from its ⋯ menu; Done keeps them.
+        composeRule.onNodeWithTag("session_exercise_menu").performScrollTo().performClick()
+        composeRule.waitForTag("session_edit_target")
+        composeRule.onNodeWithTag("session_edit_target").performClick()
+        composeRule.waitForTag("target_sheet")
+        composeRule.onNodeWithTag("target_done").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("target_sheet").fetchSemanticsNodes().isEmpty() }
+
+        // A timer of its own runs in the dock; paused, it can be stopped.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_timer")
+        composeRule.onNodeWithTag("session_timer").performClick()
         composeRule.waitForTag("timer_start")
         composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
         composeRule.waitForTag("timer_band")
-        // Compact, it keeps its controls on one line, and stays compact until opened up again.
-        composeRule.onNodeWithTag("timer_compact").performClick()
-        composeRule.waitForTag("timer_counts")
+        // Tapping the dock makes it big; Make small puts it back in the dock.
+        composeRule.onNodeWithTag("timer_band").performClick()
+        composeRule.waitForTag("timer_make_small")
+        composeRule.onNodeWithTag("timer_make_small").performClick()
+        composeRule.waitForTag("timer_pause")
         composeRule.onNodeWithTag("timer_pause").performClick()
         composeRule.waitForTag("timer_stop")
         composeRule.onNodeWithTag("timer_stop").performClick()
@@ -334,6 +354,10 @@ class MainActivityTest {
         composeRule.onNodeWithTag("category_CLIMBING").performClick()
         composeRule.onNodeWithTag("save_exercise").performClick()
 
+        // A new exercise lands on its own page; back goes to the library.
+        composeRule.waitForTag("screen_ExerciseRecords")
+        composeRule.waitForTag("exercise_setup")
+        composeRule.onNodeWithTag("back").performClick()
         composeRule.waitForTag("screen_Train")
         composeRule.onNodeWithTag("segment_Plans").performClick()
         composeRule.onNodeWithTag("new_plan").performClick()
@@ -361,6 +385,50 @@ class MainActivityTest {
         composeRule.onNode(hasText("Power day")).performClick()
         composeRule.waitForTag("template_exercise")
         composeRule.onNode(hasText("Campus ladders")).assertIsDisplayed()
+    }
+
+    @Test
+    fun trainingProgressShowsInProgressAndAsWidgetsYouSetUp() {
+        // A result logged by hand is training too.
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasText("Log a record"))
+        composeRule.onNode(hasText("Log a record")).performClick()
+        composeRule.waitForTag("row_record_exercise")
+        // The exercise list starts open; it only needs opening when it isn't.
+        if (composeRule.onAllNodesWithTag("record_pick_Half-crimp hang").fetchSemanticsNodes().isEmpty()) {
+            composeRule.onNodeWithTag("row_record_exercise").performClick()
+        }
+        composeRule.waitForTag("record_pick_Half-crimp hang")
+        composeRule.onNodeWithTag("record_pick_Half-crimp hang").performScrollTo().performClick()
+        composeRule.onNodeWithTag("save_record").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("screen_RecordEditor").fetchSemanticsNodes().isEmpty() }
+
+        // Progress's Training tab lists the exercises trained, and each opens its page with a chart.
+        composeRule.onNodeWithTag("nav_Progress").performClick()
+        composeRule.waitForTag("progress_tabs")
+        composeRule.onNode(hasText("Training")).performClick()
+        composeRule.waitForTag("training_exercise")
+        composeRule.onAllNodesWithTag("training_exercise")[0].performClick()
+        composeRule.waitForTag("exercise_chart")
+        composeRule.onNodeWithTag("back").performClick()
+
+        // On Home, a Training widget asks which figure to show, and an Exercise widget which exercise.
+        composeRule.onNodeWithTag("nav_Home").performClick()
+        composeRule.waitForTag("edit_dashboard")
+        composeRule.onNodeWithTag("edit_dashboard").performClick()
+        composeRule.onNodeWithTag("add_widget").performClick()
+        composeRule.onNodeWithTag("catalog_TRAINING").performScrollTo().performClick()
+        composeRule.waitForTag("setup_SETS")
+        composeRule.onNodeWithTag("setup_SETS").performClick()
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_TRAINING"))
+        composeRule.onNodeWithTag("training_figure", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag("add_widget").performClick()
+        composeRule.onNodeWithTag("catalog_EXERCISE").performScrollTo().performClick()
+        composeRule.waitForTag("setup_exercise_Half-crimp hang")
+        composeRule.onNodeWithTag("setup_exercise_Half-crimp hang").performScrollTo().performClick()
+        composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("widget_EXERCISE"))
+        composeRule.onNodeWithTag("exercise_best", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -475,6 +543,119 @@ class MainActivityTest {
         composeRule.onNodeWithTag("log_fab").performClick()
         composeRule.onNodeWithTag("quick_LogClimb").performClick()
         composeRule.waitForTag("favourite_Test Gym")
+    }
+
+    @Test
+    fun aBoardClimbsAngleIsTheFirstLineOfItsNote() {
+        composeRule.onNodeWithTag("log_fab").performClick()
+        composeRule.onNodeWithTag("quick_LogClimb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        // No saved place, on a board: the Angle chip shows beside Photo and Video.
+        composeRule.onNodeWithTag("where_summary").performClick()
+        composeRule.waitForTag("venue")
+        composeRule.onNode(hasText("Board") and hasAnyAncestor(hasTestTag("venue"))).performClick()
+        androidx.test.espresso.Espresso.pressBack()
+        composeRule.waitForTag("climb_angle")
+        composeRule.onNodeWithTag("climb_angle").performScrollTo().performClick()
+        composeRule.waitForTag("angle_sheet")
+        composeRule.onNodeWithTag("angle_40").performClick()
+        composeRule.onNodeWithTag("angle_done").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("angle_sheet").fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithTag("add_note").performScrollTo().performClick()
+        composeRule.textFieldIn("field_notes").performTextInput("Heel hook")
+        composeRule.onNodeWithTag("field_name").performScrollTo()
+        composeRule.textFieldIn("field_name").performTextInput("Angle test")
+        composeRule.onNodeWithTag("save_climb").performClick()
+
+        // Edit log lifts the angle back into the chip; the note field shows only the note.
+        composeRule.waitForTag("screen_Home")
+        composeRule.onNodeWithTag("nav_Journal").performClick()
+        composeRule.waitForTag("journal_climb")
+        composeRule.onNodeWithTag("journal_climb").performClick()
+        composeRule.waitForTag("climb_angle")
+        composeRule.onNodeWithTag("climb_angle").performScrollTo().assertTextContains("40°", substring = true)
+        composeRule.textFieldIn("field_notes").assertTextContains("Heel hook", substring = true)
+        composeRule.textFieldIn("field_notes").assert(hasText("40°", substring = true).not())
+    }
+
+    @Test
+    fun aDatasetCanBeMadeAndHoldClimbs() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("menu_datasets"))
+        composeRule.onNodeWithTag("menu_datasets").performClick()
+        // Empty to start with; New dataset opens its details, Create opens it.
+        composeRule.waitForTag("datasets_new")
+        composeRule.onNodeWithTag("datasets_new").performClick()
+        composeRule.waitForTag("dataset_details")
+        composeRule.textFieldIn("field_dataset_name").performTextInput("Garage board")
+        composeRule.onNodeWithTag("dataset_details_save").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        // A climb goes in; an ungraded one sorts last with a dash.
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Roof to pinch")
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitForTag("dataset_climb")
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Sit start project")
+        composeRule.onNodeWithTag("climb_no_grade").performClick()
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("dataset_climb").fetchSemanticsNodes().size == 2 }
+        // Search narrows the list.
+        composeRule.textFieldIn("dataset_search").performTextInput("roof")
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("dataset_climb").fetchSemanticsNodes().size == 1 }
+        composeRule.onNodeWithTag("dataset_climb").assertTextContains("Roof to pinch", substring = true)
+    }
+
+    @Test
+    fun aDatasetClimbIsLoggedAndClimbedFromAPlaylist() {
+        composeRule.onNodeWithTag("nav_You").performClick()
+        composeRule.waitForTag("you_list")
+        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("menu_datasets"))
+        composeRule.onNodeWithTag("menu_datasets").performClick()
+        composeRule.waitForTag("datasets_new")
+        composeRule.onNodeWithTag("datasets_new").performClick()
+        composeRule.waitForTag("dataset_details")
+        composeRule.textFieldIn("field_dataset_name").performTextInput("Garage board")
+        composeRule.onNodeWithTag("dataset_details_save").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        composeRule.onNodeWithTag("dataset_add_climb").performClick()
+        composeRule.waitForTag("climb_sheet")
+        composeRule.textFieldIn("field_climb_name").performTextInput("Roof to pinch")
+        composeRule.onNodeWithTag("climb_sheet_save").performClick()
+        composeRule.waitForTag("dataset_climb")
+        // Into a new playlist, from the climb's sheet.
+        composeRule.onNodeWithTag("dataset_climb").performClick()
+        composeRule.waitForTag("climb_sheet_playlist")
+        composeRule.onNodeWithTag("climb_sheet_playlist").performClick()
+        composeRule.waitForTag("add_to_playlist")
+        composeRule.textFieldIn("field_new_playlist").performTextInput("Tonight")
+        composeRule.onNodeWithTag("new_playlist_add").performClick()
+        // Log this climb: the form takes its name, linked to the dataset.
+        composeRule.onNodeWithTag("dataset_climb").performClick()
+        composeRule.waitForTag("climb_sheet_log")
+        composeRule.onNodeWithTag("climb_sheet_log").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("linked_name").performScrollTo()
+        composeRule.onNode(hasAnyAncestor(hasTestTag("linked_name")) and hasText("from Garage board", substring = true)).assertExists()
+        composeRule.onNodeWithTag("save_climb").performClick()
+        composeRule.waitForTag("screen_Dataset")
+        // The playlist, climbed in a session: + Fell adds a go to its climb.
+        androidx.test.espresso.Espresso.pressBack()
+        composeRule.waitForTag("datasets_tabs")
+        composeRule.onNode(hasText("Playlists · 1")).performClick()
+        composeRule.waitForTag("playlist_row")
+        composeRule.onNodeWithTag("playlist_row").performClick()
+        composeRule.waitForTag("playlist_climb")
+        composeRule.onNodeWithTag("playlist_climb").performClick()
+        composeRule.waitForTag("session_playlist")
+        composeRule.onNodeWithTag("session_playlist_climb").assertTextContains("not tried yet", substring = true)
+        composeRule.onNodeWithTag("session_playlist_fell").performScrollTo().performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("session_playlist_climb") and hasText("1 go", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test

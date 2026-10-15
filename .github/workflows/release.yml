@@ -22,6 +22,8 @@ env:
 jobs:
   device-tests:
     uses: ./.github/workflows/device-tests.yml
+    with:
+      benchmarks: true
 
   release:
     needs: device-tests

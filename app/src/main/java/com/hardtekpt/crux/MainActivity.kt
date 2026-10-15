@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(darkBars(), darkBars())
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) openRequest.value = OpenRequest.from(intent)
+        LauncherShortcuts.publish(this)
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
@@ -111,6 +112,8 @@ class MainActivity : ComponentActivity() {
         const val OPEN_SESSION = "session"
         const val OPEN_TIMER = "timer"
         const val OPEN_LOG_CLIMB = "log_climb"
+        const val OPEN_LOG_WEIGHT = "log_weight"
+        const val OPEN_START_SESSION = "start_session"
     }
 
     private fun darkBars() = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -170,13 +173,51 @@ sealed interface OpenRequest {
     data class Session(val id: Long) : OpenRequest
     data object Timer : OpenRequest
     data object LogClimb : OpenRequest
+    data object LogWeight : OpenRequest
+
+    /** The running session, or the choice of what to start. */
+    data object StartSession : OpenRequest
 
     companion object {
         fun from(intent: Intent?): OpenRequest? = when (intent?.getStringExtra(MainActivity.EXTRA_OPEN)) {
             MainActivity.OPEN_SESSION -> intent.getLongExtra(MainActivity.EXTRA_SESSION, 0L).takeIf { it != 0L }?.let(::Session)
             MainActivity.OPEN_TIMER -> Timer
             MainActivity.OPEN_LOG_CLIMB -> LogClimb
+            MainActivity.OPEN_LOG_WEIGHT -> LogWeight
+            MainActivity.OPEN_START_SESSION -> StartSession
             else -> null
+        }
+    }
+}
+
+/**
+ * What a long press on Crux's icon offers: Log climb, Start a session, Log weight and the Interval
+ * timer, each straight to its page. Set from code rather than res/xml so they point at whichever
+ * build is installed (the debug and internal builds have their own app id).
+ */
+internal object LauncherShortcuts {
+    fun publish(context: android.content.Context) {
+        runCatching {
+            fun shortcut(id: String, short: String, long: String, icon: Int, open: String) = androidx.core.content.pm.ShortcutInfoCompat.Builder(context, id)
+                .setShortLabel(short)
+                .setLongLabel(long)
+                .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(context, icon))
+                .setIntent(
+                    Intent(context, MainActivity::class.java)
+                        .setAction(Intent.ACTION_VIEW)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        .putExtra(MainActivity.EXTRA_OPEN, open),
+                )
+                .build()
+            androidx.core.content.pm.ShortcutManagerCompat.setDynamicShortcuts(
+                context,
+                listOf(
+                    shortcut("log_climb", "Log climb", "Log a climb", R.drawable.ic_shortcut_climb, MainActivity.OPEN_LOG_CLIMB),
+                    shortcut("start_session", "Session", "Start or resume a session", R.drawable.ic_shortcut_session, MainActivity.OPEN_START_SESSION),
+                    shortcut("log_weight", "Log weight", "Log your weight", R.drawable.ic_shortcut_weight, MainActivity.OPEN_LOG_WEIGHT),
+                    shortcut("timer", "Timer", "Interval timer", R.drawable.ic_shortcut_timer, MainActivity.OPEN_TIMER),
+                ),
+            )
         }
     }
 }

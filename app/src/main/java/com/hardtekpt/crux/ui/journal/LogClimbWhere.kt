@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -77,6 +78,16 @@ data class WhereActions(
     val setPlaceText: (String) -> Unit,
     /** At a place with several parts: which one this climb was at. */
     val selectSection: (Long) -> Unit = {},
+    /** The Climb step: one of your climbs, a dataset's climb, or a new climb to type. */
+    val pickProblem: (Problem) -> Unit = {},
+    val pickDatasetClimb: (com.hardtekpt.crux.data.ClimbSource) -> Unit = {},
+    val newClimb: () -> Unit = {},
+    /** Whether a section uses any dataset, so picking it leads on to the Climb step. */
+    val usesDatasets: (com.hardtekpt.crux.data.model.Section) -> Boolean = { false },
+    /** The sheet opened by itself, for Log this climb. */
+    val whereOpened: () -> Unit = {},
+    /** A board catalogue's climbs whose name or setter has what's typed, at the draft's angle. */
+    val searchCatalogue: suspend (com.hardtekpt.crux.data.Dataset, String) -> List<com.hardtekpt.crux.data.ClimbSource> = { _, _ -> emptyList() },
 )
 
 /** The part of [this] place the draft is at: the picked section, else the first. */
@@ -85,7 +96,7 @@ private fun Place.sectionFor(draft: LogClimbDraft) = sections.firstOrNull { it.i
 /** The kind of climbing the draft is at, within [this] place. */
 private fun Place.typeFor(draft: LogClimbDraft): PlaceType = sectionFor(draft)?.type ?: types.firstOrNull { it.venue == draft.venue } ?: type
 
-private enum class WhereStep { PLACE, AREA }
+private enum class WhereStep { PLACE, AREA, CLIMB }
 
 /**
  * Where the climb was, as one read-only line ("Block Lab · Kilter · Benchmarks · 40°"), with
@@ -93,8 +104,22 @@ private enum class WhereStep { PLACE, AREA }
  * place, then its facility and wall; any step can be skipped or the sheet closed early.
  */
 @Composable
-fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions, trailing: @Composable () -> Unit = {}) {
+fun WhereSection(
+    draft: LogClimbDraft,
+    places: List<PlaceSummary>,
+    detail: PlaceDetail?,
+    actions: WhereActions,
+    trailing: @Composable () -> Unit = {},
+    choices: ClimbChoices? = null,
+) {
     var open by rememberSaveable { mutableStateOf(false) }
+    // Log this climb, from a dataset used at several sections: the sheet opens on them.
+    androidx.compose.runtime.LaunchedEffect(draft.openWhere) {
+        if (draft.openWhere) {
+            open = true
+            actions.whereOpened()
+        }
+    }
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     val area = place?.let { detail.areas.firstOrNull { it.id == draft.areaId } }
 
@@ -128,7 +153,7 @@ fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: Place
         Box(Modifier.weight(1f)) {
             WhereRow(
                 summary = summary.ifBlank { null },
-                kind = place?.typeFor(draft)?.label ?: draft.venue.label,
+                kind = place?.sectionFor(draft)?.boardLabel?.let { "Board · $it" } ?: place?.typeFor(draft)?.label ?: draft.venue.label,
                 icon = place?.let { placeIcon(it.typeFor(draft)) } ?: Icons.Rounded.EditLocationAlt,
                 onClick = { open = true },
             )
@@ -136,7 +161,7 @@ fun WhereSection(draft: LogClimbDraft, places: List<PlaceSummary>, detail: Place
         trailing()
     }
     if (open) {
-        WhereSheet(draft, places, detail, actions, onClose = { open = false })
+        WhereSheet(draft, places, detail, actions, choices, onClose = { open = false })
     }
 }
 
@@ -177,20 +202,40 @@ private fun WhereRow(summary: String?, kind: String, icon: ImageVector, onClick:
 }
 
 @Composable
-private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail: PlaceDetail?, actions: WhereActions, onClose: () -> Unit) {
+private fun WhereSheet(
+    draft: LogClimbDraft,
+    places: List<PlaceSummary>,
+    detail: PlaceDetail?,
+    actions: WhereActions,
+    choices: ClimbChoices?,
+    onClose: () -> Unit,
+) {
     val place = detail?.place?.takeIf { it.id == draft.placeId }
     var step by rememberSaveable { mutableStateOf(WhereStep.PLACE) }
     var creatingPlace by rememberSaveable { mutableStateOf(false) }
-    // With no place the later step has nothing to show.
-    val current = if (place == null) WhereStep.PLACE else step
-    // After the wall, the sheet has done its job.
-    val next = {
-        if (current == WhereStep.PLACE && (detail?.areas?.isNotEmpty() == true || place?.hasSeveralTypes == true)) step = WhereStep.AREA else onClose()
+    var climbTab by rememberSaveable { mutableStateOf(YOURS) }
+    var query by rememberSaveable { mutableStateOf("") }
+    // With no place the later steps have nothing to show; Climb only where the section has datasets.
+    val current = when {
+        place == null -> WhereStep.PLACE
+        step == WhereStep.CLIMB && choices == null -> WhereStep.AREA
+        else -> step
     }
+    val hasArea = detail?.areas?.isNotEmpty() == true || place?.hasSeveralTypes == true
+    // After the wall (or the climb, where there are datasets), the sheet has done its job.
+    val next = {
+        when {
+            current == WhereStep.PLACE && hasArea -> step = WhereStep.AREA
+            current != WhereStep.CLIMB && choices != null -> step = WhereStep.CLIMB
+            else -> onClose()
+        }
+    }
+    val steps = WhereStep.entries.filter { it != WhereStep.CLIMB || choices != null }
     val stepLabel = { s: WhereStep ->
         when (s) {
             WhereStep.PLACE -> "Place"
             WhereStep.AREA -> place?.let { if (it.hasSeveralTypes) "Area" else it.type.areaLabel } ?: "Area"
+            WhereStep.CLIMB -> "Climb"
         }
     }
 
@@ -212,7 +257,7 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = CruxTheme.space.s3),
             ) {
-                WhereStep.entries.forEachIndexed { index, s ->
+                steps.forEachIndexed { index, s ->
                     if (index > 0) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     val enabled = s == WhereStep.PLACE || place != null
                     Text(
@@ -243,7 +288,7 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                             horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                             modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
                         ) {
-                            place.sections.forEach { section ->
+                            place.sections.filter { draft.whereLimit == null || it.id in draft.whereLimit }.forEach { section ->
                                 CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, {
                                     actions.selectSection(section.id)
                                 }, Modifier.testTag("where_section_${section.name}"))
@@ -253,11 +298,30 @@ private fun WhereSheet(draft: LogClimbDraft, places: List<PlaceSummary>, detail:
                 }
                 when (current) {
                     // The new place's walls may not have loaded yet, so decide from its summary.
-                    WhereStep.PLACE -> placeStep(draft, places, actions, onPicked = { picked ->
-                        if (picked.walls > 0 || picked.place.hasSeveralTypes) step = WhereStep.AREA else onClose()
-                    }, onNew = { creatingPlace = true })
+                    WhereStep.PLACE -> placeStep(
+                        draft,
+                        places.filter { summary -> draft.whereLimit == null || summary.place.sections.any { it.id in draft.whereLimit } },
+                        actions,
+                        onPicked = { picked ->
+                            when {
+                                picked.walls > 0 || picked.place.hasSeveralTypes -> step = WhereStep.AREA
+                                picked.place.sections.firstOrNull()?.let(actions.usesDatasets) == true -> step = WhereStep.CLIMB
+                                else -> onClose()
+                            }
+                        },
+                        onNew = { creatingPlace = true },
+                    )
 
-                    WhereStep.AREA -> if (detail != null) areaStep(draft, detail, actions, onPicked = onClose)
+                    WhereStep.AREA -> if (detail != null) {
+                        areaStep(draft, detail, actions, onPicked = { area ->
+                            val section = area?.let { detail.place.sectionOf(it) } ?: detail.place.section(draft.sectionId)
+                            if (section != null && actions.usesDatasets(section)) step = WhereStep.CLIMB else onClose()
+                        })
+                    }
+
+                    WhereStep.CLIMB -> if (choices != null) {
+                        climbStep(draft, detail, choices, climbTab, { climbTab = it }, query, { query = it }, actions, onClose)
+                    }
                 }
                 if (place == null) {
                     item(key = "venue") {
@@ -319,13 +383,13 @@ private fun LazyListScope.placeStep(
     }
 }
 
-private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, actions: WhereActions, onPicked: () -> Unit) {
+private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, actions: WhereActions, onPicked: (com.hardtekpt.crux.data.model.Area?) -> Unit) {
     val type = detail.place.typeFor(draft)
     val section = detail.place.sectionFor(draft)
     item(key = "area_any") {
         PickRow("Any ${type.areaLabel.lowercase()}", selected = draft.areaId == null, tag = "area_any") {
             actions.selectArea(null)
-            onPicked()
+            onPicked(null)
         }
     }
     items(detail.areas.filter { section == null || detail.place.sectionOf(it)?.id == section.id }, key = { "area_${it.id}" }) { area ->
@@ -335,9 +399,178 @@ private fun LazyListScope.areaStep(draft: LogClimbDraft, detail: PlaceDetail, ac
             tag = "area_${area.name}",
         ) {
             actions.selectArea(area.id)
-            onPicked()
+            onPicked(area)
         }
     }
+}
+
+private const val YOURS = "yours"
+
+/**
+ * The Climb step: your climbs at the section first, then a chip per playlist and dataset, with a
+ * search over the chip shown. Rows show the grade in the section's scale and how you've done on
+ * the climb here. Picking fills the form; New climb leaves the name to type.
+ */
+private fun LazyListScope.climbStep(
+    draft: LogClimbDraft,
+    detail: PlaceDetail?,
+    choices: ClimbChoices,
+    tab: String,
+    onTab: (String) -> Unit,
+    query: String,
+    onQuery: (String) -> Unit,
+    actions: WhereActions,
+    onClose: () -> Unit,
+) {
+    val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    fun matches(vararg text: String?) = words.all { word -> text.any { it?.lowercase()?.contains(word) == true } }
+    item(key = "climb_search") {
+        CruxTextField(
+            label = "",
+            value = query,
+            onValueChange = { onQuery(it.take(60)) },
+            placeholder = "Search climbs",
+            modifier = Modifier.fillMaxWidth().testTag("climb_search"),
+        )
+    }
+    item(key = "climb_tabs") {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.testTag("climb_tabs")) {
+            item { CruxFilterChip("Your climbs", tab == YOURS, { onTab(YOURS) }, Modifier.testTag("climb_tab_yours")) }
+            items(choices.playlists, key = { "p${it.id}" }) { list ->
+                CruxFilterChip(list.name, tab == "p${list.id}", { onTab("p${list.id}") }, Modifier.testTag("climb_tab_${list.name}"))
+            }
+            items(choices.datasets, key = { "d${it.id}" }) { dataset ->
+                CruxFilterChip(dataset.name, tab == "d${dataset.id}", { onTab("d${dataset.id}") }, Modifier.testTag("climb_tab_${dataset.name}"))
+            }
+        }
+    }
+    val pick = { source: com.hardtekpt.crux.data.ClimbSource ->
+        actions.pickDatasetClimb(source)
+        onClose()
+    }
+    val dataset = choices.datasets.firstOrNull { "d${it.id}" == tab }
+    val playlist = choices.playlists.firstOrNull { "p${it.id}" == tab }
+    when {
+        dataset != null && dataset.isCatalogue -> item(key = "catalogue_${dataset.id}") {
+            // A board catalogue is searched, most sent first, rather than listed whole.
+            val found by androidx.compose.runtime.produceState<List<com.hardtekpt.crux.data.ClimbSource>?>(null, dataset.id, query) {
+                value = actions.searchCatalogue(dataset, query)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                found?.forEach { source -> DatasetClimbRow(source, choices, showDataset = false) { pick(it) } }
+                if (found?.isEmpty() == true) NothingRow(false)
+            }
+        }
+
+        dataset != null -> {
+            val climbs = com.hardtekpt.crux.ui.datasets.sorted(dataset.climbs, com.hardtekpt.crux.ui.datasets.ClimbSort.GRADE)
+                .filter { matches(it.name, it.setter, it.note) }
+            items(climbs, key = { "dc${it.id}" }) { climb ->
+                DatasetClimbRow(com.hardtekpt.crux.data.ClimbSource(climb, dataset), choices, showDataset = false) { pick(it) }
+            }
+            if (climbs.isEmpty()) item(key = "climb_none") { NothingRow(dataset.climbs.isEmpty()) }
+        }
+
+        playlist != null -> {
+            val sources = playlist.items.mapNotNull { item -> item.climb?.let { c -> item.dataset?.let { d -> com.hardtekpt.crux.data.ClimbSource(c, d) } } }
+                .filter { matches(it.climb.name, it.climb.setter, it.dataset.name) }
+            items(sources, key = { "pc${it.climb.catalogueUuid ?: it.climb.id}" }) { source ->
+                DatasetClimbRow(source, choices, showDataset = true) { pick(it) }
+            }
+            if (sources.isEmpty()) item(key = "climb_none") { NothingRow(false) }
+        }
+
+        else -> {
+            val yours = choices.yours.filter { matches(it.problem.name, it.problem.setter) }
+                .sortedWith(compareByDescending<ProblemWithStats> { it.stats?.lastGo }.thenBy { it.problem.name.lowercase() })
+            items(yours, key = { "yc${it.problem.id}" }) { item ->
+                CruxListRow(
+                    title = item.problem.name,
+                    supporting = problemLine(item, detail),
+                    leading = { GradeText(item.problem.grade) },
+                    trailing = { StatusDot(item.stats?.sent, item.stats != null) },
+                    selected = draft.problemId == item.problem.id,
+                    onClick = {
+                        actions.pickProblem(item.problem)
+                        onClose()
+                    },
+                    modifier = Modifier.testTag("climb_yours_${item.problem.name}"),
+                )
+            }
+            if (yours.isEmpty()) item(key = "climb_none") { NothingRow(choices.yours.isEmpty(), yours = true) }
+        }
+    }
+    if (!draft.isEditing) {
+        item(key = "climb_new") {
+            PickRow("New climb · type its name in the form", selected = false, tag = "climb_new", icon = Icons.Rounded.Add) {
+                actions.newClimb()
+                onClose()
+            }
+        }
+    }
+}
+
+/** A dataset's climb in the Climb step: its grade in the section's scale, its setter and how you've done on it here. */
+@Composable
+private fun DatasetClimbRow(
+    source: com.hardtekpt.crux.data.ClimbSource,
+    choices: ClimbChoices,
+    showDataset: Boolean,
+    onPick: (com.hardtekpt.crux.data.ClimbSource) -> Unit,
+) {
+    val climb = source.climb
+    // Yours here: linked to it, else of its name and type.
+    val yours = choices.yours.firstOrNull {
+        if (climb.catalogueUuid != null) it.problem.sourceCatalogueUuid == climb.catalogueUuid else it.problem.sourceDatasetClimbId == climb.id
+    }
+        ?: choices.yours.firstOrNull { it.problem.discipline == climb.discipline && it.problem.name.trim().equals(climb.name.trim(), ignoreCase = true) }
+    val grade = climb.gradeScale?.let { scale ->
+        climb.gradeIndex?.let { index -> com.hardtekpt.crux.data.convertGrade(scale, index, choices.system.scale)?.let(choices.system::label) }
+    } ?: climb.gradeLabel ?: "–"
+    val stats = yours?.stats
+    val status = when {
+        yours == null || stats == null -> "never logged"
+        stats.sent -> "sent ${stats.firstSend!!.shortLabel()}"
+        else -> "logged here, project"
+    }
+    CruxListRow(
+        title = climb.name,
+        supporting = listOfNotNull(source.dataset.name.takeIf { showDataset }, climb.setter, status).joinToString(" · "),
+        leading = { GradeText(grade) },
+        trailing = { StatusDot(stats?.sent, stats != null) },
+        onClick = { onPick(source) },
+        modifier = Modifier.testTag("climb_pick_${climb.name}"),
+    )
+}
+
+@Composable
+private fun GradeText(grade: String) {
+    Text(grade, style = CruxTheme.type.grade, maxLines = 1, modifier = Modifier.width(44.dp))
+}
+
+/** Green once sent, amber while a project; nothing before a go. */
+@Composable
+private fun StatusDot(sent: Boolean?, tried: Boolean) {
+    if (!tried) return
+    Box(
+        Modifier
+            .size(8.dp)
+            .background(if (sent == true) CruxTheme.colors.success else MaterialTheme.colorScheme.secondary, CircleShape),
+    )
+}
+
+@Composable
+private fun NothingRow(empty: Boolean, yours: Boolean = false) {
+    Text(
+        when {
+            yours && empty -> "No climbs logged here yet. Pick one from a dataset, or start a new one."
+            empty -> "This dataset has no climbs yet."
+            else -> "Nothing matches."
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(vertical = CruxTheme.space.s2),
+    )
 }
 
 @Composable

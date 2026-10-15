@@ -61,14 +61,27 @@ import kotlinx.serialization.Serializable
 // Full-screen forms above the tabs; the nav bar hides while they are open.
 
 /** The standalone interval timer, which takes the whole screen. */
-@Serializable data object IntervalTimerRoute
+@Serializable data class IntervalTimerRoute(val exerciseId: Long = 0)
 
 /**
  * Log a climb, or edit one when [climbId] is set; [placeId]/[problemId] preselect where.
  * [reuseToday]: with a [problemId], open its log from today or the running session if there is one.
+ * [datasetClimbId]: Log this climb, from a dataset.
  */
 @Serializable
-data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val problemId: Long = 0, val sectionId: Long = 0, val reuseToday: Boolean = false)
+data class LogClimbRoute(
+    val climbId: Long = 0,
+    val placeId: Long = 0,
+    val problemId: Long = 0,
+    val sectionId: Long = 0,
+    val reuseToday: Boolean = false,
+    val datasetClimbId: Long = 0,
+    /** Log this climb, from a board catalogue: the board's id for it. */
+    val catalogueUuid: String = "",
+)
+
+/** A board catalogue: browse its climbs. */
+@Serializable data class CatalogueRoute(val datasetId: Long)
 
 @Serializable data object LogWeightRoute
 
@@ -85,6 +98,14 @@ data class LogClimbRoute(val climbId: Long = 0, val placeId: Long = 0, val probl
 @Serializable data class RecordEditorRoute(val exerciseId: Long = 0)
 
 @Serializable data class ExerciseRecordsRoute(val exerciseId: Long)
+
+/** Your lists of climbs (You → Datasets), and one of them. */
+@Serializable data object DatasetsRoute
+
+@Serializable data class DatasetRoute(val datasetId: Long)
+
+/** A playlist of climbs from your datasets. */
+@Serializable data class PlaylistRoute(val playlistId: Long)
 
 /** The five root destinations from the app blueprint. */
 enum class TopLevelDestination(val graph: Any, val label: String, val icon: ImageVector) {

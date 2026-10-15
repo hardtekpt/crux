@@ -6,6 +6,87 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-15
+
+### Added
+
+- **Datasets**: keep your own lists of climbs under *You → Datasets*, for a home board, a spray
+  wall or a gym circuit. Add, edit, search and sort climbs, import a CSV or a Crux dataset file
+  (with a preview first), and export either. Datasets are in your backups.
+- **Pick climbs from your datasets when you log**: a facility uses the datasets made for its board,
+  and any you link to it in Edit place. Log climb's Where sheet then ends with a **Climb** step:
+  your climbs there, then each dataset and playlist, with a search. Picking fills in the name and
+  grade (in the facility's scale, with the dataset's grade shown under the strip), and typing a name
+  suggests climbs from them too. A dataset climb also has **Log this climb**.
+- **Playlists**: ordered picks of climbs from your datasets, like "Tonight". Add climbs from a
+  dataset (long-press to pick several), drag to reorder, swipe to remove, and share them as a
+  file. **Climb this playlist** puts a card in your session with the climb that's up, Prev and
+  Next, and **+ Fell** and **+ Sent** to log a go in one tap.
+- The climbs CSV export has a Setter column.
+- **Board catalogues**: import a Kilter (Original or Homewall) or MoonBoard catalogue from a
+  Boardsesh snapshot file you download; a Kilter keeps only your board's size. Browse its climbs at
+  each angle with search, Popular, Grade and Name sorts and Benchmarks, log them, add them to
+  playlists, and pick them in Log climb's Climb step, graded at your angle. Catalogues stay on the
+  phone apart from your data and are never backed up.
+- **Light your board**: pair your Kilter or MoonBoard's lights from its facility in Edit place,
+  then tap **Light** on a catalogue climb, in Log climb or on a session's playlist card to show its
+  holds on the wall. The live notification of a playlist gets Prev, Next and Light. Nothing lights
+  by itself. Uses Bluetooth (Nearby devices), never location. Not yet tried on a real board: tell
+  us how it goes.
+- **Hold diagrams**: board catalogue climbs show their holds on the board, drawn by Crux, on the
+  climb sheet, in Log climb, on the session's playlist card and on climbs you logged from them. Tap
+  one for the whole board.
+
+- **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
+  and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board
+  and size show on the place, in the Places list and when you log a climb.
+- **Board angle**: an Angle chip when you log a climb on a board. It remembers the last angle you
+  used there and saves it as the first line of the log's note, like "40°". MoonBoards offer 25°
+  and 40°.
+
+- **One page per exercise**: every list of exercises opens the same page, with your record, chart,
+  how it's set up, the plans that use it and every day you trained it. Edit it from the pencil, log
+  a result, or start an interval exercise's timer from there.
+- **Also change the plan**: changing an exercise mid-session can update the plan too, so next time
+  starts from it.
+- **Places in the Journal**: a Places tab next to Notes, and a **My gym** widget for Home with the
+  place you climb at most, its projects and Log here.
+- **Shortcuts**: long-press Crux's icon for Log climb, Session, Log weight and the Interval timer.
+
+- **Training progress**: Progress now has a **Training** tab. It shows how much of your Week
+  schedule you did over the last 8 weeks, your sessions, time trained and new bests in the last 30
+  days, and every exercise with a small trend of your best set. Tap an exercise for its chart (best
+  set or volume, over 3 months, a year or all time) and every day you trained it.
+- **Training and Exercise widgets** for Home: pick a training figure (on plan, sessions, sets, time
+  trained or new bests) or an exercise when you add one, and change it later with its tune button.
+
+- **Change an exercise mid-session**: its ⋯ menu changes its sets, reps or time, load and rest for
+  that session; your plan stays as it is. **Add set** adds one more set, and an exercise with
+  nothing logged can be taken out.
+- **Export as a spreadsheet**: save your climbs or your session sets as a `.csv` file from
+  *Settings → Backups*, to open in Excel, Google Sheets or any spreadsheet app.
+
+### Changed
+
+- **Projects name their part of the place**: on Home and in Progress, a project at a place with more than one part (a gym and a MoonBoard) shows which part it is on, so projects there aren't confused.
+- **Weight input at the bottom**: the weight ruler and the day strip now sit at the bottom of the screen, just above the Log weight button.
+- **Today's plan shows the plan**: each block with its exercises and their sets, reps, time and
+  load, and the week strip shows the dates.
+- **A simpler live session**: every exercise in one list, each with a table of its sets showing
+  last time's values. Tap a value to change it in place and tick the set. A dock at the bottom
+  holds Done for the next set, the rest countdown and the interval timer; climbs, extra exercises
+  and timers sit behind the **+** in the top bar. A rail under the top bar has a segment per
+  exercise that fills as you go; tap one to jump to it. Tap the dock for a big timer you can read from
+  across the mat. The exercise you're on is outlined in the accent colour, finished ones fold to a
+  green tick, and climbs get their own amber card with **+ go** on each climb.
+- **Smoother Home and Journal**: Home builds only the widgets on screen as you scroll, and the
+  Journal's search waits until you stop typing, then filters once.
+
+### Fixed
+
+- **Home crashed on open** with some widgets (a dev build after 0.4.0 only): full-width widgets
+  lay out again as they did in 0.4.0.
+
 ## [0.4.0] - 2026-10-14
 
 ### Added
@@ -204,7 +285,8 @@ The first release.
 - **Design**: a dark-first design system with a light theme, a floating tab bar with Log built in,
   and quiet transitions.
 
-[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.4.0...dev
+[Unreleased]: https://github.com/hardtekpt/crux/compare/v0.5.0...dev
+[0.5.0]: https://github.com/hardtekpt/crux/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/hardtekpt/crux/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/hardtekpt/crux/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hardtekpt/crux/compare/v0.1.0...v0.2.0

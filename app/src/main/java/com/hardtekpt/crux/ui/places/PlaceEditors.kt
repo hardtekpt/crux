@@ -120,7 +120,16 @@ private const val MAX_NAME = 40
 
 /** One part of the place: its kind as chips, a name, and a remove button when there are others. */
 @Composable
-private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean, onChange: ((SectionDraft) -> SectionDraft) -> Unit, onRemove: () -> Unit) {
+private fun SectionEditor(
+    section: SectionDraft,
+    index: Int,
+    removable: Boolean,
+    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
+    onRemove: () -> Unit,
+    datasets: List<com.hardtekpt.crux.data.Dataset> = emptyList(),
+    onNewDataset: ((com.hardtekpt.crux.data.Dataset) -> Unit)? = null,
+    lights: LightsActions? = null,
+) {
     val space = CruxTheme.space
     CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("section_$index")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -152,11 +161,148 @@ private fun SectionEditor(section: SectionDraft, index: Int, removable: Boolean,
             helper = "Name, optional: \"${section.type.label}\" if left blank",
             modifier = Modifier.testTag("section_name_$index"),
         )
+        // Which board it is, and for Kilter its size (and a Homewall's holds).
+        if (section.type == PlaceType.BOARD) BoardChoice(section, index, onChange)
         // The grades climbs here use; boards hold boulders only.
         val tag = if (index == 0) "" else "_$index"
         ScaleChoice("Boulder grades", Discipline.BOULDER, section.boulderScale, tag) { scale -> onChange { it.copy(boulderScale = scale) } }
         if (section.type != PlaceType.BOARD) {
             ScaleChoice("Route grades", Discipline.ROUTE, section.routeScale, tag) { scale -> onChange { it.copy(routeScale = scale) } }
+        }
+        // The lists of climbs Log climb offers here: those for its board, and any linked by hand.
+        if (onNewDataset != null) DatasetsChoice(section, index, datasets, onChange, onNewDataset)
+        // A Kilter or MoonBoard's lights, paired on this phone.
+        if (lights != null && section.type == PlaceType.BOARD && section.board != null) LightsChoice(section, index, lights)
+    }
+}
+
+/** A section as the place it will be, for telling which datasets are made for its board. */
+internal fun SectionDraft.asSection() = com.hardtekpt.crux.data.model.Section(
+    id = id,
+    placeId = 0,
+    type = type,
+    name = name,
+    board = board,
+    boardSize = boardSize,
+    boardHolds = boardHolds,
+    lights = lights,
+)
+
+/** The Datasets row: "None", "Kilter warm-ups" or "2 datasets"; it opens the checkbox sheet. */
+@Composable
+private fun DatasetsChoice(
+    section: SectionDraft,
+    index: Int,
+    datasets: List<com.hardtekpt.crux.data.Dataset>,
+    onChange: ((SectionDraft) -> SectionDraft) -> Unit,
+    onNewDataset: (com.hardtekpt.crux.data.Dataset) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val used = com.hardtekpt.crux.data.datasetsFor(section.asSection(), datasets, section.datasetIds.orEmpty())
+    ChoiceRow(
+        "Datasets",
+        when (used.size) {
+            0 -> "None"
+            1 -> used.single().name
+            else -> "${used.size} datasets"
+        },
+        "section_datasets_$index",
+    ) { open = true }
+    if (open) {
+        DatasetLinksSheet(
+            section = section,
+            datasets = datasets,
+            onToggle = { id, on -> onChange { it.copy(datasetIds = it.datasetIds.orEmpty().let { ids -> if (on) ids + id else ids - id }) } },
+            onNew = onNewDataset,
+            onDismiss = { open = false },
+        )
+    }
+}
+
+/**
+ * Every dataset with a checkbox: ticked ones are offered when you log here. Those made for this
+ * section's board are ticked and locked ("Same board"); the rest are linked by hand.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DatasetLinksSheet(
+    section: SectionDraft,
+    datasets: List<com.hardtekpt.crux.data.Dataset>,
+    onToggle: (Long, Boolean) -> Unit,
+    onNew: (com.hardtekpt.crux.data.Dataset) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val asSection = section.asSection()
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("dataset_links_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Datasets · ${section.name.ifBlank { section.type.label }}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                CruxButton("Done", onDismiss, size = CruxButtonSize.Small, modifier = Modifier.testTag("dataset_links_done"))
+            }
+            Text(
+                "Ticked datasets are offered when you log a climb here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (datasets.isEmpty()) {
+                Text("You have no datasets yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = CruxTheme.space.s2))
+            }
+            datasets.forEach { dataset ->
+                val auto = dataset.fitsBoard(asSection)
+                val ticked = auto || dataset.id in section.datasetIds.orEmpty()
+                CruxListRow(
+                    title = dataset.name,
+                    supporting = listOfNotNull(
+                        "Same board".takeIf { auto },
+                        dataset.boardLabel,
+                        "${dataset.climbs.size} ${if (dataset.climbs.size == 1) "climb" else "climbs"}",
+                    ).joinToString(" · "),
+                    leading = {
+                        androidx.compose.material3.Checkbox(
+                            checked = ticked,
+                            onCheckedChange = null,
+                            enabled = !auto,
+                        )
+                    },
+                    onClick = if (auto) null else ({ onToggle(dataset.id, !ticked) }),
+                    modifier = Modifier.testTag("dataset_link_${dataset.name}"),
+                )
+            }
+            CruxListRow(
+                title = "New dataset for this ${if (section.type == PlaceType.BOARD) "board" else section.type.label.lowercase()}",
+                leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = {
+                    onNew(
+                        com.hardtekpt.crux.data.Dataset(
+                            name = section.name.ifBlank { section.type.label },
+                            board = section.board.takeIf { section.type == PlaceType.BOARD },
+                            customBoard = section.type == PlaceType.BOARD && section.board == null,
+                            boardSize = section.boardSize.takeIf { section.type == PlaceType.BOARD },
+                            boardHolds = section.boardHolds.takeIf { section.type == PlaceType.BOARD },
+                            boulderScale = section.boulderScale?.takeIf { !it.isLocal },
+                            routeScale = section.routeScale?.takeIf { !it.isLocal && section.type != PlaceType.BOARD },
+                        ),
+                    )
+                },
+                modifier = Modifier.testTag("dataset_link_new"),
+            )
         }
     }
 }
@@ -202,20 +348,100 @@ data class SectionDraft(
     /** This part's own grades; kept while editing even if no discipline uses them. */
     val localScale: LocalScale = LocalScale.DEFAULT_COLOURS,
     val localError: String? = null,
+    /** Board sections: which board (null = custom), its Kilter size and Homewall holds. */
+    val board: com.hardtekpt.crux.data.model.BoardModel? = null,
+    val boardSize: String? = null,
+    val boardHolds: com.hardtekpt.crux.data.model.BoardHolds? = null,
+    val boardError: String? = null,
+    /** Datasets linked by hand; null until the place's links have loaded. */
+    val datasetIds: Set<Long>? = null,
+    /** The board's lights paired on this phone; saved as soon as they're paired, not with the place. */
+    val lights: com.hardtekpt.crux.data.model.PairedLights? = null,
 ) {
     /** Boards hold boulders only. */
     val usesLocal: Boolean get() = boulderScale?.isLocal == true || (type != PlaceType.BOARD && routeScale?.isLocal == true)
 }
 
 @HiltViewModel
-class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: PlaceRepository) : ViewModel() {
+class PlaceEditorViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: PlaceRepository,
+    private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
+    private val link: com.hardtekpt.crux.data.BoardLink? = null,
+) : ViewModel() {
+    /** What the board's lights are doing, for the Lights sheet. */
+    val lightsState: StateFlow<com.hardtekpt.crux.data.BoardLink.State> =
+        link?.state ?: MutableStateFlow(com.hardtekpt.crux.data.BoardLink.State.Off)
+
+    /** Pairs a board section's lights; a Kilter's protocol comes from its name, a MoonBoard's is the text one. */
+    fun pairLights(sectionKey: Int, found: com.hardtekpt.crux.ui.components.FoundBoard) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        if (section.id == 0L) return
+        val kilter = section.board?.maker == "Kilter"
+        val lights = com.hardtekpt.crux.data.model.PairedLights(
+            address = found.address,
+            name = found.name,
+            protocol = if (kilter) com.hardtekpt.crux.data.BoardLights.auroraVersion(found.name) else com.hardtekpt.crux.data.BoardLights.MOONBOARD,
+        )
+        saveLights(section, lights)
+    }
+
+    fun forgetLights(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.clear(section.asSection()) }
+        saveLights(section, null)
+    }
+
+    /** The MoonBoard check: which corner LED 0 lit, so its LED order is known. */
+    fun setMoonOrder(sectionKey: Int, order: com.hardtekpt.crux.data.BoardLights.MoonOrder) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        val lights = section.lights ?: return
+        saveLights(section, lights.copy(order = order.ordinal))
+        viewModelScope.launch { link?.clear(section.asSection()) }
+    }
+
+    fun testLights(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.test(section.asSection()) }
+    }
+
+    fun lightFirst(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.lightFirst(section.asSection(), com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1) }
+    }
+
+    fun lightsOff(sectionKey: Int) {
+        val section = _draft.value.sections.firstOrNull { it.key == sectionKey } ?: return
+        viewModelScope.launch { link?.clear(section.asSection()) }
+    }
+
+    private fun saveLights(section: SectionDraft, lights: com.hardtekpt.crux.data.model.PairedLights?) {
+        _draft.update { d -> d.updateSection(section.key) { it.copy(lights = lights) } }
+        viewModelScope.launch { repository.setLights(section.id, lights) }
+    }
     private val placeId: Long = savedStateHandle.get<Long>("placeId") ?: 0L
     private val _draft = MutableStateFlow(PlaceDraft(id = placeId))
     val draft: StateFlow<PlaceDraft> = _draft.asStateFlow()
 
+    /** Every dataset, for the Datasets rows; empty where datasets aren't offered. */
+    val datasets: StateFlow<List<com.hardtekpt.crux.data.Dataset>> = (datasetRepository?.observeDatasets() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Makes a dataset from a section's sheet; one not made for its board is linked to it. */
+    fun createDataset(sectionKey: Int, dataset: com.hardtekpt.crux.data.Dataset) {
+        val repo = datasetRepository ?: return
+        viewModelScope.launch {
+            val id = repo.saveDataset(dataset.copy(id = 0))
+            update { d ->
+                d.updateSection(sectionKey) { s -> if (dataset.fitsBoard(s.asSection())) s else s.copy(datasetIds = s.datasetIds.orEmpty() + id) }
+            }
+        }
+    }
+
     init {
         if (placeId != 0L) {
             viewModelScope.launch {
+                val links = datasetRepository?.observeLinks()?.first().orEmpty()
                 repository.getPlace(placeId)?.let { p ->
                     _draft.update {
                         it.copy(
@@ -230,6 +456,11 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                                         boulderScale = section.boulderScale,
                                         routeScale = section.routeScale,
                                         localScale = section.localScale ?: LocalScale.DEFAULT_COLOURS,
+                                        board = section.board,
+                                        boardSize = section.boardSize,
+                                        boardHolds = section.boardHolds,
+                                        datasetIds = links[section.id].orEmpty().takeIf { datasetRepository != null },
+                                        lights = section.lights,
                                     )
                                 },
                             location = p.location.orEmpty(),
@@ -244,7 +475,7 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
     }
 
     fun update(change: (PlaceDraft) -> PlaceDraft) = _draft.update { d ->
-        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null) }) }
+        change(d).let { it.copy(nameError = null, sections = it.sections.map { s -> s.copy(localError = null, boardError = null) }) }
     }
 
     fun save() {
@@ -264,9 +495,16 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                 local.grades.map { it.name.lowercase() }.toSet().size < local.grades.size -> "Each grade needs a different name"
                 else -> null
             }
-            section.copy(localScale = local, localError = localError)
+            // A Kilter board needs its size; a Homewall its holds too.
+            val boardError = when {
+                section.type != PlaceType.BOARD -> null
+                section.board?.needsSize == true && section.boardSize !in section.board.sizes -> "Pick a size"
+                section.board?.hasHolds == true && section.boardHolds == null -> "Pick the holds"
+                else -> null
+            }
+            section.copy(localScale = local, localError = localError, boardError = boardError)
         }
-        if (error != null || sections.any { it.localError != null }) {
+        if (error != null || sections.any { it.localError != null || it.boardError != null }) {
             _draft.update { it.copy(nameError = error, sections = sections) }
             return
         }
@@ -283,6 +521,10 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
                             boulderScale = it.boulderScale,
                             routeScale = it.routeScale,
                             localScale = it.localScale.takeIf { _ -> it.usesLocal },
+                            board = it.board,
+                            boardSize = it.boardSize,
+                            boardHolds = it.boardHolds,
+                            datasetIds = it.datasetIds,
                         )
                     },
                     location = d.location,
@@ -311,6 +553,9 @@ class PlaceEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandl
 @Composable
 fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: PlaceEditorViewModel = hiltViewModel()) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val datasets by viewModel.datasets.collectAsStateWithLifecycle()
+    val lightsState by viewModel.lightsState.collectAsStateWithLifecycle()
+    var newDatasetFor by remember { mutableStateOf<Pair<Int, com.hardtekpt.crux.data.Dataset>?>(null) }
     LaunchedEffect(draft.doneId) { draft.doneId?.let(onSaved) }
     val space = CruxTheme.space
 
@@ -369,6 +614,17 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
                         removable = draft.sections.size > 1,
                         onChange = change,
                         onRemove = { viewModel.update { it.removeSection(section.key) } },
+                        datasets = datasets,
+                        onNewDataset = { newDatasetFor = section.key to it },
+                        lights = LightsActions(
+                            state = lightsState,
+                            pair = { found -> viewModel.pairLights(section.key, found) },
+                            forget = { viewModel.forgetLights(section.key) },
+                            test = { viewModel.testLights(section.key) },
+                            lightFirst = { viewModel.lightFirst(section.key) },
+                            setOrder = { viewModel.setMoonOrder(section.key, it) },
+                            off = { viewModel.lightsOff(section.key) },
+                        ),
                     )
                     if (section.usesLocal) {
                         LocalScaleEditor(
@@ -434,6 +690,18 @@ fun PlaceEditorScreen(onBack: () -> Unit, onSaved: (Long) -> Unit, viewModel: Pl
         )
     }
 
+    newDatasetFor?.let { (key, initial) ->
+        com.hardtekpt.crux.ui.datasets.DatasetDetailsSheet(
+            initial = initial,
+            title = "New dataset",
+            confirm = "Create",
+            onSave = { dataset ->
+                newDatasetFor = null
+                viewModel.createDataset(key, dataset)
+            },
+            onDismiss = { newDatasetFor = null },
+        )
+    }
     if (draft.confirmDelete) {
         AlertDialog(
             onDismissRequest = viewModel::cancelDelete,
@@ -535,12 +803,19 @@ private fun MapLocationField(location: MapLocation?, placeName: String, onChange
  * choices. Keeps the section to two quiet lines instead of rows of chips.
  */
 @Composable
-private fun ScaleChoice(label: String, discipline: Discipline, selected: GradeScale?, tagSuffix: String = "", onSelect: (GradeScale?) -> Unit) {
+internal fun ScaleChoice(
+    label: String,
+    discipline: Discipline,
+    selected: GradeScale?,
+    tagSuffix: String = "",
+    allowLocal: Boolean = true,
+    onSelect: (GradeScale?) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     val options: List<Pair<GradeScale?, String>> =
         listOf<Pair<GradeScale?, String>>(null to "My settings") +
             discipline.scales.map { it to it.label } +
-            (discipline.localScale to "Local grades")
+            listOfNotNull((discipline.localScale to "Local grades").takeIf { allowLocal })
     val current = options.firstOrNull { it.first == selected }?.second ?: "My settings"
     Box {
         Row(
@@ -785,5 +1060,336 @@ fun MapPreview(location: MapLocation, modifier: Modifier = Modifier) {
                 .size(32.dp)
                 .offset(y = (-16).dp),
         )
+    }
+}
+
+/**
+ * A board section's Board row ("Custom board" until one is picked) and, for Kilter, a Size row;
+ * each opens a sheet. A Homewall picks its holds in the Size sheet.
+ */
+@Composable
+private fun BoardChoice(section: SectionDraft, index: Int, onChange: ((SectionDraft) -> SectionDraft) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    var sizing by remember { mutableStateOf(false) }
+    val board = section.board
+    ChoiceRow("Board", board?.label ?: "Custom board", "board_$index") { picking = true }
+    if (board?.needsSize == true) {
+        ChoiceRow(
+            "Size",
+            listOfNotNull(
+                section.boardSize?.takeIf { it in board.sizes }?.let { com.hardtekpt.crux.data.model.boardSizeLabel(it) } ?: "Pick",
+                section.boardHolds?.takeIf { board.hasHolds }?.label,
+            ).joinToString(" · "),
+            "board_size_$index",
+        ) { sizing = true }
+    }
+    section.boardError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+    if (picking) {
+        BoardSheet(
+            selected = board,
+            onPick = { picked ->
+                picking = false
+                onChange {
+                    it.copy(
+                        board = picked,
+                        // A size or holds the new board doesn't have goes.
+                        boardSize = it.boardSize?.takeIf { size -> picked?.sizes?.contains(size) == true },
+                        boardHolds = it.boardHolds?.takeIf { _ -> picked?.hasHolds == true },
+                    )
+                }
+                if (picked?.needsSize == true && section.boardSize !in picked.sizes) sizing = true
+            },
+            onDismiss = { picking = false },
+        )
+    }
+    if (sizing && board?.needsSize == true) {
+        BoardSizeSheet(
+            board = board,
+            size = section.boardSize,
+            holds = section.boardHolds,
+            onChange = { size, holds -> onChange { it.copy(boardSize = size, boardHolds = holds) } },
+            onDismiss = { sizing = false },
+        )
+    }
+}
+
+/** A "label · value ▾" row like the grade rows. */
+@Composable
+private fun ChoiceRow(label: String, value: String, tag: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = "Change $label", onClick = onClick)
+            .padding(vertical = CruxTheme.space.s1)
+            .testTag(tag),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+        Icon(Icons.Rounded.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Which board: Kilter, then MoonBoard, then Custom board, each with a line on what it covers. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+internal fun BoardSheet(
+    selected: com.hardtekpt.crux.data.model.BoardModel?,
+    onPick: (com.hardtekpt.crux.data.model.BoardModel?) -> Unit,
+    onDismiss: () -> Unit,
+    /** Datasets: also offer No board, at the top; picking it calls this. */
+    onNoBoard: (() -> Unit)? = null,
+    noBoardSelected: Boolean = false,
+) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("board_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+        ) {
+            Text("Board", style = MaterialTheme.typography.headlineSmall)
+            onNoBoard?.let {
+                CruxListRow(
+                    title = "No board",
+                    supporting = "A gym circuit or a crag's climbs",
+                    selected = noBoardSelected,
+                    onClick = it,
+                    modifier = Modifier.testTag("board_option_none"),
+                )
+            }
+            com.hardtekpt.crux.data.model.BoardModel.entries.groupBy { it.maker }.forEach { (maker, models) ->
+                Eyebrow(maker, Modifier.padding(top = CruxTheme.space.s2))
+                models.forEach { model ->
+                    CruxListRow(
+                        title = model.label,
+                        supporting = model.hint,
+                        selected = model == selected,
+                        onClick = { onPick(model) },
+                        modifier = Modifier.testTag("board_option_${model.key}"),
+                    )
+                }
+            }
+            Eyebrow("Other", Modifier.padding(top = CruxTheme.space.s2))
+            CruxListRow(
+                title = "Custom board",
+                supporting = "Spray wall, home board or anything else",
+                selected = selected == null && !noBoardSelected,
+                onClick = { onPick(null) },
+                modifier = Modifier.testTag("board_option_custom"),
+            )
+        }
+    }
+}
+
+/** A Kilter board's size as chips; a Homewall adds Full ride or Mainline only in the same sheet. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun BoardSizeSheet(
+    board: com.hardtekpt.crux.data.model.BoardModel,
+    size: String?,
+    holds: com.hardtekpt.crux.data.model.BoardHolds?,
+    onChange: (String?, com.hardtekpt.crux.data.model.BoardHolds?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("board_size_sheet"),
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = CruxTheme.space.s4)
+                .padding(bottom = CruxTheme.space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+        ) {
+            Text("Size · ${board.label}", style = MaterialTheme.typography.headlineSmall)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                board.sizes.forEach { option ->
+                    CruxFilterChip(
+                        label = com.hardtekpt.crux.data.model.boardSizeLabel(option),
+                        selected = option == size,
+                        onClick = { onChange(option, holds) },
+                        modifier = Modifier.testTag("board_size_$option"),
+                    )
+                }
+            }
+            if (board.hasHolds) {
+                Eyebrow("Holds")
+                com.hardtekpt.crux.data.model.BoardHolds.entries.forEach { option ->
+                    CruxListRow(
+                        title = option.label,
+                        supporting = option.hint,
+                        selected = option == holds,
+                        onClick = { onChange(size, option) },
+                        modifier = Modifier.testTag("board_holds_${option.key}"),
+                    )
+                }
+            }
+            CruxButton(
+                "Done",
+                onDismiss,
+                variant = CruxButtonVariant.Tonal,
+                modifier = Modifier.fillMaxWidth().testTag("board_size_done"),
+            )
+        }
+    }
+}
+
+/** What a board section's Lights row can do. */
+class LightsActions(
+    val state: com.hardtekpt.crux.data.BoardLink.State,
+    val pair: (com.hardtekpt.crux.ui.components.FoundBoard) -> Unit,
+    val forget: () -> Unit,
+    val test: () -> Unit,
+    val lightFirst: () -> Unit,
+    val setOrder: (com.hardtekpt.crux.data.BoardLights.MoonOrder) -> Unit,
+    val off: () -> Unit,
+)
+
+/** The Lights row: "Pair a board", or the paired board's name; its sheet pairs, tests, checks and forgets. */
+@Composable
+private fun LightsChoice(section: SectionDraft, index: Int, actions: LightsActions) {
+    var open by remember { mutableStateOf(false) }
+    val lights = section.lights
+    ChoiceRow("Lights", lights?.name ?: if (section.id == 0L) "Save the place first" else "Pair a board", "section_lights_$index") { open = true }
+    if (open) LightsSheet(section, actions) { open = false }
+}
+
+/**
+ * Pairing a board's lights through Android's own picker, and once paired: Test lights (the four
+ * corners), for a MoonBoard the one-hold check that learns its LED order, and Forget.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun LightsSheet(section: SectionDraft, actions: LightsActions, onDismiss: () -> Unit) {
+    val space = CruxTheme.space
+    val kilter = section.board?.maker == "Kilter"
+    var error by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    val pair = com.hardtekpt.crux.ui.components.rememberBoardPairing(
+        onFound = {
+            error = null
+            actions.pair(it)
+        },
+        onFailed = { error = it },
+    )
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = {
+            if (checking) actions.off()
+            onDismiss()
+        },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("lights_sheet"),
+    ) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Text("Lights · ${section.name.ifBlank { section.board?.label.orEmpty() }}", style = MaterialTheme.typography.headlineSmall)
+            val lights = section.lights
+            when {
+                section.id == 0L -> Text("Save the place first, then pair its board here.", style = MaterialTheme.typography.bodyMedium)
+
+                lights == null -> {
+                    Text(
+                        "Crux lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
+                            "pick yours. Crux asks for Nearby devices, never your location.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    CruxButton("Pair a board", { pair(kilter) }, modifier = Modifier.fillMaxWidth().testTag("lights_pair"))
+                }
+
+                checking -> {
+                    Text("Crux has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
+                    val rows = if (section.board?.fixedAngle == 40) 12 else 18
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                        listOf(
+                            "A1, bottom left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1,
+                            "K1, bottom right" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_K1,
+                            "A$rows, top left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A_TOP,
+                        ).forEach { (label, order) ->
+                            CruxButton(label, {
+                                checking = false
+                                actions.setOrder(order)
+                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                        }
+                        CruxButton("None", {
+                            checking = false
+                            actions.off()
+                            error = "Nothing lit: check the board is on and close by, then try again."
+                        }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    }
+                }
+
+                else -> {
+                    Text(
+                        listOfNotNull(
+                            lights.name,
+                            when (lights.protocol) {
+                                com.hardtekpt.crux.data.BoardLights.AURORA_V3 -> "protocol 3"
+                                com.hardtekpt.crux.data.BoardLights.AURORA_V2 -> "protocol 2"
+                                else -> "MoonBoard LED box"
+                            },
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                        val small = CruxButtonSize.Small
+                        CruxButton("Test lights", actions.test, variant = CruxButtonVariant.Outlined, size = small, modifier = Modifier.testTag("lights_test"))
+                        if (!kilter) {
+                            CruxButton("Check a hold", {
+                                checking = true
+                                actions.lightFirst()
+                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small, modifier = Modifier.testTag("lights_check"))
+                        }
+                        CruxButton("Lights off", actions.off, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                        CruxButton("Forget", actions.forget, variant = CruxButtonVariant.Text, size = small, modifier = Modifier.testTag("lights_forget"))
+                    }
+                    Text(
+                        if (kilter) {
+                            "Test lights lights the four corners of your size."
+                        } else {
+                            "Test lights lights the four corners; Check a hold makes sure Crux counts your box's LEDs the right way round."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            when (val state = actions.state) {
+                is com.hardtekpt.crux.data.BoardLink.State.Failed -> Text(
+                    state.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+
+                is com.hardtekpt.crux.data.BoardLink.State.Sending -> Text("Sending…", style = MaterialTheme.typography.bodySmall)
+
+                is com.hardtekpt.crux.data.BoardLink.State.Lit -> Text("Lit ${state.climb}.", style = MaterialTheme.typography.bodySmall)
+
+                else -> Unit
+            }
+            error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+        }
     }
 }

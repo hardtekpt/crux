@@ -137,8 +137,16 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
     LaunchedEffect(openRequest) {
         when (openRequest) {
             is com.hardtekpt.crux.OpenRequest.Session -> openSession(openRequest.id)
-            com.hardtekpt.crux.OpenRequest.Timer -> navController.navigate(IntervalTimerRoute) { launchSingleTop = true }
+
+            com.hardtekpt.crux.OpenRequest.Timer -> navController.navigate(IntervalTimerRoute()) { launchSingleTop = true }
+
             com.hardtekpt.crux.OpenRequest.LogClimb -> navController.navigate(LogClimbRoute())
+
+            com.hardtekpt.crux.OpenRequest.LogWeight -> navController.navigate(LogWeightRoute)
+
+            // From the launcher: back into a running session, else the choice of what to start.
+            com.hardtekpt.crux.OpenRequest.StartSession -> sessionsViewModel.runningId()?.let { openSession(it) } ?: run { showStartSession = true }
+
             null -> return@LaunchedEffect
         }
         onOpened()
@@ -206,6 +214,9 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onOpenJournal = { navController.navigateToTab(TopLevelDestination.Journal) },
                             onOpenProgress = { navController.navigateToTab(TopLevelDestination.Progress) },
                             onOpenYou = { navController.navigateToTab(TopLevelDestination.You) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
+                            onOpenPlace = { navController.navigate(PlaceDetailRoute(it)) },
+                            onLogAtPlace = { navController.navigate(LogClimbRoute(placeId = it)) },
                             onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
                             onStartPlan = { startSession(it) },
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
@@ -241,7 +252,7 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                         TrainScreen(
                             onOpenPlan = { navController.navigate(TemplateDetailRoute(it)) },
                             onNewPlan = { navController.navigate(PlanEditorRoute()) },
-                            onOpenExercise = { navController.navigate(ExerciseEditorRoute(it)) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
                             onNewExercise = { navController.navigate(ExerciseEditorRoute()) },
                         )
                     }
@@ -250,10 +261,19 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onBack = navController::popBackStack,
                             onEdit = { navController.navigate(PlanEditorRoute(it)) },
                             onStart = { startSession(it) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
                         )
                     }
                     page<PlanEditorRoute> { PlanEditorScreen(onDone = navController::popBackStack) }
-                    page<ExerciseEditorRoute> { ExerciseEditorScreen(onDone = navController::popBackStack) }
+                    page<ExerciseEditorRoute> {
+                        ExerciseEditorScreen(
+                            onDone = navController::popBackStack,
+                            // A new exercise lands on its own page, in place of the editor.
+                            onCreated = { id ->
+                                navController.navigate(ExerciseRecordsRoute(id)) { popUpTo<ExerciseEditorRoute> { inclusive = true } }
+                            },
+                        )
+                    }
                 }
                 navigation<JournalGraph>(startDestination = JournalRoute) {
                     page<JournalRoute> {
@@ -263,6 +283,8 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                                 openNote = { navController.navigate(NoteEditorRoute(it)) },
                                 openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
                                 openSession = { navController.navigate(SessionSummaryRoute(it)) },
+                                openPlace = { navController.navigate(PlaceDetailRoute(it)) },
+                                newPlace = { navController.navigate(PlaceEditorRoute()) },
                             ),
                         )
                     }
@@ -274,7 +296,12 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                     }
                 }
                 navigation<ProgressGraph>(startDestination = ProgressRoute) {
-                    page<ProgressRoute> { ProgressScreen(onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) }) }
+                    page<ProgressRoute> {
+                        ProgressScreen(
+                            onOpenProblem = { navController.navigate(LogClimbRoute(problemId = it, reuseToday = true)) },
+                            onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
+                        )
+                    }
                 }
                 navigation<YouGraph>(startDestination = YouRoute) {
                     page<YouRoute> {
@@ -288,8 +315,9 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                                 openCircumferences = { navController.navigate(CircumferencesRoute) },
                                 openNotes = { navController.navigate(NotesRoute) },
                                 openPlaces = { navController.navigate(PlacesRoute) },
+                                openDatasets = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetsRoute) },
                                 openConverter = { navController.navigate(GradeConverterRoute) },
-                                openTimer = { navController.navigate(IntervalTimerRoute) },
+                                openTimer = { navController.navigate(IntervalTimerRoute()) },
                             ),
                         )
                     }
@@ -349,23 +377,72 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onNew = { navController.navigate(NoteEditorRoute()) },
                         )
                     }
+                    page<com.hardtekpt.crux.ui.navigation.DatasetsRoute> {
+                        com.hardtekpt.crux.ui.datasets.DatasetsScreen(
+                            onBack = navController::popBackStack,
+                            onOpen = { navController.navigate(com.hardtekpt.crux.ui.navigation.DatasetRoute(it)) },
+                            onOpenPlaylist = { navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it)) },
+                            onOpenCatalogue = { navController.navigate(com.hardtekpt.crux.ui.navigation.CatalogueRoute(it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.CatalogueRoute> {
+                        com.hardtekpt.crux.ui.datasets.CatalogueScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(catalogueUuid = it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.DatasetRoute> {
+                        com.hardtekpt.crux.ui.datasets.DatasetScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(datasetClimbId = it)) },
+                        )
+                    }
+                    page<com.hardtekpt.crux.ui.navigation.PlaylistRoute> {
+                        com.hardtekpt.crux.ui.datasets.PlaylistScreen(
+                            onBack = navController::popBackStack,
+                            onLogClimb = { navController.navigate(LogClimbRoute(datasetClimbId = it)) },
+                            onOpenSession = openSession,
+                            onLogCatalogueClimb = { navController.navigate(LogClimbRoute(catalogueUuid = it)) },
+                            onOpenPlaylist = {
+                                navController.popBackStack()
+                                navController.navigate(com.hardtekpt.crux.ui.navigation.PlaylistRoute(it))
+                            },
+                        )
+                    }
                     page<ExerciseRecordsRoute> {
                         ExerciseRecordsScreen(
                             onBack = navController::popBackStack,
                             onAdd = { navController.navigate(RecordEditorRoute(it)) },
+                            onEdit = { navController.navigate(ExerciseEditorRoute(it)) },
+                            onOpenPlan = { navController.navigate(TemplateDetailRoute(it)) },
+                            onTimer = { navController.navigate(IntervalTimerRoute(it)) },
                         )
                     }
                 }
                 page<SessionRoute> {
                     com.hardtekpt.crux.ui.session.SessionScreen(
+                        onOpenExercise = { navController.navigate(ExerciseRecordsRoute(it)) },
                         onLeave = navController::popBackStack,
                         onLogClimb = { navController.navigate(LogClimbRoute()) },
                         onFinished = navController::popBackStack,
                         onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
+                        onLogDatasetClimb = { placeId, sectionId, climbId ->
+                            navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, datasetClimbId = climbId))
+                        },
+                        onLogCatalogueClimb = { placeId, sectionId, uuid ->
+                            navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, catalogueUuid = uuid))
+                        },
                     )
                 }
                 page<LogClimbRoute> {
-                    LogClimbScreen(onDone = navController::popBackStack, onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) })
+                    LogClimbScreen(
+                        onDone = navController::popBackStack,
+                        onOpenLog = { navController.navigate(LogClimbRoute(climbId = it)) },
+                        onSwitchToLog = {
+                            navController.popBackStack()
+                            navController.navigate(LogClimbRoute(climbId = it))
+                        },
+                    )
                 }
                 page<LogWeightRoute> { LogWeightScreen(onDone = navController::popBackStack) }
                 page<NoteEditorRoute> { NoteEditorScreen(onDone = navController::popBackStack) }

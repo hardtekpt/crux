@@ -72,6 +72,9 @@ class SessionsViewModel @Inject constructor(
 
     fun now(): Long = clock.millis()
 
+    /** The running session's id, once loaded; null with none. */
+    suspend fun runningId(): Long? = sessions.observeRunning().first()?.id
+
     /** Starts at the last place climbed, with a plan or without; [onStarted] gets the session. */
     fun start(templateId: Long?, onStarted: (Long) -> Unit) {
         viewModelScope.launch {

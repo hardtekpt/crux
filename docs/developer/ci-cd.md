@@ -20,7 +20,7 @@ flowchart LR
 | Workflow | Triggers | What it does |
 | --- | --- | --- |
 | **CI** (`ci.yml`) | Push to `dev`, PRs into `main` | `spotlessCheck verifyRoborazziDebug lintDebug koverXmlReportDebug`, then `assembleRelease` (debug-signed). Uploads coverage, and test/lint/screenshot reports on failure. A newer push cancels the running one. |
-| **Device tests** (`device-tests.yml`) | PRs into `main`, pushes to `ci/**`, manual, and called by Release | Emulator (API 35, Pixel 6 profile, 4 GB disk, 2 GB RAM, KVM): `connectedDebugAndroidTest`, then installs the minified release APK and checks it launches and stays up. |
+| **Device tests** (`device-tests.yml`) | PRs into `main`, pushes to `ci/**`, manual, and called by Release | Emulator (API 35, Pixel 6 profile, 4 GB disk, 2 GB RAM, KVM): `connectedDebugAndroidTest`, then installs the minified release APK and checks it launches and stays up. Called by Release (or run by hand with *benchmarks*), it also runs the `:baselineprofile` startup and scrolling benchmarks and uploads their results as the `benchmarks` artifact; on an emulator they are a rough guide, so they never fail the run. |
 | **Reproducible build** (`reproducible.yml`) | PRs into `main`, pushes to `ci/**`, manual | Builds the release APK twice from clean checkouts and compares them with `apksigcopier`. |
 | **Release** (`release.yml`) | Push to `main`, manual | After Device tests pass: ktlint, unit, screenshot and lint checks; signed release build; certificate check against `CRUX_CERT_SHA256`; publishes the GitHub release. See [Releasing](releasing.md). |
 

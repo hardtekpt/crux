@@ -42,6 +42,27 @@ import kotlinx.coroutines.launch
 
 data class WeekSummary(val climbs: Int = 0, val sends: Int = 0, val daysClimbed: Int = 0)
 
+/** The place you climb at most lately: how often, when last, and the projects open there. */
+data class MyGym(val placeId: Long, val name: String, val daysLast30: Int, val climbsLast30: Int, val lastVisit: LocalDate, val projects: List<Project>)
+
+/** The place with the most days climbed in the last 90 days (else ever), with its open projects. */
+fun myGym(climbs: List<Climb>, projects: List<Project>, today: LocalDate): MyGym? {
+    val placed = climbs.filter { it.placeId != null }
+    if (placed.isEmpty()) return null
+    val recent = placed.filter { !it.date.isBefore(today.minusDays(89)) }.ifEmpty { placed }
+    val (placeId, atPlace) = recent.groupBy { it.placeId!! }.maxBy { (_, list) -> list.map { it.date }.distinct().size }
+    val all = placed.filter { it.placeId == placeId }
+    val month = all.filter { !it.date.isBefore(today.minusDays(29)) }
+    return MyGym(
+        placeId = placeId,
+        name = atPlace.first().place.orEmpty(),
+        daysLast30 = month.map { it.date }.distinct().size,
+        climbsLast30 = month.size,
+        lastVisit = all.maxOf { it.date },
+        projects = projects.filter { it.problem.placeId == placeId },
+    )
+}
+
 /** Everything the dashboard's widgets can draw from. */
 data class HomeUiState(
     val isLoading: Boolean = true,
@@ -69,10 +90,22 @@ data class HomeUiState(
     val weekStreak: Int = 0,
     val bestWeekStreak: Int = 0,
     val daysLast30: Int = 0,
+    val myGym: MyGym? = null,
+    /** Training week by week and per exercise, for the Training and Exercise widgets. */
+    val training: com.hardtekpt.crux.ui.progress.TrainingProgress = com.hardtekpt.crux.ui.progress.TrainingProgress(),
 )
 
 /** The layout being shown, and while editing, the working copy. */
-data class DashboardState(val widgets: List<DashboardWidget> = emptyList(), val editing: Boolean = false, val addingWidget: Boolean = false)
+data class DashboardState(
+    val widgets: List<DashboardWidget> = emptyList(),
+    val editing: Boolean = false,
+    val addingWidget: Boolean = false,
+    /** A widget being told what to show: a new one of [WidgetSetup.type], or the one with [WidgetSetup.widgetId]. */
+    val setup: WidgetSetup? = null,
+)
+
+/** Choosing what a configurable widget shows. */
+data class WidgetSetup(val type: WidgetType, val widgetId: String? = null)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -85,6 +118,7 @@ class HomeViewModel @Inject constructor(
     preferences: UserPreferencesRepository,
     private val dashboardRepository: DashboardRepository,
     clock: Clock,
+    training: com.hardtekpt.crux.ui.progress.TrainingProgressSource? = null,
 ) : ViewModel() {
 
     private val today = LocalDate.now(clock)
@@ -111,6 +145,9 @@ class HomeViewModel @Inject constructor(
         .combine(scheduleRepository.observeWeek()) { inputs, slots -> inputs.copy(slots = slots) }
         .combine(sessionRepository.observeFinished()) { inputs, sessions -> inputs.copy(sessions = sessions) }
         .map(::buildState)
+        .combine(training?.observe() ?: kotlinx.coroutines.flow.flowOf(com.hardtekpt.crux.ui.progress.TrainingProgress())) { state, progress ->
+            state.copy(training = progress)
+        }
         .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState(today = today))
 
     val demoMode: StateFlow<Boolean> = preferences.demoMode
@@ -180,6 +217,7 @@ class HomeViewModel @Inject constructor(
             weekStreak = streak,
             bestWeekStreak = bestStreak,
             daysLast30 = climbDays.keys.count { !it.isBefore(today.minusDays(29)) && !it.isAfter(today) },
+            myGym = myGym(inputs.climbs, inputs.projects, today),
         )
     }
 
@@ -216,9 +254,32 @@ class HomeViewModel @Inject constructor(
     fun openAddWidget() = _dashboard.update { it.copy(addingWidget = true) }
     fun closeAddWidget() = _dashboard.update { it.copy(addingWidget = false) }
 
+    /** Adds a widget; one that shows a figure or an exercise asks which first. */
     fun add(type: WidgetType) = _dashboard.update { state ->
-        state.copy(widgets = state.widgets + DashboardWidget(type = type), addingWidget = false)
+        if (type.configurable) {
+            state.copy(addingWidget = false, setup = WidgetSetup(type))
+        } else {
+            state.copy(widgets = state.widgets + DashboardWidget(type = type), addingWidget = false)
+        }
     }
+
+    /** Opens the choice of what a widget shows. */
+    fun configure(id: String) = _dashboard.update { state ->
+        state.widgets.firstOrNull { it.id == id }?.let { state.copy(setup = WidgetSetup(it.type, it.id)) } ?: state
+    }
+
+    /** Sets what the widget being set up shows, adding it if it's new. */
+    fun applySetup(stat: com.hardtekpt.crux.data.TrainingStat?, exerciseId: Long?) = _dashboard.update { state ->
+        val setup = state.setup ?: return@update state
+        val widgets = if (setup.widgetId == null) {
+            state.widgets + DashboardWidget(type = setup.type, stat = stat, exerciseId = exerciseId)
+        } else {
+            state.widgets.map { if (it.id == setup.widgetId) it.copy(stat = stat, exerciseId = exerciseId) else it }
+        }
+        state.copy(widgets = widgets, setup = null)
+    }
+
+    fun cancelSetup() = _dashboard.update { it.copy(setup = null) }
 
     fun resetToDefault() {
         viewModelScope.launch {

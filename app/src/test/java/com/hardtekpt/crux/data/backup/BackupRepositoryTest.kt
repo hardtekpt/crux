@@ -128,8 +128,15 @@ class BackupRepositoryTest {
         source.exerciseRecordDao().insert(ExerciseRecordEntity(exerciseId = exercise.id, dateEpochDay = 20_000, reps = 5, loadKg = 12.5, createdAtMillis = 2))
         // A board graded apart from the gym it's in.
         val kilterSection = source.placeDao().getAllSections().first { it.name == "Kilter board" }
-        source.placeDao().updateSection(kilterSection.copy(boulderScale = GradeScale.V_SCALE))
+        source.placeDao().updateSection(
+            kilterSection.copy(boulderScale = GradeScale.V_SCALE, boardModel = "kilter_homewall", boardSize = "10x12", boardHolds = "mainline"),
+        )
         addSession(source)
+        // A climb picked from the circuit, with its setter.
+        val pinch = source.datasetDao().getAllClimbs().first { it.name == "Pinch roof" }
+        source.placeDao().getAllProblems().first { it.name == "Pinch roof" }.let {
+            source.placeDao().updateProblem(it.copy(setter = "Rita", sourceDatasetClimbId = pinch.id, holds = "p4125r42p4334r44", holdsBoard = "kilter:8:25"))
+        }
         val bytes = repo(source).exportBytes()
 
         val target = newDb()
@@ -164,6 +171,31 @@ class BackupRepositoryTest {
         val sections = target.placeDao().getSections(blockLab.id)
         assertEquals(listOf("Main gym", "Kilter board"), sections.map { it.name })
         assertEquals(listOf(null, GradeScale.V_SCALE), sections.map { it.boulderScale })
+        // Datasets come back with their climbs.
+        val circuit = target.datasetDao().getDatasets().single { it.name == "Block Lab circuit" }
+        assertEquals(
+            source.datasetDao().getAllClimbs().map { it.name to it.gradeIndex },
+            target.datasetDao().getClimbs(circuit.id).map {
+                it.name to
+                    it.gradeIndex
+            },
+        )
+        // The circuit stays linked to the main gym, the picked climb to its circuit climb, and the
+        // playlist comes back in order, each climb found again.
+        assertEquals(listOf(com.hardtekpt.crux.data.SectionDatasetEntity(sections[0].id, circuit.id)), target.datasetDao().getLinks())
+        val picked = target.placeDao().getAllProblems().first { it.name == "Pinch roof" }
+        assertEquals("Rita", picked.setter)
+        assertEquals("p4125r42p4334r44" to "kilter:8:25", picked.holds to picked.holdsBoard)
+        assertEquals(target.datasetDao().getClimbs(circuit.id).first { it.name == "Pinch roof" }.id, picked.sourceDatasetClimbId)
+        val tonight = target.playlistDao().getPlaylists().single()
+        assertEquals("Tonight", tonight.name)
+        val items = target.playlistDao().getItems(tonight.id)
+        assertEquals(listOf("Blue slab", "Cave jugs", "Pinch roof", "Cave crimps", "Black overhang"), items.map { it.name })
+        assertTrue(items.all { it.datasetClimbId != null })
+        // The board, its size and its holds come back; the gym stays a plain section.
+        assertEquals(listOf(null, "kilter_homewall"), sections.map { it.boardModel })
+        assertEquals(listOf(null, "10x12"), sections.map { it.boardSize })
+        assertEquals(listOf(null, "mainline"), sections.map { it.boardHolds })
         assertEquals(sections[1].id, target.placeDao().getAllAreas().first { it.name == "Benchmarks" }.sectionId)
         assertEquals(source.placeDao().getAllProblems().size, target.placeDao().getAllProblems().size)
         val linkedSource = source.climbDao().getAll().count { it.problemId != null && it.areaId != null && it.placeId != null }
@@ -172,16 +204,16 @@ class BackupRepositoryTest {
         assertEquals(linkedSource, linkedTarget)
 
         // The session comes back with its sets, its plan, its place, and the climb logged in it.
-        val session = target.sessionDao().getFinished().single()
+        val session = target.sessionDao().getFinished().single { it.notes == "Felt strong" }
         assertEquals("Felt strong", session.notes)
         assertEquals(7, session.effort)
         assertEquals(4_600_000L, session.endedAtMillis)
         assertEquals(target.templateDao().getAll().first { it.template.name == "Strength day" }.template.id, session.templateId)
         assertEquals(blockLab.id, session.placeId)
         assertEquals(sections[0].id, session.sectionId)
-        val item = target.sessionDao().getAllItems().single()
+        val item = target.sessionDao().getAllItems().single { it.sessionId == session.id }
         assertEquals(exercise.name, target.exerciseDao().get(item.exerciseId)!!.name)
-        assertEquals(listOf(false, true), target.sessionDao().getAllSets().map { it.skipped })
+        assertEquals(listOf(false, true), target.sessionDao().getAllSets().filter { it.itemId == item.id }.map { it.skipped })
         assertEquals(1, target.climbDao().getAll().count { it.sessionId == session.id })
     }
 

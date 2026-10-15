@@ -101,12 +101,28 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 @Composable
-fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel: LogClimbViewModel = hiltViewModel()) {
+fun LogClimbScreen(
+    onDone: () -> Unit,
+    onOpenLog: (Long) -> Unit = {},
+    /** Picking a climb logged today: its log opens in place of this form. */
+    onSwitchToLog: (Long) -> Unit = onOpenLog,
+    viewModel: LogClimbViewModel = hiltViewModel(),
+) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val places by viewModel.places.collectAsStateWithLifecycle()
     val detail by viewModel.placeDetail.collectAsStateWithLifecycle()
     val earlierLogs by viewModel.earlierLogs.collectAsStateWithLifecycle()
+    val datasets by viewModel.datasets.collectAsStateWithLifecycle()
+    val links by viewModel.datasetLinks.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val openLog by viewModel.openLog.collectAsStateWithLifecycle()
     LaunchedEffect(draft.saved) { if (draft.saved) onDone() }
+    LaunchedEffect(openLog) {
+        openLog?.let {
+            viewModel.logOpened()
+            onSwitchToLog(it)
+        }
+    }
     val whereActions = WhereActions(
         selectPlace = viewModel::selectPlace,
         createPlace = viewModel::createPlace,
@@ -114,12 +130,22 @@ fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel
         setVenue = viewModel::setVenue,
         setPlaceText = viewModel::setPlace,
         selectSection = viewModel::selectSection,
+        pickProblem = viewModel::pickProblem,
+        pickDatasetClimb = viewModel::pickDatasetClimb,
+        newClimb = viewModel::newClimb,
+        usesDatasets = { section -> com.hardtekpt.crux.data.datasetsFor(section, datasets, links[section.id].orEmpty()).isNotEmpty() },
+        whereOpened = viewModel::whereOpened,
+        searchCatalogue = { dataset, query -> viewModel.searchCatalogue(dataset, query) },
     )
+    val choices = remember(draft.placeId, draft.sectionId, detail, datasets, links, playlists) { viewModel.climbChoices(draft) }
     LogClimbContent(
         draft = draft,
         onBack = onDone,
-        where = { dayButton -> WhereSection(draft, places, detail, whereActions, trailing = dayButton) },
+        where = { dayButton -> WhereSection(draft, places, detail, whereActions, trailing = dayButton, choices = choices) },
         suggestions = remember(draft.placeId, draft.name, draft.problemId, detail) { viewModel.candidates() },
+        datasetSuggestions = catalogueAndDatasetMatches(draft.name, choices, viewModel),
+        onPickDatasetClimb = viewModel::pickDatasetClimb,
+        onUnlink = viewModel::unlinkSource,
         onPickClimb = viewModel::pickProblem,
         onGo = viewModel::addGo,
         onUndoGo = viewModel::undoGo,
@@ -145,6 +171,12 @@ fun LogClimbScreen(onDone: () -> Unit, onOpenLog: (Long) -> Unit = {}, viewModel
                 onAttachVideo = viewModel::attachVideo,
                 onRemoveVideo = viewModel::removeVideo,
                 videoCaptureUri = viewModel::videoCaptureUri,
+                // On a board, the angle sits beside the photo and video.
+                angle = if (viewModel.onBoard(draft)) {
+                    AngleChoice(draft.angle, viewModel.boardOf(draft), viewModel::setAngle)
+                } else {
+                    null
+                },
             )
         },
     )
@@ -196,6 +228,9 @@ fun LogClimbContent(
     onEffort: (Int?) -> Unit = {},
     media: @Composable () -> Unit = {},
     today: LocalDate = LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current),
+    datasetSuggestions: List<com.hardtekpt.crux.data.ClimbSource> = emptyList(),
+    onPickDatasetClimb: (com.hardtekpt.crux.data.ClimbSource) -> Unit = {},
+    onUnlink: () -> Unit = {},
 ) {
     val space = CruxTheme.space
     var pickingDate by rememberSaveable { mutableStateOf(false) }
@@ -244,6 +279,15 @@ fun LogClimbContent(
                 onSelect = onGrade,
                 modifier = Modifier.bleed(space.s4),
             )
+            // Picked from a dataset: its own grade, which the strip started at when it converts.
+            draft.gradeHint?.let { hint ->
+                Text(
+                    hint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("grade_hint"),
+                )
+            }
 
             // Today's goes: one tap each, in the order climbed. The style follows from them.
             Eyebrow("Goes", Modifier.padding(top = space.s3))
@@ -270,7 +314,25 @@ fun LogClimbContent(
             com.hardtekpt.crux.ui.components.input.EffortWords(draft.effort, onEffort, Modifier.padding(top = space.s3))
 
             // Name: suggests climbs here to continue; any other name starts a new climb.
-            NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3))
+            val source = draft.source
+            // A board climb whose catalogue is gone still has its holds.
+            val kept = draft.problemHolds
+            if (source == null && kept != null) {
+                Eyebrow("Holds", Modifier.padding(top = space.s3))
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(kept.second, kept.first, draft.name, Modifier.fillMaxWidth(), maxHeight = 280)
+            }
+            if (source != null) {
+                LinkedNameRow(source, onUnlink, Modifier.padding(top = space.s3))
+                val board = source.dataset.holdsBoard
+                val holds = source.climb.holds
+                if (board != null &&
+                    holds != null
+                ) {
+                    com.hardtekpt.crux.ui.components.LightButton(board, holds, source.climb.name, preferredSection = draft.sectionId)
+                }
+            } else {
+                NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3), datasetSuggestions, onPickDatasetClimb)
+            }
             Extras(draft, onNotes, media)
             if (earlierLogs.isNotEmpty()) {
                 // The name, grade and where are the climb's: changing them changes every log.
@@ -317,8 +379,10 @@ private fun ClimbMedia(
     onAttachVideo: (Uri) -> Unit,
     onRemoveVideo: () -> Unit,
     videoCaptureUri: () -> Uri,
+    angle: AngleChoice? = null,
 ) {
     val space = CruxTheme.space
+    var pickingAngle by rememberSaveable { mutableStateOf(false) }
     var capture by rememberSaveable { mutableStateOf<String?>(null) }
     var viewing by rememberSaveable { mutableStateOf(false) }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(onAttach) }
@@ -382,6 +446,17 @@ private fun ClimbMedia(
                 recorder.launch(uri)
             }
         }
+        angle?.let { choice ->
+            com.hardtekpt.crux.ui.components.CruxFilterChip(
+                label = choice.angle?.let { "∠ $it°" } ?: "Angle",
+                selected = choice.angle != null,
+                onClick = { pickingAngle = true },
+                modifier = Modifier.testTag("climb_angle"),
+            )
+        }
+    }
+    if (pickingAngle && angle != null) {
+        AngleSheet(angle, onDismiss = { pickingAngle = false })
     }
     if (draft.videoFailed) {
         Text("That video could not be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -534,6 +609,8 @@ private fun NameField(
     onName: (String) -> Unit,
     onPick: (com.hardtekpt.crux.data.model.Problem) -> Unit,
     modifier: Modifier = Modifier,
+    fromDatasets: List<com.hardtekpt.crux.data.ClimbSource> = emptyList(),
+    onPickFromDataset: (com.hardtekpt.crux.data.ClimbSource) -> Unit = {},
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
         CruxTextField(
@@ -549,7 +626,10 @@ private fun NameField(
         val matches = suggestions
             .filter { it.id != draft.problemId && (query.isEmpty() || it.name.contains(query, ignoreCase = true)) }
             .take(if (query.isEmpty()) 4 else 6)
-        if (!draft.isEditing && matches.isNotEmpty()) {
+        // The section's datasets, for a name typed: picking one is picking it in the Climb step.
+        val named = matches.map { it.name.trim().lowercase() }.toSet()
+        val fromData = fromDatasets.filter { it.climb.name.trim().lowercase() !in named }
+        if (!draft.isEditing && (matches.isNotEmpty() || fromData.isNotEmpty())) {
             androidx.compose.foundation.layout.FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                 verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
@@ -563,6 +643,85 @@ private fun NameField(
                         modifier = Modifier.testTag("suggest_${climb.name}"),
                     )
                 }
+                fromData.forEach { source ->
+                    CruxFilterChip(
+                        label = listOfNotNull(source.climb.name, source.climb.gradeLabel, source.dataset.name).joinToString(" · "),
+                        selected = false,
+                        onClick = { onPickFromDataset(source) },
+                        modifier = Modifier.testTag("suggest_dataset_${source.climb.name}"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Name suggestions from the section's datasets, then its board catalogues (searched as you type), three at most. */
+@Composable
+private fun catalogueAndDatasetMatches(typed: String, choices: ClimbChoices?, viewModel: LogClimbViewModel): List<com.hardtekpt.crux.data.ClimbSource> {
+    val own = remember(typed, choices) { datasetMatches(typed, choices) }
+    val catalogues = choices?.datasets.orEmpty().filter { it.isCatalogue }
+    val fromCatalogues by androidx.compose.runtime.produceState(emptyList<com.hardtekpt.crux.data.ClimbSource>(), typed, catalogues) {
+        val query = typed.trim()
+        value = if (query.length < 2 || own.size >= 3) {
+            emptyList()
+        } else {
+            catalogues.flatMap { viewModel.searchCatalogue(it, query, limit = 3) }
+                .filter { !it.climb.name.trim().equals(query, ignoreCase = true) }
+        }
+    }
+    return (own + fromCatalogues).take(3)
+}
+
+/** Up to three climbs in the section's datasets whose name has what's typed. */
+internal fun datasetMatches(typed: String, choices: ClimbChoices?): List<com.hardtekpt.crux.data.ClimbSource> {
+    val query = typed.trim()
+    if (query.isEmpty() || choices == null) return emptyList()
+    return choices.datasets.flatMap { d -> d.climbs.map { com.hardtekpt.crux.data.ClimbSource(it, d) } }
+        .filter { it.climb.name.contains(query, ignoreCase = true) && !it.climb.name.trim().equals(query, ignoreCase = true) }
+        .take(3)
+}
+
+/**
+ * The name as a climb picked from a dataset: the dataset's badge, the name, where it's from and
+ * who set it. ✕ makes it a plain name again, keeping the text.
+ */
+@Composable
+private fun LinkedNameRow(source: com.hardtekpt.crux.data.ClimbSource, onUnlink: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.medium
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
+        Eyebrow("Name")
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(colors.surfaceContainerLow, shape)
+                .border(CruxTheme.size.borderEmphasis, colors.primary, shape)
+                .padding(start = CruxTheme.space.s3, top = CruxTheme.space.s1, bottom = CruxTheme.space.s1)
+                .testTag("linked_name"),
+        ) {
+            // A board climb shows its holds; tap them for the whole board.
+            val holds = source.climb.holds
+            val board = source.dataset.holdsBoard
+            if (holds != null && board != null) {
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(board, holds, source.climb.name, Modifier.size(width = 40.dp, height = 52.dp), small = true)
+            } else {
+                com.hardtekpt.crux.ui.datasets.DatasetBadge(source.dataset, size = 32.dp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(source.climb.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(
+                    listOfNotNull("from ${source.dataset.name}", source.climb.setter?.let { "set by $it" }).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            IconButton(onClick = onUnlink, modifier = Modifier.testTag("unlink_source")) {
+                Icon(Icons.Rounded.Close, contentDescription = "Type a name instead")
             }
         }
     }
@@ -673,6 +832,97 @@ private fun EarlierLogs(logs: List<com.hardtekpt.crux.data.model.Climb>, onOpen:
                 leading = { com.hardtekpt.crux.ui.components.GradeBadge(log.grade, log.gradeState) },
                 onClick = { onOpen(log.id) },
                 modifier = Modifier.testTag("earlier_log"),
+            )
+        }
+    }
+}
+
+/** The board angle as the form has it, the board it's on (for its angles), and how to change it. */
+data class AngleChoice(val angle: Int?, val board: com.hardtekpt.crux.data.model.BoardModel?, val onChange: (Int?) -> Unit)
+
+/**
+ * The board's angle: a MoonBoard's two angles, or the stepper (0° to 70° in 5° steps, tap the
+ * number to type) with quick picks. Clear takes it off. It is saved as the note's first line.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AngleSheet(choice: AngleChoice, onDismiss: () -> Unit) {
+    val space = CruxTheme.space
+    val board = choice.board
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.testTag("angle_sheet"),
+    ) {
+        Column(
+            Modifier
+                .padding(horizontal = space.s4)
+                .padding(bottom = space.s6)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Board angle", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                if (choice.angle != null) {
+                    androidx.compose.material3.TextButton(onClick = { choice.onChange(null) }, modifier = Modifier.testTag("angle_clear")) { Text("Clear") }
+                }
+            }
+            val angles = board?.angles
+            Text(
+                if (board != null &&
+                    angles != null
+                ) {
+                    "${board.label} is set at ${angles.joinToString(" or ") { "$it°" }}."
+                } else {
+                    "Saved as the first line of the note."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (angles != null) {
+                com.hardtekpt.crux.ui.components.CruxSegmentedButtons(
+                    options = angles,
+                    selected = choice.angle ?: -1,
+                    label = { "$it°" },
+                    onSelect = { choice.onChange(it) },
+                    modifier = Modifier.fillMaxWidth().testTag("angle_options"),
+                )
+            } else {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    com.hardtekpt.crux.ui.components.CruxStepper(
+                        choice.angle ?: 40,
+                        { choice.onChange(it) },
+                        com.hardtekpt.crux.data.model.BoardAngleNote.RANGE,
+                        "°",
+                        step = com.hardtekpt.crux.data.model.BoardAngleNote.STEP,
+                        testTagPrefix = "angle",
+                    )
+                }
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(space.s2),
+                    verticalArrangement = Arrangement.spacedBy(space.s2),
+                ) {
+                    listOf(20, 25, 30, 35, 40, 45, 50).forEach { quick ->
+                        com.hardtekpt.crux.ui.components.CruxFilterChip(
+                            label = "$quick°",
+                            selected = choice.angle == quick,
+                            onClick = { choice.onChange(quick) },
+                            modifier = Modifier.testTag("angle_$quick"),
+                        )
+                    }
+                }
+            }
+            com.hardtekpt.crux.ui.components.CruxButton(
+                "Done",
+                {
+                    // Opening the stepper and leaving it as it shows sets that angle.
+                    if (choice.angle == null && angles == null) choice.onChange(40)
+                    onDismiss()
+                },
+                variant = com.hardtekpt.crux.ui.components.CruxButtonVariant.Tonal,
+                modifier = Modifier.fillMaxWidth().testTag("angle_done"),
             )
         }
     }

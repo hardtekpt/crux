@@ -20,6 +20,7 @@ crux/
 ├── gradle/libs.versions.toml       Every dependency and plugin version
 ├── scripts/
 │   ├── crux.ps1                    Windows dev script (run, test, format, emulator…)
+│   ├── board_holes.py              Builds assets/board_holes.json from Boardsesh's hardware catalogue
 │   └── release-smoke.sh            Launch check of the release APK (CI)
 ├── .github/
 │   ├── workflows/                  ci, device-tests, reproducible, release
@@ -36,7 +37,14 @@ com.hardtekpt.crux
 ├── CruxApplication.kt      Hilt app; installs crash reports, StrictMode (debug), seeds demo data
 ├── MainActivity.kt         Single activity; edge-to-edge; hosts CruxApp
 ├── data/
-│   ├── *Repository.kt      Climb, Place, Body, Template, Exercise, Session, Note, Record
+│   ├── *Repository.kt      Climb, Place, Body, Template, Exercise, Session, Note, Record, Dataset
+│   ├── Playlists.kt        Playlists: tables, repository, .crux-playlist.json files
+│   ├── PlaylistGoes.kt     + Fell and + Sent on a session's playlist climb
+│   ├── DatasetFiles.kt     CSV and .crux-dataset.json import and export
+│   ├── Catalogue*.kt       Board catalogues: their database, repository and Boardsesh importer
+│   ├── BoardGeometry.kt    Built-in hold positions and LED numbers (assets/board_holes.json)
+│   ├── BoardLights.kt      Aurora and MoonBoard light messages (pure Kotlin)
+│   ├── BoardLink.kt        The Bluetooth link to a paired board
 │   ├── model/              Domain types: Climbing (grades, styles), Training, Places, GradeConversion
 │   ├── local/              Room: entities, DAOs, CruxDatabase (+ migration specs), CruxDatabases,
 │   │                       DatabaseSnapshots
@@ -54,9 +62,11 @@ com.hardtekpt.crux
 │   ├── components/         Buttons, cards, list rows, inputs; input/ = the touch input kit
 │   ├── charts/             Canvas charts and chart cards
 │   ├── home/ train/ journal/ session/ progress/ you/ places/ settings/ quicklog/
+│   ├── datasets/           Datasets, playlists and board catalogues
 │   ├── timer/              The standalone, full-screen interval timer
 │   ├── Format.kt           Date and number formatting
 │   └── Units.kt            Metric/imperial display, LocalUnits, LocalGradeScales, LocalClock
+├── live/                   The live notification: service, cards, actions, playlist buttons
 └── work/                   WorkManager workers
 ```
 
@@ -68,6 +78,7 @@ com.hardtekpt.crux
 | Data flow for one screen | `ui/home/HomeViewModel.kt` → `data/ClimbRepository.kt` → `data/local/ClimbDao.kt` |
 | Places and grades | `data/model/Climbing.kt`, `data/model/Places.kt`, `data/PlaceRepository.kt` |
 | Live sessions | `data/SessionRepository.kt`, `ui/session/SessionScreen.kt`, `ui/session/IntervalTimer.kt` |
+| Boards, datasets, catalogues | `data/DatasetRepository.kt`, `data/Catalogue.kt`, `ui/journal/LogClimbWhere.kt`, [Architecture](architecture.md#boards-datasets-and-catalogues) |
 | The standalone timer | `ui/timer/IntervalTimerScreen.kt` (reuses `IntervalRun` and the session's timer pieces) |
 | Migrations | `data/local/CruxDatabase.kt`, [Database](database.md) |
 | Tests | [Testing](testing.md) |

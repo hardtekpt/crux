@@ -113,7 +113,24 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
             ClimbLinks.linkUnlinked(sql, clock.millis())
         }
         ClimbLinks.settleSections(sql)
-        db.climbDao().get(logId)?.problemId?.let { ClimbLinks.syncLogs(sql, it) }
+        val problemId = db.climbDao().get(logId)?.problemId
+        problemId?.let { ClimbLinks.syncLogs(sql, it) }
+        // Picked from a dataset (or unlinked): the climb keeps which one, and its setter.
+        val source = climb.source
+        if (source != null && problemId != null) {
+            sql.execSQL(
+                "UPDATE problems SET sourceDatasetClimbId = (SELECT id FROM dataset_climbs WHERE id = ?), sourceCatalogueUuid = ?, " +
+                    "setter = COALESCE(?, setter), holds = COALESCE(?, holds), holdsBoard = COALESCE(?, holdsBoard) WHERE id = ?",
+                arrayOf<Any?>(
+                    source.datasetClimbId,
+                    source.catalogueUuid,
+                    source.setter?.trim()?.ifEmpty { null },
+                    source.holds?.takeIf { source.holdsBoard != null },
+                    source.holdsBoard?.takeIf { source.holds != null },
+                    problemId,
+                ),
+            )
+        }
     }
 
     /** Deletes the log; its climb goes too when that was its last log. */

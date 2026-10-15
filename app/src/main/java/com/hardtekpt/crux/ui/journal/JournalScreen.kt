@@ -98,6 +98,7 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
+import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
@@ -112,7 +113,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -142,27 +145,50 @@ class JournalViewModel @Inject constructor(
     private val today = LocalDate.now(clock)
     private val query = MutableStateFlow(JournalQuery())
 
-    val uiState: StateFlow<JournalUiState> = combine(
+    private data class Logged(val all: List<TimelineDay>, val places: List<String>, val tags: List<String>)
+
+    /** The timeline, built when something is logged, not on every keystroke or tap of a filter. */
+    private val logged = combine(
         climbRepository.observeClimbs(),
         recordRepository.observeResults(),
         noteRepository.observeNotes(),
         sessionRepository.observeFinished(),
-        query,
-    ) { climbs, results, notes, sessions, q ->
-        val all = buildTimeline(climbs, results, notes, sessions, clock.zone)
-        JournalUiState(
-            today = today,
-            isLoading = false,
-            all = all,
-            days = all.matching(q, today),
-            query = q,
-            counts = JournalFilter.entries.associateWith { all.matching(q.copy(kind = it), today).count() },
+    ) { climbs, results, notes, sessions ->
+        Logged(
+            all = buildTimeline(climbs, results, notes, sessions, clock.zone),
             places = climbs.mapNotNull { it.place }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key },
             tags = notes.mapNotNull { it.tag }.distinct().sorted(),
         )
-    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
+    }
+
+    /** The query the list follows: a tab or filter at once, search once you stop typing. */
+    private var searched = ""
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private val settled = query
+        .debounce { q -> if (q.search != searched) SEARCH_PAUSE_MILLIS else 0L }
+        .onEach { searched = it.search }
+
+    val uiState: StateFlow<JournalUiState> = combine(logged, settled) { data, q ->
+        JournalUiState(
+            today = today,
+            isLoading = false,
+            all = data.all,
+            days = data.all.matching(q, today),
+            counts = JournalFilter.entries.associateWith { data.all.matching(q.copy(kind = it), today).count() },
+            places = data.places,
+            tags = data.tags,
+        )
+    }
+        // The search field shows what you typed straight away.
+        .combine(query) { state, q -> state.copy(query = q) }
+        .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
 
     fun update(change: (JournalQuery) -> JournalQuery) = query.update(change)
+
+    private companion object {
+        const val SEARCH_PAUSE_MILLIS = 150L
+    }
 }
 
 /** Where the journal's taps lead. */
@@ -171,12 +197,19 @@ data class JournalActions(
     val openNote: (Long) -> Unit = {},
     val openRecords: (Long) -> Unit = {},
     val openSession: (Long) -> Unit = {},
+    val openPlace: (Long) -> Unit = {},
+    val newPlace: () -> Unit = {},
 )
 
 @Composable
-fun JournalScreen(actions: JournalActions, viewModel: JournalViewModel = hiltViewModel()) {
+fun JournalScreen(
+    actions: JournalActions,
+    viewModel: JournalViewModel = hiltViewModel(),
+    placesViewModel: com.hardtekpt.crux.ui.places.PlacesViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions)
+    val places by placesViewModel.places.collectAsStateWithLifecycle()
+    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions, places = places)
 }
 
 private val GUTTER = 48.dp
@@ -193,10 +226,12 @@ fun JournalContent(
     modifier: Modifier = Modifier,
     onQuery: ((JournalQuery) -> JournalQuery) -> Unit = {},
     actions: JournalActions = JournalActions(),
+    places: List<com.hardtekpt.crux.data.model.PlaceSummary>? = null,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val space = CruxTheme.space
     var showFilters by rememberSaveable { mutableStateOf(false) }
+    var placeType by rememberSaveable { mutableStateOf<com.hardtekpt.crux.data.model.PlaceType?>(null) }
     var searching by rememberSaveable { mutableStateOf(uiState.query.search.isNotEmpty()) }
     Column(
         modifier = modifier
@@ -218,7 +253,7 @@ fun JournalContent(
                 FiltersButton(uiState.query.activeFilters) { showFilters = true }
             }
         }
-        if (!uiState.isLoading && uiState.all.isEmpty()) {
+        if (!uiState.isLoading && uiState.all.isEmpty() && uiState.query.kind != JournalFilter.Places) {
             EmptyState(
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 headline = "Nothing logged yet",
@@ -226,7 +261,19 @@ fun JournalContent(
             )
             return
         }
-        TypeTabs(uiState, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        TypeTabs(uiState, placeCount = places?.size ?: 0, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        // Places: the gyms, crags and boards you climb at, with New place, in place of the timeline.
+        if (uiState.query.kind == JournalFilter.Places) {
+            LazyColumn(
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+                modifier = Modifier.testTag("journal_places"),
+            ) {
+                placesList(places, actions.openPlace, actions.newPlace, placeType, { placeType = it })
+            }
+            if (showFilters) FilterSheet(uiState, onQuery, onDismiss = { showFilters = false })
+            return@Column
+        }
         androidx.compose.animation.AnimatedVisibility(
             visible = uiState.query.activeFilters > 0,
             enter = androidx.compose.animation.expandVertically(CruxMotion.medium()) + androidx.compose.animation.fadeIn(CruxMotion.medium()),
@@ -372,7 +419,7 @@ private fun daySummary(day: TimelineDay): String {
 
 /** The four types as equal tabs with live counts, the picked one underlined. */
 @Composable
-private fun TypeTabs(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit) {
+private fun TypeTabs(uiState: JournalUiState, placeCount: Int = 0, onSelect: (JournalFilter) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column {
         Row(
@@ -407,7 +454,11 @@ private fun TypeTabs(uiState: JournalUiState, onSelect: (JournalFilter) -> Unit)
                             label = "tabCount",
                         )
                         Text(option.label, style = MaterialTheme.typography.titleSmall, color = label, maxLines = 1)
-                        AnimatedCount((uiState.counts[option] ?: 0).toString(), style = MonoLabel, color = count)
+                        AnimatedCount(
+                            (if (option == JournalFilter.Places) placeCount else uiState.counts[option] ?: 0).toString(),
+                            style = MonoLabel,
+                            color = count,
+                        )
                     }
                     val underline by androidx.compose.animation.animateColorAsState(
                         if (selected) colors.primary else Color.Transparent,

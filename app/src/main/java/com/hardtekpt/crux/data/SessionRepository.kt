@@ -51,6 +51,9 @@ data class Session(
     val notes: String?,
     val items: List<SessionItem>,
     val climbs: List<Climb>,
+    /** The playlist being climbed, if any, and the position of the climb that's up. */
+    val playlistId: Long? = null,
+    val playlistIndex: Int = 0,
 ) {
     val hasPlan: Boolean get() = templateId != null
 
@@ -80,7 +83,13 @@ interface SessionRepository {
     suspend fun start(templateId: Long?, placeId: Long?, sectionId: Long?): Long
     suspend fun logSet(itemId: Long, setIndex: Int, reps: Int?, seconds: Int?, loadKg: Double?)
     suspend fun skipSet(itemId: Long, setIndex: Int)
+
+    /** Takes an exercise out of the session; only one with nothing logged yet. */
+    suspend fun removeExercise(itemId: Long)
     suspend fun undoSet(itemId: Long, setIndex: Int)
+
+    /** Changes an exercise's target for this session only; at least as many sets as are already logged. */
+    suspend fun updateTarget(itemId: Long, target: ExerciseTarget)
 
     /** Adds an exercise during the session, with its usual target. */
     suspend fun addExercise(sessionId: Long, exercise: Exercise): Long
@@ -92,6 +101,9 @@ interface SessionRepository {
 
     /** Throws the session away; climbs logged in it stay in the journal. */
     suspend fun discard(sessionId: Long)
+
+    /** Climbs a playlist in the session from its [index]th climb; null stops. */
+    suspend fun setPlaylist(sessionId: Long, playlistId: Long?, index: Int = 0) {}
 }
 
 class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabases, private val templates: TemplateRepository, private val clock: Clock) :
@@ -185,6 +197,8 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
         )
     }
 
+    override suspend fun removeExercise(itemId: Long) = dbs.current().sessionDao().deleteItemWithoutSets(itemId)
+
     override suspend fun skipSet(itemId: Long, setIndex: Int) {
         val dao = dbs.current().sessionDao()
         dao.deleteSet(itemId, setIndex)
@@ -192,6 +206,20 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
     }
 
     override suspend fun undoSet(itemId: Long, setIndex: Int) = dbs.current().sessionDao().deleteSet(itemId, setIndex)
+
+    override suspend fun updateTarget(itemId: Long, target: ExerciseTarget) {
+        val dao = dbs.current().sessionDao()
+        val logged = dao.getAllSets().count { it.itemId == itemId }
+        dao.updateTarget(
+            itemId = itemId,
+            sets = target.sets.coerceAtLeast(maxOf(1, logged)),
+            reps = target.reps,
+            seconds = target.seconds,
+            loadKg = target.loadKg,
+            restSeconds = target.restSeconds,
+            repRestSeconds = target.repRestSeconds,
+        )
+    }
 
     override suspend fun addExercise(sessionId: Long, exercise: Exercise): Long {
         val dao = dbs.current().sessionDao()
@@ -242,6 +270,11 @@ class OfflineSessionRepository @Inject constructor(private val dbs: CruxDatabase
                 ),
             )
         }
+    }
+
+    override suspend fun setPlaylist(sessionId: Long, playlistId: Long?, index: Int) {
+        val dao = dbs.current().sessionDao()
+        dao.getSession(sessionId)?.let { dao.updateSession(it.copy(playlistId = playlistId, playlistIndex = index.coerceAtLeast(0))) }
     }
 
     override suspend fun discard(sessionId: Long) {
@@ -295,5 +328,7 @@ private fun SessionEntity.toModel(
             )
         },
         climbs = climbs,
+        playlistId = playlistId,
+        playlistIndex = playlistIndex,
     )
 }
