@@ -809,6 +809,8 @@ class BackupRepository(
                     setter = problem.setter ?: match?.setter,
                     sourceDatasetClimbId = source(problem.source) ?: match?.sourceDatasetClimbId,
                     sourceCatalogueUuid = problem.source?.catalogueUuid ?: match?.sourceCatalogueUuid,
+                    holds = problem.holds ?: match?.holds,
+                    holdsBoard = problem.holdsBoard ?: match?.holdsBoard,
                 )
                 if (match != null) dao.updateProblem(entity.copy(id = match.id)) else dao.insertProblem(entity)
             }
@@ -1395,6 +1397,8 @@ private fun ProblemEntity.toDto(area: String?) = ProblemDto(
     gradeColour = gradeColour,
     createdAt = createdAtMillis,
     setter = setter,
+    holds = holds,
+    holdsBoard = holdsBoard,
 )
 
 private fun BodyMeasurementEntity.toDto() = MeasurementDto(

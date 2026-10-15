@@ -315,6 +315,12 @@ fun LogClimbContent(
 
             // Name: suggests climbs here to continue; any other name starts a new climb.
             val source = draft.source
+            // A board climb whose catalogue is gone still has its holds.
+            val kept = draft.problemHolds
+            if (source == null && kept != null) {
+                Eyebrow("Holds", Modifier.padding(top = space.s3))
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(kept.second, kept.first, draft.name, Modifier.fillMaxWidth(), maxHeight = 280)
+            }
             if (source != null) {
                 LinkedNameRow(source, onUnlink, Modifier.padding(top = space.s3))
             } else {
@@ -690,7 +696,14 @@ private fun LinkedNameRow(source: com.hardtekpt.crux.data.ClimbSource, onUnlink:
                 .padding(start = CruxTheme.space.s3, top = CruxTheme.space.s1, bottom = CruxTheme.space.s1)
                 .testTag("linked_name"),
         ) {
-            com.hardtekpt.crux.ui.datasets.DatasetBadge(source.dataset, size = 32.dp)
+            // A board climb shows its holds; tap them for the whole board.
+            val holds = source.climb.holds
+            val board = source.dataset.holdsBoard
+            if (holds != null && board != null) {
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(board, holds, source.climb.name, Modifier.size(width = 40.dp, height = 52.dp), small = true)
+            } else {
+                com.hardtekpt.crux.ui.datasets.DatasetBadge(source.dataset, size = 32.dp)
+            }
             Column(Modifier.weight(1f)) {
                 Text(source.climb.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(

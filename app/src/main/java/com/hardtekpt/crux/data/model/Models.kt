@@ -82,7 +82,14 @@ data class NewClimb(
  * Sets where a climb came from: the dataset climb it was picked from and its setter, both
  * copied onto the climb; a null [datasetClimbId] unlinks it (the setter stays).
  */
-data class SourceChange(val datasetClimbId: Long?, val setter: String? = null, val catalogueUuid: String? = null)
+data class SourceChange(
+    val datasetClimbId: Long?,
+    val setter: String? = null,
+    val catalogueUuid: String? = null,
+    /** A catalogue climb's holds and whose positions they are; copied, never cleared. */
+    val holds: String? = null,
+    val holdsBoard: String? = null,
+)
 
 data class PersonalBest(
     val discipline: Discipline,

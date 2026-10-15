@@ -26,6 +26,9 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   each angle with search, Popular, Grade and Name sorts and Benchmarks, log them, add them to
   playlists, and pick them in Log climb's Climb step, graded at your angle. Catalogues stay on the
   phone apart from your data and are never backed up.
+- **Hold diagrams**: board catalogue climbs show their holds on the board, drawn by Crux, on the
+  climb sheet, in Log climb, on the session's playlist card and on climbs you logged from them. Tap
+  one for the whole board.
 
 - **Say which board it is**: a board facility can be a Kilter Original or Homewall (with its size,
   and a Homewall's holds), a MoonBoard 2016 to 2024, a Mini MoonBoard, or a custom board. The board

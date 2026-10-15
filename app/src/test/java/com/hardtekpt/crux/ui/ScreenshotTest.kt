@@ -1,6 +1,8 @@
 package com.hardtekpt.crux.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -245,6 +248,42 @@ class ScreenshotTest {
         loaded(vm.uiState) { it.playlist != null }
         bothThemes("playlist", readyText = "Cave crimps", dark = DARK) {
             com.hardtekpt.crux.ui.datasets.PlaylistScreen(onBack = {}, onLogClimb = {}, onOpenSession = {}, viewModel = vm)
+        }
+    }
+
+    // Hold diagrams: a Kilter Homewall climb, its thumbnail, and a Mini MoonBoard climb with its grid.
+    @Test
+    fun boardDiagrams() {
+        bothThemes("board_diagrams", dark = DARK) {
+            androidx.compose.foundation.layout.Column(
+                androidx.compose.ui.Modifier.padding(16.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+            ) {
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                        "kilter:8:25",
+                        "p4125r42p4146r45p4149r45p4180r45p4212r43p4214r43p4235r45p4238r42p4268r45p4272r43p4274r43p4334r44p4363r44",
+                        "Moon Landing",
+                        androidx.compose.ui.Modifier.weight(1f),
+                        maxHeight = 300,
+                    )
+                    com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                        "moonboard:7",
+                        "p45r43p124r44p37r43p93r43p127r43p62r42p95r43p53r42",
+                        "Easy Does It",
+                        androidx.compose.ui.Modifier.weight(1f),
+                        maxHeight = 300,
+                    )
+                }
+                com.hardtekpt.crux.ui.components.HoldLegend("p4125r42p4146r45p4212r43p4334r44")
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(
+                    "kilter:8:25",
+                    "p4125r42p4146r45p4149r45p4180r45p4212r43p4214r43p4235r45p4238r42p4268r45p4272r43p4274r43p4334r44p4363r44",
+                    "Moon Landing",
+                    androidx.compose.ui.Modifier.size(width = 40.dp, height = 52.dp),
+                    small = true,
+                )
+            }
         }
     }
 

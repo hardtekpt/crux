@@ -120,8 +120,15 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
         if (source != null && problemId != null) {
             sql.execSQL(
                 "UPDATE problems SET sourceDatasetClimbId = (SELECT id FROM dataset_climbs WHERE id = ?), sourceCatalogueUuid = ?, " +
-                    "setter = COALESCE(?, setter) WHERE id = ?",
-                arrayOf<Any?>(source.datasetClimbId, source.catalogueUuid, source.setter?.trim()?.ifEmpty { null }, problemId),
+                    "setter = COALESCE(?, setter), holds = COALESCE(?, holds), holdsBoard = COALESCE(?, holdsBoard) WHERE id = ?",
+                arrayOf<Any?>(
+                    source.datasetClimbId,
+                    source.catalogueUuid,
+                    source.setter?.trim()?.ifEmpty { null },
+                    source.holds?.takeIf { source.holdsBoard != null },
+                    source.holdsBoard?.takeIf { source.holds != null },
+                    problemId,
+                ),
             )
         }
     }

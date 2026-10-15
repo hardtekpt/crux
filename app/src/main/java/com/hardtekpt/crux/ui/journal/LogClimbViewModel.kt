@@ -104,6 +104,8 @@ data class LogClimbDraft(
     val sourceTouched: Boolean = false,
     /** Log this climb from a dataset used at several sections: the Where sheet opens on those. */
     val whereLimit: Set<Long>? = null,
+    /** The picked climb's holds and whose positions they are, copied when it was logged. */
+    val problemHolds: Pair<String, String>? = null,
     val openWhere: Boolean = false,
     val confirmDelete: Boolean = false,
     val isSaving: Boolean = false,
@@ -287,9 +289,10 @@ class LogClimbViewModel @Inject constructor(
                 )
             }
             climb.problemId?.let { refreshEarlierGoes(it, climb) }
-            // Picked from a dataset: the linked name row.
-            val source = sourceOf(climb.problemId?.let { placeRepository.getProblem(it) })
-            if (source != null) _draft.update { it.copy(source = source) }
+            // Picked from a dataset: the linked name row, and the holds it was logged with.
+            val problem = climb.problemId?.let { placeRepository.getProblem(it) }
+            val source = sourceOf(problem)
+            _draft.update { it.copy(source = source ?: it.source, problemHolds = problem?.holds?.let { h -> problem.holdsBoard?.let { h to it } }) }
             // Local grades need the place's list to show the strip.
             climb.placeId?.let { placeRepository.getPlace(it) }?.section(climb.sectionId)?.localScale?.let { local -> _draft.update { it.copy(local = local) } }
             return
@@ -349,6 +352,7 @@ class LogClimbViewModel @Inject constructor(
                     gradeIndex = index,
                     setter = row.setter,
                     catalogueUuid = row.uuid,
+                    holds = row.frames,
                 ),
                 dataset,
             )
@@ -681,6 +685,7 @@ class LogClimbViewModel @Inject constructor(
             scaleOverride = problem.gradeScale,
             gradeIndex = problem.gradeIndex,
             name = problem.name,
+            problemHolds = problem.holds?.let { h -> problem.holdsBoard?.let { h to it } },
         )
     }
 
@@ -904,6 +909,8 @@ class LogClimbViewModel @Inject constructor(
                         draft.source?.climb?.takeIf { it.catalogueUuid == null }?.id,
                         draft.source?.climb?.setter,
                         draft.source?.climb?.catalogueUuid,
+                        draft.source?.climb?.holds,
+                        draft.source?.dataset?.holdsBoard,
                     )
                 } else {
                     null

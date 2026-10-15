@@ -149,6 +149,10 @@ data class ProblemEntity(
     val sourceDatasetClimbId: Long? = null,
     /** The board catalogue climb it was picked from, by the board's id, which a re-import keeps (schema 29). */
     val sourceCatalogueUuid: String? = null,
+    /** Its holds as the board lists them ("p4125r42…"), copied when picked from a catalogue (schema 30). */
+    val holds: String? = null,
+    /** Whose hold positions [holds] are: "kilter:8:25" (layout and size), "moonboard:7". */
+    val holdsBoard: String? = null,
 )
 
 /** How the climber has done on one problem, summed over every logged go. */

@@ -135,7 +135,7 @@ class BackupRepositoryTest {
         // A climb picked from the circuit, with its setter.
         val pinch = source.datasetDao().getAllClimbs().first { it.name == "Pinch roof" }
         source.placeDao().getAllProblems().first { it.name == "Pinch roof" }.let {
-            source.placeDao().updateProblem(it.copy(setter = "Rita", sourceDatasetClimbId = pinch.id))
+            source.placeDao().updateProblem(it.copy(setter = "Rita", sourceDatasetClimbId = pinch.id, holds = "p4125r42p4334r44", holdsBoard = "kilter:8:25"))
         }
         val bytes = repo(source).exportBytes()
 
@@ -185,6 +185,7 @@ class BackupRepositoryTest {
         assertEquals(listOf(com.hardtekpt.crux.data.SectionDatasetEntity(sections[0].id, circuit.id)), target.datasetDao().getLinks())
         val picked = target.placeDao().getAllProblems().first { it.name == "Pinch roof" }
         assertEquals("Rita", picked.setter)
+        assertEquals("p4125r42p4334r44" to "kilter:8:25", picked.holds to picked.holdsBoard)
         assertEquals(target.datasetDao().getClimbs(circuit.id).first { it.name == "Pinch roof" }.id, picked.sourceDatasetClimbId)
         val tonight = target.playlistDao().getPlaylists().single()
         assertEquals("Tonight", tonight.name)

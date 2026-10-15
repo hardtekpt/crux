@@ -85,6 +85,12 @@ internal fun PlaylistCard(
             }
             Text(item.gradeLabel ?: "–", style = CruxTheme.type.grade)
         }
+        // A board climb's holds, big enough to read from the mat; tap for the whole board.
+        val holds = item.climb?.holds
+        val board = item.dataset?.holdsBoard
+        if (holds != null && board != null) {
+            com.hardtekpt.crux.ui.components.BoardDiagramCard(board, holds, item.name, Modifier.fillMaxWidth(), maxHeight = 260)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically) {
             CruxButton(
                 "Prev",

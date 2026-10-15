@@ -434,6 +434,22 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate29To30AddsClimbHolds() {
+        helper.createDatabase(DB, 29).apply {
+            execSQL(
+                "INSERT INTO problems (id, name, discipline, gradeScale, gradeIndex, retired, createdAtMillis) VALUES (1, 'Pinch roof', 'BOULDER', 'FONT', 9, 0, 0)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 30, true)
+        db.query("SELECT name, holds, holdsBoard FROM problems").use { c ->
+            c.moveToFirst()
+            assertEquals("Pinch roof", c.getString(0))
+            assertEquals(true, c.isNull(1) && c.isNull(2))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
 

@@ -383,6 +383,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     open?.let { climb ->
         CatalogueClimbSheet(
             climb = climb,
+            board = ds.holdsBoard,
             angle = uiState.query.angle,
             scales = uiState.scales,
             onLog = {
@@ -416,7 +417,15 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
 /** A catalogue climb: who set it, its description, its grade and ascents at each angle, Log this climb and + Playlist. */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun CatalogueClimbSheet(climb: CatalogueClimb, angle: Int?, scales: GradeScales, onLog: () -> Unit, onPlaylist: () -> Unit, onDismiss: () -> Unit) {
+private fun CatalogueClimbSheet(
+    climb: CatalogueClimb,
+    board: String?,
+    angle: Int?,
+    scales: GradeScales,
+    onLog: () -> Unit,
+    onPlaylist: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val space = CruxTheme.space
     val here = climb.gradeAt(angle)
     ModalBottomSheet(
@@ -440,6 +449,12 @@ private fun CatalogueClimbSheet(climb: CatalogueClimb, angle: Int?, scales: Grad
                     )
                 }
                 Text(boardGrade(here?.difficulty, scales), style = CruxTheme.type.grade)
+            }
+            // The holds on the board; tap for the whole board.
+            val frames = climb.frames
+            if (board != null && frames != null) {
+                com.hardtekpt.crux.ui.components.BoardDiagramCard(board, frames, climb.name, Modifier.fillMaxWidth())
+                com.hardtekpt.crux.ui.components.HoldLegend(frames)
             }
             climb.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Eyebrow("By angle", Modifier.padding(top = space.s2))

@@ -59,6 +59,7 @@ data class CatalogueRow(
     val uuid: String,
     val name: String,
     val setter: String?,
+    val frames: String?,
     val difficulty: Double?,
     val benchmark: Boolean?,
     val ascents: Int?,
@@ -103,7 +104,7 @@ interface CatalogueDao {
      */
     @Query(
         """
-        SELECT c.uuid AS uuid, c.name AS name, c.setter AS setter, g.difficulty AS difficulty, g.benchmark AS benchmark,
+        SELECT c.uuid AS uuid, c.name AS name, c.setter AS setter, c.frames AS frames, g.difficulty AS difficulty, g.benchmark AS benchmark,
                g.ascents AS ascents, g.quality AS quality
         FROM catalogue_climbs c JOIN catalogue_grades g ON g.catalogueKey = c.catalogueKey AND g.uuid = c.uuid AND g.angle = :angle
         WHERE c.catalogueKey = :key
@@ -238,6 +239,7 @@ data class CatalogueClimb(
     val description: String?,
     val setterAngle: Int?,
     val grades: List<CatalogueGradeEntity>,
+    val frames: String? = null,
 ) {
     /** The grade at [angle] as a Font grade's index, or at the setter's angle. */
     fun fontIndex(angle: Int?): Int? = gradeAt(angle)?.difficulty?.let(BoardseshBoards::fontIndex)
@@ -256,6 +258,7 @@ data class CatalogueClimb(
             setter = setter,
             note = description?.ifBlank { null },
             catalogueUuid = uuid,
+            holds = frames,
         )
     }
 }
@@ -295,7 +298,7 @@ class CatalogueRepository @Inject constructor(private val dbs: CatalogueDatabase
     suspend fun climb(key: String, uuid: String): CatalogueClimb? {
         val dao = dbs.dao()
         val climb = dao.climb(key, uuid) ?: return null
-        return CatalogueClimb(climb.uuid, climb.name, climb.setter, climb.description, climb.setterAngle, dao.grades(key, uuid))
+        return CatalogueClimb(climb.uuid, climb.name, climb.setter, climb.description, climb.setterAngle, dao.grades(key, uuid), climb.frames)
     }
 
     /** The climb of [uuid] in any catalogue, with the key of the one it was found in. */

@@ -244,6 +244,9 @@ data class ProblemDto(
     /** Who set it, and the dataset climb it was picked from (app schema 28). Older backups omit them. */
     val setter: String? = null,
     val source: SourceDto? = null,
+    /** A board climb's holds and whose positions they are (app schema 30). Older backups omit them. */
+    val holds: String? = null,
+    val holdsBoard: String? = null,
 )
 
 @Serializable

@@ -116,6 +116,9 @@ data class Problem(
     val sourceDatasetClimbId: Long? = null,
     /** The board catalogue climb it was picked from. */
     val sourceCatalogueUuid: String? = null,
+    /** Its holds and whose positions they are, for the hold diagram. */
+    val holds: String? = null,
+    val holdsBoard: String? = null,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }

@@ -82,6 +82,20 @@ file) and pick it in **+ → Import a file**. Crux never goes online for it.
   angle follows. Typing a name suggests its climbs too.
 - **⋯ → Delete catalogue** removes it; import it again any time.
 
+### Hold diagrams
+
+A board catalogue's climbs show their holds on the board, drawn by Crux: every hold of your
+board as a faint dot, the climb's as rings, green for start, cyan for hand, violet for finish and
+amber for foot (a legend says which). A MoonBoard shows its grid with the letters and numbers along
+the edges. Tap a diagram for the whole board.
+
+<img src="../../app/src/test/screenshots/board_diagrams_dark.png" width="300" alt="A Kilter Homewall climb and a Mini MoonBoard climb drawn on their boards, with the role legend">
+
+The diagram shows on the catalogue's climb sheet, as a thumbnail in Log climb's linked name row,
+on the session's playlist card, and in Log climb for a board climb you logged before. Logging a
+catalogue climb copies its holds onto your climb, so its diagram stays even after you delete the
+catalogue. The hold positions are built into Crux (positions only, no climbs or board images).
+
 Climbs and grades come from each board's community. Crux isn't affiliated with Kilter or Moon
 Climbing, and never shows their board images.
 

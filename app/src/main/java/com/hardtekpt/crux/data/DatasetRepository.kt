@@ -158,6 +158,8 @@ data class DatasetClimb(
     val createdAtMillis: Long = 0,
     /** A board catalogue's climb: its id on the board (then [id] is 0). */
     val catalogueUuid: String? = null,
+    /** A catalogue climb's holds, as the board lists them. */
+    val holds: String? = null,
 ) {
     /** "6C+", or null when ungraded. */
     val gradeLabel: String? get() = gradeScale?.takeIf { !it.isLocal }?.let { scale -> gradeIndex?.let(scale::label) }
@@ -179,6 +181,9 @@ data class Dataset(
     val catalogueCount: Int = 0,
 ) {
     val isCatalogue: Boolean get() = catalogueKey != null
+
+    /** Whose hold positions a catalogue's climbs use: "kilter:8:25", "moonboard:7". */
+    val holdsBoard: String? get() = catalogueKey?.removePrefix("boardsesh:")
 
     /** How many climbs it has. */
     val size: Int get() = if (isCatalogue) catalogueCount else climbs.size
