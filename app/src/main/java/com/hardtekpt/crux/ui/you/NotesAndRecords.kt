@@ -78,6 +78,7 @@ import com.hardtekpt.crux.ui.components.input.LoadWheel
 import com.hardtekpt.crux.ui.components.input.NumberWheel
 import com.hardtekpt.crux.ui.components.input.PastDayDialog
 import com.hardtekpt.crux.ui.components.input.formatDuration
+import com.hardtekpt.crux.ui.components.listItemMotion
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.Archivo
@@ -148,7 +149,7 @@ fun NotesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, onNew: () -> Unit, v
                     }
                 }
             }
-            items(shown, key = { it.id }) { note -> NoteCard(note, onClick = { onOpen(note.id) }) }
+            items(shown, key = { it.id }) { note -> NoteCard(note, onClick = { onOpen(note.id) }, modifier = listItemMotion()) }
         }
     }
 }

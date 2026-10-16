@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.ui.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,6 +34,14 @@ object CruxMotion {
     fun <T> fast() = tween<T>(FAST, easing = FastOutSlowInEasing)
     fun <T> medium() = tween<T>(MEDIUM, easing = FastOutSlowInEasing)
     fun <T> slow() = tween<T>(SLOW, easing = FastOutSlowInEasing)
+
+    /** Page arrivals and departures: decelerating in, accelerating out. */
+    const val ENTER = 180
+    const val EXIT = 120
+    val Decelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+    val Accelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+    fun <T> enter() = tween<T>(ENTER, easing = Decelerate)
+    fun <T> exit() = tween<T>(EXIT, easing = Accelerate)
 }
 
 /**
@@ -72,3 +81,7 @@ fun AnimatedCount(value: String, style: TextStyle, modifier: Modifier = Modifier
         Text(text, style = style, color = color)
     }
 }
+
+/** How a row in a lazy list comes, goes and moves: a short fade in, a quicker fade out, a slide to its new place. */
+fun androidx.compose.foundation.lazy.LazyItemScope.listItemMotion(): Modifier =
+    Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())

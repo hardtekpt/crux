@@ -81,7 +81,7 @@ fun FloatingNavBar(
         Box(
             modifier = Modifier
                 .height(FloatingNavBarHeight)
-                .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
+                .shadow(elevation = 6.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
                 .background(colors.surfaceContainerHigh)
                 .border(CruxTheme.size.borderHairline, colors.outlineVariant, CircleShape)
@@ -174,7 +174,8 @@ private fun LogButton(open: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(LogButtonSize)
-            .shadow(elevation = 16.dp, shape = CircleShape, ambientColor = colors.primary, spotColor = colors.primary)
+            // A plain shadow: the fill and size already make it the strongest action, no glow needed.
+            .shadow(elevation = 6.dp, shape = CircleShape)
             .clip(CircleShape)
             .background(colors.primary)
             .clickable(role = Role.Button, onClickLabel = "Log", onClick = onClick)

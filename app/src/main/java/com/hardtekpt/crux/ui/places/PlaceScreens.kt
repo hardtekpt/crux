@@ -94,6 +94,7 @@ import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.ImageViewer
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.areaImageFile
+import com.hardtekpt.crux.ui.components.listItemMotion
 import com.hardtekpt.crux.ui.components.rememberLocalImage
 import com.hardtekpt.crux.ui.gradesLabel
 import com.hardtekpt.crux.ui.journal.TapeDot
@@ -174,9 +175,9 @@ fun LazyListScope.placesList(
     }
     items(shown.orEmpty(), key = { "place_${it.place.id}" }) { summary ->
         if (compact) {
-            PlaceRow(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
+            PlaceRow(summary, onOpen = { onOpen(summary.place.id) }, modifier = listItemMotion().testTag("place_row"))
         } else {
-            PlaceCard(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
+            PlaceCard(summary, onOpen = { onOpen(summary.place.id) }, modifier = listItemMotion().testTag("place_row"))
         }
     }
 }

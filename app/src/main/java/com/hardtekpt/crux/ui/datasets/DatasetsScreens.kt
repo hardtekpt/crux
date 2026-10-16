@@ -78,6 +78,7 @@ import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.GradeStrip
+import com.hardtekpt.crux.ui.components.listItemMotion
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.places.BoardSheet
 import com.hardtekpt.crux.ui.places.BoardSizeSheet
@@ -504,7 +505,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                             }
                         },
                         onLongClick = { selected = if (climb.id in selected) selected - climb.id else selected + climb.id },
-                        modifier = Modifier.testTag("dataset_climb"),
+                        modifier = listItemMotion().testTag("dataset_climb"),
                     )
                 }
             }

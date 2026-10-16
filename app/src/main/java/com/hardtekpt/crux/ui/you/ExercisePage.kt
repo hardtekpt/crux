@@ -54,6 +54,7 @@ import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.StatTile
+import com.hardtekpt.crux.ui.components.listItemMotion
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.progress.ExerciseChartCard
@@ -271,7 +272,7 @@ fun ExerciseRecordsScreen(
                         { IconButton(onClick = { viewModel.delete(record.id) }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") } }
                     },
                     selected = day.isBest,
-                    modifier = Modifier.heightIn(min = 56.dp).testTag("record_result"),
+                    modifier = listItemMotion().heightIn(min = 56.dp).testTag("record_result"),
                 )
             }
         }
