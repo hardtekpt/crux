@@ -679,7 +679,7 @@
    "lane": "session",
    "col": 1,
    "row": 0,
-   "desc": "The plan’s exercises as one list of cards with a table of sets. A rail of segments under the top bar shows each exercise and fills as sets go in. Tick a set, or change what you did first.",
+   "desc": "The plan as blocks of exercise cards with a table of sets. A rail of segments under the top bar shows each exercise and fills as sets go in; a climbing block sits among the exercises. Tick a set, or change what you did first.",
    "covers": [
     "SessionRoute"
    ],
@@ -986,17 +986,18 @@
   },
   {
    "id": "session-climbing-day",
-   "title": "Climbing day",
+   "title": "Climb from the first screen",
    "kind": "page",
    "lane": "session",
    "col": 0,
    "row": 2,
-   "desc": "A session without a plan: climbs, sends and hardest send so far, with a Log climb button.",
+   "desc": "Choosing Climb on the first screen opens Log climb for the session at once; once logged, the climb is a block in the session with a Log climb button, and the dock shows Log climb (and Back to sets while you climb in a plan).",
    "covers": [],
    "steps": [
     "tab:Log",
     "tap:Start a session",
-    "tap:Without a plan"
+    "tap:Without a plan",
+    "tap:Climb"
    ],
    "cleanup": [
     "discard:Climbing session"
@@ -3017,6 +3018,24 @@
     "wait:1.5"
    ],
    "cleanup": []
+  },
+  {
+   "id": "session-first",
+   "title": "What are you doing first?",
+   "kind": "page",
+   "lane": "session",
+   "col": 6,
+   "row": 2,
+   "desc": "A session without a plan opens here: Climb (log climbs as you go), Climb a playlist, An exercise from your library, or A timer. Each becomes a block, in the order you add them.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
   }
  ],
  "edges": [
@@ -3186,12 +3205,6 @@
    "start-session-sheet",
    "session-live",
    "From a plan",
-   "nav"
-  ],
-  [
-   "start-session-sheet",
-   "session-climbing-day",
-   "Without a plan",
    "nav"
   ],
   [
@@ -4080,6 +4093,24 @@
    "place-editor",
    "place-lights",
    "Lights row",
+   "sheet"
+  ],
+  [
+   "start-session-sheet",
+   "session-first",
+   "Without a plan",
+   "nav"
+  ],
+  [
+   "session-first",
+   "session-climbing-day",
+   "Climb",
+   "nav"
+  ],
+  [
+   "session-first",
+   "session-playlist-picker",
+   "Climb a playlist",
    "sheet"
   ]
  ],
