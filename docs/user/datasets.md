@@ -123,6 +123,12 @@ never lights anything by itself: a **Light** button sends the climb you're looki
 Kilter boards speak Aurora's protocol 2 or 3, read from the board's name; MoonBoard LED boxes take
 the newer Nordic module or the first-generation one.
 
+## Open in MoonBoard
+
+A MoonBoard catalogue climb's sheet has **Open in MoonBoard** when the official MoonBoard app is
+on your phone. It copies the climb's name and opens the app, so you can paste it into the app's
+search. The MoonBoard app can't be sent straight to one problem: it opens no problem from a link.
+
 ## Where a dataset is offered
 
 A facility uses:

@@ -61,5 +61,8 @@ before Crux may show it.
 | Run at start-up, keep awake | Android's job scheduler, so automatic backups keep their schedule after a restart |
 | Nearby devices (Bluetooth connect) | Lighting a climb's holds on a Kilter or MoonBoard you paired, only when you tap Light. Android's own pairing picker finds the board, so Crux never scans and never uses location for it; nothing is sent anywhere else |
 
+Crux can see whether one other app is installed, the official MoonBoard app, to offer **Open in
+MoonBoard**. That needs no permission, and Crux sees no other apps.
+
 Crux doesn't ask for precise location, contacts, storage, camera or microphone access. Photos and
 videos come through the system pickers and camera apps, which hand over only what you choose.
