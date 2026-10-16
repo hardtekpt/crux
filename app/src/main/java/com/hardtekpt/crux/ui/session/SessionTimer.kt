@@ -149,7 +149,7 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
     CruxSheet(
         onDismiss = onDismiss,
         modifier = Modifier.testTag("timer_setup"),
-        title = "Interval timer",
+        title = if (title == null) "Start a timer" else "Interval timer",
         confirm = SheetButton("Start", { onStart(spec) }, icon = Icons.Rounded.PlayArrow, tag = "timer_start"),
     ) {
         Text(

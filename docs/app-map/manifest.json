@@ -897,12 +897,12 @@
   },
   {
    "id": "session-timer-setup",
-   "title": "Interval timer",
+   "title": "Start a timer",
    "kind": "sheet",
    "lane": "session",
    "col": 2,
    "row": 1,
-   "desc": "Pick Tabata, Repeaters or your own preparation, work, rest, repeats and cycles.",
+   "desc": "A countdown starts with one tap (30 s to 5 min). Or pick Tabata, Repeaters or your own preparation, work, rest, repeats and cycles.",
    "covers": [
     "TimerSetupSheet"
    ],
