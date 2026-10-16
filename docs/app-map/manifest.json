@@ -3017,6 +3017,40 @@
    "cleanup": [
     "discard:Climbing session"
    ]
+  },
+  {
+   "id": "notes-selection",
+   "title": "Select notes",
+   "kind": "page",
+   "lane": "you",
+   "col": 6,
+   "row": 0,
+   "desc": "Hold a note to pick it, then tap more; the top bar counts how many are selected and has a bin that deletes the picked notes, with Undo.",
+   "covers": [],
+   "steps": [
+    "tab:You",
+    "scrollto:Notes",
+    "tap:Notes",
+    "longtap:Left ring finger",
+    "wait:1"
+   ],
+   "cleanup": []
+  },
+  {
+   "id": "journal-selection",
+   "title": "Select entries",
+   "kind": "page",
+   "lane": "journal",
+   "col": 4,
+   "row": 1,
+   "desc": "Hold a journal entry to pick it, then tap more; the top bar counts how many are selected and has a bin that deletes the picked entries, with Undo.",
+   "covers": [],
+   "steps": [
+    "tab:Journal",
+    "longtap:Purple sloper",
+    "wait:1"
+   ],
+   "cleanup": []
   }
  ],
  "edges": [
@@ -4087,6 +4121,18 @@
    "session-playlist-picker",
    "Climb a playlist",
    "sheet"
+  ],
+  [
+   "notes",
+   "notes-selection",
+   "Hold a note",
+   "tab"
+  ],
+  [
+   "journal-top",
+   "journal-selection",
+   "Hold an entry",
+   "tab"
   ]
  ],
  "ignore": {

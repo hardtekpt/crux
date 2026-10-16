@@ -1,8 +1,10 @@
 package com.hardtekpt.crux.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,7 +83,7 @@ fun FloatingNavBar(
         Box(
             modifier = Modifier
                 .height(FloatingNavBarHeight)
-                .shadow(elevation = 6.dp, shape = CircleShape, clip = false)
+                .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
                 .background(colors.surfaceContainerHigh)
                 .border(CruxTheme.size.borderHairline, colors.outlineVariant, CircleShape)
@@ -92,7 +94,8 @@ fun FloatingNavBar(
             if (selectedIndex >= 0) {
                 val indicatorOffset by animateDpAsState(
                     targetValue = TabWidth * selectedIndex + (TabWidth - IndicatorSize) / 2,
-                    animationSpec = CruxMotion.medium(),
+                    // The one spring in the app: the highlight overshoots a little as it lands (Boss's choice).
+                    animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
                     label = "indicator",
                 )
                 Box(
@@ -174,8 +177,7 @@ private fun LogButton(open: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(LogButtonSize)
-            // A plain shadow: the fill and size already make it the strongest action, no glow needed.
-            .shadow(elevation = 6.dp, shape = CircleShape)
+            .shadow(elevation = 16.dp, shape = CircleShape, ambientColor = colors.primary, spotColor = colors.primary)
             .clip(CircleShape)
             .background(colors.primary)
             .clickable(role = Role.Button, onClickLabel = "Log", onClick = onClick)

@@ -33,7 +33,6 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - A board catalogue's **Delete** is a bin in its top bar instead of a menu with one item.
 - Importing a backup asks about something already in Crux with the same chips as a dataset import
   (Skip, Replace, Keep both, and *Same for the other …*), then **Next**.
-- The + Log button and the nav bar drop their glow for a plain, softer shadow.
 - Places, dataset climbs, notes and an exercise's results slide and fade when one is added or
   removed (and when Undo brings it back) instead of jumping.
 - **One "How hard it felt"**: logging a climb and finishing a session use the same 1 to 10
@@ -52,8 +51,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   readable.
 - Figures inside cards (consistency, a week of climbs, days on the wall, finishing a session)
   are plain numbers rather than boxes inside the card; a streak shows in amber.
-- Snappier motion: the nav bar's highlight slides without a bounce, the bar comes back sooner after
-  a form, and charts draw in quickly the first time instead of redrawing on every filter.
+- Snappier motion: the nav bar comes back sooner after a form, and charts draw in quickly the first time instead of redrawing on every filter.
 
 ### Fixed
 

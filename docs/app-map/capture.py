@@ -152,7 +152,7 @@ def run_steps(steps, page_id=None):
             x, y = arg.split(',')
             tap_xy(int(x), int(y), 1.2)
         elif step == 'longtap':
-            n = find(arg, bottom=False) or find(arg)
+            n = find(arg, bottom=False) or find(arg) or find(arg, contains=True, bottom=False)
             if not n:
                 raise Fail('not found: ' + arg)
             adb('shell', 'input', 'swipe', str(n['cx']), str(n['cy']), str(n['cx']), str(n['cy']), '1000')

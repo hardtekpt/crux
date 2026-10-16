@@ -110,7 +110,7 @@ Wheels expose semantics actions, so TalkBack can set them directly.
 - **Tabs or segments**: up to three views of one page use `CruxSegmentedButtons` (Train, Progress,
   Datasets); four or more, or views that show counts, use underline tabs (the Journal).
 - **Motion** lives in `components/Motion.kt`: `CruxMotion` durations (120 / 160 / 200 ms,
-  decelerating, no overshoot, plus the page `enter()` / `exit()` curves that `Transitions.kt` uses), `revealWhen(ready)` to fade a list in once its data is loaded
+  decelerating, no overshoot (the nav bar's sliding highlight is the one spring, by choice), plus the page `enter()` / `exit()` curves that `Transitions.kt` uses), `revealWhen(ready)` to fade a list in once its data is loaded
   instead of showing empty values, `pressScale` for big tap targets and `AnimatedCount` for
   numbers that roll. Lazy lists use `Modifier.animateItem()`; colours that change with state use
   `animateColorAsState`. Keep new motion within these: short, quiet, never in the way of a tap.
