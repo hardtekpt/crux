@@ -21,7 +21,16 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
 /** A set as logged: what was done, or that it was skipped. */
-data class SessionSet(val setIndex: Int, val reps: Int?, val seconds: Int?, val loadKg: Double?, val skipped: Boolean, val id: Long = 0)
+data class SessionSet(
+    val setIndex: Int,
+    val reps: Int?,
+    val seconds: Int?,
+    val loadKg: Double?,
+    val skipped: Boolean,
+    val id: Long = 0,
+    /** When it was ticked off, so a session can tell what came first. */
+    val completedAtMillis: Long = 0,
+)
 
 /** One exercise in a session: its target and the sets logged so far. */
 data class SessionItem(val id: Long, val exercise: Exercise, val blockName: String, val target: ExerciseTarget, val sets: List<SessionSet>) {
@@ -324,7 +333,7 @@ private fun SessionEntity.toModel(
                 ),
                 sets = setsByItem[item.id].orEmpty().sortedBy {
                     it.setIndex
-                }.map { SessionSet(it.setIndex, it.reps, it.seconds, it.loadKg, it.skipped, it.id) },
+                }.map { SessionSet(it.setIndex, it.reps, it.seconds, it.loadKg, it.skipped, it.id, it.completedAtMillis) },
             )
         },
         climbs = climbs,

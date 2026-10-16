@@ -20,6 +20,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   and open projects are an amber number rather than an amber block.
 - Place cards are calmer: what's at a place is a line of text, and its numbers sit straight on the
   card instead of in boxes of their own.
+- **Sessions in blocks**: each exercise is a block, and so is your climbing, which now sits where
+  it happened instead of always at the end. Only the block you're on is open, the rail shows every
+  block, and the dock follows along: **Log climb** while you climb (with **Back to sets**), Done
+  for a set. A session without a plan starts with **What are you doing first?**.
 - **One "How hard it felt"**: logging a climb and finishing a session use the same 1 to 10
   scale, with Easy, Steady, Moderate, Hard and Limit under it for a one-tap answer.
 - **Feel it as well as see it**: the phone gives a short buzz when you tick off a set, tap

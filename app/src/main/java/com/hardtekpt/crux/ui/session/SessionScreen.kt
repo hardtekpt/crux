@@ -737,24 +737,36 @@ fun SessionScreen(
             }
             TextButton(onClick = { finishing = true }, modifier = Modifier.testTag("session_finish")) { Text("Finish") }
         }
-        // The plan as a rail: a segment per exercise, filling as its sets go in, green once done.
-        // Tap one to scroll to that exercise.
+        // The session as blocks: each exercise, and the climbing (with a playlist or without), in
+        // the order they happened. Climbing is current when it's the newest thing logged, until
+        // "Back to sets" says otherwise.
+        val hasPlaylist = playlist != null
+        val blocks = current.blocks(hasPlaylist)
+        var backToSets by rememberSaveable(current.climbs.size, hasPlaylist) { mutableStateOf(false) }
+        val climbingCurrent = current.climbingNow(hasPlaylist) && !backToSets && runningTimer == null
+        val currentExerciseId = next?.first?.id.takeIf { !climbingCurrent }
+        // The rail: a segment per block, filling as sets go in (green once done); climbing fills
+        // once there's a climb. Tap one to scroll to it.
         val listScroll = rememberScrollState()
         val tops = remember { androidx.compose.runtime.mutableStateMapOf<Long, Int>() }
         val scope = androidx.compose.runtime.rememberCoroutineScope()
-        if (current.items.isNotEmpty()) {
+        if (blocks.isNotEmpty()) {
             val success = CruxTheme.colors.success
             SegmentStrip(
-                segments = current.items.map { item ->
-                    Segment(
-                        filled = item.logged.toFloat() / item.target.sets.coerceAtLeast(1),
-                        color = if (item.finished) success else colors.primary,
-                    )
+                segments = blocks.map { block ->
+                    when (block) {
+                        is SessionBlock.Exercise -> Segment(
+                            filled = block.item.logged.toFloat() / block.item.target.sets.coerceAtLeast(1),
+                            color = if (block.item.finished) success else colors.primary,
+                        )
+
+                        SessionBlock.Climbing -> Segment(filled = if (current.climbs.isEmpty()) 0f else 1f, color = colors.primary)
+                    }
                 },
                 modifier = Modifier.padding(horizontal = space.s4).padding(bottom = space.s1).testTag("session_rail"),
                 height = 6,
                 onPick = { index ->
-                    current.items.getOrNull(index)?.let { item -> tops[item.id]?.let { y -> scope.launch { listScroll.animateScrollTo(y) } } }
+                    blocks.getOrNull(index)?.let { block -> tops[block.key]?.let { y -> scope.launch { listScroll.animateScrollTo(y) } } }
                 },
             )
         }
@@ -807,65 +819,85 @@ fun SessionScreen(
                 .testTag("session_list"),
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
-            if (current.items.isEmpty()) ClimbTally(current.climbGroups)
-            current.items.forEach { item ->
-                key(item.id) {
-                    // Where the card sits, for the rail to scroll to.
-                    Box(Modifier.onGloballyPositioned { tops[item.id] = it.positionInParent().y.toInt() }) {
-                        ExerciseCard(
-                            item = item,
-                            values = { setIndex ->
-                                pendingValues
-                                viewModel.valuesFor(item, setIndex)
-                            },
-                            previous = previous[item.exercise.id],
-                            newBest = item.id in newBests,
-                            folded = folds[item.id] ?: item.finished,
-                            open = open,
-                            timerRunning = runningTimer?.itemId == item.id,
-                            current = next?.first?.id == item.id && runningTimer == null,
-                            onToggleFold = { folds[item.id] = !(folds[item.id] ?: item.finished) },
-                            onOpen = { open = it },
-                            onValues = { setIndex, values -> viewModel.setValues(item, setIndex, values) },
-                            onTick = { setIndex ->
-                                open = null
-                                viewModel.tick(item, setIndex)
-                            },
-                            onAddSet = { viewModel.addSet(item) },
-                            onMenu = { menuFor = item.id },
-                        )
-                    }
-                }
-            }
-            playlist?.let { list ->
-                val item = list.items.getOrNull(current.playlistIndex)
-                PlaylistCard(
-                    playlist = list,
-                    index = current.playlistIndex,
-                    today = item?.let { up ->
-                        current.climbGroups.firstOrNull { it.discipline == up.discipline && it.name?.trim().equals(up.name.trim(), ignoreCase = true) }
-                    },
-                    onMove = viewModel::movePlaylist,
-                    onGo = viewModel::playlistGo,
-                    onOpen = {
-                        item?.climb?.let { climb ->
-                            val uuid = climb.catalogueUuid
-                            if (uuid !=
-                                null
-                            ) {
-                                onLogCatalogueClimb(current.placeId, current.sectionId, uuid)
-                            } else {
-                                onLogDatasetClimb(current.placeId, current.sectionId, climb.id)
-                            }
-                        }
-                    },
-                    onStop = { viewModel.climbPlaylist(null) },
-                    onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
-                    sectionId = current.sectionId,
+            if (current.isBlank(hasPlaylist)) {
+                FirstBlock(
+                    onLogClimb = onLogClimb,
+                    onPlaylist = { pickingPlaylist = true }.takeIf { playlists.isNotEmpty() },
+                    onAddExercise = { picking = true },
+                    onTimer = { freeTimer = true },
                 )
             }
-            if (current.climbGroups.isNotEmpty() || current.items.isEmpty()) {
-                ClimbsCard(current.climbGroups, onLogMore, onLogClimb)
+            blocks.forEach { block ->
+                when (block) {
+                    is SessionBlock.Exercise -> {
+                        val item = block.item
+                        key(item.id) {
+                            // Where the card sits, for the rail to scroll to.
+                            Box(Modifier.onGloballyPositioned { tops[item.id] = it.positionInParent().y.toInt() }) {
+                                ExerciseCard(
+                                    item = item,
+                                    values = { setIndex ->
+                                        pendingValues
+                                        viewModel.valuesFor(item, setIndex)
+                                    },
+                                    previous = previous[item.exercise.id],
+                                    newBest = item.id in newBests,
+                                    folded = folds[item.id] ?: (item.id != currentExerciseId),
+                                    open = open,
+                                    timerRunning = runningTimer?.itemId == item.id,
+                                    current = currentExerciseId == item.id && runningTimer == null,
+                                    onToggleFold = { folds[item.id] = !(folds[item.id] ?: (item.id != currentExerciseId)) },
+                                    onOpen = { open = it },
+                                    onValues = { setIndex, values -> viewModel.setValues(item, setIndex, values) },
+                                    onTick = { setIndex ->
+                                        open = null
+                                        viewModel.tick(item, setIndex)
+                                    },
+                                    onAddSet = { viewModel.addSet(item) },
+                                    onMenu = { menuFor = item.id },
+                                )
+                            }
+                        }
+                    }
+
+                    SessionBlock.Climbing -> key(CLIMBING_KEY) {
+                        Column(
+                            Modifier.onGloballyPositioned { tops[CLIMBING_KEY] = it.positionInParent().y.toInt() },
+                            verticalArrangement = Arrangement.spacedBy(space.s3),
+                        ) {
+                            playlist?.let { list ->
+                                val item = list.items.getOrNull(current.playlistIndex)
+                                PlaylistCard(
+                                    playlist = list,
+                                    index = current.playlistIndex,
+                                    today = item?.let { up ->
+                                        current.climbGroups.firstOrNull {
+                                            it.discipline == up.discipline && it.name?.trim().equals(up.name.trim(), ignoreCase = true)
+                                        }
+                                    },
+                                    onMove = viewModel::movePlaylist,
+                                    onGo = viewModel::playlistGo,
+                                    onOpen = {
+                                        item?.climb?.let { climb ->
+                                            val uuid = climb.catalogueUuid
+                                            if (uuid !=
+                                                null
+                                            ) {
+                                                onLogCatalogueClimb(current.placeId, current.sectionId, uuid)
+                                            } else {
+                                                onLogDatasetClimb(current.placeId, current.sectionId, climb.id)
+                                            }
+                                        }
+                                    },
+                                    onStop = { viewModel.climbPlaylist(null) },
+                                    onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
+                                    sectionId = current.sectionId,
+                                )
+                            }
+                            ClimbsCard(current.climbGroups, onLogMore, onLogClimb, place = place?.name, current = climbingCurrent && playlist == null)
+                        }
+                    }
+                }
             }
         }
 
@@ -900,13 +932,28 @@ fun SessionScreen(
 
                 else -> Box(Modifier.padding(horizontal = space.s4, vertical = space.s2)) {
                     when {
-                        current.items.isEmpty() -> CruxButton(
-                            "Log climb",
-                            onLogClimb,
-                            icon = Icons.Rounded.Add,
-                            size = CruxButtonSize.Large,
-                            modifier = Modifier.fillMaxWidth().testTag("session_dock_log_climb"),
-                        )
+                        // Nothing yet: the first block is chosen on the page itself.
+                        current.isBlank(hasPlaylist) -> Unit
+
+                        // Climbing: Log climb, and a way back to the sets when there are some left.
+                        climbingCurrent || current.items.isEmpty() -> Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                            CruxButton(
+                                "Log climb",
+                                onLogClimb,
+                                icon = Icons.Rounded.Add,
+                                size = CruxButtonSize.Large,
+                                modifier = Modifier.weight(1f).testTag("session_dock_log_climb"),
+                            )
+                            if (next != null) {
+                                CruxButton(
+                                    "Back to sets",
+                                    { backToSets = true },
+                                    variant = CruxButtonVariant.Tonal,
+                                    size = CruxButtonSize.Large,
+                                    modifier = Modifier.testTag("session_back_to_sets"),
+                                )
+                            }
+                        }
 
                         next == null -> CruxButton(
                             "Every set in · Finish",
@@ -1130,38 +1177,6 @@ internal fun describeSet(metric: com.hardtekpt.crux.data.model.MetricType, reps:
         else -> "${reps ?: 0} reps"
     }
     return listOfNotNull(work, load).joinToString(" · ")
-}
-
-/** Climbs, sends and the hardest send so far, as three plain figures. */
-@Composable
-private fun ClimbTally(climbs: List<Climb>) {
-    val sent = climbs.filter { it.style.isSend }
-    val hardest = sent.maxByOrNull { it.gradeIndex }?.grade ?: "–"
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max).testTag("session_tally"),
-    ) {
-        TallyFigure(climbs.size.toString(), if (climbs.size == 1) "climb" else "climbs", Modifier.weight(1f))
-        TallyFigure(sent.size.toString(), "sent", Modifier.weight(1f))
-        // The hardest send lights up only once there is one.
-        TallyFigure(hardest, "hardest send", Modifier.weight(1f), accent = sent.isNotEmpty())
-    }
-}
-
-@Composable
-private fun TallyFigure(value: String, label: String, modifier: Modifier = Modifier, accent: Boolean = false) {
-    val colors = MaterialTheme.colorScheme
-    Column(
-        modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (accent) colors.primaryContainer else colors.surfaceContainerLow)
-            .border(CruxTheme.size.borderHairline, if (accent) colors.primaryContainer else colors.outlineVariant, RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-    ) {
-        Text(value, style = CruxTheme.type.metricMedium.copy(fontSize = 22.sp), color = if (accent) colors.onPrimaryContainer else colors.onSurface)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = if (accent) colors.onPrimaryContainer else colors.onSurfaceVariant)
-    }
 }
 
 /** A climb logged in the session; tapping it logs more goes on it. */

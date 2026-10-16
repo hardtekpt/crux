@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
@@ -374,22 +375,37 @@ private fun ValueStepper(field: Field, values: SetValues, imperial: Boolean, onC
     }
 }
 
-/** The climbs logged in the session, one row per climb with its goes added up, and Log climb. */
+/**
+ * The session's climbing block: "Climbing" and the place, its figures (climbs, sent, hardest) once
+ * there's a climb, a row per climb with its goes added up, and Log climb. [current] edges it in the
+ * accent while climbing is what's happening.
+ */
 @Composable
-internal fun ClimbsCard(climbs: List<com.hardtekpt.crux.data.model.Climb>, onLogMore: (Long) -> Unit, onLogClimb: () -> Unit) {
-    val sent = climbs.count { it.style.isSend }
-    val hardest = climbs.filter { it.style.isSend }.maxByOrNull { it.gradeIndex }?.grade
-    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs")) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (climbs.isEmpty()) "Climbs" else "Climbs · ${climbs.size} · $sent sent",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
-            hardest?.let { Text("hardest $it", style = CruxTheme.type.code, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
+internal fun ClimbsCard(
+    climbs: List<com.hardtekpt.crux.data.model.Climb>,
+    onLogMore: (Long) -> Unit,
+    onLogClimb: () -> Unit,
+    place: String? = null,
+    current: Boolean = false,
+) {
+    val sent = climbs.filter { it.style.isSend }
+    val hardest = sent.maxByOrNull { it.gradeIndex }?.grade
+    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs"), outline = MaterialTheme.colorScheme.primary.takeIf { current }) {
+        Text(
+            listOfNotNull("Climbing", place).joinToString(" · "),
+            style = MaterialTheme.typography.titleMedium,
+        )
         if (climbs.isEmpty()) {
             Text("Climbs you log now land in this session.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            com.hardtekpt.crux.ui.components.StatStrip(
+                listOf(
+                    com.hardtekpt.crux.ui.components.StatFigure(climbs.size.toString(), if (climbs.size == 1) "climb" else "climbs"),
+                    com.hardtekpt.crux.ui.components.StatFigure(sent.size.toString(), "sent"),
+                    com.hardtekpt.crux.ui.components.StatFigure(hardest ?: "–", "hardest"),
+                ),
+                Modifier.padding(vertical = CruxTheme.space.s2).testTag("session_tally"),
+            )
         }
         climbs.sortedByDescending { it.id }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
         CruxButton(
@@ -399,6 +415,50 @@ internal fun ClimbsCard(climbs: List<com.hardtekpt.crux.data.model.Climb>, onLog
             size = CruxButtonSize.Small,
             icon = Icons.Rounded.Add,
             modifier = Modifier.testTag("session_card_log_climb"),
+        )
+    }
+}
+
+/** A session with nothing in it yet opens on this: what to do first, each one a block. */
+@Composable
+internal fun FirstBlock(onLogClimb: () -> Unit, onPlaylist: (() -> Unit)?, onAddExercise: () -> Unit, onTimer: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1), modifier = Modifier.testTag("session_first_block")) {
+        com.hardtekpt.crux.ui.components.Eyebrow("What are you doing first?", Modifier.padding(bottom = CruxTheme.space.s1))
+        com.hardtekpt.crux.ui.components.CruxListRow(
+            title = "Climb",
+            supporting = "Log climbs as you go",
+            leading = { Icon(Icons.Rounded.Landscape, contentDescription = null) },
+            onClick = onLogClimb,
+            modifier = Modifier.testTag("first_climb"),
+        )
+        onPlaylist?.let {
+            com.hardtekpt.crux.ui.components.CruxListRow(
+                title = "Climb a playlist",
+                supporting = "One climb after another, with + Fell and + Sent",
+                leading = { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = null) },
+                onClick = it,
+                modifier = Modifier.testTag("first_playlist"),
+            )
+        }
+        com.hardtekpt.crux.ui.components.CruxListRow(
+            title = "An exercise",
+            supporting = "From your library",
+            leading = { Icon(Icons.Rounded.FitnessCenter, contentDescription = null) },
+            onClick = onAddExercise,
+            modifier = Modifier.testTag("first_exercise"),
+        )
+        com.hardtekpt.crux.ui.components.CruxListRow(
+            title = "A timer",
+            supporting = "Tabata, repeaters or your own",
+            leading = { Icon(Icons.Rounded.Timer, contentDescription = null) },
+            onClick = onTimer,
+            modifier = Modifier.testTag("first_timer"),
+        )
+        Text(
+            "Add more at any time with +. Each becomes a block, in the order you add it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = CruxTheme.space.s2),
         )
     }
 }

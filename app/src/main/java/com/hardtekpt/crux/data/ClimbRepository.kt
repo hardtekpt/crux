@@ -222,6 +222,7 @@ internal fun ClimbEntity.toModel() = Climb(
     effort = effort,
     gradeLabel = gradeLabel.takeIf { gradeScale.isLocal },
     gradeColour = gradeColour.takeIf { gradeScale.isLocal },
+    createdAtMillis = createdAtMillis,
 )
 
 internal fun PersonalBestRow.toModel() = PersonalBest(

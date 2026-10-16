@@ -31,6 +31,8 @@ data class Climb(
     val sectionId: Long? = null,
     /** The live session it was logged in. */
     val sessionId: Long? = null,
+    /** When it was logged; a session places its climbing among the exercises by it. */
+    val createdAtMillis: Long = 0,
 ) {
     val grade: String get() = gradeLabel(gradeScale, gradeIndex, gradeLabel)
 }

@@ -18,9 +18,15 @@ session. Only one session runs at a time; starting another ends the first.
 
 - The top bar shows the session's name, a quiet clock with how many exercises are done, **+** and
   **Finish**.
-- **The rail** under it has a segment per exercise that fills as its sets go in and turns green
-  once it's done. Tap a segment to scroll to that exercise.
-- **Every exercise in one list**, in plan order. Each card shows the target (for example
+- **Blocks**: everything in a session is a block. Each exercise is one, and so is your climbing
+  (with a playlist or without). Climbing sits where it happened: start climbing after the warm-up
+  and the climbing block appears after the warm-up. A session without a plan opens on **What are
+  you doing first?** (climb, a playlist, an exercise or a timer), and each thing you add becomes
+  the next block.
+- **The rail** under the title has a segment per block that fills as its sets go in (green once
+  done; the climbing segment fills once you've logged a climb). Tap a segment to scroll to it.
+- **Every block in one list**. Only the one you're on is open; the others fold to a line, and
+  tapping a name opens or folds it. Each card shows the target (for example
   "6 × 10 s · +17.5 kg · 3 min rest") and a table of its sets: the set number, what you did last
   time, the values (load, reps, time) and a tick box. The exercise with the next set is outlined in
   the accent colour (in the timer's colour while its timer runs), and its next set is highlighted.
@@ -32,8 +38,9 @@ session. Only one session runs at a time; starting another ends the first.
 - **A playlist** (from **+ → Climb a playlist**, or *Climb this playlist* on a playlist) shows as
   a card with the climb that's up, **Prev** and **Next**, and **+ Fell** and **+ Sent** to add a go
   in one tap. See [Playlists](datasets.md#playlists).
-- **The dock** at the bottom always shows what's next: **Done · Exercise, set N** ticks the next
-  set, **Start timer** runs the next interval exercise, and **Log climb** on a climbing day.
+- **The dock** at the bottom follows the block you're on: **Done · Exercise, set N** ticks the next
+  set, **Start timer** runs the next interval exercise, and while you're climbing **Log climb**
+  (with **Back to sets** when the plan still has sets to do). Ticking a set takes you back too.
 - **The ⋯ menu** on an exercise opens **About this exercise** (its page, with your record and
   chart), changes its sets, reps or time, load and rest, starts its timer, skips the rest of it, or
   takes it out while nothing is logged on it. A change is for this session only, unless you switch
@@ -54,9 +61,9 @@ session. Only one session runs at a time; starting another ends the first.
   (6 × 7 s on, 3 s off, three cycles, 3 min between). Outside a session, *You → Interval timer* is
   a full-screen timer of its own: see [You](you.md#interval-timer).
 - **Climbs**: a climb logged inside a session goes into the session and your journal, and shows on
-  the session's **Climbs** card under the exercises, outlined in amber, with your hardest send and
-  **Log climb** on it. Each climb shows its grade, how it went and **+ go** to log another go. On a
-  climbing day three tiles on top show your climbs, sends and hardest send so far. Several logs on the same climb show
+  the session's **Climbing** block, with your climbs, sends and hardest send so far, and **Log
+  climb** on it; it's outlined in the accent while you're climbing. Each climb shows its grade, how
+  it went and **+ go** to log another go. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the
   Journal and in the session's summary. Tap a climb in the session to log more goes on it. If
   **Rest after a climb** is set in Settings, logging a
