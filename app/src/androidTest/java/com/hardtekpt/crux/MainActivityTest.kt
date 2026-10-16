@@ -87,7 +87,10 @@ class MainActivityTest {
 
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("hardest_BOULDER")
-        composeRule.onNodeWithTag("hardest_BOULDER").assertTextEquals("7A")
+        // The figure arrives with the data, a moment after the page.
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("hardest_BOULDER").assertTextEquals("7A") }.isSuccess
+        }
     }
 
     @Test
@@ -330,7 +333,9 @@ class MainActivityTest {
         composeRule.waitForTag("screen_Home")
         composeRule.onNodeWithTag("nav_Progress").performClick()
         composeRule.waitForTag("hardest_BOULDER")
-        composeRule.onNodeWithTag("hardest_BOULDER").assertTextEquals("V5")
+        composeRule.waitUntil(5_000) {
+            runCatching { composeRule.onNodeWithTag("hardest_BOULDER").assertTextEquals("V5") }.isSuccess
+        }
     }
 
     @Test
@@ -368,11 +373,11 @@ class MainActivityTest {
         composeRule.textFieldIn("exercise_search").performTextInput("Campus")
         composeRule.onNodeWithTag("pick_Campus ladders").performClick()
         composeRule.waitForTag("target_sheet")
-        // Sets opens a wheel in place; set it the way TalkBack would.
-        composeRule.onNodeWithTag("row_sets").performClick()
-        composeRule.onNode(hasContentDescription("Sets")).performSemanticsAction(SemanticsActions.SetProgress) { it(4f) }
+        // Sets has the same stepper as Edit exercise: one more set.
+        val setsBefore = composeRule.onNodeWithTag("default_sets_value", useUnmergedTree = true).textValue()
+        composeRule.onNodeWithTag("default_sets_plus").performClick()
         composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("sets_value", useUnmergedTree = true).assertTextEquals("5") }.isSuccess
+            composeRule.onNodeWithTag("default_sets_value", useUnmergedTree = true).textValue() != setsBefore
         }
         composeRule.onNodeWithTag("target_done").performClick()
         composeRule.onNodeWithTag("save_plan").performClick()
@@ -591,7 +596,8 @@ class MainActivityTest {
         composeRule.textFieldIn("field_dataset_name").performTextInput("Garage board")
         composeRule.onNodeWithTag("dataset_details_save").performClick()
         composeRule.waitForTag("screen_Dataset")
-        // A climb goes in; an ungraded one sorts last with a dash.
+        // A climb goes in; an ungraded one sorts last with a dash. The button comes with the dataset.
+        composeRule.waitForTag("dataset_add_climb")
         composeRule.onNodeWithTag("dataset_add_climb").performClick()
         composeRule.waitForTag("climb_sheet")
         composeRule.textFieldIn("field_climb_name").performTextInput("Roof to pinch")
@@ -801,3 +807,7 @@ private fun ComposeTestRule.textFieldIn(tag: String): SemanticsNodeInteraction =
 private fun ComposeTestRule.waitForTag(tag: String) {
     waitUntil(timeoutMillis = 10_000) { onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
 }
+
+/** The text a node shows, joined, or "" when it has none. */
+private fun androidx.compose.ui.test.SemanticsNodeInteraction.textValue(): String =
+    fetchSemanticsNode().config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.joinToString { it.text }.orEmpty()
