@@ -442,6 +442,7 @@ private fun CatalogueClimbSheet(
             com.hardtekpt.crux.ui.components.HoldLegend(frames)
             com.hardtekpt.crux.ui.components.LightButton(board, frames, climb.name)
         }
+        if (board != null) com.hardtekpt.crux.ui.components.MoonBoardAppButton(board, climb.name)
         climb.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         Eyebrow("By angle", Modifier.padding(top = space.s2))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {

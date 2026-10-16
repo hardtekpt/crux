@@ -396,7 +396,7 @@ class LogClimbViewModelTest {
     }
 
     @Test
-    fun `name suggestions are the open projects here, not sent or untried climbs`() = runBlocking {
+    fun `Choose a climb lists the open projects here, not sent or untried climbs`() = runBlocking {
         val (placeId, tried) = boardWithProblem()
         fun problem(name: String) = ProblemInput(
             placeId = placeId,
@@ -422,7 +422,7 @@ class LogClimbViewModelTest {
         withTimeout(5_000) { vm.placeDetail.first { it?.problems?.size == 3 } }
         withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
 
-        assertEquals(listOf("Hard moves"), vm.suggestions().map { it.name })
+        assertEquals(listOf("Hard moves"), vm.openProjects().map { it.problem.name })
         assertEquals(3, vm.candidates().size)
     }
 }

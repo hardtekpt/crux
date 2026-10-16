@@ -13,10 +13,10 @@ Grades are never converted. A climb keeps the scale it was logged in. See [Grade
 They're safe. Demo mode shows a separate set of sample data. Turn it off in *Settings → Your data*
 and your own data is back, untouched.
 
-**Why isn't a climb showing in the name suggestions?**
-The chips show your open projects (climbs you've tried and not sent) at the place you picked, or, with no
-place, the ones with none. A climb you've already sent or never tried isn't a chip, but typing its exact name
-still continues it. Pick the place first.
+**Where do I pick a climb I've already started?**
+Under Name in Log climb, **Choose a climb** lists your open projects (climbs you've tried and not sent) at the
+place you picked, or, with no place, the ones with none, and a chip for each playlist. Pick the place first.
+Typing the exact name of any climb there also continues it.
 
 **How do I mark something as a project?**
 You don't: a climb you've tried and not sent is a project automatically. See

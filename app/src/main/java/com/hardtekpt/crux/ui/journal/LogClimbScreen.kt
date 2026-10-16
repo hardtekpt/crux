@@ -147,11 +147,17 @@ fun LogClimbScreen(
         draft = draft,
         onBack = onDone,
         where = { dayButton -> WhereSection(draft, places, detail, whereActions, trailing = dayButton, choices = choices) },
-        suggestions = remember(draft.placeId, draft.name, draft.problemId, detail) { viewModel.suggestions() },
-        datasetSuggestions = catalogueAndDatasetMatches(draft.name, choices, viewModel),
-        onPickDatasetClimb = viewModel::pickDatasetClimb,
+        picker = {
+            ClimbPickerButton(
+                projects = remember(draft.placeId, draft.sectionId, draft.problemId, detail) { viewModel.openProjects() },
+                playlists = playlists,
+                choices = choices ?: ClimbChoices(emptyList(), playlists, detail?.problems.orEmpty(), draft.system),
+                detail = detail,
+                onPickProject = viewModel::pickProblem,
+                onPickClimb = viewModel::pickDatasetClimb,
+            )
+        },
         onUnlink = viewModel::unlinkSource,
-        onPickClimb = viewModel::pickProblem,
         onGo = viewModel::addGo,
         onUndoGo = viewModel::undoGo,
         onNoBeta = viewModel::setNoBeta,
@@ -203,8 +209,7 @@ fun LogClimbContent(
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
     where: @Composable (dayButton: @Composable () -> Unit) -> Unit = { it() },
-    suggestions: List<com.hardtekpt.crux.data.model.Problem> = emptyList(),
-    onPickClimb: (com.hardtekpt.crux.data.model.Problem) -> Unit = {},
+    picker: @Composable () -> Unit = {},
     onGo: (Boolean) -> Unit = {},
     onUndoGo: () -> Unit = {},
     onNoBeta: (Boolean) -> Unit = {},
@@ -214,8 +219,6 @@ fun LogClimbContent(
     onEffort: (Int?) -> Unit = {},
     media: @Composable () -> Unit = {},
     today: LocalDate = LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current),
-    datasetSuggestions: List<com.hardtekpt.crux.data.ClimbSource> = emptyList(),
-    onPickDatasetClimb: (com.hardtekpt.crux.data.ClimbSource) -> Unit = {},
     onUnlink: () -> Unit = {},
 ) {
     val space = CruxTheme.space
@@ -317,7 +320,7 @@ fun LogClimbContent(
                     com.hardtekpt.crux.ui.components.LightButton(board, holds, source.climb.name, preferredSection = draft.sectionId)
                 }
             } else {
-                NameField(draft, suggestions, onName, onPickClimb, Modifier.padding(top = space.s3), datasetSuggestions, onPickDatasetClimb)
+                NameField(draft, onName, Modifier.padding(top = space.s3), picker)
             }
             Extras(draft, onNotes, media)
             if (earlierLogs.isNotEmpty()) {
@@ -594,17 +597,9 @@ private fun GoTrail(draft: LogClimbDraft, onUndo: () -> Unit) {
     }
 }
 
-/** The name, with the climbs here that match it to continue one. */
+/** The name, with a button to pick one of your open projects or a playlist's climb instead of typing it. */
 @Composable
-private fun NameField(
-    draft: LogClimbDraft,
-    suggestions: List<com.hardtekpt.crux.data.model.Problem>,
-    onName: (String) -> Unit,
-    onPick: (com.hardtekpt.crux.data.model.Problem) -> Unit,
-    modifier: Modifier = Modifier,
-    fromDatasets: List<com.hardtekpt.crux.data.ClimbSource> = emptyList(),
-    onPickFromDataset: (com.hardtekpt.crux.data.ClimbSource) -> Unit = {},
-) {
+private fun NameField(draft: LogClimbDraft, onName: (String) -> Unit, modifier: Modifier = Modifier, picker: @Composable () -> Unit) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
         CruxTextField(
             label = "Name",
@@ -615,64 +610,8 @@ private fun NameField(
             error = draft.nameError,
             modifier = Modifier.testTag("field_name"),
         )
-        val query = draft.name.trim()
-        val matches = suggestions
-            .filter { it.id != draft.problemId && (query.isEmpty() || it.name.contains(query, ignoreCase = true)) }
-            .take(if (query.isEmpty()) 4 else 6)
-        // The section's datasets, for a name typed: picking one is picking it in the Climb step.
-        val named = matches.map { it.name.trim().lowercase() }.toSet()
-        val fromData = fromDatasets.filter { it.climb.name.trim().lowercase() !in named }
-        if (!draft.isEditing && (matches.isNotEmpty() || fromData.isNotEmpty())) {
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                modifier = Modifier.testTag("climb_suggestions"),
-            ) {
-                matches.forEach { climb ->
-                    CruxFilterChip(
-                        label = "${climb.name} · ${climb.grade}",
-                        selected = false,
-                        onClick = { onPick(climb) },
-                        modifier = Modifier.testTag("suggest_${climb.name}"),
-                    )
-                }
-                fromData.forEach { source ->
-                    CruxFilterChip(
-                        label = listOfNotNull(source.climb.name, source.climb.gradeLabel, source.dataset.name).joinToString(" · "),
-                        selected = false,
-                        onClick = { onPickFromDataset(source) },
-                        modifier = Modifier.testTag("suggest_dataset_${source.climb.name}"),
-                    )
-                }
-            }
-        }
+        if (!draft.isEditing) picker()
     }
-}
-
-/** Name suggestions from the section's datasets, then its board catalogues (searched as you type), three at most. */
-@Composable
-private fun catalogueAndDatasetMatches(typed: String, choices: ClimbChoices?, viewModel: LogClimbViewModel): List<com.hardtekpt.crux.data.ClimbSource> {
-    val own = remember(typed, choices) { datasetMatches(typed, choices) }
-    val catalogues = choices?.datasets.orEmpty().filter { it.isCatalogue }
-    val fromCatalogues by androidx.compose.runtime.produceState(emptyList<com.hardtekpt.crux.data.ClimbSource>(), typed, catalogues) {
-        val query = typed.trim()
-        value = if (query.length < 2 || own.size >= 3) {
-            emptyList()
-        } else {
-            catalogues.flatMap { viewModel.searchCatalogue(it, query, limit = 3) }
-                .filter { !it.climb.name.trim().equals(query, ignoreCase = true) }
-        }
-    }
-    return (own + fromCatalogues).take(3)
-}
-
-/** Up to three climbs in the section's datasets whose name has what's typed. */
-internal fun datasetMatches(typed: String, choices: ClimbChoices?): List<com.hardtekpt.crux.data.ClimbSource> {
-    val query = typed.trim()
-    if (query.isEmpty() || choices == null) return emptyList()
-    return choices.datasets.flatMap { d -> d.climbs.map { com.hardtekpt.crux.data.ClimbSource(it, d) } }
-        .filter { it.climb.name.contains(query, ignoreCase = true) && !it.climb.name.trim().equals(query, ignoreCase = true) }
-        .take(3)
 }
 
 /**

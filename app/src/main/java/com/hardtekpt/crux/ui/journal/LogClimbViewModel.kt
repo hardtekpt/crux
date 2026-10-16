@@ -195,8 +195,8 @@ class LogClimbViewModel @Inject constructor(
     /** Climbs logged with no place, for suggestions when no place is picked. */
     private val unplaced = MutableStateFlow<List<Problem>>(emptyList())
 
-    /** Which of [unplaced] are open projects. */
-    private val unplacedProjects = MutableStateFlow<Set<Long>>(emptySet())
+    /** The open projects with no place. */
+    private val unplacedProjects = MutableStateFlow<List<com.hardtekpt.crux.data.model.ProblemWithStats>>(emptyList())
 
     /** Saved places to pick from, most recently visited first. */
     val places: StateFlow<List<PlaceSummary>> = placeRepository.observePlaces()
@@ -724,21 +724,29 @@ class LogClimbViewModel @Inject constructor(
         }
     }
 
-    /** The chips under the name: only the open projects (tried, not sent yet) among [candidates]. A typed name still finds any climb. */
-    fun suggestions(): List<Problem> {
+    /** Your open projects (tried, not sent yet) at the picked place, or those with no place, for Choose a climb. */
+    fun openProjects(): List<com.hardtekpt.crux.data.model.ProblemWithStats> {
         val draft = _draft.value
-        val open = if (draft.placeId == null) {
+        val several: Boolean
+        val all = if (draft.placeId == null) {
+            several = false
             unplacedProjects.value
         } else {
-            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems.orEmpty().filter { it.isProject }.map { it.problem.id }.toSet()
+            val detail = placeDetail.value?.takeIf { it.place.id == draft.placeId }
+            several = (detail?.place?.sections?.size ?: 0) > 1
+            detail?.problems.orEmpty()
         }
-        return candidates().filter { it.id in open && !it.retired }
+        return all.filter { it.isProject && !it.problem.retired && (!several || it.problem.sectionId == null || it.problem.sectionId == draft.sectionId) }
+            .sortedByDescending { it.stats?.lastGo }
     }
 
     fun refreshUnplaced() {
         viewModelScope.launch {
             unplaced.value = placeRepository.climbsAt(null)
-            unplacedProjects.value = placeRepository.observeProjects().first().filter { it.problem.placeId == null }.map { it.problem.id }.toSet()
+            unplacedProjects.value =
+                placeRepository.observeProjects().first().filter {
+                    it.problem.placeId == null
+                }.map { com.hardtekpt.crux.data.model.ProblemWithStats(it.problem, it.stats) }
         }
     }
 

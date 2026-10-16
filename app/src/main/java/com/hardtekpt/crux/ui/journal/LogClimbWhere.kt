@@ -509,7 +509,7 @@ private fun LazyListScope.climbStep(
 
 /** A dataset's climb in the Climb step: its grade in the section's scale, its setter and how you've done on it here. */
 @Composable
-private fun DatasetClimbRow(
+internal fun DatasetClimbRow(
     source: com.hardtekpt.crux.data.ClimbSource,
     choices: ClimbChoices,
     showDataset: Boolean,
@@ -541,13 +541,13 @@ private fun DatasetClimbRow(
 }
 
 @Composable
-private fun GradeText(grade: String) {
+internal fun GradeText(grade: String) {
     com.hardtekpt.crux.ui.components.ClimbGrade(grade)
 }
 
 /** Green once sent, amber while a project; nothing before a go. */
 @Composable
-private fun StatusDot(sent: Boolean?, tried: Boolean) {
+internal fun StatusDot(sent: Boolean?, tried: Boolean) {
     if (!tried) return
     Box(
         Modifier

@@ -10,11 +10,14 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 - **Simple countdowns in a session**: + → Start a timer now opens with a countdown row (30 s, 1, 2, 3 and 5 min)
   that starts at once, in the same dock and big view as the interval timers. Nothing is logged.
+- **Open in MoonBoard**: a MoonBoard catalogue climb's sheet can open the official MoonBoard app with the
+  climb's name copied, ready to paste into its search.
 
 ### Changed
 
-- **Log climb's name suggestions are only your projects**: the chips under Name no longer list every climb
-  at the place, just the ones you've tried and not sent. Typing a sent climb's exact name still continues it.
+- **Choose a climb in Log climb**: the climb chips under Name are gone. A **Choose a climb** button opens a sheet
+  with your open projects (tried, not sent yet) and a chip per playlist. Typing a climb's exact name still
+  continues it.
 - **Undo instead of "Are you sure?"**: deleting a log, a note or a result on an exercise page
   happens at once, with **Undo** above the nav bar for a few seconds. A log's photo and video come
   back too. Deletes that take other things with them (a place, a plan, a dataset) still ask first.
