@@ -591,6 +591,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             GradeFilterSheet(
                 range = all,
                 shown = gradeFiltered(filtered(ds.climbs, query), all).size,
+                bounds = gradeBounds(ds.climbs, all.scale),
                 onRange = {
                     gradeFrom = it.from
                     gradeTo = it.to
@@ -716,6 +717,13 @@ internal fun filtered(climbs: List<DatasetClimb>, query: String): List<DatasetCl
 /** The scale most of a dataset's graded climbs are in, which its grade filter reads in; null when none is graded. */
 internal fun datasetScale(climbs: List<DatasetClimb>): GradeScale? =
     climbs.mapNotNull { it.gradeScale?.takeIf { s -> !s.isLocal && it.gradeIndex != null } }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
+/** The easiest and hardest grade in the dataset, as indices in [scale]; the slider spans just these. */
+internal fun gradeBounds(climbs: List<DatasetClimb>, scale: GradeScale?): IntRange? {
+    scale ?: return null
+    val indexes = climbs.mapNotNull { c -> c.gradeScale?.let { s -> c.gradeIndex?.let { convertGrade(s, it, scale) } } }
+    return if (indexes.isEmpty() || indexes.min() == indexes.max()) null else indexes.min()..indexes.max()
+}
 
 /** Climbs in [range], their grades read in its scale (converted when they are in another); an ungraded climb is out while a range is set. */
 internal fun gradeFiltered(climbs: List<DatasetClimb>, range: GradeRange): List<DatasetClimb> {

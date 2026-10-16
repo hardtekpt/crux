@@ -52,4 +52,10 @@ class GradeFilterTest {
         assertEquals("up to 7A", GradeRange(GradeScale.FONT, to = index("7A")).label())
         assertNull(GradeRange(GradeScale.FONT).label())
     }
+
+    @Test
+    fun `the slider spans the grades the dataset has`() {
+        assertEquals(index("5+")..index("7A"), gradeBounds(climbs, GradeScale.FONT))
+        assertNull(gradeBounds(listOf(climbs[0]), GradeScale.FONT))
+    }
 }
