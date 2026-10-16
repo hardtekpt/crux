@@ -559,7 +559,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("where_summary").performClick()
         composeRule.waitForTag("venue")
         composeRule.onNode(hasText("Board") and hasAnyAncestor(hasTestTag("venue"))).performClick()
-        androidx.test.espresso.Espresso.pressBack()
+        composeRule.onNodeWithTag("where_done").performClick()
         composeRule.waitForTag("climb_angle")
         composeRule.onNodeWithTag("climb_angle").performScrollTo().performClick()
         composeRule.waitForTag("angle_sheet")
@@ -649,7 +649,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
         composeRule.waitForTag("screen_Dataset")
         // The playlist, climbed in a session: + Fell adds a go to its climb.
-        androidx.test.espresso.Espresso.pressBack()
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.waitForTag("datasets_tabs")
         composeRule.onNode(hasText("Playlists · 1")).performClick()
         composeRule.waitForTag("playlist_row")
