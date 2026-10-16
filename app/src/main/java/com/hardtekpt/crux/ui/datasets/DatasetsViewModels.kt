@@ -206,6 +206,8 @@ data class DatasetUiState(
     val datasets: List<Dataset> = emptyList(),
     val scales: GradeScales = GradeScales(),
     val playlists: List<com.hardtekpt.crux.data.Playlist> = emptyList(),
+    /** What you have sent, for [com.hardtekpt.crux.data.isSentIn]. */
+    val sent: Set<String> = emptySet(),
 )
 
 @HiltViewModel
@@ -219,12 +221,18 @@ class DatasetViewModel @Inject constructor(
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
 
-    val uiState: StateFlow<DatasetUiState> = combine(repository.observeDatasets(), preferences.gradeScales, playlists.observePlaylists()) {
+    val uiState: StateFlow<DatasetUiState> = combine(
+        repository.observeDatasets(),
+        preferences.gradeScales,
+        playlists.observePlaylists(),
+        playlists.observeSent(),
+    ) {
             list,
             scales,
             lists,
+            sent,
         ->
-        DatasetUiState(isLoading = false, dataset = list.firstOrNull { it.id == datasetId }, datasets = list, scales = scales, playlists = lists)
+        DatasetUiState(isLoading = false, dataset = list.firstOrNull { it.id == datasetId }, datasets = list, scales = scales, playlists = lists, sent = sent)
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DatasetUiState())
 
     val importer = DatasetImport(context, repository, viewModelScope, playlists)

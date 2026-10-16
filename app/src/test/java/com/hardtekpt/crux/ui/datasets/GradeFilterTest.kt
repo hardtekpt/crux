@@ -58,4 +58,11 @@ class GradeFilterTest {
         assertEquals(index("5+")..index("7A"), gradeBounds(climbs, GradeScale.FONT))
         assertNull(gradeBounds(listOf(climbs[0]), GradeScale.FONT))
     }
+
+    @Test
+    fun `hiding sent climbs drops those you have sent`() {
+        val sent = setOf("d3", "nBOULDER:easy")
+        assertEquals(listOf("Mid", "In V", "Ungraded"), unsent(climbs, sent, hide = true).map { it.name })
+        assertEquals(5, unsent(climbs, sent, hide = false).size)
+    }
 }

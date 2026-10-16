@@ -59,6 +59,7 @@ import com.hardtekpt.crux.data.Dataset
 import com.hardtekpt.crux.data.DatasetClimb
 import com.hardtekpt.crux.data.DatasetFiles
 import com.hardtekpt.crux.data.convertGrade
+import com.hardtekpt.crux.data.isSentIn
 import com.hardtekpt.crux.data.model.BoardModel
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
@@ -382,6 +383,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf(ClimbSort.GRADE) }
     var filtering by rememberSaveable { mutableStateOf(false) }
+    var hideSent by rememberSaveable { mutableStateOf(false) }
     var gradeFrom by rememberSaveable { mutableStateOf<Int?>(null) }
     var gradeTo by rememberSaveable { mutableStateOf<Int?>(null) }
     var menu by rememberSaveable { mutableStateOf(false) }
@@ -430,7 +432,9 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             }
             val ds = dataset ?: return@Column
             val range = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
-            val climbs = remember(ds, query, sort, gradeFrom, gradeTo) { sorted(gradeFiltered(filtered(ds.climbs, query), range), sort) }
+            val climbs = remember(ds, query, sort, gradeFrom, gradeTo, hideSent, uiState.sent) {
+                sorted(unsent(gradeFiltered(filtered(ds.climbs, query), range), uiState.sent, hideSent), sort)
+            }
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + 72.dp + LocalNavBarClearance.current),
                 verticalArrangement = Arrangement.spacedBy(space.s2),
@@ -448,19 +452,24 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                             placeholder = "Search name, setter or note",
                             modifier = Modifier.weight(1f).testTag("dataset_search"),
                         )
-                        if (range.scale != null) {
+                        if (range.scale != null || ds.climbs.isNotEmpty()) {
                             FiltersButton(
-                                active = if (range.active) 1 else 0,
+                                active = listOf(range.active, hideSent).count { it },
                                 onClick = { filtering = true },
                                 modifier = Modifier.testTag("dataset_open_filters"),
                             )
                         }
                     }
                 }
-                if (range.active) {
+                if (range.active || hideSent) {
                     item(key = "applied") {
                         Text(
-                            "Grades ${range.label()}",
+                            listOfNotNull(
+                                range.label()?.let {
+                                    "Grades $it"
+                                },
+                                "hiding sent climbs".takeIf { hideSent },
+                            ).joinToString(" · ").replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.testTag("dataset_grade_applied"),
@@ -590,7 +599,9 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             val all = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
             GradeFilterSheet(
                 range = all,
-                shown = gradeFiltered(filtered(ds.climbs, query), all).size,
+                shown = unsent(gradeFiltered(filtered(ds.climbs, query), all), uiState.sent, hideSent).size,
+                hideSent = hideSent,
+                onHideSent = { hideSent = it },
                 bounds = gradeBounds(ds.climbs, all.scale),
                 onRange = {
                     gradeFrom = it.from
@@ -717,6 +728,10 @@ internal fun filtered(climbs: List<DatasetClimb>, query: String): List<DatasetCl
 /** The scale most of a dataset's graded climbs are in, which its grade filter reads in; null when none is graded. */
 internal fun datasetScale(climbs: List<DatasetClimb>): GradeScale? =
     climbs.mapNotNull { it.gradeScale?.takeIf { s -> !s.isLocal && it.gradeIndex != null } }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
+/** [climbs] without the ones you have sent, when [hide] is on. */
+internal fun unsent(climbs: List<DatasetClimb>, sent: Set<String>, hide: Boolean): List<DatasetClimb> =
+    if (hide) climbs.filter { !it.isSentIn(sent) } else climbs
 
 /** The easiest and hardest grade in the dataset, as indices in [scale]; the slider spans just these. */
 internal fun gradeBounds(climbs: List<DatasetClimb>, scale: GradeScale?): IntRange? {

@@ -108,7 +108,11 @@ data class CatalogueQuery(
     /** A grade range, as indices in [catalogueScale]. */
     val gradeFrom: Int? = null,
     val gradeTo: Int? = null,
+    /** Hide the climbs you have sent. */
+    val hideSent: Boolean = false,
 )
+
+private const val HIDE_SENT_SCAN = 2000
 
 /** The scale a catalogue's grades are read and filtered in: the climber's boulder scale, or Font for a local one. */
 internal fun catalogueScale(scales: GradeScales): GradeScale = scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
@@ -139,6 +143,7 @@ class CatalogueViewModel @Inject constructor(
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
     private val scalesFlow = preferences.gradeScales
+    private val sentKeys = playlists.observeSent()
     private val query = MutableStateFlow(CatalogueQuery())
     private val found = MutableStateFlow<Pair<CatalogueQuery, List<CatalogueRow>>?>(null)
     private val angles = MutableStateFlow<List<Int>>(emptyList())
@@ -182,7 +187,16 @@ class CatalogueViewModel @Inject constructor(
             query.collectLatest { q ->
                 val angle = q.angle ?: return@collectLatest
                 val scale = catalogueScale(scalesFlow.first())
-                val rows = catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, fontOf(scale, q.gradeFrom), fontOf(scale, q.gradeTo))
+                val from = fontOf(scale, q.gradeFrom)
+                val to = fontOf(scale, q.gradeTo)
+                val rows = if (q.hideSent) {
+                    // The sent ones are in another database, so look further down the list and take a page of what is left.
+                    val sent = sentKeys.first()
+                    catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, from, to, limit = HIDE_SENT_SCAN)
+                        .filter { "c${it.uuid}" !in sent }.take(CatalogueRepository.PAGE)
+                } else {
+                    catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, from, to)
+                }
                 found.value = q to rows
             }
         }
@@ -290,16 +304,21 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                             modifier = Modifier.weight(1f).testTag("catalogue_search"),
                         )
                         FiltersButton(
-                            active = if (range.active) 1 else 0,
+                            active = listOf(range.active, q.hideSent).count { it },
                             onClick = { filtering = true },
                             modifier = Modifier.testTag("catalogue_open_filters"),
                         )
                     }
                 }
-                if (range.active) {
+                if (range.active || q.hideSent) {
                     item(key = "applied") {
                         Text(
-                            "Grades ${range.label()}",
+                            listOfNotNull(
+                                range.label()?.let {
+                                    "Grades $it"
+                                },
+                                "hiding sent climbs".takeIf { q.hideSent },
+                            ).joinToString(" · ").replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.testTag("catalogue_grade_applied"),
@@ -395,6 +414,8 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
             range = GradeRange(catalogueScale(uiState.scales), uiState.query.gradeFrom, uiState.query.gradeTo),
             shown = uiState.rows.size,
             onRange = { r -> viewModel.update { it.copy(gradeFrom = r.from, gradeTo = r.to) } },
+            hideSent = uiState.query.hideSent,
+            onHideSent = { on -> viewModel.update { it.copy(hideSent = on) } },
             onDismiss = { filtering = false },
         )
     }

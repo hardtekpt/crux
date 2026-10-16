@@ -78,43 +78,69 @@ internal fun GradeFilterSheet(
     onDismiss: () -> Unit,
     /** The grades the slider spans; the whole scale unless given. */
     bounds: IntRange? = null,
+    hideSent: Boolean = false,
+    onHideSent: (Boolean) -> Unit = {},
     extra: @Composable () -> Unit = {},
 ) {
     val space = CruxTheme.space
-    val scale = range.scale ?: return
+    val scale = range.scale
     CruxSheet(
         onDismiss = onDismiss,
         modifier = Modifier.testTag("grade_filter_sheet"),
         title = "Filters",
-        action = SheetButton("Clear all", { onRange(range.copy(from = null, to = null)) }, enabled = range.active),
+        action = SheetButton(
+            "Clear all",
+            {
+                onRange(range.copy(from = null, to = null))
+                onHideSent(false)
+            },
+            enabled = range.active || hideSent,
+        ),
         confirm = SheetButton(if (shown == 1) "Show 1 climb" else "Show $shown climbs", onDismiss, tag = "apply_filters"),
     ) {
-        Eyebrow("Grades", Modifier.padding(top = space.s2))
-        val first = bounds?.first ?: 0
-        val last = bounds?.last ?: scale.grades.lastIndex
-        val low = (range.from ?: first).coerceIn(first, last)
-        val high = (range.to ?: last).coerceIn(first, last)
-        Text(
-            range.label()?.replaceFirstChar { it.uppercase() } ?: "Any grade",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (range.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag("grade_range_label"),
-        )
-        // Both ends at the ends of the scale is no filter; drag either thumb in to set one.
-        RangeSlider(
-            value = low.toFloat()..high.toFloat(),
-            onValueChange = { picked ->
-                val from = picked.start.roundToInt()
-                val to = picked.endInclusive.roundToInt()
-                onRange(range.copy(from = from.takeIf { it > first }, to = to.takeIf { it < last }))
-            },
-            valueRange = first.toFloat()..last.toFloat(),
-            steps = (last - first - 1).coerceAtLeast(0),
-            modifier = Modifier.fillMaxWidth().testTag("grade_range"),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(scale.grades[first], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(scale.grades[last], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (scale != null) {
+            Eyebrow("Grades", Modifier.padding(top = space.s2))
+            val first = bounds?.first ?: 0
+            val last = bounds?.last ?: scale.grades.lastIndex
+            val low = (range.from ?: first).coerceIn(first, last)
+            val high = (range.to ?: last).coerceIn(first, last)
+            Text(
+                range.label()?.replaceFirstChar { it.uppercase() } ?: "Any grade",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (range.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("grade_range_label"),
+            )
+            // Both ends at the ends of the scale is no filter; drag either thumb in to set one.
+            RangeSlider(
+                value = low.toFloat()..high.toFloat(),
+                onValueChange = { picked ->
+                    val from = picked.start.roundToInt()
+                    val to = picked.endInclusive.roundToInt()
+                    onRange(range.copy(from = from.takeIf { it > first }, to = to.takeIf { it < last }))
+                },
+                valueRange = first.toFloat()..last.toFloat(),
+                steps = (last - first - 1).coerceAtLeast(0),
+                modifier = Modifier.fillMaxWidth().testTag("grade_range"),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(scale.grades[first], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(scale.grades[last], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = space.s3),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(space.s3),
+        ) {
+            androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                Text("Hide climbs I've sent", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Projects you've tried but not sent still show.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            androidx.compose.material3.Switch(hideSent, onHideSent, Modifier.testTag("hide_sent"))
         }
         extra()
     }

@@ -115,10 +115,29 @@ interface PlaylistDao {
         """,
     )
     fun observeCatalogueTriedOn(day: Long): Flow<List<CatalogueTriedRow>>
+
+    /** Every climb that has ever been sent, with the dataset or catalogue climb it was picked from, if any. */
+    @Query(
+        """
+        SELECT sourceDatasetClimbId AS climbId, sourceCatalogueUuid AS uuid, name, discipline FROM problems
+        WHERE EXISTS (SELECT 1 FROM climbs c WHERE c.problemId = problems.id AND c.sends > 0)
+        """,
+    )
+    fun observeSent(): Flow<List<SentRow>>
 }
+
+/** A climb you have sent, as [PlaylistDao.observeSent] lists it. */
+data class SentRow(val climbId: Long?, val uuid: String?, val name: String, val discipline: Discipline)
 
 /** A catalogue climb tried on a day, and whether it was sent. */
 data class CatalogueTriedRow(val uuid: String, val sent: Boolean)
+
+/**
+ * Whether [keys] (from [PlaylistRepository.observeSent]) say you have sent this climb: it was picked
+ * from here, or a climb of its name and type was sent. A catalogue climb is told by its board id only.
+ */
+fun DatasetClimb.isSentIn(keys: Set<String>): Boolean =
+    triedKey() in keys || (catalogueUuid == null && "n${discipline.name}:${name.trim().lowercase()}" in keys)
 
 /** How [observeTriedOn][PlaylistRepository.observeTriedOn] keys a climb. */
 fun DatasetClimb.triedKey(): String = catalogueUuid?.let { "c$it" } ?: "d$id"
@@ -182,6 +201,9 @@ interface PlaylistRepository {
 
     /** Climbs tried on [date], by [triedKey]: true where one was sent. */
     fun observeTriedOn(date: java.time.LocalDate): Flow<Map<String, Boolean>>
+
+    /** What has ever been sent, as keys for [isSentIn]: [triedKey]s and "n<type>:<name>". */
+    fun observeSent(): Flow<Set<String>>
 }
 
 class OfflinePlaylistRepository @Inject constructor(
@@ -380,6 +402,14 @@ class OfflinePlaylistRepository @Inject constructor(
     override fun observeTriedOn(date: java.time.LocalDate): Flow<Map<String, Boolean>> = dbs.observe { db ->
         combine(db.playlistDao().observeTriedOn(date.toEpochDay()), db.playlistDao().observeCatalogueTriedOn(date.toEpochDay())) { own, board ->
             own.associate { "d${it.climbId}" to it.sent } + board.associate { "c${it.uuid}" to it.sent }
+        }
+    }
+
+    override fun observeSent(): Flow<Set<String>> = dbs.observe { db ->
+        db.playlistDao().observeSent().map { rows ->
+            rows.flatMapTo(mutableSetOf()) { row ->
+                listOfNotNull(row.climbId?.let { "d$it" }, row.uuid?.let { "c$it" }, "n${row.discipline.name}:${row.name.trim().lowercase()}")
+            }
         }
     }
 

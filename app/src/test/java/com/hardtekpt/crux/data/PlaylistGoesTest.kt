@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -44,6 +45,7 @@ class PlaylistGoesTest {
         val session: Session,
         val source: ClimbSource,
         val placeId: Long,
+        val playlists: OfflinePlaylistRepository,
     )
 
     /** A session at a gym, and a dataset climb "Blue slab" set by Rita. */
@@ -66,7 +68,15 @@ class PlaylistGoesTest {
         val dataset = Dataset(id = datasets.saveDataset(Dataset(name = "Block Lab circuit")), name = "Block Lab circuit")
         val climb = DatasetClimb(name = "Blue slab", gradeScale = GradeScale.FONT, gradeIndex = 4, setter = "Rita")
         val source = ClimbSource(climb.copy(id = datasets.saveClimb(dataset.id, climb)), dataset)
-        return Setup(PlaylistGoes(climbs, places, preferences, FIXED_CLOCK), climbs, places, session, source, placeId)
+        return Setup(
+            PlaylistGoes(climbs, places, preferences, FIXED_CLOCK),
+            climbs,
+            places,
+            session,
+            source,
+            placeId,
+            OfflinePlaylistRepository(dbs, FIXED_CLOCK),
+        )
     }
 
     @Test
@@ -86,6 +96,20 @@ class PlaylistGoesTest {
         assertEquals(s.source.climb.id, problem.sourceDatasetClimbId)
         assertEquals("Rita", problem.setter)
         assertEquals(log.problemId, problem.id)
+    }
+
+    @Test
+    fun `only a send makes a climb sent`() = runTest {
+        val s = setup()
+        s.goes.add(s.session, s.source, sent = false)
+        assertFalse(s.source.climb.isSentIn(s.playlists.observeSent().first()))
+
+        s.goes.add(s.session, s.source, sent = true)
+        val sent = s.playlists.observeSent().first()
+        assertTrue(s.source.climb.isSentIn(sent))
+        // A same-named climb of that type counts too, one of another name does not.
+        assertTrue(s.source.climb.copy(id = 99).isSentIn(sent))
+        assertFalse(s.source.climb.copy(id = 99, name = "Other").isSentIn(sent))
     }
 
     @Test

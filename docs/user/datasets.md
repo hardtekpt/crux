@@ -33,7 +33,8 @@ Search finds a word in the name, setter or note. Sort by **Grade** (easiest firs
 a grade come last, shown as "–"), **Name** or **Newest**. The filters button beside the search
 opens **Filters**: drag the two ends of the grade slider to show only climbs between them (grades in
 other scales are converted; climbs without a grade drop out while a range is set). The button shows
-when the dataset has graded climbs.
+when the dataset has climbs. **Hide climbs I've sent** drops the ones you have sent (picked from here, or
+logged under the same name); projects you've tried but not sent still show.
 
 **⋯ → Delete dataset** asks first. Its climbs go with it; climbs you logged are never touched.
 
@@ -76,7 +77,7 @@ file) and pick it in **+ → Import a file**. Crux never goes online for it.
 - Open one to browse its climbs at an angle (a Kilter's grades and ascents change with the
   angle; a MoonBoard has its one or two). Search names and setters, sort by **Popular**, **Grade** or
   **Name**, or show **Benchmarks** only. Grades show in your boulder scale. A dot marks climbs you
-  tried today. The filters button beside the search has a grade range slider. A list shows
+  tried today. The filters button beside the search has a grade range slider and **Hide climbs I've sent**. A list shows
   200 at a time: search or filter to find the rest.
 - Tap a climb for its setter, description and grade at each angle, **Log this climb** and
   **Playlist**.
