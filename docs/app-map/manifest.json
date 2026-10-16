@@ -2590,6 +2590,7 @@
     "CatalogueImportSheet"
    ],
    "steps": [
+    "shell:rm -f /sdcard/Download/crux-backup-2026-10-14.zip /sdcard/Download/crux-backup-2026-10-15.zip /sdcard/Download/crux-backup-2026-10-16.zip /sdcard/Download/tonight.crux-playlist.json /sdcard/Download/block-lab-circuit.csv",
     "tab:You",
     "scrollto:Datasets",
     "tap:Datasets",
@@ -2667,6 +2668,7 @@
    "desc": "When the import finishes, the sheet says how many climbs were kept, with Open to browse them. The catalogue stays on this phone, apart from your data: it is not in backups or exports.",
    "covers": [],
    "steps": [
+    "shell:rm -f /sdcard/Download/crux-backup-2026-10-14.zip /sdcard/Download/crux-backup-2026-10-15.zip /sdcard/Download/crux-backup-2026-10-16.zip /sdcard/Download/tonight.crux-playlist.json /sdcard/Download/block-lab-circuit.csv",
     "tab:You",
     "scrollto:Datasets",
     "tap:Datasets",
