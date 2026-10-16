@@ -703,6 +703,8 @@ fun SessionScreen(
     // The big timer view opens on a tap of the dock and stays big for the next rest, until made small.
     var big by rememberSaveable { mutableStateOf(bigTimer) }
     val next = viewModel.nextUp(current)
+    // Climbing stays the current block until a set is ticked, an exercise is added or "Back to sets".
+    var backToSets by rememberSaveable(current.climbs.size, playlist != null) { mutableStateOf(false) }
     val runningTimer = timer
     val runningRest = rest
     val done = current.items.count { it.finished }
@@ -742,7 +744,6 @@ fun SessionScreen(
         // "Back to sets" says otherwise.
         val hasPlaylist = playlist != null
         val blocks = current.blocks(hasPlaylist)
-        var backToSets by rememberSaveable(current.climbs.size, hasPlaylist) { mutableStateOf(false) }
         val climbingCurrent = current.climbingNow(hasPlaylist) && !backToSets && runningTimer == null
         val currentExerciseId = next?.first?.id.takeIf { !climbingCurrent }
         // The rail: a segment per block, filling as sets go in (green once done); climbing fills
@@ -1051,6 +1052,7 @@ fun SessionScreen(
             library = library,
             onPick = {
                 viewModel.addExercise(it)
+                backToSets = true
                 picking = false
             },
             onDismiss = { picking = false },
