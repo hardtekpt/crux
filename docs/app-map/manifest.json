@@ -3053,6 +3053,28 @@
     "wait:1"
    ],
    "cleanup": []
+  },
+  {
+   "id": "log-climb-choose",
+   "title": "Choose a climb",
+   "kind": "sheet",
+   "lane": "log",
+   "col": 6,
+   "row": 2,
+   "desc": "Under Name: your open projects at the place, and a chip for each playlist. Picking one fills the form to add goes to it.",
+   "covers": [
+    "ClimbPickerSheet"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Log climb",
+    "tap:Add",
+    "tap:The Arch",
+    "tap:Done",
+    "scroll:down",
+    "tapc:Choose a climb"
+   ],
+   "cleanup": []
   }
  ],
  "edges": [
@@ -4135,6 +4157,12 @@
    "journal-selection",
    "Hold an entry",
    "tab"
+  ],
+  [
+   "log-climb-more",
+   "log-climb-choose",
+   "Choose a climb",
+   "sheet"
   ]
  ],
  "ignore": {
