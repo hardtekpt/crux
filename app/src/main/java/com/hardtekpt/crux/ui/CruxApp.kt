@@ -2,7 +2,6 @@ package com.hardtekpt.crux.ui
 
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -32,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -47,6 +47,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.home.HomeScreen
 import com.hardtekpt.crux.ui.journal.JournalActions
 import com.hardtekpt.crux.ui.journal.JournalScreen
@@ -462,10 +463,28 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
             )
         }
 
+        // Undo for a delete made on the page just left: above the nav bar, wherever the climber lands.
+        val undoCenter = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel<UndoViewModel>().center
+        val pendingUndo by undoCenter.pending.collectAsStateWithLifecycle()
+        val undoHost = remember { androidx.compose.material3.SnackbarHostState() }
+        LaunchedEffect(pendingUndo) {
+            val pending = pendingUndo ?: return@LaunchedEffect
+            undoHost.currentSnackbarData?.dismiss()
+            val result = undoHost.showSnackbar(pending.message, actionLabel = "Undo", duration = androidx.compose.material3.SnackbarDuration.Short)
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) undoCenter.undo(pending) else undoCenter.settle(pending)
+        }
+        androidx.compose.material3.SnackbarHost(
+            undoHost,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (onForm) bottomInset + CruxTheme.space.s4 else navBarClearance(bottomInset))
+                .testTag("undo_snackbar"),
+        )
+
         AnimatedVisibility(
             visible = !onForm,
-            enter = fadeIn(tween(180, delayMillis = 60)) + slideInVertically(tween(180, delayMillis = 60)) { it / 4 },
-            exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it / 4 },
+            enter = fadeIn(CruxMotion.medium()) + slideInVertically(CruxMotion.medium()) { it / 4 },
+            exit = fadeOut(CruxMotion.fast()) + slideOutVertically(CruxMotion.fast()) { it / 4 },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()

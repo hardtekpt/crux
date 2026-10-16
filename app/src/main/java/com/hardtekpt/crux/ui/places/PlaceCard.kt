@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.data.model.PlaceSummary
 import com.hardtekpt.crux.data.model.PlaceType
+import com.hardtekpt.crux.ui.components.StatFigure
+import com.hardtekpt.crux.ui.components.StatStrip
 import com.hardtekpt.crux.ui.components.areaImageFile
 import com.hardtekpt.crux.ui.components.rememberLocalImage
 import com.hardtekpt.crux.ui.gradesLabel
@@ -126,17 +128,13 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
                     modifier = Modifier.testTag("place_modules"),
                 ) {
+                    // Plain text with the kind's icon, not chips: the card is the only box here.
                     place.sections.forEach { section ->
                         val tint = section.type.accent()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(tint.copy(alpha = 0.12f))
-                                .border(CruxTheme.size.borderHairline, tint.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                .testTag("module_${section.name}"),
+                            modifier = Modifier.testTag("module_${section.name}"),
                         ) {
                             Icon(placeIcon(section.type), contentDescription = section.type.label, tint = tint, modifier = Modifier.size(16.dp))
                             Text(section.name, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
@@ -151,11 +149,13 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.fillMaxWidth()) {
-                PlaceStat("Climbs", summary.climbs, Modifier.weight(1f))
-                PlaceStat(if (place.hasSeveralTypes) "Areas" else place.type.areaLabel + "s", summary.walls, Modifier.weight(1f))
-                PlaceStat("Projects", summary.openProjects, Modifier.weight(1f), highlight = summary.openProjects > 0)
-            }
+            StatStrip(
+                listOf(
+                    StatFigure(summary.climbs.toString(), "Climbs"),
+                    StatFigure(summary.walls.toString(), if (place.hasSeveralTypes) "Areas" else place.type.areaLabel + "s"),
+                    StatFigure(summary.openProjects.toString(), "Projects", notable = summary.openProjects > 0),
+                ),
+            )
         }
     }
 }
@@ -185,31 +185,6 @@ internal fun BoxScope.PlaceBannerArt(place: com.hardtekpt.crux.data.model.Place,
 /** A kind's colour: gyms in the primary, crags in sandstone, boards in lilac. */
 @Composable
 internal fun kindAccent(type: PlaceType): Color = type.accent()
-
-/** One number on a place card. Open projects light up so there is something to go back for. */
-@Composable
-private fun PlaceStat(label: String, value: Int, modifier: Modifier = Modifier, highlight: Boolean = false) {
-    val colors = MaterialTheme.colorScheme
-    val shape = MaterialTheme.shapes.medium
-    Column(
-        modifier
-            .clip(shape)
-            .background(if (highlight) colors.secondaryContainer else colors.surfaceContainer)
-            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s2),
-    ) {
-        Text(
-            value.toString(),
-            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, fontFeatureSettings = "tnum"),
-            color = if (highlight) colors.onSecondaryContainer else colors.onSurface,
-        )
-        Text(
-            label.uppercase(),
-            style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.sp),
-            color = if (highlight) colors.onSecondaryContainer else colors.onSurfaceVariant,
-            maxLines = 1,
-        )
-    }
-}
 
 /** Darkens the bottom of a photo or map banner so it sits well against the card. */
 @Composable

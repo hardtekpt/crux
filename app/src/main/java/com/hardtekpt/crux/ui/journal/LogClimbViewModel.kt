@@ -162,6 +162,7 @@ class LogClimbViewModel @Inject constructor(
     private val datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
     playlistRepository: com.hardtekpt.crux.data.PlaylistRepository? = null,
     private val catalogue: com.hardtekpt.crux.data.CatalogueRepository? = null,
+    private val undo: com.hardtekpt.crux.ui.UndoCenter? = null,
 ) : ViewModel() {
 
     // Route arguments, read directly so the view model needs no navigation runtime.
@@ -851,13 +852,27 @@ class LogClimbViewModel @Inject constructor(
             .forEach { orphan -> kotlinx.coroutines.GlobalScope.launch { images.delete(orphan) } }
     }
 
+    /**
+     * Deletes the log at once and offers Undo. The saved photo and video stay on disk until the
+     * Undo has gone, so taking it back brings them too; media added since the last save goes now.
+     */
     fun confirmDelete() {
         viewModelScope.launch {
-            images.delete(_draft.value.savedImagePath)
-            if (_draft.value.imagePath != _draft.value.savedImagePath) images.delete(_draft.value.imagePath)
-            images.delete(_draft.value.savedVideoPath)
-            if (_draft.value.videoPath != _draft.value.savedVideoPath) images.delete(_draft.value.videoPath)
-            climbRepository.deleteClimb(climbId)
+            val draft = _draft.value
+            if (draft.imagePath != draft.savedImagePath) images.delete(draft.imagePath)
+            if (draft.videoPath != draft.savedVideoPath) images.delete(draft.videoPath)
+            val saved = listOfNotNull(draft.savedImagePath, draft.savedVideoPath)
+            val restore = climbRepository.deleteClimbUndoable(climbId)
+            val center = undo
+            if (restore != null && center != null) {
+                center.offer(
+                    "Deleted ${draft.name.trim().ifEmpty { "the log" }}",
+                    undo = restore,
+                    commit = { saved.forEach { images.delete(it) } },
+                )
+            } else {
+                saved.forEach { images.delete(it) }
+            }
             _draft.update { it.copy(confirmDelete = false, saved = true) }
         }
     }

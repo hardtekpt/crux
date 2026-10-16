@@ -63,16 +63,19 @@ import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.boardSizeLabel
 import com.hardtekpt.crux.data.prefs.GradeScales
+import com.hardtekpt.crux.ui.components.ActionSheet
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.GradeStrip
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.places.BoardSheet
@@ -687,21 +690,7 @@ internal fun sorted(climbs: List<DatasetClimb>, sort: ClimbSort): List<DatasetCl
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MenuSheet(title: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.testTag("dataset_sheet"),
-    ) {
-        Column(
-            Modifier.padding(horizontal = CruxTheme.space.s4).padding(bottom = CruxTheme.space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
-        ) {
-            Eyebrow(title, Modifier.padding(bottom = CruxTheme.space.s2))
-            content()
-        }
-    }
+    ActionSheet(title, onDismiss, Modifier.testTag("dataset_sheet")) { content() }
 }
 
 /** A dataset's name, board (with Kilter size) and grade scales, for New dataset and Edit details. */
@@ -712,61 +701,49 @@ internal fun DatasetDetailsSheet(initial: Dataset, title: String, confirm: Strin
     var nameError by remember { mutableStateOf<String?>(null) }
     var pickingBoard by remember { mutableStateOf(false) }
     var sizing by remember { mutableStateOf(false) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("dataset_details"),
+        title = title,
+        confirm = SheetButton(confirm, {
+            if (draft.name.isBlank()) {
+                nameError = "Give the dataset a name"
+            } else {
+                onSave(draft)
+            }
+        }, tag = "dataset_details_save"),
     ) {
-        Column(
-            Modifier.verticalScroll(
-                rememberScrollState(),
-            ).padding(horizontal = CruxTheme.space.s4).padding(bottom = CruxTheme.space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                CruxButton(confirm, {
-                    if (draft.name.isBlank()) {
-                        nameError = "Give the dataset a name"
-                    } else {
-                        onSave(draft)
-                    }
-                }, size = CruxButtonSize.Small, modifier = Modifier.testTag("dataset_details_save"))
-            }
-            CruxTextField(
-                label = "Name",
-                value = draft.name,
-                onValueChange = {
-                    draft = draft.copy(name = it.take(60))
-                    nameError = null
-                },
-                placeholder = "Garage board, Block Lab circuit",
-                error = nameError,
-                modifier = Modifier.testTag("field_dataset_name"),
-            )
-            DetailRow("Board", draft.boardLabel, "dataset_board") { pickingBoard = true }
-            draft.board?.takeIf { it.needsSize }?.let { board ->
-                DetailRow(
-                    "Size",
-                    listOfNotNull(
-                        draft.boardSize?.takeIf {
-                            it in board.sizes
-                        }?.let { boardSizeLabel(it) } ?: "Pick",
-                        draft.boardHolds?.label,
-                    ).joinToString(" · "),
-                    "dataset_board_size",
-                ) { sizing = true }
-            }
-            ScaleChoice("Boulder grades", Discipline.BOULDER, draft.boulderScale, "_dataset", allowLocal = false) { draft = draft.copy(boulderScale = it) }
-            ScaleChoice("Route grades", Discipline.ROUTE, draft.routeScale, "_dataset", allowLocal = false) { draft = draft.copy(routeScale = it) }
-            Text(
-                "Board is optional. Pick one to offer this list when you log on that board.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        CruxTextField(
+            label = "Name",
+            value = draft.name,
+            onValueChange = {
+                draft = draft.copy(name = it.take(60))
+                nameError = null
+            },
+            placeholder = "Garage board, Block Lab circuit",
+            error = nameError,
+            modifier = Modifier.testTag("field_dataset_name"),
+        )
+        DetailRow("Board", draft.boardLabel, "dataset_board") { pickingBoard = true }
+        draft.board?.takeIf { it.needsSize }?.let { board ->
+            DetailRow(
+                "Size",
+                listOfNotNull(
+                    draft.boardSize?.takeIf {
+                        it in board.sizes
+                    }?.let { boardSizeLabel(it) } ?: "Pick",
+                    draft.boardHolds?.label,
+                ).joinToString(" · "),
+                "dataset_board_size",
+            ) { sizing = true }
         }
+        ScaleChoice("Boulder grades", Discipline.BOULDER, draft.boulderScale, "_dataset", allowLocal = false) { draft = draft.copy(boulderScale = it) }
+        ScaleChoice("Route grades", Discipline.ROUTE, draft.routeScale, "_dataset", allowLocal = false) { draft = draft.copy(routeScale = it) }
+        Text(
+            "Board is optional. Pick one to offer this list when you log on that board.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     if (pickingBoard) {
         BoardSheet(
@@ -833,97 +810,91 @@ private fun ClimbSheet(
     var nameError by remember { mutableStateOf<String?>(null) }
     val duplicate =
         name.isNotBlank() && dataset.climbs.any { it.id != initial?.id && it.discipline == discipline && it.name.trim().equals(name.trim(), ignoreCase = true) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("climb_sheet"),
+        title = if (initial == null) "Add climb" else "Edit climb",
+        confirm = SheetButton("Save", {
+            if (name.isBlank()) {
+                nameError = "Give the climb a name"
+            } else {
+                onSave(
+                    DatasetClimb(
+                        id = initial?.id ?: 0,
+                        name = name,
+                        discipline = discipline,
+                        gradeScale = scale.takeIf { index != null },
+                        gradeIndex = index,
+                        setter = setter,
+                        note = note,
+                        createdAtMillis = initial?.createdAtMillis ?: 0,
+                    ),
+                )
+            }
+        }, tag = "climb_sheet_save"),
     ) {
-        Column(
-            Modifier.verticalScroll(
-                rememberScrollState(),
-            ).padding(horizontal = CruxTheme.space.s4).padding(bottom = CruxTheme.space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (initial == null) "Add climb" else "Edit climb", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                CruxButton("Save", {
-                    if (name.isBlank()) {
-                        nameError = "Give the climb a name"
-                    } else {
-                        onSave(
-                            DatasetClimb(
-                                id = initial?.id ?: 0,
-                                name = name,
-                                discipline = discipline,
-                                gradeScale = scale.takeIf { index != null },
-                                gradeIndex = index,
-                                setter = setter,
-                                note = note,
-                                createdAtMillis = initial?.createdAtMillis ?: 0,
-                            ),
-                        )
-                    }
-                }, size = CruxButtonSize.Small, modifier = Modifier.testTag("climb_sheet_save"))
-            }
-            CruxTextField(
-                label = "Name",
-                value = name,
-                onValueChange = {
-                    name = it.take(60)
-                    nameError = null
-                },
-                placeholder = "Roof to pinch",
-                error = nameError,
-                helper = "Already in this dataset".takeIf { duplicate },
-                modifier = Modifier.testTag("field_climb_name"),
-            )
-            CruxSegmentedButtons(
-                options = Discipline.entries,
-                selected = discipline,
-                label = { it.label },
-                onSelect = {
-                    discipline = it
-                    index = null
-                },
-                modifier = Modifier.fillMaxWidth().testTag("climb_discipline"),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Eyebrow("Grade · ${scale.label}", Modifier.weight(1f))
-                CruxFilterChip("No grade", index == null, { index = null }, Modifier.testTag("climb_no_grade"))
-            }
-            GradeStrip(
-                grades = scale.grades,
-                selectedIndex = index ?: scale.defaultIndex,
-                onSelect = { index = it },
-                tagPrefix = "dataset_grade",
-            )
-            CruxTextField(label = "Setter", value = setter, onValueChange = {
-                setter = it.take(40)
-            }, placeholder = "Optional", modifier = Modifier.testTag("field_climb_setter"))
-            CruxTextField(label = "Note", value = note, onValueChange = {
-                note = it.take(500)
-            }, placeholder = "Optional", singleLine = false, minLines = 2, modifier = Modifier.testTag("field_climb_note"))
-            if (onLog != null || onPlaylist != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s2)) {
-                    onLog?.let {
-                        CruxButton("Log this climb", it, icon = Icons.Rounded.Check, modifier = Modifier.weight(1f).testTag("climb_sheet_log"))
-                    }
-                    onPlaylist?.let {
-                        CruxButton(
-                            "Playlist",
-                            it,
-                            icon = Icons.Rounded.Add,
-                            variant = CruxButtonVariant.Outlined,
-                            modifier = Modifier.weight(1f).testTag("climb_sheet_playlist"),
-                        )
-                    }
+        CruxTextField(
+            label = "Name",
+            value = name,
+            onValueChange = {
+                name = it.take(60)
+                nameError = null
+            },
+            placeholder = "Roof to pinch",
+            error = nameError,
+            helper = "Already in this dataset".takeIf { duplicate },
+            modifier = Modifier.testTag("field_climb_name"),
+        )
+        CruxSegmentedButtons(
+            options = Discipline.entries,
+            selected = discipline,
+            label = { it.label },
+            onSelect = {
+                discipline = it
+                index = null
+            },
+            modifier = Modifier.fillMaxWidth().testTag("climb_discipline"),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Eyebrow("Grade · ${scale.label}", Modifier.weight(1f))
+            CruxFilterChip("No grade", index == null, { index = null }, Modifier.testTag("climb_no_grade"))
+        }
+        GradeStrip(
+            grades = scale.grades,
+            selectedIndex = index ?: scale.defaultIndex,
+            onSelect = { index = it },
+            tagPrefix = "dataset_grade",
+        )
+        CruxTextField(label = "Setter", value = setter, onValueChange = {
+            setter = it.take(40)
+        }, placeholder = "Optional", modifier = Modifier.testTag("field_climb_setter"))
+        CruxTextField(label = "Note", value = note, onValueChange = {
+            note = it.take(500)
+        }, placeholder = "Optional", singleLine = false, minLines = 2, modifier = Modifier.testTag("field_climb_note"))
+        if (onLog != null || onPlaylist != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s2)) {
+                onLog?.let {
+                    CruxButton(
+                        "Log this climb",
+                        it,
+                        icon = Icons.Rounded.Check,
+                        variant = CruxButtonVariant.Tonal,
+                        modifier = Modifier.weight(1f).testTag("climb_sheet_log"),
+                    )
+                }
+                onPlaylist?.let {
+                    CruxButton(
+                        "Playlist",
+                        it,
+                        icon = Icons.Rounded.Add,
+                        variant = CruxButtonVariant.Outlined,
+                        modifier = Modifier.weight(1f).testTag("climb_sheet_playlist"),
+                    )
                 }
             }
-            onDelete?.let {
-                TextButton(onClick = it, modifier = Modifier.testTag("climb_sheet_delete")) { Text("Delete climb", color = MaterialTheme.colorScheme.error) }
-            }
+        }
+        onDelete?.let {
+            TextButton(onClick = it, modifier = Modifier.testTag("climb_sheet_delete")) { Text("Delete climb", color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -949,123 +920,105 @@ private fun ImportSheet(
     val scaleFor = { d: Discipline -> draft.scaleFor(d, settings, into) }
     val unknown = remember(draft, into, settings) { DatasetFiles.unknownGrades(draft.parsed.climbs, scaleFor) }
     val space = CruxTheme.space
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    val result = draft.result
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("import_sheet"),
+        title = if (result != null) "Imported" else "Import ${draft.fileName}",
+        confirm = if (result != null) {
+            SheetButton("Done", { onDone(draft.intoId ?: datasets.firstOrNull { it.name == draft.name.trim() }?.id ?: 0) }, tag = "import_done")
+        } else {
+            SheetButton("Import", { onImport(scaleFor) }, enabled = draft.parsed.climbs.isNotEmpty(), tag = "import_confirm")
+        },
     ) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = space.s4).padding(bottom = space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            val result = draft.result
-            if (result != null) {
-                Text("Imported", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    listOfNotNull(
-                        "${result.added} added",
-                        "${result.replaced} replaced".takeIf { result.replaced > 0 },
-                        "${result.skipped} already there, skipped".takeIf { result.skipped > 0 },
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.testTag("import_result"),
-                )
-                CruxButton("Done", {
-                    onDone(draft.intoId ?: datasets.firstOrNull { it.name == draft.name.trim() }?.id ?: 0)
-                }, modifier = Modifier.fillMaxWidth().testTag("import_done"))
-                return@Column
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Import ${draft.fileName}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                CruxButton("Import", {
-                    onImport(scaleFor)
-                }, size = CruxButtonSize.Small, enabled = draft.parsed.climbs.isNotEmpty(), modifier = Modifier.testTag("import_confirm"))
-            }
+        if (result != null) {
             Text(
                 listOfNotNull(
-                    "${draft.parsed.climbs.size} ${if (draft.parsed.climbs.size == 1) "climb" else "climbs"} found",
-                    "${unknown.size} ${if (unknown.size == 1) "grade" else "grades"} not recognised, kept without a grade".takeIf { unknown.isNotEmpty() },
-                    "${draft.parsed.skipped} ${if (draft.parsed.skipped == 1) "row" else "rows"} without a name left out".takeIf { draft.parsed.skipped > 0 },
-                    "columns ignored: ${draft.parsed.ignoredColumns.joinToString(", ")}".takeIf { draft.parsed.ignoredColumns.isNotEmpty() },
+                    "${result.added} added",
+                    "${result.replaced} replaced".takeIf { result.replaced > 0 },
+                    "${result.skipped} already there, skipped".takeIf { result.skipped > 0 },
                 ).joinToString(" · "),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.testTag("import_result"),
+            )
+            return@CruxSheet
+        }
+        Text(
+            listOfNotNull(
+                "${draft.parsed.climbs.size} ${if (draft.parsed.climbs.size == 1) "climb" else "climbs"} found",
+                "${unknown.size} ${if (unknown.size == 1) "grade" else "grades"} not recognised, kept without a grade".takeIf { unknown.isNotEmpty() },
+                "${draft.parsed.skipped} ${if (draft.parsed.skipped == 1) "row" else "rows"} without a name left out".takeIf { draft.parsed.skipped > 0 },
+                "columns ignored: ${draft.parsed.ignoredColumns.joinToString(", ")}".takeIf { draft.parsed.ignoredColumns.isNotEmpty() },
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("import_summary"),
+        )
+        if (canPickInto && datasets.isNotEmpty()) {
+            Eyebrow("Into", Modifier.padding(top = space.s1))
+            CruxSegmentedButtons(
+                options = listOf(false, true),
+                selected = draft.intoId != null,
+                label = { if (it) "A dataset you have" else "New dataset" },
+                onSelect = { existing -> onChange { it.copy(intoId = if (existing) datasets.first().id else null) } },
+                modifier = Modifier.fillMaxWidth().testTag("import_into"),
+            )
+        }
+        if (draft.intoId == null) {
+            CruxTextField(label = "Name", value = draft.name, onValueChange = { name ->
+                onChange { it.copy(name = name.take(60)) }
+            }, modifier = Modifier.testTag("import_name"))
+            ScaleChoice("Boulder grades", Discipline.BOULDER, draft.dataset.boulderScale, "_import", allowLocal = false) { scale ->
+                onChange { it.copy(dataset = it.dataset.copy(boulderScale = scale)) }
+            }
+            ScaleChoice("Route grades", Discipline.ROUTE, draft.dataset.routeScale, "_import", allowLocal = false) { scale ->
+                onChange { it.copy(dataset = it.dataset.copy(routeScale = scale)) }
+            }
+        } else {
+            if (canPickInto) {
+                datasets.forEach { dataset ->
+                    CruxListRow(
+                        title = dataset.name,
+                        supporting = datasetLine(dataset),
+                        selected = dataset.id == draft.intoId,
+                        onClick = { onChange { it.copy(intoId = dataset.id) } },
+                        modifier = Modifier.testTag("import_into_${dataset.name}"),
+                    )
+                }
+            }
+            Eyebrow("A climb already there, by name and type", Modifier.padding(top = space.s1))
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                ClashChoice.entries.forEach { choice ->
+                    CruxFilterChip(choice.label, draft.clash == choice, {
+                        onChange { it.copy(clash = choice) }
+                    }, Modifier.testTag("import_clash_${choice.name}"))
+                }
+            }
+        }
+        Eyebrow("Preview", Modifier.padding(top = space.s1))
+        draft.parsed.climbs.take(PREVIEW_ROWS).forEach { raw ->
+            val scale = scaleFor(raw.discipline)
+            val index = raw.grade?.let { DatasetFiles.gradeIndex(scale, it) }
+            val known = raw.grade == null || index != null
+            CruxListRow(
+                title = raw.name,
+                supporting = if (known) raw.discipline.label else "grade \"${raw.grade}\" not recognised",
+                leading = {
+                    Text(
+                        index?.let(scale::label) ?: if (raw.grade == null) "–" else "?",
+                        style = CruxTheme.type.grade,
+                        color = if (known) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.width(44.dp),
+                    )
+                },
+            )
+        }
+        if (draft.parsed.climbs.size > PREVIEW_ROWS) {
+            Text(
+                "and ${draft.parsed.climbs.size - PREVIEW_ROWS} more",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("import_summary"),
             )
-            if (canPickInto && datasets.isNotEmpty()) {
-                Eyebrow("Into", Modifier.padding(top = space.s1))
-                CruxSegmentedButtons(
-                    options = listOf(false, true),
-                    selected = draft.intoId != null,
-                    label = { if (it) "A dataset you have" else "New dataset" },
-                    onSelect = { existing -> onChange { it.copy(intoId = if (existing) datasets.first().id else null) } },
-                    modifier = Modifier.fillMaxWidth().testTag("import_into"),
-                )
-            }
-            if (draft.intoId == null) {
-                CruxTextField(label = "Name", value = draft.name, onValueChange = { name ->
-                    onChange { it.copy(name = name.take(60)) }
-                }, modifier = Modifier.testTag("import_name"))
-                ScaleChoice("Boulder grades", Discipline.BOULDER, draft.dataset.boulderScale, "_import", allowLocal = false) { scale ->
-                    onChange { it.copy(dataset = it.dataset.copy(boulderScale = scale)) }
-                }
-                ScaleChoice("Route grades", Discipline.ROUTE, draft.dataset.routeScale, "_import", allowLocal = false) { scale ->
-                    onChange { it.copy(dataset = it.dataset.copy(routeScale = scale)) }
-                }
-            } else {
-                if (canPickInto) {
-                    datasets.forEach { dataset ->
-                        CruxListRow(
-                            title = dataset.name,
-                            supporting = datasetLine(dataset),
-                            selected = dataset.id == draft.intoId,
-                            onClick = { onChange { it.copy(intoId = dataset.id) } },
-                            modifier = Modifier.testTag("import_into_${dataset.name}"),
-                        )
-                    }
-                }
-                Eyebrow("A climb already there, by name and type", Modifier.padding(top = space.s1))
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                    ClashChoice.entries.forEach { choice ->
-                        CruxFilterChip(choice.label, draft.clash == choice, {
-                            onChange { it.copy(clash = choice) }
-                        }, Modifier.testTag("import_clash_${choice.name}"))
-                    }
-                }
-            }
-            Eyebrow("Preview", Modifier.padding(top = space.s1))
-            draft.parsed.climbs.take(PREVIEW_ROWS).forEach { raw ->
-                val scale = scaleFor(raw.discipline)
-                val index = raw.grade?.let { DatasetFiles.gradeIndex(scale, it) }
-                val known = raw.grade == null || index != null
-                CruxListRow(
-                    title = raw.name,
-                    supporting = if (known) raw.discipline.label else "grade \"${raw.grade}\" not recognised",
-                    leading = {
-                        Text(
-                            index?.let(scale::label) ?: if (raw.grade == null) "–" else "?",
-                            style = CruxTheme.type.grade,
-                            color = if (known) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.width(44.dp),
-                        )
-                    },
-                )
-            }
-            if (draft.parsed.climbs.size > PREVIEW_ROWS) {
-                Text(
-                    "and ${draft.parsed.climbs.size - PREVIEW_ROWS} more",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

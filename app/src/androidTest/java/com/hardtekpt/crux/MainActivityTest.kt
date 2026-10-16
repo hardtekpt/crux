@@ -270,7 +270,7 @@ class MainActivityTest {
         composeRule.waitForTag("session_edit_target")
         composeRule.onNodeWithTag("session_edit_target").performClick()
         composeRule.waitForTag("target_sheet")
-        composeRule.onNodeWithTag("target_done").performScrollTo().performClick()
+        composeRule.onNodeWithTag("target_done").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("target_sheet").fetchSemanticsNodes().isEmpty() }
 
         // A timer of its own runs in the dock; paused, it can be stopped.
@@ -278,7 +278,7 @@ class MainActivityTest {
         composeRule.waitForTag("session_timer")
         composeRule.onNodeWithTag("session_timer").performClick()
         composeRule.waitForTag("timer_start")
-        composeRule.onNodeWithTag("timer_start").performScrollTo().performClick()
+        composeRule.onNodeWithTag("timer_start").performClick()
         composeRule.waitForTag("timer_band")
         // Tapping the dock makes it big; Make small puts it back in the dock.
         composeRule.onNodeWithTag("timer_band").performClick()
@@ -292,7 +292,7 @@ class MainActivityTest {
 
         composeRule.onNodeWithTag("session_finish").performClick()
         composeRule.waitForTag("session_save")
-        composeRule.onNodeWithTag("session_save").performScrollTo().performClick()
+        composeRule.onNodeWithTag("session_save").performClick()
         composeRule.waitUntil(10_000) { composeRule.onAllNodesWithTag("screen_Session").fetchSemanticsNodes().isEmpty() }
 
         composeRule.onNodeWithTag("nav_Journal").performClick()
@@ -307,7 +307,7 @@ class MainActivityTest {
         composeRule.onNodeWithTag("edit_session").performClick()
         composeRule.waitForTag("edit_session_sheet")
         composeRule.textFieldIn("edit_session_notes").performTextInput("Felt strong")
-        composeRule.onNodeWithTag("edit_session_save").performScrollTo().performClick()
+        composeRule.onNodeWithTag("edit_session_save").performClick()
         composeRule.waitForTag("session_summary_notes")
     }
 
@@ -681,7 +681,6 @@ class MainActivityTest {
         composeRule.onNodeWithTag("journal_climb").performClick()
         composeRule.waitForTag("delete_climb")
         composeRule.onNodeWithTag("delete_climb").performClick()
-        composeRule.onNodeWithTag("confirm_delete").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("journal_climb").fetchSemanticsNodes().isEmpty() }
     }
 
@@ -693,7 +692,7 @@ class MainActivityTest {
         composeRule.waitForTag("day_sheet")
         composeRule.onNodeWithTag("day_plan_Strength day").performClick()
         composeRule.onNodeWithTag("day_climbing").performClick()
-        composeRule.onNodeWithTag("day_save").performScrollTo().performClick()
+        composeRule.onNodeWithTag("day_save").performClick()
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodes(
                 hasTestTag("week_plan") and hasAnyDescendant(hasText("Strength day")),

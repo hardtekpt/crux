@@ -60,11 +60,13 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.places.placeIcon
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -239,108 +241,103 @@ private fun WhereSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onClose,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onClose,
         modifier = Modifier.testTag("where_sheet"),
+        title = "Where",
+        action = SheetButton("Done", onClose, tag = "where_done"),
+        spacing = CruxTheme.space.s0,
+        scroll = false,
     ) {
-        Column(Modifier.padding(horizontal = CruxTheme.space.s4)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("Where", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                CruxButton("Done", onClose, size = CruxButtonSize.Small, modifier = Modifier.testTag("where_done"))
+        // The steps: tap one to go back to it. Later steps wait for a place.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = CruxTheme.space.s3),
+        ) {
+            steps.forEachIndexed { index, s ->
+                if (index > 0) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                val enabled = s == WhereStep.PLACE || place != null
+                Text(
+                    stepLabel(s),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = when {
+                        s == current -> MaterialTheme.colorScheme.primary
+                        enabled -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    },
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(enabled = enabled) { step = s }
+                        .padding(CruxTheme.space.s1)
+                        .testTag("where_step_${s.name}"),
+                )
             }
-            // The steps: tap one to go back to it. Later steps wait for a place.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = CruxTheme.space.s3),
-            ) {
-                steps.forEachIndexed { index, s ->
-                    if (index > 0) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    val enabled = s == WhereStep.PLACE || place != null
-                    Text(
-                        stepLabel(s),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = when {
-                            s == current -> MaterialTheme.colorScheme.primary
-                            enabled -> MaterialTheme.colorScheme.onSurface
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        },
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .clickable(enabled = enabled) { step = s }
-                            .padding(CruxTheme.space.s1)
-                            .testTag("where_step_${s.name}"),
-                    )
-                }
-            }
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
-                modifier = Modifier.navigationBarsPadding(),
-            ) {
-                // A place with several kinds: pick which part of it first; walls and problems follow.
-                if (place != null && place.hasSeveralTypes && current != WhereStep.PLACE) {
-                    item(key = "place_type") {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                            modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
-                        ) {
-                            place.sections.filter { draft.whereLimit == null || it.id in draft.whereLimit }.forEach { section ->
-                                CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, {
-                                    actions.selectSection(section.id)
-                                }, Modifier.testTag("where_section_${section.name}"))
-                            }
+        }
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+            contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
+            modifier = Modifier.navigationBarsPadding(),
+        ) {
+            // A place with several kinds: pick which part of it first; walls and problems follow.
+            if (place != null && place.hasSeveralTypes && current != WhereStep.PLACE) {
+                item(key = "place_type") {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                        modifier = Modifier.padding(bottom = CruxTheme.space.s2).testTag("where_place_type"),
+                    ) {
+                        place.sections.filter { draft.whereLimit == null || it.id in draft.whereLimit }.forEach { section ->
+                            CruxFilterChip(section.name, place.sectionFor(draft)?.id == section.id, {
+                                actions.selectSection(section.id)
+                            }, Modifier.testTag("where_section_${section.name}"))
                         }
                     }
                 }
-                when (current) {
-                    // The new place's walls may not have loaded yet, so decide from its summary.
-                    WhereStep.PLACE -> placeStep(
-                        draft,
-                        places.filter { summary -> draft.whereLimit == null || summary.place.sections.any { it.id in draft.whereLimit } },
-                        actions,
-                        onPicked = { picked ->
-                            when {
-                                picked.walls > 0 || picked.place.hasSeveralTypes -> step = WhereStep.AREA
-                                picked.place.sections.firstOrNull()?.let(actions.usesDatasets) == true -> step = WhereStep.CLIMB
-                                else -> onClose()
-                            }
-                        },
-                        onNew = { creatingPlace = true },
-                    )
-
-                    WhereStep.AREA -> if (detail != null) {
-                        areaStep(draft, detail, actions, onPicked = { area ->
-                            val section = area?.let { detail.place.sectionOf(it) } ?: detail.place.section(draft.sectionId)
-                            if (section != null && actions.usesDatasets(section)) step = WhereStep.CLIMB else onClose()
-                        })
-                    }
-
-                    WhereStep.CLIMB -> if (choices != null) {
-                        climbStep(draft, detail, choices, climbTab, { climbTab = it }, query, { query = it }, actions, onClose)
-                    }
-                }
-                if (place == null) {
-                    item(key = "venue") {
-                        Column(Modifier.padding(top = CruxTheme.space.s3), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-                            Eyebrow("No saved place · what kind of climbing?")
-                            CruxSegmentedButtons(
-                                options = listOf(Venue.GYM, Venue.CRAG, Venue.BOARD),
-                                selected = draft.venue,
-                                label = { it.label },
-                                onSelect = actions.setVenue,
-                                modifier = Modifier.testTag("venue"),
-                            )
+            }
+            when (current) {
+                // The new place's walls may not have loaded yet, so decide from its summary.
+                WhereStep.PLACE -> placeStep(
+                    draft,
+                    places.filter { summary -> draft.whereLimit == null || summary.place.sections.any { it.id in draft.whereLimit } },
+                    actions,
+                    onPicked = { picked ->
+                        when {
+                            picked.walls > 0 || picked.place.hasSeveralTypes -> step = WhereStep.AREA
+                            picked.place.sections.firstOrNull()?.let(actions.usesDatasets) == true -> step = WhereStep.CLIMB
+                            else -> onClose()
                         }
+                    },
+                    onNew = { creatingPlace = true },
+                )
+
+                WhereStep.AREA -> if (detail != null) {
+                    areaStep(draft, detail, actions, onPicked = { area ->
+                        val section = area?.let { detail.place.sectionOf(it) } ?: detail.place.section(draft.sectionId)
+                        if (section != null && actions.usesDatasets(section)) step = WhereStep.CLIMB else onClose()
+                    })
+                }
+
+                WhereStep.CLIMB -> if (choices != null) {
+                    climbStep(draft, detail, choices, climbTab, { climbTab = it }, query, { query = it }, actions, onClose)
+                }
+            }
+            if (place == null) {
+                item(key = "venue") {
+                    Column(Modifier.padding(top = CruxTheme.space.s3), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                        Eyebrow("No saved place · what kind of climbing?")
+                        CruxSegmentedButtons(
+                            options = listOf(Venue.GYM, Venue.CRAG, Venue.BOARD),
+                            selected = draft.venue,
+                            label = { it.label },
+                            onSelect = actions.setVenue,
+                            modifier = Modifier.testTag("venue"),
+                        )
                     }
                 }
-                if (place != null) {
-                    item(key = "skip") {
-                        CruxButton("Skip", next, variant = CruxButtonVariant.Text, modifier = Modifier.testTag("where_skip"))
-                    }
+            }
+            if (place != null) {
+                item(key = "skip") {
+                    CruxButton("Skip", next, variant = CruxButtonVariant.Text, modifier = Modifier.testTag("where_skip"))
                 }
             }
         }

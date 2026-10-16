@@ -233,7 +233,7 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
             Text(
                 "Also: " + more.joinToString(", "),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
         Text(

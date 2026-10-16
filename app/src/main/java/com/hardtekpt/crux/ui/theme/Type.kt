@@ -65,6 +65,8 @@ val CruxTypography = Typography(
 data class CruxType(
     val metricLarge: TextStyle = style(Archivo, 38, 42, 700, -0.02, tabular = true),
     val metricMedium: TextStyle = style(Archivo, 26, 30, 700, -0.015, tabular = true),
+    /** A figure inside a card or sheet (a StatStrip): smaller than a tile's, still the figure voice. */
+    val figure: TextStyle = style(Archivo, 20, 24, 800, -0.01, tabular = true),
     val grade: TextStyle = style(JetBrainsMono, 15, 18, 600, 0.02, tabular = true),
     val gradeSmall: TextStyle = style(JetBrainsMono, 13, 16, 600, 0.02, tabular = true),
     val timer: TextStyle = style(JetBrainsMono, 32, 34, 500, 0.01, tabular = true),

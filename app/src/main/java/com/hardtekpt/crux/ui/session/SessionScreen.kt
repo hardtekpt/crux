@@ -104,10 +104,12 @@ import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxValueStepper
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.EffortScale
 import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.displayName
@@ -996,8 +998,8 @@ fun SessionScreen(
         )
     }
     if (picking) {
-        ExercisePicker(
-            exercises = library,
+        com.hardtekpt.crux.ui.components.ExercisePickerSheet(
+            library = library,
             onPick = {
                 viewModel.addExercise(it)
                 picking = false
@@ -1139,7 +1141,8 @@ private fun ClimbTally(climbs: List<Climb>) {
     ) {
         TallyFigure(climbs.size.toString(), if (climbs.size == 1) "climb" else "climbs", Modifier.weight(1f))
         TallyFigure(sent.size.toString(), "sent", Modifier.weight(1f))
-        TallyFigure(hardest, "hardest send", Modifier.weight(1f), accent = true)
+        // The hardest send lights up only once there is one.
+        TallyFigure(hardest, "hardest send", Modifier.weight(1f), accent = sent.isNotEmpty())
     }
 }
 
@@ -1199,34 +1202,6 @@ internal fun SessionClimbLine(climb: Climb, onClick: (() -> Unit)?) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExercisePicker(exercises: List<Exercise>, onPick: (Exercise) -> Unit, onDismiss: () -> Unit) {
-    var query by rememberSaveable { mutableStateOf("") }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.testTag("exercise_picker"),
-    ) {
-        Column(Modifier.padding(horizontal = CruxTheme.space.s4).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-            Text("Add an exercise", style = MaterialTheme.typography.headlineSmall)
-            CruxTextField(label = "", value = query, onValueChange = { query = it }, placeholder = "Search the library")
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), contentPadding = PaddingValues(bottom = CruxTheme.space.s6)) {
-                items(exercises.filter { query.isBlank() || it.name.contains(query.trim(), ignoreCase = true) }, key = { it.id }) { exercise ->
-                    CruxListRow(
-                        title = exercise.name,
-                        supporting = exercise.metric.label,
-                        onClick = { onPick(exercise) },
-                        modifier = Modifier.testTag("pick_${exercise.name}"),
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** How it went, how hard it felt and a note; then save, or throw it away after asking. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1235,36 +1210,27 @@ private fun FinishSheet(session: Session, nowMillis: Long, onSave: (Int?, String
     var notes by rememberSaveable { mutableStateOf("") }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     val space = CruxTheme.space
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("finish_sheet"),
+        title = "Finish session",
+        confirm = SheetButton("Save session", { onSave(effort, notes) }, icon = Icons.Rounded.Check, tag = "session_save"),
+        spacing = space.s3,
     ) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = space.s4).padding(bottom = space.s4).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            Text("Finish session", style = MaterialTheme.typography.headlineSmall)
-            Eyebrow(session.name)
-            Text(clockLabel(session.durationMillis(nowMillis)), style = CruxTheme.type.metricMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
-                if (session.items.isNotEmpty()) TallyFigure("${session.setsDone}/${session.setsPlanned}", "sets done", Modifier.weight(1f))
-                TallyFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs", Modifier.weight(1f))
-                TallyFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
-            }
-            EffortScale(effort, { effort = it })
-            CruxTextField(label = "Notes", value = notes, onValueChange = {
-                notes = it.take(1000)
-            }, placeholder = "How it went", singleLine = false, minLines = 2)
-            CruxButton("Save session", {
-                onSave(effort, notes)
-            }, icon = Icons.Rounded.Check, size = CruxButtonSize.Large, modifier = Modifier.fillMaxWidth().testTag("session_save"))
-            CruxButton("Discard session", {
-                confirmDiscard = true
-            }, variant = CruxButtonVariant.Text, modifier = Modifier.fillMaxWidth().testTag("session_discard"))
+        Eyebrow(session.name)
+        Text(clockLabel(session.durationMillis(nowMillis)), style = CruxTheme.type.metricMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
+            if (session.items.isNotEmpty()) TallyFigure("${session.setsDone}/${session.setsPlanned}", "sets done", Modifier.weight(1f))
+            TallyFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs", Modifier.weight(1f))
+            TallyFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
         }
+        EffortScale(effort, { effort = it })
+        CruxTextField(label = "Notes", value = notes, onValueChange = {
+            notes = it.take(1000)
+        }, placeholder = "How it went", singleLine = false, minLines = 2)
+        CruxButton("Discard session", {
+            confirmDiscard = true
+        }, variant = CruxButtonVariant.Text, modifier = Modifier.fillMaxWidth().testTag("session_discard"))
     }
     if (confirmDiscard) {
         AlertDialog(

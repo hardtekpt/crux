@@ -74,8 +74,10 @@ import com.hardtekpt.crux.data.dashboard.toRows
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -575,31 +577,19 @@ private fun DashboardGrid(widgets: List<DashboardWidget>, spacing: androidx.comp
 
 @Composable
 private fun AddWidgetSheet(onAdd: (WidgetType) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
+        title = "Add widget",
     ) {
-        Column(
-            Modifier
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Text("Add widget", style = MaterialTheme.typography.headlineSmall)
-            Eyebrow("Widgets", Modifier.padding(bottom = CruxTheme.space.s1))
-            WidgetType.entries.forEach { type ->
-                CruxListRow(
-                    title = type.title,
-                    supporting = "${type.description} · ${type.sizes.joinToString(", ") { it.label.lowercase() }}",
-                    onClick = { onAdd(type) },
-                    trailing = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.testTag("catalog_${type.name}"),
-                )
-            }
+        Eyebrow("Widgets", Modifier.padding(bottom = CruxTheme.space.s1))
+        WidgetType.entries.forEach { type ->
+            CruxListRow(
+                title = type.title,
+                supporting = "${type.description} · ${type.sizes.joinToString(", ") { it.label.lowercase() }}",
+                onClick = { onAdd(type) },
+                trailing = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                modifier = Modifier.testTag("catalog_${type.name}"),
+            )
         }
     }
 }
@@ -617,52 +607,40 @@ private fun WidgetSetupSheet(
     onPick: (com.hardtekpt.crux.data.TrainingStat?, Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("widget_setup"),
+        title = setup.type.title,
     ) {
-        Column(
-            Modifier
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Text(setup.type.title, style = MaterialTheme.typography.headlineSmall)
-            if (setup.type == WidgetType.TRAINING) {
-                Eyebrow("Show", Modifier.padding(bottom = CruxTheme.space.s1))
-                com.hardtekpt.crux.data.TrainingStat.entries.forEach { stat ->
-                    CruxListRow(
-                        title = stat.label,
-                        supporting = stat.description,
-                        selected = current?.stat == stat,
-                        onClick = { onPick(stat, null) },
-                        modifier = Modifier.testTag("setup_${stat.name}"),
-                    )
-                }
-            } else {
-                Eyebrow("Exercise", Modifier.padding(bottom = CruxTheme.space.s1))
-                if (exercises.isEmpty()) {
-                    Text(
-                        "Finish a session or log a result on an exercise, then pick it here.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
-                exercises.sortedBy { it.exercise.name.lowercase() }.forEach { progress ->
-                    CruxListRow(
-                        title = progress.exercise.name,
-                        supporting = "Best " + progress.best.describe(progress.exercise.metric, imperial),
-                        selected = current?.exerciseId == progress.exercise.id,
-                        onClick = { onPick(null, progress.exercise.id) },
-                        modifier = Modifier.testTag("setup_exercise_${progress.exercise.name}"),
-                    )
-                }
+        if (setup.type == WidgetType.TRAINING) {
+            Eyebrow("Show", Modifier.padding(bottom = CruxTheme.space.s1))
+            com.hardtekpt.crux.data.TrainingStat.entries.forEach { stat ->
+                CruxListRow(
+                    title = stat.label,
+                    supporting = stat.description,
+                    selected = current?.stat == stat,
+                    onClick = { onPick(stat, null) },
+                    modifier = Modifier.testTag("setup_${stat.name}"),
+                )
+            }
+        } else {
+            Eyebrow("Exercise", Modifier.padding(bottom = CruxTheme.space.s1))
+            if (exercises.isEmpty()) {
+                Text(
+                    "Finish a session or log a result on an exercise, then pick it here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
+            exercises.sortedBy { it.exercise.name.lowercase() }.forEach { progress ->
+                CruxListRow(
+                    title = progress.exercise.name,
+                    supporting = "Best " + progress.best.describe(progress.exercise.metric, imperial),
+                    selected = current?.exerciseId == progress.exercise.id,
+                    onClick = { onPick(null, progress.exercise.id) },
+                    modifier = Modifier.testTag("setup_exercise_${progress.exercise.name}"),
+                )
             }
         }
     }

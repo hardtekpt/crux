@@ -128,7 +128,7 @@ fun WeekBars(weeks: List<TrainingWeek>, scheduled: Boolean, modifier: Modifier =
                                 .fillMaxWidth()
                                 .fillMaxHeight(fraction.coerceIn(0.06f, 1f))
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (now) colors.secondary else colors.primary.copy(alpha = 0.85f)),
+                                .background(if (now) colors.primary else colors.primary.copy(alpha = 0.55f)),
                         )
                     }
                 }

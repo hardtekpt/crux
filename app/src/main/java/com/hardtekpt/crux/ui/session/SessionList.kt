@@ -375,7 +375,7 @@ private fun ValueStepper(field: Field, values: SetValues, imperial: Boolean, onC
 internal fun ClimbsCard(climbs: List<com.hardtekpt.crux.data.model.Climb>, onLogMore: (Long) -> Unit, onLogClimb: () -> Unit) {
     val sent = climbs.count { it.style.isSend }
     val hardest = climbs.filter { it.style.isSend }.maxByOrNull { it.gradeIndex }?.grade
-    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs"), outline = MaterialTheme.colorScheme.secondary) {
+    CruxCard(modifier = Modifier.fillMaxWidth().testTag("session_climbs")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (climbs.isEmpty()) "Climbs" else "Climbs · ${climbs.size} · $sent sent",
@@ -520,25 +520,7 @@ internal fun PlaylistPicker(playlists: List<com.hardtekpt.crux.data.Playlist>, o
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MenuSheet(title: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.testTag("session_menu"),
-    ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s4)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
-        ) {
-            Eyebrow(title, Modifier.padding(bottom = CruxTheme.space.s2))
-            content()
-        }
-    }
+    com.hardtekpt.crux.ui.components.ActionSheet(title, onDismiss, Modifier.testTag("session_menu")) { content() }
 }
 
 /** A small dot of colour, for counts in the dock. */

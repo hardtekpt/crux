@@ -65,7 +65,9 @@ import com.hardtekpt.crux.data.model.formatDuration
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 
@@ -82,9 +84,9 @@ internal object TimerColors {
     val cycleRest: Color
         @Composable get() = CruxTheme.colors.timerCycleRest
 
-    /** The rest between sets, which isn't part of an interval timer. */
+    /** The rest between sets: the same blue as an interval timer's rest, so a rest always looks like a rest. */
     val setRest: Color
-        @Composable get() = MaterialTheme.colorScheme.secondary
+        @Composable get() = CruxTheme.colors.timerRest
 
     @Composable
     fun of(kind: IntervalPhase.Kind): Color = when (kind) {
@@ -144,65 +146,51 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
     val spec = IntervalSpec(prep, work, rest, repeats, cycles, cycleRest)
     val space = CruxTheme.space
     val colors = MaterialTheme.colorScheme
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = colors.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("timer_setup"),
+        title = "Interval timer",
+        confirm = SheetButton("Start", { onStart(spec) }, icon = Icons.Rounded.PlayArrow, tag = "timer_start"),
     ) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = space.s4).padding(bottom = space.s4).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            Text("Interval timer", style = MaterialTheme.typography.headlineSmall)
-            Text(
-                title ?: "A timer of its own. Nothing is logged.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.onSurfaceVariant,
-            )
-            if (title == null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                    listOf("Tabata" to IntervalSpec.TABATA, "Repeaters" to IntervalSpec.REPEATERS).forEach { (name, preset) ->
-                        CruxButton(
-                            name,
-                            {
-                                prep = preset.prepSeconds
-                                work = preset.workSeconds
-                                rest = preset.restSeconds
-                                repeats = preset.repeats
-                                cycles = preset.cycles
-                                cycleRest = preset.cycleRestSeconds
-                            },
-                            variant = if (spec == preset) CruxButtonVariant.Tonal else CruxButtonVariant.Outlined,
-                            size = CruxButtonSize.Small,
-                            modifier = Modifier.testTag("timer_preset_$name"),
-                        )
-                    }
+        Text(
+            title ?: "A timer of its own. Nothing is logged.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+        )
+        if (title == null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                listOf("Tabata" to IntervalSpec.TABATA, "Repeaters" to IntervalSpec.REPEATERS).forEach { (name, preset) ->
+                    CruxButton(
+                        name,
+                        {
+                            prep = preset.prepSeconds
+                            work = preset.workSeconds
+                            rest = preset.restSeconds
+                            repeats = preset.repeats
+                            cycles = preset.cycles
+                            cycleRest = preset.cycleRestSeconds
+                        },
+                        variant = if (spec == preset) CruxButtonVariant.Tonal else CruxButtonVariant.Outlined,
+                        size = CruxButtonSize.Small,
+                        modifier = Modifier.testTag("timer_preset_$name"),
+                    )
                 }
             }
-            IntervalFields(spec.toSettings()) {
-                prep = it.prepSeconds
-                work = it.workSeconds
-                rest = it.restSeconds
-                repeats = it.repeats
-                cycles = it.cycles
-                cycleRest = it.cycleRestSeconds
-            }
-            Text(
-                "Takes ${formatDuration(spec.totalSeconds)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.onSurfaceVariant,
-                modifier = Modifier.padding(top = space.s1),
-            )
-            CruxButton(
-                "Start",
-                { onStart(spec) },
-                icon = Icons.Rounded.PlayArrow,
-                size = CruxButtonSize.Large,
-                modifier = Modifier.fillMaxWidth().testTag("timer_start"),
-            )
         }
+        IntervalFields(spec.toSettings()) {
+            prep = it.prepSeconds
+            work = it.workSeconds
+            rest = it.restSeconds
+            repeats = it.repeats
+            cycles = it.cycles
+            cycleRest = it.cycleRestSeconds
+        }
+        Text(
+            "Takes ${formatDuration(spec.totalSeconds)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.padding(top = space.s1),
+        )
     }
 }
 

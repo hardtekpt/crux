@@ -40,7 +40,7 @@ A menu of pages:
   **ape index**), standing reach, weight and body fat. Below them are a weight chart (1M, 3M, 1Y or
   all) and every weigh-in.
 - **Circumferences**: forearm, bicep and thigh (left and right), chest and waist.
-- **Notes**: all your notes, pinned first, with tag filters. Tap one to edit, pin, tag or delete it.
+- **Notes**: all your notes, pinned first, with tag filters. Tap one to edit, pin, tag or delete it (with **Undo**, as for a deleted log).
 - **Places**: your gyms, crags and boards. See [Places](places.md).
 - **Datasets**: your lists of climbs to pick from, like a home board or a gym circuit. See [Datasets](datasets.md).
 - **Grade converter**: pick a system and a grade, and see it in every other system (French, YDS,

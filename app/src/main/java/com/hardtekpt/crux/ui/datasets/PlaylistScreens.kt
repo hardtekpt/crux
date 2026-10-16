@@ -75,12 +75,15 @@ import com.hardtekpt.crux.data.PlaylistItem
 import com.hardtekpt.crux.data.PlaylistRepository
 import com.hardtekpt.crux.data.datasetsFor
 import com.hardtekpt.crux.data.triedKey
+import com.hardtekpt.crux.ui.components.ActionSheet
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -460,7 +463,7 @@ private fun ReorderableItems(
                                         Box(
                                             Modifier
                                                 .size(8.dp)
-                                                .background(if (sent) CruxTheme.colors.success else MaterialTheme.colorScheme.secondary, CircleShape),
+                                                .background(if (sent) CruxTheme.colors.success else MaterialTheme.colorScheme.outline, CircleShape),
                                         )
                                     }
                                 }
@@ -478,21 +481,7 @@ private fun ReorderableItems(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PlaylistMenuSheet(title: String, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.testTag("playlist_sheet"),
-    ) {
-        Column(
-            Modifier.padding(horizontal = CruxTheme.space.s4).padding(bottom = CruxTheme.space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1),
-        ) {
-            Eyebrow(title, Modifier.padding(bottom = CruxTheme.space.s2))
-            content()
-        }
-    }
+    ActionSheet(title, onDismiss, Modifier.testTag("playlist_sheet")) { content() }
 }
 
 /** A playlist's name and an optional note, for New playlist and Rename. */
@@ -509,44 +498,35 @@ internal fun PlaylistDetailsSheet(
     var name by remember { mutableStateOf(initialName) }
     var note by remember { mutableStateOf(initialNote) }
     var error by remember { mutableStateOf<String?>(null) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("playlist_details"),
+        title = title,
+        confirm = SheetButton(confirm, {
+            if (name.isBlank()) error = "Give the playlist a name" else onSave(name, note.ifBlank { null })
+        }, tag = "playlist_details_save"),
+        scroll = false,
     ) {
-        Column(
-            Modifier.padding(horizontal = CruxTheme.space.s4).padding(bottom = CruxTheme.space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                CruxButton(confirm, {
-                    if (name.isBlank()) error = "Give the playlist a name" else onSave(name, note.ifBlank { null })
-                }, size = CruxButtonSize.Small, modifier = Modifier.testTag("playlist_details_save"))
-            }
-            CruxTextField(
-                label = "Name",
-                value = name,
-                onValueChange = {
-                    name = it.take(60)
-                    error = null
-                },
-                placeholder = "Tonight, 7A benchmarks",
-                error = error,
-                modifier = Modifier.testTag("field_playlist_name"),
-            )
-            CruxTextField(
-                label = "Note",
-                value = note,
-                onValueChange = { note = it.take(300) },
-                placeholder = "Optional",
-                singleLine = false,
-                minLines = 2,
-                modifier = Modifier.testTag("field_playlist_note"),
-            )
-        }
+        CruxTextField(
+            label = "Name",
+            value = name,
+            onValueChange = {
+                name = it.take(60)
+                error = null
+            },
+            placeholder = "Tonight, 7A benchmarks",
+            error = error,
+            modifier = Modifier.testTag("field_playlist_name"),
+        )
+        CruxTextField(
+            label = "Note",
+            value = note,
+            onValueChange = { note = it.take(300) },
+            placeholder = "Optional",
+            singleLine = false,
+            minLines = 2,
+            modifier = Modifier.testTag("field_playlist_note"),
+        )
     }
 }
 
@@ -556,47 +536,35 @@ internal fun PlaylistDetailsSheet(
 internal fun AddToPlaylistSheet(count: Int, playlists: List<Playlist>, onPick: (Long) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
     var creating by rememberSaveable { mutableStateOf(playlists.isEmpty()) }
     var name by rememberSaveable { mutableStateOf("") }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("add_to_playlist"),
+        title = if (count == 1) "Add to a playlist" else "Add $count climbs to a playlist",
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Text(if (count == 1) "Add to a playlist" else "Add $count climbs to a playlist", style = MaterialTheme.typography.headlineSmall)
-            playlists.forEach { list ->
-                CruxListRow(
-                    title = list.name,
-                    supporting = playlistLine(list),
-                    onClick = { onPick(list.id) },
-                    modifier = Modifier.testTag("add_to_${list.name}"),
-                )
-            }
-            if (creating) {
-                CruxTextField(
-                    label = "New playlist",
-                    value = name,
-                    onValueChange = { name = it.take(60) },
-                    placeholder = "Tonight",
-                    modifier = Modifier.testTag("field_new_playlist"),
-                )
-                CruxButton("Create and add", { onNew(name) }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().testTag("new_playlist_add"))
-            } else {
-                CruxListRow(
-                    title = "New playlist",
-                    leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    onClick = { creating = true },
-                    modifier = Modifier.testTag("add_to_new"),
-                )
-            }
+        playlists.forEach { list ->
+            CruxListRow(
+                title = list.name,
+                supporting = playlistLine(list),
+                onClick = { onPick(list.id) },
+                modifier = Modifier.testTag("add_to_${list.name}"),
+            )
+        }
+        if (creating) {
+            CruxTextField(
+                label = "New playlist",
+                value = name,
+                onValueChange = { name = it.take(60) },
+                placeholder = "Tonight",
+                modifier = Modifier.testTag("field_new_playlist"),
+            )
+            CruxButton("Create and add", { onNew(name) }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().testTag("new_playlist_add"))
+        } else {
+            CruxListRow(
+                title = "New playlist",
+                leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = { creating = true },
+                modifier = Modifier.testTag("add_to_new"),
+            )
         }
     }
 }
@@ -614,12 +582,12 @@ internal fun PlaylistRow(playlist: Playlist, onOpen: () -> Unit) {
         leading = {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small),
+                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small),
             ) {
                 Icon(
                     Icons.AutoMirrored.Rounded.PlaylistPlay,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         },

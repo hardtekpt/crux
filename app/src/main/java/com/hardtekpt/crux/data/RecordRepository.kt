@@ -108,6 +108,12 @@ interface RecordRepository {
     fun observeAll(): Flow<List<ExerciseRecord>>
     suspend fun addRecord(exerciseId: Long, date: LocalDate, reps: Int?, seconds: Int?, loadKg: Double?, notes: String?): Long
     suspend fun deleteRecord(id: Long)
+
+    /** Deletes a result logged by hand and returns what puts it back, or null if it can't. */
+    suspend fun deleteRecordUndoable(id: Long): (suspend () -> Unit)? {
+        deleteRecord(id)
+        return null
+    }
 }
 
 class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : RecordRepository {
@@ -161,6 +167,14 @@ class OfflineRecordRepository @Inject constructor(private val dbs: CruxDatabases
     /** Only results logged by hand go; a session's sets are changed in its session. */
     override suspend fun deleteRecord(id: Long) {
         if (id > 0) dbs.current().exerciseRecordDao().delete(id)
+    }
+
+    override suspend fun deleteRecordUndoable(id: Long): (suspend () -> Unit)? {
+        if (id <= 0) return null
+        val dao = dbs.current().exerciseRecordDao()
+        val record = dao.getAll().firstOrNull { it.id == id } ?: return null
+        dao.delete(id)
+        return { dao.insert(record) }
     }
 }
 

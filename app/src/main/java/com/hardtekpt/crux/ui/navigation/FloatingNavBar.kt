@@ -1,11 +1,8 @@
 package com.hardtekpt.crux.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -43,6 +41,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.theme.CruxTheme
 
 /** Height of the floating bar itself, without its margin. */
@@ -93,7 +92,7 @@ fun FloatingNavBar(
             if (selectedIndex >= 0) {
                 val indicatorOffset by animateDpAsState(
                     targetValue = TabWidth * selectedIndex + (TabWidth - IndicatorSize) / 2,
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+                    animationSpec = CruxMotion.medium(),
                     label = "indicator",
                 )
                 Box(
@@ -132,10 +131,10 @@ private fun NavTab(destination: TopLevelDestination, selected: Boolean, onClick:
     val colors = MaterialTheme.colorScheme
     val tint by animateColorAsState(
         targetValue = if (selected) colors.primary else colors.onSurfaceVariant,
-        animationSpec = tween(150),
+        animationSpec = CruxMotion.fast(),
         label = "tint",
     )
-    val scale by animateFloatAsState(if (selected) 1.1f else 1f, tween(150), label = "scale")
+    val scale by animateFloatAsState(if (selected) 1.1f else 1f, CruxMotion.fast(), label = "scale")
     Box(
         modifier = Modifier
             .width(TabWidth)
@@ -157,8 +156,13 @@ private fun NavTab(destination: TopLevelDestination, selected: Boolean, onClick:
             destination.icon,
             contentDescription = null,
             tint = tint,
+            // Scaled in the draw phase, so the row isn't measured again on every frame.
             modifier = Modifier
-                .size(CruxTheme.size.iconMd * scale),
+                .size(CruxTheme.size.iconMd)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
         )
     }
 }
@@ -166,7 +170,7 @@ private fun NavTab(destination: TopLevelDestination, selected: Boolean, onClick:
 @Composable
 private fun LogButton(open: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val rotation by animateFloatAsState(if (open) 45f else 0f, tween(250), label = "rotation")
+    val rotation by animateFloatAsState(if (open) 45f else 0f, CruxMotion.medium(), label = "rotation")
     Box(
         modifier = Modifier
             .size(LogButtonSize)

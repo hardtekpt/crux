@@ -540,17 +540,18 @@ private fun PlaceFigure(value: Int, label: String, detail: String, modifier: Mod
         modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(14.dp))
-            .background(if (highlight) colors.secondaryContainer else colors.surfaceContainerLow)
-            .border(CruxTheme.size.borderHairline, if (highlight) colors.secondary else colors.outlineVariant, RoundedCornerShape(14.dp))
+            .background(colors.surfaceContainerLow)
+            .border(CruxTheme.size.borderHairline, colors.outlineVariant, RoundedCornerShape(14.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        Text(value.toString(), style = CruxTheme.type.metricMedium, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
-        Text(label, style = MaterialTheme.typography.labelLarge, color = if (highlight) colors.onSecondaryContainer else colors.onSurface)
+        // Open projects are worth noticing: the figure turns amber, the tile stays a tile.
+        Text(value.toString(), style = CruxTheme.type.metricMedium, color = if (highlight) colors.secondary else colors.onSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
         Text(
             detail,
             style = MaterialTheme.typography.bodySmall,
-            color = if (highlight) colors.onSecondaryContainer.copy(alpha = 0.8f) else colors.onSurfaceVariant,
+            color = colors.onSurfaceVariant,
         )
     }
 }

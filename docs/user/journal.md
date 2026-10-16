@@ -68,7 +68,8 @@ Photos are copied into Crux and scaled to at most 2048 px, so they survive the o
 deleted. Videos are copied as they are.
 
 To change a log, tap it in the Journal. To remove it, use **Delete**; it disappears from your
-journal, bests and charts.
+journal, bests and charts at once, and **Undo** shows above the nav bar for a few seconds in case
+it was a slip. Undo brings back the log with its photo and video.
 
 ## Notes
 

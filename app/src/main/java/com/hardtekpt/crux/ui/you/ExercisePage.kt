@@ -88,6 +88,7 @@ class ExerciseRecordsViewModel @Inject constructor(
     private val records: RecordRepository,
     templates: TemplateRepository? = null,
     schedule: ScheduleRepository? = null,
+    private val undo: com.hardtekpt.crux.ui.UndoCenter? = null,
 ) : ViewModel() {
     val exerciseId: Long = savedStateHandle.get<Long>("exerciseId") ?: 0L
 
@@ -108,8 +109,12 @@ class ExerciseRecordsViewModel @Inject constructor(
     }
         .flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExercisePageState())
 
+    /** Deletes a result at once, with Undo. */
     fun delete(id: Long) {
-        viewModelScope.launch { records.deleteRecord(id) }
+        viewModelScope.launch {
+            val restore = records.deleteRecordUndoable(id)
+            if (restore != null) undo?.offer("Deleted the result", undo = restore)
+        }
     }
 }
 

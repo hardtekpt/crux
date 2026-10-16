@@ -64,6 +64,12 @@ interface NoteRepository {
     /** Creates when [id] is 0; returns the note's id. */
     suspend fun saveNote(id: Long, text: String, pinned: Boolean, tag: String? = null): Long
     suspend fun deleteNote(id: Long)
+
+    /** Deletes the note and returns what puts it back as it was, or null if it can't. */
+    suspend fun deleteNoteUndoable(id: Long): (suspend () -> Unit)? {
+        deleteNote(id)
+        return null
+    }
 }
 
 class OfflineNoteRepository @Inject constructor(private val dbs: CruxDatabases, private val clock: Clock) : NoteRepository {
@@ -85,6 +91,13 @@ class OfflineNoteRepository @Inject constructor(private val dbs: CruxDatabases, 
     }
 
     override suspend fun deleteNote(id: Long) = dbs.current().noteDao().delete(id)
+
+    override suspend fun deleteNoteUndoable(id: Long): (suspend () -> Unit)? {
+        val dao = dbs.current().noteDao()
+        val note = dao.get(id) ?: return null
+        dao.delete(id)
+        return { dao.insert(note) }
+    }
 
     private fun NoteEntity.toModel() = Note(
         id = id,

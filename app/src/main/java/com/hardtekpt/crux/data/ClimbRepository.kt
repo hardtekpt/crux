@@ -30,6 +30,12 @@ interface ClimbRepository {
     /** Replaces a logged climb's details, keeping when it was first logged. */
     suspend fun updateClimb(id: Long, climb: NewClimb)
     suspend fun deleteClimb(id: Long)
+
+    /** Deletes the log and returns what puts it back exactly (its climb, photo and video rows), or null if it can't. */
+    suspend fun deleteClimbUndoable(id: Long): (suspend () -> Unit)? {
+        deleteClimb(id)
+        return null
+    }
     fun observeClimbsForProblem(problemId: Long): Flow<List<Climb>>
     fun observeClimbsAtPlace(placeId: Long): Flow<List<Climb>>
 
@@ -140,6 +146,26 @@ class OfflineClimbRepository @Inject constructor(private val dbs: CruxDatabases,
             val problemId = db.climbDao().get(id)?.problemId
             db.climbDao().delete(id)
             problemId?.let { dropIfEmpty(db, it) }
+        }
+    }
+
+    override suspend fun deleteClimbUndoable(id: Long): (suspend () -> Unit)? {
+        val db = dbs.current()
+        return db.withTransaction {
+            val climb = db.climbDao().get(id) ?: return@withTransaction null
+            val media = MediaKind.entries.mapNotNull { db.climbMediaDao().get(id, it) }
+            val problem = climb.problemId?.let { db.placeDao().getProblem(it) }
+            db.climbDao().delete(id)
+            val dropped = problem?.takeIf { db.climbDao().countForProblem(it.id) == 0 }
+            dropped?.let { db.placeDao().deleteProblem(it.id) }
+            val restore: suspend () -> Unit = {
+                db.withTransaction {
+                    dropped?.let { if (db.placeDao().getProblem(it.id) == null) db.placeDao().insertProblem(it) }
+                    db.climbDao().insert(climb)
+                    media.forEach { db.climbMediaDao().insert(it) }
+                }
+            }
+            restore
         }
     }
 

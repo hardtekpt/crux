@@ -44,7 +44,9 @@ import com.hardtekpt.crux.data.TemplateRepository
 import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
@@ -88,38 +90,34 @@ class SessionsViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartSessionSheet(plans: List<WorkoutTemplate>, onStart: (Long?) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("start_session_sheet"),
+        title = "Start a session",
+        scroll = false,
     ) {
-        Column(Modifier.padding(horizontal = CruxTheme.space.s4).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-            Text("Start a session", style = MaterialTheme.typography.headlineSmall)
-            Eyebrow("Log climbs and sets as you go", Modifier.padding(bottom = CruxTheme.space.s2))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), contentPadding = PaddingValues(bottom = CruxTheme.space.s6)) {
-                item(key = "free") {
-                    CruxListRow(
-                        title = "Without a plan",
-                        supporting = "A climbing day or an unplanned workout",
-                        leading = { Icon(Icons.Rounded.Landscape, contentDescription = null) },
-                        trailing = { Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null) },
-                        onClick = { onStart(null) },
-                        modifier = Modifier.testTag("start_free"),
-                    )
-                }
-                if (plans.isNotEmpty()) item(key = "plans") { Eyebrow("From a plan", Modifier.padding(top = CruxTheme.space.s2)) }
-                items(plans, key = { it.id }) { plan ->
-                    CruxListRow(
-                        title = plan.name,
-                        supporting = "${plan.exerciseCount} exercises · about ${plan.estimatedMinutes} min",
-                        leading = { Icon(Icons.Rounded.FitnessCenter, contentDescription = null) },
-                        trailing = { Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null) },
-                        onClick = { onStart(plan.id) },
-                        modifier = Modifier.testTag("start_plan_${plan.name}"),
-                    )
-                }
+        Eyebrow("Log climbs and sets as you go", Modifier.padding(bottom = CruxTheme.space.s2))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), contentPadding = PaddingValues(bottom = CruxTheme.space.s6)) {
+            item(key = "free") {
+                CruxListRow(
+                    title = "Without a plan",
+                    supporting = "A climbing day or an unplanned workout",
+                    leading = { Icon(Icons.Rounded.Landscape, contentDescription = null) },
+                    trailing = { Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null) },
+                    onClick = { onStart(null) },
+                    modifier = Modifier.testTag("start_free"),
+                )
+            }
+            if (plans.isNotEmpty()) item(key = "plans") { Eyebrow("From a plan", Modifier.padding(top = CruxTheme.space.s2)) }
+            items(plans, key = { it.id }) { plan ->
+                CruxListRow(
+                    title = plan.name,
+                    supporting = "${plan.exerciseCount} exercises · about ${plan.estimatedMinutes} min",
+                    leading = { Icon(Icons.Rounded.FitnessCenter, contentDescription = null) },
+                    trailing = { Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null) },
+                    onClick = { onStart(plan.id) },
+                    modifier = Modifier.testTag("start_plan_${plan.name}"),
+                )
             }
         }
     }

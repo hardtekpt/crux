@@ -50,6 +50,24 @@ the composition's density.
   `CruxSegmentedButtons`, `CruxFilterChip`.
 - **Inputs**: `CruxTextField`, `CruxStepper`, `CruxValueStepper`.
 
+### Sheets, figures and undo
+
+- **`CruxSheet`** (`components/Sheets.kt`) is every bottom sheet: handle, colour, corners, insets and a
+  title row. Its one rule for actions: a sheet that commits something passes `confirm` (a full-width
+  filled button pinned at the bottom); a sheet that only picks passes nothing and closes on a tap;
+  a step inside a flow (Where) passes `action`, a text button at the top right. Never a filled button
+  in the content as well. **`ActionSheet`** is the menu form: the thing's name as a mono eyebrow,
+  then `CruxListRow`s. Don't call `ModalBottomSheet` directly.
+- **`StatStrip`** (`components/Stats.kt`) is figures inside a card or sheet: no border or fill of
+  their own, so there are no cards inside cards. A `notable` figure turns amber. Standalone figures
+  on the screen's ground are `StatTile`s.
+- **`ExercisePickerSheet`** is the one exercise picker, for plans and sessions.
+- **Deletes**: something simple (a log, a note, a result) is deleted at once and offered to
+  `UndoCenter` (`ui/UndoCenter.kt`) with a restore and an optional commit; the app shell shows the
+  Undo snackbar above the nav bar. Repositories expose `delete…Undoable`, which returns the restore.
+  Deletes that cascade (places, plans, datasets) keep a confirm dialog that says what goes with them.
+- **Amber** (`secondary`) is for bests, streak highlights and cautions only. Rests are `timerRest`.
+
 ### The touch input kit (`components/input/`)
 
 Built for logging with one thumb, often with chalky fingers. Everything can also be typed: tap the

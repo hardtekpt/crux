@@ -78,12 +78,14 @@ import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.ImageViewer
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.VideoPlayer
 import com.hardtekpt.crux.ui.components.VideoThumbnail
 import com.hardtekpt.crux.ui.components.input.DayStrip
@@ -152,7 +154,8 @@ fun LogClimbScreen(
         onNoBeta = viewModel::setNoBeta,
         earlierLogs = earlierLogs,
         onOpenLog = onOpenLog,
-        onDelete = viewModel::requestDelete,
+        // Deletes at once; the app offers Undo.
+        onDelete = viewModel::confirmDelete,
         onDiscipline = viewModel::setDiscipline,
         onGrade = viewModel::setGrade,
         onDate = viewModel::setDate,
@@ -180,26 +183,6 @@ fun LogClimbScreen(
             )
         },
     )
-    if (draft.confirmDelete) {
-        AlertDialog(
-            onDismissRequest = viewModel::cancelDelete,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text("Delete this log?", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                Text(
-                    "These goes are removed from your journal, bests and charts. If it's the climb's only log, the climb goes too.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Keep") } },
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -472,12 +455,12 @@ private fun ClimbMedia(
     }
 }
 
-/** The day button beside the place: "Today", or the picked day in amber so it isn't missed. */
+/** The day button beside the place: "Today", or the picked day edged in the accent so it isn't missed. */
 @Composable
 private fun DayButton(date: LocalDate, today: LocalDate, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val past = date != today
-    val tint = if (past) colors.secondary else colors.primary
+    val tint = colors.primary
     val shape = MaterialTheme.shapes.medium
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -487,7 +470,7 @@ private fun DayButton(date: LocalDate, today: LocalDate, onClick: () -> Unit) {
             .widthIn(min = 64.dp)
             .clip(shape)
             .background(colors.surfaceContainerLow, shape)
-            .border(CruxTheme.size.borderHairline, if (past) colors.secondary else colors.outlineVariant, shape)
+            .border(if (past) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline, if (past) colors.primary else colors.outlineVariant, shape)
             .clickable(onClickLabel = "Change the day", onClick = onClick)
             .padding(vertical = CruxTheme.space.s2, horizontal = CruxTheme.space.s1)
             .testTag("climb_day"),
@@ -849,81 +832,63 @@ data class AngleChoice(val angle: Int?, val board: com.hardtekpt.crux.data.model
 private fun AngleSheet(choice: AngleChoice, onDismiss: () -> Unit) {
     val space = CruxTheme.space
     val board = choice.board
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("angle_sheet"),
+        title = "Board angle",
+        action = if (choice.angle != null) SheetButton("Clear", { choice.onChange(null) }, tag = "angle_clear") else null,
+        confirm = SheetButton("Done", {
+            // Opening the stepper and leaving it as it shows sets that angle.
+            if (choice.angle == null && board?.angles == null) choice.onChange(40)
+            onDismiss()
+        }, tag = "angle_done"),
+        spacing = space.s3,
+        scroll = false,
     ) {
-        Column(
-            Modifier
-                .padding(horizontal = space.s4)
-                .padding(bottom = space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Board angle", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                if (choice.angle != null) {
-                    androidx.compose.material3.TextButton(onClick = { choice.onChange(null) }, modifier = Modifier.testTag("angle_clear")) { Text("Clear") }
-                }
-            }
-            val angles = board?.angles
-            Text(
-                if (board != null &&
-                    angles != null
-                ) {
-                    "${board.label} is set at ${angles.joinToString(" or ") { "$it°" }}."
-                } else {
-                    "Saved as the first line of the note."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (angles != null) {
-                com.hardtekpt.crux.ui.components.CruxSegmentedButtons(
-                    options = angles,
-                    selected = choice.angle ?: -1,
-                    label = { "$it°" },
-                    onSelect = { choice.onChange(it) },
-                    modifier = Modifier.fillMaxWidth().testTag("angle_options"),
-                )
+        val angles = board?.angles
+        Text(
+            if (board != null &&
+                angles != null
+            ) {
+                "${board.label} is set at ${angles.joinToString(" or ") { "$it°" }}."
             } else {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    com.hardtekpt.crux.ui.components.CruxStepper(
-                        choice.angle ?: 40,
-                        { choice.onChange(it) },
-                        com.hardtekpt.crux.data.model.BoardAngleNote.RANGE,
-                        "°",
-                        step = com.hardtekpt.crux.data.model.BoardAngleNote.STEP,
-                        testTagPrefix = "angle",
+                "Saved as the first line of the note."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (angles != null) {
+            com.hardtekpt.crux.ui.components.CruxSegmentedButtons(
+                options = angles,
+                selected = choice.angle ?: -1,
+                label = { "$it°" },
+                onSelect = { choice.onChange(it) },
+                modifier = Modifier.fillMaxWidth().testTag("angle_options"),
+            )
+        } else {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                com.hardtekpt.crux.ui.components.CruxStepper(
+                    choice.angle ?: 40,
+                    { choice.onChange(it) },
+                    com.hardtekpt.crux.data.model.BoardAngleNote.RANGE,
+                    "°",
+                    step = com.hardtekpt.crux.data.model.BoardAngleNote.STEP,
+                    testTagPrefix = "angle",
+                )
+            }
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(space.s2),
+                verticalArrangement = Arrangement.spacedBy(space.s2),
+            ) {
+                listOf(20, 25, 30, 35, 40, 45, 50).forEach { quick ->
+                    com.hardtekpt.crux.ui.components.CruxFilterChip(
+                        label = "$quick°",
+                        selected = choice.angle == quick,
+                        onClick = { choice.onChange(quick) },
+                        modifier = Modifier.testTag("angle_$quick"),
                     )
                 }
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(space.s2),
-                    verticalArrangement = Arrangement.spacedBy(space.s2),
-                ) {
-                    listOf(20, 25, 30, 35, 40, 45, 50).forEach { quick ->
-                        com.hardtekpt.crux.ui.components.CruxFilterChip(
-                            label = "$quick°",
-                            selected = choice.angle == quick,
-                            onClick = { choice.onChange(quick) },
-                            modifier = Modifier.testTag("angle_$quick"),
-                        )
-                    }
-                }
             }
-            com.hardtekpt.crux.ui.components.CruxButton(
-                "Done",
-                {
-                    // Opening the stepper and leaving it as it shows sets that angle.
-                    if (choice.angle == null && angles == null) choice.onChange(40)
-                    onDismiss()
-                },
-                variant = com.hardtekpt.crux.ui.components.CruxButtonVariant.Tonal,
-                modifier = Modifier.fillMaxWidth().testTag("angle_done"),
-            )
         }
     }
 }

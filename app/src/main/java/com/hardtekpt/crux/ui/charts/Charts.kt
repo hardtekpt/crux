@@ -1,8 +1,6 @@
 package com.hardtekpt.crux.ui.charts
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,6 +46,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.hardtekpt.crux.ui.components.CruxMotion
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -89,8 +88,9 @@ fun TimeSeriesChart(
     var selected by remember(points) { mutableStateOf<Int?>(null) }
     // Plot left/right edges from the last draw, for mapping touches to points.
     val plotEdges = remember { FloatArray(2) }
-    val reveal = remember(points) { Animatable(0f) }
-    LaunchedEffect(points) { reveal.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
+    // Draws in once, the first time it shows; new data (another range or filter) just redraws.
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, CruxMotion.slow()) }
 
     if (sorted.isEmpty()) return
     val scale = remember(sorted) { niceScale(sorted.minOf { it.y }, sorted.maxOf { it.y }) }
@@ -228,8 +228,9 @@ fun BarChart(
     val measurer = rememberTextMeasurer()
     val axisStyle = MaterialTheme.typography.labelMedium.copy(color = colors.onSurfaceVariant)
     val valueStyle = CruxTheme.type.code.copy(color = colors.onSurface)
-    val reveal = remember(bars) { Animatable(0f) }
-    LaunchedEffect(bars) { reveal.animateTo(1f, tween(500, easing = FastOutSlowInEasing)) }
+    // Draws in once, the first time it shows; new data (another range or filter) just redraws.
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, CruxMotion.slow()) }
     if (bars.isEmpty()) return
     val maxValue = bars.maxOf { it.value }.takeIf { it > 0 } ?: 1.0
 
@@ -302,8 +303,9 @@ fun HorizontalBarList(
 ) {
     val colors = MaterialTheme.colorScheme
     val max = rows.maxOfOrNull { it.value }?.takeIf { it > 0 } ?: 1.0
-    val reveal = remember(rows) { Animatable(0f) }
-    LaunchedEffect(rows) { reveal.animateTo(1f, tween(500, easing = FastOutSlowInEasing)) }
+    // Draws in once, the first time it shows; new data (another range or filter) just redraws.
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, CruxMotion.slow()) }
     Column(modifier.testTag("horizontal_bars"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         rows.forEachIndexed { index, row ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -363,8 +365,9 @@ fun DonutChart(
     val shown = remember(slices) { foldSlices(slices.filter { it.value > 0 }) }
     val total = shown.sumOf { it.value }.takeIf { it > 0 } ?: 1.0
     var selected by remember(slices) { mutableStateOf<Int?>(null) }
-    val reveal = remember(slices) { Animatable(0f) }
-    LaunchedEffect(slices) { reveal.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
+    // Draws in once, the first time it shows; new data (another range or filter) just redraws.
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, CruxMotion.slow()) }
     fun colorAt(i: Int) = if (i < CATEGORICAL_SLOTS) palette[i] else colors.outline
 
     Row(

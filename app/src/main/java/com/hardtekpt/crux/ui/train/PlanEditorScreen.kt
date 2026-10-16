@@ -51,11 +51,13 @@ import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxCard
 import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.CruxValueStepper
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.DurationWheel
 import com.hardtekpt.crux.ui.components.input.InputRow
 import com.hardtekpt.crux.ui.components.input.LoadWheel
@@ -158,7 +160,7 @@ fun PlanEditorScreen(onDone: () -> Unit, viewModel: PlanEditorViewModel = hiltVi
     }
 
     if (draft.pickingFor != null) {
-        ExercisePickerSheet(library = library, onPick = viewModel::addExercise, onDismiss = viewModel::closePicker)
+        com.hardtekpt.crux.ui.components.ExercisePickerSheet(library = library, onPick = viewModel::addExercise, onDismiss = viewModel::closePicker)
     }
     draft.editingItem?.let { item ->
         TargetSheet(
@@ -253,54 +255,6 @@ private fun SmallIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, des
     }
 }
 
-@Composable
-private fun ExercisePickerSheet(library: List<Exercise>, onPick: (Exercise) -> Unit, onDismiss: () -> Unit) {
-    var query by rememberSaveable { mutableStateOf("") }
-    val matches = library.filter { it.name.contains(query.trim(), ignoreCase = true) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-    ) {
-        Column(Modifier.padding(horizontal = CruxTheme.space.s4)) {
-            Text("Add exercise", style = MaterialTheme.typography.headlineSmall)
-            CruxTextField(
-                label = "Search the library",
-                value = query,
-                onValueChange = { query = it },
-                placeholder = "Hang, pull-up, core",
-                modifier = Modifier
-                    .padding(top = CruxTheme.space.s3)
-                    .testTag("exercise_search"),
-            )
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                contentPadding = PaddingValues(bottom = CruxTheme.space.s8),
-                modifier = Modifier.navigationBarsPadding(),
-            ) {
-                if (matches.isEmpty()) {
-                    item {
-                        Text(
-                            if (library.isEmpty()) "Your library is empty. Add exercises from Train › Exercises." else "Nothing matches \"$query\".",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                items(matches, key = { it.id }) { exercise ->
-                    CruxListRow(
-                        title = exercise.name,
-                        supporting = "${exercise.category.label} · ${exercise.metric.label}",
-                        onClick = { onPick(exercise) },
-                        modifier = Modifier.testTag("pick_${exercise.name}"),
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** Targets for one exercise; only the fields its metric uses are shown. [note] says where the change applies. */
 @Composable
 internal fun TargetSheet(
@@ -312,43 +266,25 @@ internal fun TargetSheet(
     extra: (@Composable () -> Unit)? = null,
 ) {
     val metric = exercise.metric
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("target_sheet"),
+        title = exercise.name,
+        confirm = SheetButton("Done", onDismiss, tag = "target_done"),
+        spacing = CruxTheme.space.s3,
     ) {
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
-        ) {
-            Text(exercise.name, style = MaterialTheme.typography.headlineSmall)
-            Text(
-                target.prescription(metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
-                style = CruxTheme.type.code,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (metric.usesIntervals) {
-                IntervalTargets(target, metric.usesLoad, onChange)
-            } else {
-                StandardTargets(target, metric, onChange)
-            }
-            extra?.invoke()
-            CruxButton(
-                text = "Done",
-                onClick = onDismiss,
-                variant = CruxButtonVariant.Tonal,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("target_done"),
-            )
+        Text(
+            target.prescription(metric, com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL),
+            style = CruxTheme.type.code,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (metric.usesIntervals) {
+            IntervalTargets(target, metric.usesLoad, onChange)
+        } else {
+            StandardTargets(target, metric, onChange)
         }
+        extra?.invoke()
     }
 }
 

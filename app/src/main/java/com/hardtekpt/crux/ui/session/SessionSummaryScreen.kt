@@ -57,8 +57,10 @@ import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.data.model.Place
 import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.ui.LocalUnits
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
@@ -357,51 +359,34 @@ private fun EditSessionSheet(
     var text by remember { mutableStateOf(notes) }
     var picking by remember { mutableStateOf<String?>(null) }
     val space = CruxTheme.space
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("edit_session_sheet"),
+        title = "Edit session",
+        confirm = SheetButton("Save changes", { onSave(pickedDay, from, to, felt, text) }, icon = Icons.Rounded.Check, tag = "edit_session_save"),
+        spacing = space.s3,
     ) {
-        Column(
-            Modifier
-                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                .padding(horizontal = space.s4)
-                .padding(bottom = space.s4)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            Text("Edit session", style = MaterialTheme.typography.headlineSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                WhenField("Day", pickedDay.dayLabel(), "edit_session_day", Modifier.weight(1.4f)) { picking = "day" }
-                WhenField("Started", from.format(TIME), "edit_session_start", Modifier.weight(1f)) { picking = "start" }
-                WhenField("Finished", to.format(TIME), "edit_session_end", Modifier.weight(1f)) { picking = "end" }
-            }
-            val minutes = java.time.Duration.between(from, to).toMinutes().let { if (it < 0) it + 24 * 60 else it }
-            Text(
-                "${durationLabel(minutes * 60_000L)} long" + if (to.isBefore(from)) ", past midnight" else "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            com.hardtekpt.crux.ui.components.input.EffortScale(felt, { felt = it })
-            com.hardtekpt.crux.ui.components.CruxTextField(
-                label = "Notes",
-                value = text,
-                onValueChange = { text = it.take(1000) },
-                placeholder = "How it went",
-                singleLine = false,
-                minLines = 2,
-                modifier = Modifier.testTag("edit_session_notes"),
-            )
-            com.hardtekpt.crux.ui.components.CruxButton(
-                "Save changes",
-                { onSave(pickedDay, from, to, felt, text) },
-                icon = Icons.Rounded.Check,
-                size = com.hardtekpt.crux.ui.components.CruxButtonSize.Large,
-                modifier = Modifier.fillMaxWidth().testTag("edit_session_save"),
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+            WhenField("Day", pickedDay.dayLabel(), "edit_session_day", Modifier.weight(1.4f)) { picking = "day" }
+            WhenField("Started", from.format(TIME), "edit_session_start", Modifier.weight(1f)) { picking = "start" }
+            WhenField("Finished", to.format(TIME), "edit_session_end", Modifier.weight(1f)) { picking = "end" }
         }
+        val minutes = java.time.Duration.between(from, to).toMinutes().let { if (it < 0) it + 24 * 60 else it }
+        Text(
+            "${durationLabel(minutes * 60_000L)} long" + if (to.isBefore(from)) ", past midnight" else "",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        com.hardtekpt.crux.ui.components.input.EffortScale(felt, { felt = it })
+        com.hardtekpt.crux.ui.components.CruxTextField(
+            label = "Notes",
+            value = text,
+            onValueChange = { text = it.take(1000) },
+            placeholder = "How it went",
+            singleLine = false,
+            minLines = 2,
+            modifier = Modifier.testTag("edit_session_notes"),
+        )
     }
     when (picking) {
         "day" -> com.hardtekpt.crux.ui.components.input.PastDayDialog(pickedDay, today, { pickedDay = it }) { picking = null }

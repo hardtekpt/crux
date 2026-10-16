@@ -74,9 +74,11 @@ import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -428,56 +430,48 @@ private fun CatalogueClimbSheet(
 ) {
     val space = CruxTheme.space
     val here = climb.gradeAt(angle)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("catalogue_climb_sheet"),
     ) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = space.s4).padding(bottom = space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(climb.name, style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        listOfNotNull(climb.setter?.let { "set by $it" }, climb.setterAngle?.let { "at $it°" }).joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(boardGrade(here?.difficulty, scales), style = CruxTheme.type.grade)
-            }
-            // The holds on the board; tap for the whole board.
-            val frames = climb.frames
-            if (board != null && frames != null) {
-                com.hardtekpt.crux.ui.components.BoardDiagramCard(board, frames, climb.name, Modifier.fillMaxWidth())
-                com.hardtekpt.crux.ui.components.HoldLegend(frames)
-                com.hardtekpt.crux.ui.components.LightButton(board, frames, climb.name)
-            }
-            climb.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            Eyebrow("By angle", Modifier.padding(top = space.s2))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                climb.grades.forEach { grade ->
-                    CruxFilterChip(
-                        "${grade.angle}° ${boardGrade(grade.difficulty, scales)} · ${count(grade.ascents)}",
-                        grade.angle == here?.angle,
-                        {},
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s2)) {
-                CruxButton("Log this climb", onLog, icon = Icons.Rounded.Check, modifier = Modifier.weight(1f).testTag("catalogue_log"))
-                CruxButton(
-                    "Playlist",
-                    onPlaylist,
-                    icon = Icons.Rounded.Add,
-                    variant = CruxButtonVariant.Outlined,
-                    modifier = Modifier.weight(1f).testTag("catalogue_playlist"),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(climb.name, style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    listOfNotNull(climb.setter?.let { "set by $it" }, climb.setterAngle?.let { "at $it°" }).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Text(boardGrade(here?.difficulty, scales), style = CruxTheme.type.grade)
+        }
+        // The holds on the board; tap for the whole board.
+        val frames = climb.frames
+        if (board != null && frames != null) {
+            com.hardtekpt.crux.ui.components.BoardDiagramCard(board, frames, climb.name, Modifier.fillMaxWidth())
+            com.hardtekpt.crux.ui.components.HoldLegend(frames)
+            com.hardtekpt.crux.ui.components.LightButton(board, frames, climb.name)
+        }
+        climb.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        Eyebrow("By angle", Modifier.padding(top = space.s2))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+            climb.grades.forEach { grade ->
+                CruxFilterChip(
+                    "${grade.angle}° ${boardGrade(grade.difficulty, scales)} · ${count(grade.ascents)}",
+                    grade.angle == here?.angle,
+                    {},
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s2)) {
+            CruxButton("Log this climb", onLog, icon = Icons.Rounded.Check, modifier = Modifier.weight(1f).testTag("catalogue_log"))
+            CruxButton(
+                "Playlist",
+                onPlaylist,
+                icon = Icons.Rounded.Add,
+                variant = CruxButtonVariant.Outlined,
+                modifier = Modifier.weight(1f).testTag("catalogue_playlist"),
+            )
         }
     }
 }
@@ -497,90 +491,85 @@ internal fun CatalogueImportSheet(
     onDismiss: () -> Unit,
 ) {
     val space = CruxTheme.space
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("catalogue_import_sheet"),
     ) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = space.s4).padding(bottom = space.s6).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            when (state) {
-                CatalogueImporter.State.Idle, is CatalogueImporter.State.Failed -> Unit
+        when (state) {
+            CatalogueImporter.State.Idle, is CatalogueImporter.State.Failed -> Unit
 
-                CatalogueImporter.State.Reading -> {
-                    Text("Reading the file…", style = MaterialTheme.typography.headlineSmall)
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                }
+            CatalogueImporter.State.Reading -> {
+                Text("Reading the file…", style = MaterialTheme.typography.headlineSmall)
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
 
-                is CatalogueImporter.State.Ready -> {
-                    val inspection = state.inspection
-                    val board = inspection.board
-                    val mine = yours.firstOrNull { it.first == board }
-                    var name by rememberSaveable { mutableStateOf(board.label) }
-                    var size by rememberSaveable { mutableStateOf(mine?.second?.takeIf { it in board.sizes } ?: board.sizes.firstOrNull()) }
-                    var holds by rememberSaveable { mutableStateOf(mine?.third ?: BoardHolds.FULL_RIDE.takeIf { board.hasHolds }) }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Import ${board.label}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                        CruxButton("Import", {
-                            onImport(name, size, holds)
-                        }, size = CruxButtonSize.Small, modifier = Modifier.testTag("catalogue_import_confirm"))
-                    }
-                    Text(
-                        "${"%,d".format(inspection.climbs)} climbs in ${inspection.fileName}" +
-                            if (board.needsSize) ". Only those for your size are kept." else ".",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CruxTextField(label = "Name", value = name, onValueChange = { name = it.take(60) }, modifier = Modifier.testTag("catalogue_import_name"))
-                    if (board.needsSize) {
-                        Eyebrow("Your board's size", Modifier.padding(top = space.s1))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                            board.sizes.forEach { option ->
-                                CruxFilterChip(boardSizeLabel(option), size == option, { size = option }, Modifier.testTag("catalogue_size_$option"))
-                            }
+            is CatalogueImporter.State.Ready -> {
+                val inspection = state.inspection
+                val board = inspection.board
+                val mine = yours.firstOrNull { it.first == board }
+                var name by rememberSaveable { mutableStateOf(board.label) }
+                var size by rememberSaveable { mutableStateOf(mine?.second?.takeIf { it in board.sizes } ?: board.sizes.firstOrNull()) }
+                var holds by rememberSaveable { mutableStateOf(mine?.third ?: BoardHolds.FULL_RIDE.takeIf { board.hasHolds }) }
+                Text("Import ${board.label}", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "${"%,d".format(inspection.climbs)} climbs in ${inspection.fileName}" +
+                        if (board.needsSize) ". Only those for your size are kept." else ".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                CruxTextField(label = "Name", value = name, onValueChange = { name = it.take(60) }, modifier = Modifier.testTag("catalogue_import_name"))
+                if (board.needsSize) {
+                    Eyebrow("Your board's size", Modifier.padding(top = space.s1))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                        board.sizes.forEach { option ->
+                            CruxFilterChip(boardSizeLabel(option), size == option, { size = option }, Modifier.testTag("catalogue_size_$option"))
                         }
                     }
-                    if (board.hasHolds) {
-                        Eyebrow("Holds", Modifier.padding(top = space.s1))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                            BoardHolds.entries.forEach { option ->
-                                CruxFilterChip(option.label, holds == option, { holds = option }, Modifier.testTag("catalogue_holds_${option.key}"))
-                            }
+                }
+                if (board.hasHolds) {
+                    Eyebrow("Holds", Modifier.padding(top = space.s1))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                        BoardHolds.entries.forEach { option ->
+                            CruxFilterChip(option.label, holds == option, { holds = option }, Modifier.testTag("catalogue_holds_${option.key}"))
                         }
                     }
-                    Text(
-                        "The catalogue stays on this phone, apart from your data: it isn't in backups or exports.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
+                Text(
+                    "The catalogue stays on this phone, apart from your data: it isn't in backups or exports.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                CruxButton(
+                    "Import",
+                    { onImport(name, size, holds) },
+                    size = CruxButtonSize.Large,
+                    modifier = Modifier.fillMaxWidth().padding(top = space.s2).testTag("catalogue_import_confirm"),
+                )
+            }
 
-                is CatalogueImporter.State.Importing -> {
-                    Text("Importing ${state.board.label}", style = MaterialTheme.typography.headlineSmall)
-                    LinearProgressIndicator(
-                        progress = { if (state.total == 0) 0f else (state.done.toFloat() / state.total).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().testTag("catalogue_import_progress"),
-                    )
-                    Text(
-                        "You can leave this page; the import carries on.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            is CatalogueImporter.State.Importing -> {
+                Text("Importing ${state.board.label}", style = MaterialTheme.typography.headlineSmall)
+                LinearProgressIndicator(
+                    progress = { if (state.total == 0) 0f else (state.done.toFloat() / state.total).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().testTag("catalogue_import_progress"),
+                )
+                Text(
+                    "You can leave this page; the import carries on.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-                is CatalogueImporter.State.Done -> {
-                    Text("Imported ${state.name}", style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        "${"%,d".format(state.climbs)} climbs",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.testTag("catalogue_import_result"),
-                    )
-                    CruxButton("Open", { onOpen(state.datasetId) }, modifier = Modifier.fillMaxWidth().testTag("catalogue_import_open"))
-                }
+            is CatalogueImporter.State.Done -> {
+                Text("Imported ${state.name}", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "${"%,d".format(state.climbs)} climbs",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.testTag("catalogue_import_result"),
+                )
+                CruxButton("Open", {
+                    onOpen(state.datasetId)
+                }, size = CruxButtonSize.Large, modifier = Modifier.fillMaxWidth().testTag("catalogue_import_open"))
             }
         }
     }

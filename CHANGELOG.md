@@ -6,6 +6,27 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Changed
+
+- **Undo instead of "Are you sure?"**: deleting a log, a note or a result on an exercise page
+  happens at once, with **Undo** above the nav bar for a few seconds. A log's photo and video come
+  back too. Deletes that take other things with them (a place, a plan, a dataset) still ask first.
+- **Sheets work the same way everywhere**: a sheet that saves, creates or imports has its button at
+  the bottom, in reach of your thumb, and it stays put while the sheet scrolls. A sheet that only
+  picks closes when you tap your pick. Steps inside a form, like Where in Log climb, have **Done**
+  at the top.
+- **Amber now means a best**: rests between sets use the same blue as an interval timer's rests,
+  climbing days on the Week and Home's week strip are marked with the climbing icon and a ring,
+  and open projects are an amber number rather than an amber block.
+- Place cards are calmer: what's at a place is a line of text, and its numbers sit straight on the
+  card instead of in boxes of their own.
+- Snappier motion: the nav bar's highlight slides without a bounce, the bar comes back sooner after
+  a form, and charts draw in quickly the first time instead of redrawing on every filter.
+
+### Fixed
+
+- In landscape, the interval timer's big number no longer runs off the bottom of the screen.
+
 ## [0.5.0] - 2026-10-15
 
 ### Added

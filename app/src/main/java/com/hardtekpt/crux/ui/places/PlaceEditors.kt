@@ -93,10 +93,12 @@ import com.hardtekpt.crux.ui.components.CruxCardFill
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxStepper
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.input.GradeStrip
 import com.hardtekpt.crux.ui.components.input.TapeSwatch
 import com.hardtekpt.crux.ui.components.input.argb
@@ -233,77 +235,59 @@ private fun DatasetLinksSheet(
     onDismiss: () -> Unit,
 ) {
     val asSection = section.asSection()
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("dataset_links_sheet"),
+        title = "Datasets · ${section.name.ifBlank { section.type.label }}",
+        action = SheetButton("Done", onDismiss, tag = "dataset_links_done"),
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Datasets · ${section.name.ifBlank { section.type.label }}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                CruxButton("Done", onDismiss, size = CruxButtonSize.Small, modifier = Modifier.testTag("dataset_links_done"))
-            }
-            Text(
-                "Ticked datasets are offered when you log a climb here.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (datasets.isEmpty()) {
-                Text("You have no datasets yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = CruxTheme.space.s2))
-            }
-            datasets.forEach { dataset ->
-                val auto = dataset.fitsBoard(asSection)
-                val ticked = auto || dataset.id in section.datasetIds.orEmpty()
-                CruxListRow(
-                    title = dataset.name,
-                    supporting = listOfNotNull(
-                        "Same board".takeIf { auto },
-                        dataset.boardLabel,
-                        "${dataset.climbs.size} ${if (dataset.climbs.size == 1) "climb" else "climbs"}",
-                    ).joinToString(" · "),
-                    leading = {
-                        androidx.compose.material3.Checkbox(
-                            checked = ticked,
-                            onCheckedChange = null,
-                            enabled = !auto,
-                        )
-                    },
-                    onClick = if (auto) null else ({ onToggle(dataset.id, !ticked) }),
-                    modifier = Modifier.testTag("dataset_link_${dataset.name}"),
-                )
-            }
+        Text(
+            "Ticked datasets are offered when you log a climb here.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (datasets.isEmpty()) {
+            Text("You have no datasets yet.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = CruxTheme.space.s2))
+        }
+        datasets.forEach { dataset ->
+            val auto = dataset.fitsBoard(asSection)
+            val ticked = auto || dataset.id in section.datasetIds.orEmpty()
             CruxListRow(
-                title = "New dataset for this ${if (section.type == PlaceType.BOARD) "board" else section.type.label.lowercase()}",
-                leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                onClick = {
-                    onNew(
-                        com.hardtekpt.crux.data.Dataset(
-                            name = section.name.ifBlank { section.type.label },
-                            board = section.board.takeIf { section.type == PlaceType.BOARD },
-                            customBoard = section.type == PlaceType.BOARD && section.board == null,
-                            boardSize = section.boardSize.takeIf { section.type == PlaceType.BOARD },
-                            boardHolds = section.boardHolds.takeIf { section.type == PlaceType.BOARD },
-                            boulderScale = section.boulderScale?.takeIf { !it.isLocal },
-                            routeScale = section.routeScale?.takeIf { !it.isLocal && section.type != PlaceType.BOARD },
-                        ),
+                title = dataset.name,
+                supporting = listOfNotNull(
+                    "Same board".takeIf { auto },
+                    dataset.boardLabel,
+                    "${dataset.climbs.size} ${if (dataset.climbs.size == 1) "climb" else "climbs"}",
+                ).joinToString(" · "),
+                leading = {
+                    androidx.compose.material3.Checkbox(
+                        checked = ticked,
+                        onCheckedChange = null,
+                        enabled = !auto,
                     )
                 },
-                modifier = Modifier.testTag("dataset_link_new"),
+                onClick = if (auto) null else ({ onToggle(dataset.id, !ticked) }),
+                modifier = Modifier.testTag("dataset_link_${dataset.name}"),
             )
         }
+        CruxListRow(
+            title = "New dataset for this ${if (section.type == PlaceType.BOARD) "board" else section.type.label.lowercase()}",
+            leading = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            onClick = {
+                onNew(
+                    com.hardtekpt.crux.data.Dataset(
+                        name = section.name.ifBlank { section.type.label },
+                        board = section.board.takeIf { section.type == PlaceType.BOARD },
+                        customBoard = section.type == PlaceType.BOARD && section.board == null,
+                        boardSize = section.boardSize.takeIf { section.type == PlaceType.BOARD },
+                        boardHolds = section.boardHolds.takeIf { section.type == PlaceType.BOARD },
+                        boulderScale = section.boulderScale?.takeIf { !it.isLocal },
+                        routeScale = section.routeScale?.takeIf { !it.isLocal && section.type != PlaceType.BOARD },
+                    ),
+                )
+            },
+            modifier = Modifier.testTag("dataset_link_new"),
+        )
     }
 }
 
@@ -1143,52 +1127,40 @@ internal fun BoardSheet(
     onNoBoard: (() -> Unit)? = null,
     noBoardSelected: Boolean = false,
 ) {
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("board_sheet"),
+        title = "Board",
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-        ) {
-            Text("Board", style = MaterialTheme.typography.headlineSmall)
-            onNoBoard?.let {
-                CruxListRow(
-                    title = "No board",
-                    supporting = "A gym circuit or a crag's climbs",
-                    selected = noBoardSelected,
-                    onClick = it,
-                    modifier = Modifier.testTag("board_option_none"),
-                )
-            }
-            com.hardtekpt.crux.data.model.BoardModel.entries.groupBy { it.maker }.forEach { (maker, models) ->
-                Eyebrow(maker, Modifier.padding(top = CruxTheme.space.s2))
-                models.forEach { model ->
-                    CruxListRow(
-                        title = model.label,
-                        supporting = model.hint,
-                        selected = model == selected,
-                        onClick = { onPick(model) },
-                        modifier = Modifier.testTag("board_option_${model.key}"),
-                    )
-                }
-            }
-            Eyebrow("Other", Modifier.padding(top = CruxTheme.space.s2))
+        onNoBoard?.let {
             CruxListRow(
-                title = "Custom board",
-                supporting = "Spray wall, home board or anything else",
-                selected = selected == null && !noBoardSelected,
-                onClick = { onPick(null) },
-                modifier = Modifier.testTag("board_option_custom"),
+                title = "No board",
+                supporting = "A gym circuit or a crag's climbs",
+                selected = noBoardSelected,
+                onClick = it,
+                modifier = Modifier.testTag("board_option_none"),
             )
         }
+        com.hardtekpt.crux.data.model.BoardModel.entries.groupBy { it.maker }.forEach { (maker, models) ->
+            Eyebrow(maker, Modifier.padding(top = CruxTheme.space.s2))
+            models.forEach { model ->
+                CruxListRow(
+                    title = model.label,
+                    supporting = model.hint,
+                    selected = model == selected,
+                    onClick = { onPick(model) },
+                    modifier = Modifier.testTag("board_option_${model.key}"),
+                )
+            }
+        }
+        Eyebrow("Other", Modifier.padding(top = CruxTheme.space.s2))
+        CruxListRow(
+            title = "Custom board",
+            supporting = "Spray wall, home board or anything else",
+            selected = selected == null && !noBoardSelected,
+            onClick = { onPick(null) },
+            modifier = Modifier.testTag("board_option_custom"),
+        )
     }
 }
 
@@ -1202,49 +1174,35 @@ internal fun BoardSizeSheet(
     onChange: (String?, com.hardtekpt.crux.data.model.BoardHolds?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("board_size_sheet"),
+        title = "Size · ${board.label}",
+        confirm = SheetButton("Done", onDismiss, tag = "board_size_done"),
+        spacing = CruxTheme.space.s3,
+        scroll = false,
     ) {
-        Column(
-            Modifier
-                .padding(horizontal = CruxTheme.space.s4)
-                .padding(bottom = CruxTheme.space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
-        ) {
-            Text("Size · ${board.label}", style = MaterialTheme.typography.headlineSmall)
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-                board.sizes.forEach { option ->
-                    CruxFilterChip(
-                        label = com.hardtekpt.crux.data.model.boardSizeLabel(option),
-                        selected = option == size,
-                        onClick = { onChange(option, holds) },
-                        modifier = Modifier.testTag("board_size_$option"),
-                    )
-                }
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+            board.sizes.forEach { option ->
+                CruxFilterChip(
+                    label = com.hardtekpt.crux.data.model.boardSizeLabel(option),
+                    selected = option == size,
+                    onClick = { onChange(option, holds) },
+                    modifier = Modifier.testTag("board_size_$option"),
+                )
             }
-            if (board.hasHolds) {
-                Eyebrow("Holds")
-                com.hardtekpt.crux.data.model.BoardHolds.entries.forEach { option ->
-                    CruxListRow(
-                        title = option.label,
-                        supporting = option.hint,
-                        selected = option == holds,
-                        onClick = { onChange(size, option) },
-                        modifier = Modifier.testTag("board_holds_${option.key}"),
-                    )
-                }
+        }
+        if (board.hasHolds) {
+            Eyebrow("Holds")
+            com.hardtekpt.crux.data.model.BoardHolds.entries.forEach { option ->
+                CruxListRow(
+                    title = option.label,
+                    supporting = option.hint,
+                    selected = option == holds,
+                    onClick = { onChange(size, option) },
+                    modifier = Modifier.testTag("board_holds_${option.key}"),
+                )
             }
-            CruxButton(
-                "Done",
-                onDismiss,
-                variant = CruxButtonVariant.Tonal,
-                modifier = Modifier.fillMaxWidth().testTag("board_size_done"),
-            )
         }
     }
 }
@@ -1287,109 +1245,98 @@ private fun LightsSheet(section: SectionDraft, actions: LightsActions, onDismiss
         },
         onFailed = { error = it },
     )
-    androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = {
+    CruxSheet(
+        onDismiss = {
             if (checking) actions.off()
             onDismiss()
         },
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.testTag("lights_sheet"),
+        title = "Lights · ${section.name.ifBlank { section.board?.label.orEmpty() }}",
+        spacing = space.s3,
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = space.s4)
-                .padding(bottom = space.s6)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            Text("Lights · ${section.name.ifBlank { section.board?.label.orEmpty() }}", style = MaterialTheme.typography.headlineSmall)
-            val lights = section.lights
-            when {
-                section.id == 0L -> Text("Save the place first, then pair its board here.", style = MaterialTheme.typography.bodyMedium)
+        val lights = section.lights
+        when {
+            section.id == 0L -> Text("Save the place first, then pair its board here.", style = MaterialTheme.typography.bodyMedium)
 
-                lights == null -> {
-                    Text(
-                        "Crux lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
-                            "pick yours. Crux asks for Nearby devices, never your location.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    CruxButton("Pair a board", { pair(kilter) }, modifier = Modifier.fillMaxWidth().testTag("lights_pair"))
-                }
-
-                checking -> {
-                    Text("Crux has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
-                    val rows = if (section.board?.fixedAngle == 40) 12 else 18
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                        listOf(
-                            "A1, bottom left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1,
-                            "K1, bottom right" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_K1,
-                            "A$rows, top left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A_TOP,
-                        ).forEach { (label, order) ->
-                            CruxButton(label, {
-                                checking = false
-                                actions.setOrder(order)
-                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
-                        }
-                        CruxButton("None", {
-                            checking = false
-                            actions.off()
-                            error = "Nothing lit: check the board is on and close by, then try again."
-                        }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
-                    }
-                }
-
-                else -> {
-                    Text(
-                        listOfNotNull(
-                            lights.name,
-                            when (lights.protocol) {
-                                com.hardtekpt.crux.data.BoardLights.AURORA_V3 -> "protocol 3"
-                                com.hardtekpt.crux.data.BoardLights.AURORA_V2 -> "protocol 2"
-                                else -> "MoonBoard LED box"
-                            },
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                        val small = CruxButtonSize.Small
-                        CruxButton("Test lights", actions.test, variant = CruxButtonVariant.Outlined, size = small, modifier = Modifier.testTag("lights_test"))
-                        if (!kilter) {
-                            CruxButton("Check a hold", {
-                                checking = true
-                                actions.lightFirst()
-                            }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small, modifier = Modifier.testTag("lights_check"))
-                        }
-                        CruxButton("Lights off", actions.off, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
-                        CruxButton("Forget", actions.forget, variant = CruxButtonVariant.Text, size = small, modifier = Modifier.testTag("lights_forget"))
-                    }
-                    Text(
-                        if (kilter) {
-                            "Test lights lights the four corners of your size."
-                        } else {
-                            "Test lights lights the four corners; Check a hold makes sure Crux counts your box's LEDs the right way round."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            when (val state = actions.state) {
-                is com.hardtekpt.crux.data.BoardLink.State.Failed -> Text(
-                    state.message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+            lights == null -> {
+                Text(
+                    "Crux lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
+                        "pick yours. Crux asks for Nearby devices, never your location.",
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-
-                is com.hardtekpt.crux.data.BoardLink.State.Sending -> Text("Sending…", style = MaterialTheme.typography.bodySmall)
-
-                is com.hardtekpt.crux.data.BoardLink.State.Lit -> Text("Lit ${state.climb}.", style = MaterialTheme.typography.bodySmall)
-
-                else -> Unit
+                CruxButton("Pair a board", { pair(kilter) }, modifier = Modifier.fillMaxWidth().testTag("lights_pair"))
             }
-            error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+
+            checking -> {
+                Text("Crux has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
+                val rows = if (section.board?.fixedAngle == 40) 12 else 18
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                    listOf(
+                        "A1, bottom left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A1,
+                        "K1, bottom right" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_K1,
+                        "A$rows, top left" to com.hardtekpt.crux.data.BoardLights.MoonOrder.FROM_A_TOP,
+                    ).forEach { (label, order) ->
+                        CruxButton(label, {
+                            checking = false
+                            actions.setOrder(order)
+                        }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                    }
+                    CruxButton("None", {
+                        checking = false
+                        actions.off()
+                        error = "Nothing lit: check the board is on and close by, then try again."
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                }
+            }
+
+            else -> {
+                Text(
+                    listOfNotNull(
+                        lights.name,
+                        when (lights.protocol) {
+                            com.hardtekpt.crux.data.BoardLights.AURORA_V3 -> "protocol 3"
+                            com.hardtekpt.crux.data.BoardLights.AURORA_V2 -> "protocol 2"
+                            else -> "MoonBoard LED box"
+                        },
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                    val small = CruxButtonSize.Small
+                    CruxButton("Test lights", actions.test, variant = CruxButtonVariant.Outlined, size = small, modifier = Modifier.testTag("lights_test"))
+                    if (!kilter) {
+                        CruxButton("Check a hold", {
+                            checking = true
+                            actions.lightFirst()
+                        }, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small, modifier = Modifier.testTag("lights_check"))
+                    }
+                    CruxButton("Lights off", actions.off, variant = CruxButtonVariant.Outlined, size = CruxButtonSize.Small)
+                    CruxButton("Forget", actions.forget, variant = CruxButtonVariant.Text, size = small, modifier = Modifier.testTag("lights_forget"))
+                }
+                Text(
+                    if (kilter) {
+                        "Test lights lights the four corners of your size."
+                    } else {
+                        "Test lights lights the four corners; Check a hold makes sure Crux counts your box's LEDs the right way round."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
+        when (val state = actions.state) {
+            is com.hardtekpt.crux.data.BoardLink.State.Failed -> Text(
+                state.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+
+            is com.hardtekpt.crux.data.BoardLink.State.Sending -> Text("Sending…", style = MaterialTheme.typography.bodySmall)
+
+            is com.hardtekpt.crux.data.BoardLink.State.Lit -> Text("Lit ${state.climb}.", style = MaterialTheme.typography.bodySmall)
+
+            else -> Unit
+        }
+        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
     }
 }

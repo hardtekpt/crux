@@ -58,7 +58,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -379,8 +381,10 @@ private fun BigNumber(run: IntervalRun, position: IntervalPosition, accent: Colo
     ) {
         // JetBrains Mono's figures and colon are 0.6 em wide; the figures stand about 0.73 em tall.
         val byWidth = maxWidth / (widest.length * 0.6f)
-        val byHeight = maxHeight / 0.95f
-        val size: Dp = minOf(byWidth, byHeight) * 0.96f
+        // The line is one em tall with the figures centred in it, so a size just under the box's
+        // height always fits; the system bars in landscape used to push it past and clip it.
+        val byHeight = maxHeight * 0.92f
+        val size: Dp = minOf(byWidth * 0.96f, byHeight)
         val fontSize = with(LocalDensity.current) { size.toSp() }
         Text(
             label,
@@ -389,11 +393,13 @@ private fun BigNumber(run: IntervalRun, position: IntervalPosition, accent: Colo
                 fontWeight = FontWeight.SemiBold,
                 fontSize = fontSize,
                 lineHeight = fontSize,
+                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
                 fontFeatureSettings = "tnum",
             ),
             color = color,
             maxLines = 1,
             softWrap = false,
+            overflow = TextOverflow.Visible,
             textAlign = TextAlign.Center,
             modifier = Modifier.testTag("timer_left"),
         )

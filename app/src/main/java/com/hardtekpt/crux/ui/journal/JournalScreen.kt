@@ -86,11 +86,13 @@ import com.hardtekpt.crux.ui.components.AnimatedCount
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxMotion
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.InlineEmptyState
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.components.VideoThumbnail
 import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.components.revealWhen
@@ -536,63 +538,45 @@ private fun AppliedChip(label: String, onRemove: () -> Unit) {
 private fun FilterSheet(uiState: JournalUiState, onQuery: ((JournalQuery) -> JournalQuery) -> Unit, onDismiss: () -> Unit) {
     val query = uiState.query
     val space = CruxTheme.space
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("journal_filter_sheet"),
+        title = "Filters",
+        action = SheetButton("Clear all", { onQuery { JournalQuery(kind = it.kind, search = it.search) } }, enabled = query.activeFilters > 0),
+        confirm = uiState.days.count().let { shown ->
+            SheetButton(if (shown == 1) "Show 1 entry" else "Show $shown entries", onDismiss, tag = "journal_apply_filters")
+        },
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = space.s4)
-                .padding(bottom = space.s4)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            Text("Filters", style = MaterialTheme.typography.headlineSmall)
-            Eyebrow("When", Modifier.padding(top = space.s2))
+        Eyebrow("When", Modifier.padding(top = space.s2))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+            JournalPeriod.entries.forEach { period ->
+                CruxFilterChip(period.label, query.period == period, { onQuery { it.copy(period = period) } }, Modifier.testTag("period_${period.name}"))
+            }
+        }
+        Eyebrow("Climbs", Modifier.padding(top = space.s2))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+            JournalResult.entries.forEach { result ->
+                CruxFilterChip(result.label, query.result == result, { onQuery { it.copy(result = result) } }, Modifier.testTag("result_${result.name}"))
+            }
+        }
+        if (uiState.places.isNotEmpty()) {
+            Eyebrow("Places", Modifier.padding(top = space.s2))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                JournalPeriod.entries.forEach { period ->
-                    CruxFilterChip(period.label, query.period == period, { onQuery { it.copy(period = period) } }, Modifier.testTag("period_${period.name}"))
+                uiState.places.forEach { place ->
+                    val on = place in query.places
+                    CruxFilterChip(place, on, {
+                        onQuery { it.copy(places = if (on) it.places - place else it.places + place) }
+                    }, Modifier.testTag("place_filter_$place"))
                 }
             }
-            Eyebrow("Climbs", Modifier.padding(top = space.s2))
+        }
+        if (uiState.tags.isNotEmpty()) {
+            Eyebrow("Note tags", Modifier.padding(top = space.s2))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                JournalResult.entries.forEach { result ->
-                    CruxFilterChip(result.label, query.result == result, { onQuery { it.copy(result = result) } }, Modifier.testTag("result_${result.name}"))
+                uiState.tags.forEach { tag ->
+                    val on = tag in query.tags
+                    CruxFilterChip(tag, on, { onQuery { it.copy(tags = if (on) it.tags - tag else it.tags + tag) } }, Modifier.testTag("tag_filter_$tag"))
                 }
-            }
-            if (uiState.places.isNotEmpty()) {
-                Eyebrow("Places", Modifier.padding(top = space.s2))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                    uiState.places.forEach { place ->
-                        val on = place in query.places
-                        CruxFilterChip(place, on, {
-                            onQuery { it.copy(places = if (on) it.places - place else it.places + place) }
-                        }, Modifier.testTag("place_filter_$place"))
-                    }
-                }
-            }
-            if (uiState.tags.isNotEmpty()) {
-                Eyebrow("Note tags", Modifier.padding(top = space.s2))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                    uiState.tags.forEach { tag ->
-                        val on = tag in query.tags
-                        CruxFilterChip(tag, on, { onQuery { it.copy(tags = if (on) it.tags - tag else it.tags + tag) } }, Modifier.testTag("tag_filter_$tag"))
-                    }
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s3)) {
-                TextButton(onClick = { onQuery { JournalQuery(kind = it.kind, search = it.search) } }, enabled = query.activeFilters > 0) { Text("Clear all") }
-                Box(Modifier.weight(1f))
-                val shown = uiState.days.count()
-                CruxButton(
-                    text = if (shown == 1) "Show 1 entry" else "Show $shown entries",
-                    onClick = onDismiss,
-                    modifier = Modifier.testTag("journal_apply_filters"),
-                )
             }
         }
     }
@@ -799,7 +783,7 @@ private fun SessionEntryRow(session: com.hardtekpt.crux.data.Session, onOpenClim
                     session.items.forEach { item ->
                         val done = if (item.target.sets == 0) 0f else (item.done.toFloat() / item.target.sets).coerceAtMost(1f)
                         Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(colors.surfaceContainerHighest)) {
-                            Box(Modifier.fillMaxHeight().fillMaxWidth(done).background(colors.tertiary))
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(done).background(colors.primary))
                         }
                     }
                 }

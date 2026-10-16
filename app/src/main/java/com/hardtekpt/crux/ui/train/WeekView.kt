@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -23,8 +24,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -53,8 +56,10 @@ import com.hardtekpt.crux.data.model.WorkoutTemplate
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxFilterChip
+import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
+import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
@@ -175,13 +180,17 @@ private fun SlotCard(slot: ScheduleSlot, day: WeekDay, today: Boolean) {
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .testTag(if (climb) "week_climb" else "week_plan"),
     ) {
-        Text(
-            if (climb) "Climbing day" else slot.planName.orEmpty(),
-            style = MaterialTheme.typography.titleSmall,
-            color = if (climb) colors.secondary else colors.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // A climbing day says so with the climbing icon; amber is kept for bests.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (climb) Icon(Icons.Rounded.Landscape, contentDescription = null, tint = colors.primary, modifier = Modifier.size(CruxTheme.size.iconSm))
+            Text(
+                if (climb) "Climbing day" else slot.planName.orEmpty(),
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         val minutes = slot.planId?.let { day.doneMinutes[it] }
         val detail = listOfNotNull(
             when {
@@ -211,87 +220,70 @@ internal fun DaySheet(day: WeekDay, plans: List<WorkoutTemplate>, places: List<P
     var climbing by remember { mutableStateOf(day.slots.any { it.kind == ScheduleKind.CLIMB }) }
     var placeId by remember { mutableStateOf(day.slots.firstOrNull { it.kind == ScheduleKind.CLIMB }?.placeId) }
     val name = day.date.dayOfWeek.getDisplayName(DateTextStyle.FULL, Locale.UK)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
+    CruxSheet(
+        onDismiss = onDismiss,
         modifier = Modifier.testTag("day_sheet"),
+        title = "Every $name",
+        confirm = SheetButton("Save $name", {
+            // Plans keep the order they have under Plans.
+            onSave(DayPlan(plans.map { it.id }.filter { it in picked }, climbing, placeId.takeIf { climbing }))
+        }, tag = "day_save"),
     ) {
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = space.s4)
-                .padding(bottom = space.s4)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(space.s2),
-        ) {
-            Text("Every $name", style = MaterialTheme.typography.headlineSmall)
-            Eyebrow("Plans · pick any", Modifier.padding(top = space.s2))
-            if (plans.isEmpty()) {
-                Text("No plans yet. Make one under Plans.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            plans.forEach { plan ->
-                val on = plan.id in picked
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable(role = Role.Checkbox) { picked = if (on) picked - plan.id else picked + plan.id }
-                        .padding(end = space.s3)
-                        .testTag("day_plan_${plan.name}"),
-                ) {
-                    Checkbox(checked = on, onCheckedChange = null, modifier = Modifier.padding(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(plan.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("~${plan.estimatedMinutes} min", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            Eyebrow("Climbing", Modifier.padding(top = space.s2))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                CruxFilterChip("Climbing day", climbing, { climbing = !climbing }, Modifier.testTag("day_climbing"))
-            }
-            if (climbing && places.isNotEmpty()) {
-                Text("Where · optional", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                    places.forEach { summary ->
-                        val place = summary.place
-                        CruxFilterChip(place.name, placeId == place.id, {
-                            placeId = if (placeId ==
-                                place.id
-                            ) {
-                                null
-                            } else {
-                                place.id
-                            }
-                        }, Modifier.testTag("day_place_${place.name}"))
-                    }
-                }
-            }
-            val rest = picked.isEmpty() && !climbing
-            Text(
-                if (rest) "Nothing picked: a rest day." else "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = space.s1),
-            )
-            CruxButton(
-                "Save $name",
-                {
-                    // Plans keep the order they have under Plans.
-                    onSave(DayPlan(plans.map { it.id }.filter { it in picked }, climbing, placeId.takeIf { climbing }))
-                },
-                size = CruxButtonSize.Large,
-                modifier = Modifier.fillMaxWidth().testTag("day_save"),
-            )
+        Eyebrow("Plans · pick any", Modifier.padding(top = space.s2))
+        if (plans.isEmpty()) {
+            Text("No plans yet. Make one under Plans.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        plans.forEach { plan ->
+            val on = plan.id in picked
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable(role = Role.Checkbox) { picked = if (on) picked - plan.id else picked + plan.id }
+                    .padding(end = space.s3)
+                    .testTag("day_plan_${plan.name}"),
+            ) {
+                Checkbox(checked = on, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(plan.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("~${plan.estimatedMinutes} min", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Eyebrow("Climbing", Modifier.padding(top = space.s2))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+            CruxFilterChip("Climbing day", climbing, { climbing = !climbing }, Modifier.testTag("day_climbing"))
+        }
+        if (climbing && places.isNotEmpty()) {
+            Text("Where · optional", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                places.forEach { summary ->
+                    val place = summary.place
+                    CruxFilterChip(place.name, placeId == place.id, {
+                        placeId = if (placeId ==
+                            place.id
+                        ) {
+                            null
+                        } else {
+                            place.id
+                        }
+                    }, Modifier.testTag("day_place_${place.name}"))
+                }
+            }
+        }
+        val rest = picked.isEmpty() && !climbing
+        Text(
+            if (rest) "Nothing picked: a rest day." else "",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = space.s1),
+        )
     }
 }
 
-/** A week's days as dots, for Home: teal planned, amber climbing, green done. */
+/** A week's days as dots, for Home: a filled dot for a plan, a ring for a climbing day, green once done. */
 @Composable
 fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
@@ -301,9 +293,10 @@ fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifi
             val dot = when {
                 day.slots.isNotEmpty() && day.slots.all { day.done(it) } -> CruxTheme.colors.success
                 day.slots.any { it.kind == ScheduleKind.PLAN } -> colors.primary
-                day.slots.any { it.kind == ScheduleKind.CLIMB } -> colors.secondary
+                day.slots.any { it.kind == ScheduleKind.CLIMB } -> colors.primary
                 else -> Color.Transparent
             }
+            val ring = day.slots.none { it.kind == ScheduleKind.PLAN } && day.slots.any { it.kind == ScheduleKind.CLIMB } && dot != CruxTheme.colors.success
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -328,7 +321,7 @@ fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifi
                         .width(6.dp)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(dot),
+                        .then(if (ring) Modifier.border(1.5.dp, dot, RoundedCornerShape(3.dp)) else Modifier.background(dot)),
                 ) {}
             }
         }

@@ -165,7 +165,11 @@ data class NoteDraft(
 }
 
 @HiltViewModel
-class NoteEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: NoteRepository) : ViewModel() {
+class NoteEditorViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: NoteRepository,
+    private val undo: com.hardtekpt.crux.ui.UndoCenter? = null,
+) : ViewModel() {
     private val noteId: Long = savedStateHandle.get<Long>("noteId") ?: 0L
     private val _draft = MutableStateFlow(NoteDraft(id = noteId))
     val draft: StateFlow<NoteDraft> = _draft.asStateFlow()
@@ -203,7 +207,9 @@ class NoteEditorViewModel @Inject constructor(savedStateHandle: SavedStateHandle
     fun cancelDelete() = _draft.update { it.copy(confirmDelete = false) }
     fun confirmDelete() {
         viewModelScope.launch {
-            repository.deleteNote(noteId)
+            val title = _draft.value.text.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(40)
+            val restore = repository.deleteNoteUndoable(noteId)
+            if (restore != null) undo?.offer("Deleted ${title?.let { "\"$it\"" } ?: "the note"}", undo = restore)
             _draft.update { it.copy(confirmDelete = false, done = true) }
         }
     }
@@ -238,7 +244,7 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
                     )
                 }
                 if (!draft.isNew) {
-                    IconButton(onClick = viewModel::requestDelete, modifier = Modifier.testTag("delete_note")) {
+                    IconButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("delete_note")) {
                         Icon(Icons.Rounded.Delete, contentDescription = "Delete note")
                     }
                 }
@@ -323,18 +329,6 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
                 ) { Text("Add") }
             },
             dismissButton = { TextButton(onClick = { typingTag = false }) { Text("Cancel") } },
-        )
-    }
-    if (draft.confirmDelete) {
-        AlertDialog(
-            onDismissRequest = viewModel::cancelDelete,
-            containerColor = colors.surfaceContainerHigh,
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text("Delete this note?", style = MaterialTheme.typography.headlineSmall) },
-            confirmButton = {
-                TextButton(onClick = viewModel::confirmDelete, modifier = Modifier.testTag("confirm_delete")) { Text("Delete", color = colors.error) }
-            },
-            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Keep") } },
         )
     }
 }
