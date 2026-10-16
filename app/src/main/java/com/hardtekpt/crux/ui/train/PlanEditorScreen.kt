@@ -1,6 +1,7 @@
 package com.hardtekpt.crux.ui.train
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -201,42 +204,59 @@ private fun BlockCard(
     onMoveItem: (Int, Int) -> Unit,
     onRemoveItem: (Int) -> Unit,
 ) {
+    // Laid out like the plan's own page: the block as a numbered heading (its name typed in place),
+    // its exercises as rows under it, and no card around them. Moving and removing live in menus.
     val space = CruxTheme.space
-    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.fillMaxWidth().testTag("plan_block")) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Eyebrow("Block ${index + 1}", Modifier.weight(1f))
-            SmallIcon(Icons.Rounded.KeyboardArrowUp, "Move block up", enabled = !isFirst) { onMove(-1) }
-            SmallIcon(Icons.Rounded.KeyboardArrowDown, "Move block down", enabled = !isLast) { onMove(1) }
-            SmallIcon(Icons.Rounded.Close, "Remove block") { onRemove() }
+    val colors = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.fillMaxWidth().testTag("plan_block")) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = space.s2)) {
+            Text("${index + 1} ·", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            androidx.compose.foundation.text.BasicTextField(
+                value = block.name,
+                onValueChange = onRename,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.primary),
+                decorationBox = { field ->
+                    Box(Modifier.padding(horizontal = space.s2, vertical = space.s2)) {
+                        if (block.name.isEmpty()) Text("Block name", style = MaterialTheme.typography.titleMedium, color = colors.onSurfaceVariant)
+                        field()
+                    }
+                },
+                modifier = Modifier.weight(1f).testTag("block_name"),
+            )
+            RowMenu(
+                "Block ${index + 1}",
+                listOfNotNull(
+                    ("Move up" to { onMove(-1) }).takeIf { !isFirst },
+                    ("Move down" to { onMove(1) }).takeIf { !isLast },
+                    "Remove block" to onRemove,
+                ),
+            )
         }
-        CruxTextField(label = "Block name", value = block.name, onValueChange = onRename)
-        Column(verticalArrangement = Arrangement.spacedBy(space.s2)) {
-            block.items.forEachIndexed { itemIndex, item ->
-                CruxListRow(
-                    title = item.exercise.name,
-                    supporting = listOfNotNull(
-                        item.target.prescription(
-                            item.exercise.metric,
-                            com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+        block.items.forEachIndexed { itemIndex, item ->
+            CruxListRow(
+                title = item.exercise.name,
+                supporting = listOfNotNull(
+                    item.target.prescription(
+                        item.exercise.metric,
+                        com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL,
+                    ),
+                    item.target.restLabel()?.let { "rest $it" },
+                ).joinToString(" · "),
+                onClick = { onEditItem(itemIndex) },
+                trailing = {
+                    RowMenu(
+                        item.exercise.name,
+                        listOfNotNull(
+                            ("Move up" to { onMoveItem(itemIndex, -1) }).takeIf { itemIndex > 0 },
+                            ("Move down" to { onMoveItem(itemIndex, 1) }).takeIf { itemIndex < block.items.lastIndex },
+                            "Remove" to { onRemoveItem(itemIndex) },
                         ),
-                        item.target.restLabel()?.let {
-                            "rest $it"
-                        },
                     )
-                        .joinToString(" · "),
-                    onClick = { onEditItem(itemIndex) },
-                    trailing = {
-                        Row {
-                            SmallIcon(Icons.Rounded.KeyboardArrowUp, "Move up", enabled = itemIndex > 0) { onMoveItem(itemIndex, -1) }
-                            SmallIcon(Icons.Rounded.KeyboardArrowDown, "Move down", enabled = itemIndex < block.items.lastIndex) {
-                                onMoveItem(itemIndex, 1)
-                            }
-                            SmallIcon(Icons.Rounded.Close, "Remove ${item.exercise.name}") { onRemoveItem(itemIndex) }
-                        }
-                    },
-                    modifier = Modifier.testTag("plan_item"),
-                )
-            }
+                },
+                modifier = Modifier.testTag("plan_item"),
+            )
         }
         CruxButton(
             text = "Add exercise",
@@ -248,10 +268,25 @@ private fun BlockCard(
     }
 }
 
+/** ⋮ with a short menu of what applies to one row: move it, remove it. */
 @Composable
-private fun SmallIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(CruxTheme.size.touchTarget)) {
-        Icon(icon, contentDescription = description, modifier = Modifier.size(20.dp))
+private fun RowMenu(what: String, actions: List<Pair<String, () -> Unit>>) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(CruxTheme.size.touchTarget)) {
+            Icon(Icons.Rounded.MoreVert, contentDescription = "$what: more", modifier = Modifier.size(20.dp))
+        }
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            actions.forEach { (label, action) ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        open = false
+                        action()
+                    },
+                )
+            }
+        }
     }
 }
 

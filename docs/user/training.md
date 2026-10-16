@@ -57,11 +57,13 @@ holding exercises with a **target**: what you're aiming for in that plan.
 
 To build one, tap **New plan**, give it a name and optional description, then:
 
-1. **Add block** for each part of the session, and name it.
+1. **Add block** for each part of the session, and type its name in the heading (the editor is
+   laid out like the plan's own page: numbered headings with the exercises under them).
 2. **Add exercise** to a block, search the library, and pick one.
 3. Adjust the target in the sheet that opens: sets, reps or time, load, rest, and for intervals the
-   timer. Each value is a wheel or stepper you can drag, step, or tap to type.
-4. **Save plan**.
+   timer, with the same steppers as Edit exercise (step, hold to repeat, or tap to type).
+4. **⋮** beside a block or an exercise moves it up or down, or removes it.
+5. **Save plan**.
 
 The plan's card shows its blocks, exercise count and an estimated length (work and rest plus a
 short changeover between exercises, rounded up to 5 minutes).

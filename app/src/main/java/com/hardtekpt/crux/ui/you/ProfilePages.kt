@@ -287,7 +287,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, onNewPlace: ()
             verticalArrangement = Arrangement.spacedBy(space.s3),
             modifier = Modifier.testTag("places_list"),
         ) {
-            placesList(places, onOpenPlace, onNewPlace, filter, { filter = it })
+            placesList(places, onOpenPlace, onNewPlace, filter, { filter = it }, compact = true)
         }
     }
 }

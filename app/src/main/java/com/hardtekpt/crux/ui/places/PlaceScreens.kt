@@ -127,6 +127,8 @@ fun LazyListScope.placesList(
     onNew: () -> Unit,
     filter: PlaceType? = null,
     onFilter: (PlaceType?) -> Unit = {},
+    /** One row per place, for a quick switcher (You → Places); the Journal browses the big cards. */
+    compact: Boolean = false,
 ) {
     // No chip picked shows every place; tapping the picked chip again clears it.
     item(key = "place_filters") {
@@ -171,8 +173,53 @@ fun LazyListScope.placesList(
         }
     }
     items(shown.orEmpty(), key = { "place_${it.place.id}" }) { summary ->
-        PlaceCard(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
+        if (compact) {
+            PlaceRow(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
+        } else {
+            PlaceCard(summary, onOpen = { onOpen(summary.place.id) }, modifier = Modifier.testTag("place_row"))
+        }
     }
+}
+
+/**
+ * A place as one row: its kind's icon, the name, where it is and what's there (open projects in
+ * amber), and on the right how many climbs and when you were last there. The banner stays for the
+ * place's own page.
+ */
+@Composable
+internal fun PlaceRow(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val place = summary.place
+    val colors = MaterialTheme.colorScheme
+    val tint = kindAccent(place.type)
+    CruxListRow(
+        title = place.name,
+        supporting = listOfNotNull(
+            place.location ?: place.mapLocation?.address,
+            place.sections.joinToString(", ") { it.name }.ifBlank { null },
+        ).joinToString(" · "),
+        leading = {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(36.dp).background(tint.copy(alpha = 0.16f), MaterialTheme.shapes.small),
+            ) { Icon(placeIcon(place.type), contentDescription = place.type.label, tint = tint, modifier = Modifier.size(20.dp)) }
+        },
+        trailing = {
+            Column(horizontalAlignment = Alignment.End) {
+                Text(summary.climbs.toString(), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (summary.openProjects > 0) {
+                        "${summary.openProjects} ${if (summary.openProjects == 1) "project" else "projects"}"
+                    } else {
+                        summary.lastVisit?.relativeLabel(java.time.LocalDate.now(com.hardtekpt.crux.ui.LocalClock.current))?.lowercase() ?: "climbs"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (summary.openProjects > 0) colors.secondary else colors.onSurfaceVariant,
+                )
+            }
+        },
+        onClick = onOpen,
+        modifier = modifier,
+    )
 }
 
 fun placeIcon(type: PlaceType) = when (type) {

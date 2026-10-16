@@ -8,8 +8,10 @@ you climb at most, and logs there in one tap.
 
 ## The Places list
 
-Places are listed alphabetically. Each card shows a banner (a wall photo, its map, or art for its
-type), its climbs, walls and open projects. Filter the list by **Crag**, **Gym** or **Board**.
+In the **Journal's Places tab**, each place is a card with a banner (a wall photo, its map, or art
+for its type), what's there, and its climbs, walls and open projects. **You → Places** is the quick
+list: one row per place with its kind, where it is, how many climbs and when you were last there
+(or its open projects, in amber). Filter either by **Crag**, **Gym** or **Board**.
 
 ## Adding a place
 

@@ -266,7 +266,7 @@ fun SettingsContent(
                     Switch(
                         checked = uiState.timerSounds,
                         onCheckedChange = onTimerSounds,
-                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.secondary),
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .padding(start = space.s3)
                             .testTag("timer_sounds"),
@@ -315,7 +315,7 @@ fun SettingsContent(
                     Switch(
                         checked = uiState.demoMode,
                         onCheckedChange = onDemoMode,
-                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.secondary),
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .padding(start = space.s3)
                             .testTag("demo_mode"),
