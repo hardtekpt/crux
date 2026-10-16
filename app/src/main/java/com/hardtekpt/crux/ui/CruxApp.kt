@@ -479,7 +479,14 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
             undoHost,
             Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = if (onForm) bottomInset + CruxTheme.space.s4 else navBarClearance(bottomInset))
+                // Above the nav bar, and above the running session's pill when there is one.
+                .padding(
+                    bottom = when {
+                        onForm -> bottomInset + CruxTheme.space.s4
+                        runningSession != null -> navBarClearance(bottomInset) + 56.dp
+                        else -> navBarClearance(bottomInset)
+                    },
+                )
                 .testTag("undo_snackbar"),
         )
 
