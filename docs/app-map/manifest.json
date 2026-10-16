@@ -3083,7 +3083,7 @@
    "lane": "datasets",
    "col": 6,
    "row": 1,
-   "desc": "Pick the easiest and hardest grade to show in a dataset or board catalogue; the list updates as you pick.",
+   "desc": "Drag the two ends of the grade slider to show only a range of grades, and hide the climbs you have sent. The list updates as you go.",
    "covers": [
     "GradeFilterSheet"
    ],
@@ -3093,7 +3093,8 @@
     "tap:Datasets",
     "tap:Block Lab circuit",
     "tap:Filters",
-    "tap:6A",
+    "wait:1",
+    "xy:560,1838",
     "wait:1"
    ],
    "cleanup": []
