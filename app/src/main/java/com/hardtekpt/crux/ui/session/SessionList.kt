@@ -449,7 +449,7 @@ internal fun FirstBlock(onLogClimb: () -> Unit, onPlaylist: (() -> Unit)?, onAdd
         )
         com.hardtekpt.crux.ui.components.CruxListRow(
             title = "A timer",
-            supporting = "Tabata, repeaters or your own",
+            supporting = "A countdown, Tabata, repeaters or your own",
             leading = { Icon(Icons.Rounded.Timer, contentDescription = null) },
             onClick = onTimer,
             modifier = Modifier.testTag("first_timer"),
@@ -556,7 +556,7 @@ internal fun AddToSessionSheet(
         )
         CruxListRow(
             title = "Start a timer",
-            supporting = if (onTimer == null) "A timer is already running" else "Tabata, Repeaters, Max hangs, 4×4s or your own",
+            supporting = if (onTimer == null) "A timer is already running" else "A countdown, Tabata, Repeaters or your own",
             leading = { Icon(Icons.Rounded.Timer, contentDescription = null) },
             enabled = onTimer != null,
             onClick = onTimer ?: {},

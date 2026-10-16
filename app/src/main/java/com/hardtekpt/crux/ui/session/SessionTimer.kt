@@ -153,11 +153,25 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
         confirm = SheetButton("Start", { onStart(spec) }, icon = Icons.Rounded.PlayArrow, tag = "timer_start"),
     ) {
         Text(
-            title ?: "A timer of its own. Nothing is logged.",
+            title ?: "Timers of their own. Nothing is logged.",
             style = MaterialTheme.typography.bodyMedium,
             color = colors.onSurfaceVariant,
         )
         if (title == null) {
+            // A plain countdown: one stretch, no preparation, no rests. Tapping one starts it.
+            Text("Countdown", style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                listOf(30 to "30 s", 60 to "1 min", 120 to "2 min", 180 to "3 min", 300 to "5 min").forEach { (seconds, label) ->
+                    CruxButton(
+                        label,
+                        { onStart(IntervalSpec(prepSeconds = 0, workSeconds = seconds, restSeconds = 0, repeats = 1, cycles = 1, cycleRestSeconds = 0)) },
+                        variant = CruxButtonVariant.Outlined,
+                        size = CruxButtonSize.Small,
+                        modifier = Modifier.testTag("timer_countdown_$seconds"),
+                    )
+                }
+            }
+            Text("Or an interval timer", style = MaterialTheme.typography.labelLarge, color = colors.onSurface, modifier = Modifier.padding(top = space.s1))
             Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
                 listOf("Tabata" to IntervalSpec.TABATA, "Repeaters" to IntervalSpec.REPEATERS).forEach { (name, preset) ->
                     CruxButton(

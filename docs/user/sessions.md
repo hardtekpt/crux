@@ -56,8 +56,8 @@ session. Only one session runs at a time; starting another ends the first.
   number, for when your phone is on the floor across the mat. A big rest has **−30 s**, **+30 s**
   and **Skip rest**; a big timer has back, pause, next and stop. **Make small** puts it back in
   the dock. It stays big for the next rest until you make it small.
-- **+ in the top bar**: log a climb, add an exercise from your library, or run an interval timer of
-  its own. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
+- **+ in the top bar**: log a climb, add an exercise from your library, or run a timer of
+  its own: a **countdown** (30 s, 1, 2, 3 or 5 min) starts with one tap, or set up an interval timer. Presets include classic Tabata (8 × 20 s on, 10 s off) and hangboard repeaters
   (6 × 7 s on, 3 s off, three cycles, 3 min between). Outside a session, *You → Interval timer* is
   a full-screen timer of its own: see [You](you.md#interval-timer).
 - **Climbs**: a climb logged inside a session goes into the session and your journal, and shows on

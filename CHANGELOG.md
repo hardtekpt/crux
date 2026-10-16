@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ## [Unreleased]
 
+### Added
+
+- **Simple countdowns in a session**: + → Start a timer now opens with a countdown row (30 s, 1, 2, 3 and 5 min)
+  that starts at once, in the same dock and big view as the interval timers. Nothing is logged.
+
 ### Changed
 
 - **Log climb's name suggestions are only your projects**: the chips under Name no longer list every climb

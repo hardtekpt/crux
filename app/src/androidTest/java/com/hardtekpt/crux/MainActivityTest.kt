@@ -293,6 +293,18 @@ class MainActivityTest {
         composeRule.onNodeWithTag("timer_stop").performClick()
         composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("timer_band").fetchSemanticsNodes().isEmpty() }
 
+        // A countdown starts with one tap, and runs in the same dock.
+        composeRule.onNodeWithTag("session_add").performClick()
+        composeRule.waitForTag("session_timer")
+        composeRule.onNodeWithTag("session_timer").performClick()
+        composeRule.waitForTag("timer_countdown_60")
+        composeRule.onNodeWithTag("timer_countdown_60").performClick()
+        composeRule.waitForTag("timer_band")
+        composeRule.onNodeWithTag("timer_pause").performClick()
+        composeRule.waitForTag("timer_stop")
+        composeRule.onNodeWithTag("timer_stop").performClick()
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("timer_band").fetchSemanticsNodes().isEmpty() }
+
         composeRule.onNodeWithTag("session_finish").performClick()
         composeRule.waitForTag("session_save")
         composeRule.onNodeWithTag("session_save").performClick()
