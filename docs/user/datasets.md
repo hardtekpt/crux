@@ -30,7 +30,10 @@ since gyms reuse names. Tap a climb to change it or delete it; a climb without a
 with **Undo**, and one with a note asks first.
 
 Search finds a word in the name, setter or note. Sort by **Grade** (easiest first; climbs without
-a grade come last, shown as "–"), **Name** or **Newest**.
+a grade come last, shown as "–"), **Name** or **Newest**. The filters button beside the search
+opens **Filters**: pick the easiest and hardest grade to show only climbs between them (grades in
+other scales are converted; climbs without a grade drop out while a range is set). The button shows
+when the dataset has graded climbs.
 
 **⋯ → Delete dataset** asks first. Its climbs go with it; climbs you logged are never touched.
 
@@ -73,7 +76,8 @@ file) and pick it in **+ → Import a file**. Crux never goes online for it.
 - Open one to browse its climbs at an angle (a Kilter's grades and ascents change with the
   angle; a MoonBoard has its one or two). Search names and setters, sort by **Popular**, **Grade** or
   **Name**, or show **Benchmarks** only. Grades show in your boulder scale. A dot marks climbs you
-  tried today. A list shows 200 at a time: search to find the rest.
+  tried today. The filters button beside the search sets an easiest and hardest grade. A list shows
+  200 at a time: search or filter to find the rest.
 - Tap a climb for its setter, description and grade at each angle, **Log this climb** and
   **Playlist**.
 - A catalogue is used by every facility with the same board and size, like a dataset made for it.

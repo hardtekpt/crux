@@ -286,11 +286,14 @@ class CatalogueRepository @Inject constructor(private val dbs: CatalogueDatabase
         query: String = "",
         sort: Int = 0,
         benchmarks: Boolean = false,
-        fontIndex: Int? = null,
+        /** A grade range, as Font indices; either end can be open. */
+        fromFont: Int? = null,
+        toFont: Int? = null,
         limit: Int = PAGE,
     ): List<CatalogueRow> {
-        val range = fontIndex?.let(BoardseshBoards::difficultyRange)
-        return dbs.dao().search(key, angle, query.trim(), sort, benchmarks, range?.start, range?.endInclusive, limit)
+        val low = fromFont?.let { BoardseshBoards.difficultyRange(it).start }
+        val high = toFont?.let { BoardseshBoards.difficultyRange(it).endInclusive }
+        return dbs.dao().search(key, angle, query.trim(), sort, benchmarks, low, high, limit)
     }
 
     suspend fun angles(key: String): List<Int> = dbs.dao().angles(key)

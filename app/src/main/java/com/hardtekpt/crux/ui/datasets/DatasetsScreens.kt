@@ -58,6 +58,7 @@ import com.hardtekpt.crux.data.ClashChoice
 import com.hardtekpt.crux.data.Dataset
 import com.hardtekpt.crux.data.DatasetClimb
 import com.hardtekpt.crux.data.DatasetFiles
+import com.hardtekpt.crux.data.convertGrade
 import com.hardtekpt.crux.data.model.BoardModel
 import com.hardtekpt.crux.data.model.Discipline
 import com.hardtekpt.crux.data.model.GradeScale
@@ -380,6 +381,9 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
     val undo by viewModel.undo.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var sort by rememberSaveable { mutableStateOf(ClimbSort.GRADE) }
+    var filtering by rememberSaveable { mutableStateOf(false) }
+    var gradeFrom by rememberSaveable { mutableStateOf<Int?>(null) }
+    var gradeTo by rememberSaveable { mutableStateOf<Int?>(null) }
     var menu by rememberSaveable { mutableStateOf(false) }
     var editingDetails by rememberSaveable { mutableStateOf(false) }
     var exporting by rememberSaveable { mutableStateOf(false) }
@@ -425,7 +429,8 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                 }
             }
             val ds = dataset ?: return@Column
-            val climbs = remember(ds, query, sort) { sorted(filtered(ds.climbs, query), sort) }
+            val range = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
+            val climbs = remember(ds, query, sort, gradeFrom, gradeTo) { sorted(gradeFiltered(filtered(ds.climbs, query), range), sort) }
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + 72.dp + LocalNavBarClearance.current),
                 verticalArrangement = Arrangement.spacedBy(space.s2),
@@ -435,13 +440,32 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                     Text(datasetLine(ds), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item(key = "search") {
-                    CruxTextField(
-                        label = "",
-                        value = query,
-                        onValueChange = { query = it.take(60) },
-                        placeholder = "Search name, setter or note",
-                        modifier = Modifier.fillMaxWidth().testTag("dataset_search"),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                        CruxTextField(
+                            label = "",
+                            value = query,
+                            onValueChange = { query = it.take(60) },
+                            placeholder = "Search name, setter or note",
+                            modifier = Modifier.weight(1f).testTag("dataset_search"),
+                        )
+                        if (range.scale != null) {
+                            FiltersButton(
+                                active = if (range.active) 1 else 0,
+                                onClick = { filtering = true },
+                                modifier = Modifier.testTag("dataset_open_filters"),
+                            )
+                        }
+                    }
+                }
+                if (range.active) {
+                    item(key = "applied") {
+                        Text(
+                            "Grades ${range.label()}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("dataset_grade_applied"),
+                        )
+                    }
                 }
                 // Add sits with the list it adds to, as New plan does on Train; filled stays for the
                 // nav bar's Log.
@@ -560,6 +584,21 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             onDismiss = { editingDetails = false },
         )
     }
+    if (filtering) {
+        val ds = uiState.dataset
+        if (ds != null) {
+            val all = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
+            GradeFilterSheet(
+                range = all,
+                shown = gradeFiltered(filtered(ds.climbs, query), all).size,
+                onRange = {
+                    gradeFrom = it.from
+                    gradeTo = it.to
+                },
+                onDismiss = { filtering = false },
+            )
+        }
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -671,6 +710,21 @@ internal fun filtered(climbs: List<DatasetClimb>, query: String): List<DatasetCl
     return climbs.filter { climb ->
         val text = listOfNotNull(climb.name, climb.setter, climb.note).joinToString(" ").lowercase()
         words.all { it in text }
+    }
+}
+
+/** The scale most of a dataset's graded climbs are in, which its grade filter reads in; null when none is graded. */
+internal fun datasetScale(climbs: List<DatasetClimb>): GradeScale? =
+    climbs.mapNotNull { it.gradeScale?.takeIf { s -> !s.isLocal && it.gradeIndex != null } }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
+/** Climbs in [range], their grades read in its scale (converted when they are in another); an ungraded climb is out while a range is set. */
+internal fun gradeFiltered(climbs: List<DatasetClimb>, range: GradeRange): List<DatasetClimb> {
+    val scale = range.scale ?: return climbs
+    if (!range.active) return climbs
+    return climbs.filter { climb ->
+        val from = climb.gradeScale ?: return@filter false
+        val index = climb.gradeIndex ?: return@filter false
+        convertGrade(from, index, scale)?.let(range::contains) == true
     }
 }
 

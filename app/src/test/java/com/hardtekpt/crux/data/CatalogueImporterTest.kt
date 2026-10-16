@@ -108,6 +108,12 @@ class CatalogueImporterTest {
         // Benchmarks only, and a search by setter.
         assertEquals(listOf("Roof to pinch"), catalogue.search(dataset.catalogueKey!!, 40, benchmarks = true).map { it.name })
         assertEquals(2, catalogue.search(dataset.catalogueKey!!, 40, query = "ana").size)
+        // A grade range keeps the climbs inside it, ends included.
+        val easy = BoardseshBoards.fontIndex(20.0)
+        val hard = BoardseshBoards.fontIndex(24.0)
+        assertEquals(listOf("Roof to pinch"), catalogue.search(dataset.catalogueKey!!, 40, toFont = easy).map { it.name })
+        assertEquals(listOf("Big crimps"), catalogue.search(dataset.catalogueKey!!, 40, fromFont = easy + 1).map { it.name })
+        assertEquals(2, catalogue.search(dataset.catalogueKey!!, 40, fromFont = easy, toFont = hard).size)
 
         // Importing again replaces it rather than adding a second catalogue.
         importer.copy(snapshot(), inspection, "Home Kilter", "10x12", BoardHolds.MAINLINE)

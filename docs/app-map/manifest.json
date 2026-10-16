@@ -3075,6 +3075,28 @@
     "tapc:Choose a climb"
    ],
    "cleanup": []
+  },
+  {
+   "id": "dataset-filters",
+   "title": "Filters",
+   "kind": "sheet",
+   "lane": "datasets",
+   "col": 6,
+   "row": 1,
+   "desc": "Pick the easiest and hardest grade to show in a dataset or board catalogue; the list updates as you pick.",
+   "covers": [
+    "GradeFilterSheet"
+   ],
+   "steps": [
+    "tab:You",
+    "scrollto:Datasets",
+    "tap:Datasets",
+    "tap:Block Lab circuit",
+    "tap:Filters",
+    "tap:6A",
+    "wait:1"
+   ],
+   "cleanup": []
   }
  ],
  "edges": [
@@ -4162,6 +4184,18 @@
    "log-climb-more",
    "log-climb-choose",
    "Choose a climb",
+   "sheet"
+  ],
+  [
+   "dataset",
+   "dataset-filters",
+   "Filters",
+   "sheet"
+  ],
+  [
+   "catalogue",
+   "dataset-filters",
+   "Filters",
    "sheet"
   ]
  ],

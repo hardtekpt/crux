@@ -100,7 +100,20 @@ import kotlinx.coroutines.launch
 enum class CatalogueSort(val label: String) { POPULAR("Popular"), GRADE("Grade"), NAME("Name") }
 
 /** What the catalogue page asks for: the angle, a search, a sort and benchmarks only. */
-data class CatalogueQuery(val angle: Int? = null, val text: String = "", val sort: CatalogueSort = CatalogueSort.POPULAR, val benchmarks: Boolean = false)
+data class CatalogueQuery(
+    val angle: Int? = null,
+    val text: String = "",
+    val sort: CatalogueSort = CatalogueSort.POPULAR,
+    val benchmarks: Boolean = false,
+    /** A grade range, as indices in [catalogueScale]. */
+    val gradeFrom: Int? = null,
+    val gradeTo: Int? = null,
+)
+
+/** The scale a catalogue's grades are read and filtered in: the climber's boulder scale, or Font for a local one. */
+internal fun catalogueScale(scales: GradeScales): GradeScale = scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
+
+private fun fontOf(scale: GradeScale, index: Int?): Int? = index?.let { convertGrade(scale, it, GradeScale.FONT) }
 
 data class CatalogueUiState(
     val dataset: Dataset? = null,
@@ -125,6 +138,7 @@ class CatalogueViewModel @Inject constructor(
     clock: Clock,
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
+    private val scalesFlow = preferences.gradeScales
     private val query = MutableStateFlow(CatalogueQuery())
     private val found = MutableStateFlow<Pair<CatalogueQuery, List<CatalogueRow>>?>(null)
     private val angles = MutableStateFlow<List<Int>>(emptyList())
@@ -167,7 +181,8 @@ class CatalogueViewModel @Inject constructor(
             query.update { it.copy(angle = if (40 in list) 40 else list.firstOrNull()) }
             query.collectLatest { q ->
                 val angle = q.angle ?: return@collectLatest
-                val rows = catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks)
+                val scale = catalogueScale(scalesFlow.first())
+                val rows = catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, fontOf(scale, q.gradeFrom), fontOf(scale, q.gradeTo))
                 found.value = q to rows
             }
         }
@@ -229,6 +244,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var filtering by rememberSaveable { mutableStateOf(false) }
     var open by remember { mutableStateOf<CatalogueClimb?>(null) }
     var addingTo by remember { mutableStateOf<CatalogueClimb?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -251,6 +267,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                 }
             }
             val q = uiState.query
+            val range = GradeRange(catalogueScale(uiState.scales), q.gradeFrom, q.gradeTo)
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
                 verticalArrangement = Arrangement.spacedBy(space.s2),
@@ -264,13 +281,30 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                     )
                 }
                 item(key = "search") {
-                    CruxTextField(
-                        label = "",
-                        value = q.text,
-                        onValueChange = { text -> viewModel.update { it.copy(text = text.take(60)) } },
-                        placeholder = "Search name or setter",
-                        modifier = Modifier.fillMaxWidth().testTag("catalogue_search"),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s2)) {
+                        CruxTextField(
+                            label = "",
+                            value = q.text,
+                            onValueChange = { text -> viewModel.update { it.copy(text = text.take(60)) } },
+                            placeholder = "Search name or setter",
+                            modifier = Modifier.weight(1f).testTag("catalogue_search"),
+                        )
+                        FiltersButton(
+                            active = if (range.active) 1 else 0,
+                            onClick = { filtering = true },
+                            modifier = Modifier.testTag("catalogue_open_filters"),
+                        )
+                    }
+                }
+                if (range.active) {
+                    item(key = "applied") {
+                        Text(
+                            "Grades ${range.label()}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("catalogue_grade_applied"),
+                        )
+                    }
                 }
                 if (uiState.angles.size > 1) {
                     item(key = "angles") {
@@ -356,6 +390,14 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     }
 
     val ds = dataset ?: return
+    if (filtering) {
+        GradeFilterSheet(
+            range = GradeRange(catalogueScale(uiState.scales), uiState.query.gradeFrom, uiState.query.gradeTo),
+            shown = uiState.rows.size,
+            onRange = { r -> viewModel.update { it.copy(gradeFrom = r.from, gradeTo = r.to) } },
+            onDismiss = { filtering = false },
+        )
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Grade filter for datasets and board catalogues**: a filters button beside the search opens Filters, where you pick
+  the easiest and hardest grade to show. Grades read in your own scale.
 - **Simple countdowns in a session**: + → Start a timer now opens with a countdown row (30 s, 1, 2, 3 and 5 min)
   that starts at once, in the same dock and big view as the interval timers. Nothing is logged.
 - **Open in MoonBoard**: a MoonBoard catalogue climb's sheet can open the official MoonBoard app with the
