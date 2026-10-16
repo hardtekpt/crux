@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Log climb's name suggestions are only your projects**: the chips under Name no longer list every climb
+  at the place, just the ones you've tried and not sent. Typing a sent climb's exact name still continues it.
 - **Undo instead of "Are you sure?"**: deleting a log, a note or a result on an exercise page
   happens at once, with **Undo** above the nav bar for a few seconds. A log's photo and video come
   back too. Deletes that take other things with them (a place, a plan, a dataset) still ask first.

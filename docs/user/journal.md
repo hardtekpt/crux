@@ -53,8 +53,8 @@ Journal. Coming back to a climb adds another log to it.
 5. **How hard it felt** (optional): a 1 to 10 scale; tap or drag along it, or tap Easy, Steady,
    Moderate, Hard or Limit under it. **Clear** empties it. Finishing a session asks the same way.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
-   like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
-   or typing its exact name, adds today's goes to it. Any other name starts a new climb.
+   like "6B+ · Benchmarks". As you type, Crux suggests your open projects there (tried, not sent yet); picking one,
+   or typing the exact name of any climb there, adds today's goes to it. Any other name starts a new climb.
 7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
 8. **Angle** (on a board): a chip beside Photo and Video. It opens a stepper (0° to 70° in 5° steps;
    tap the number to type) with quick picks; a MoonBoard offers only 25° and 40°, and a Mini

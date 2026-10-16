@@ -147,7 +147,7 @@ fun LogClimbScreen(
         draft = draft,
         onBack = onDone,
         where = { dayButton -> WhereSection(draft, places, detail, whereActions, trailing = dayButton, choices = choices) },
-        suggestions = remember(draft.placeId, draft.name, draft.problemId, detail) { viewModel.candidates() },
+        suggestions = remember(draft.placeId, draft.name, draft.problemId, detail) { viewModel.suggestions() },
         datasetSuggestions = catalogueAndDatasetMatches(draft.name, choices, viewModel),
         onPickDatasetClimb = viewModel::pickDatasetClimb,
         onUnlink = viewModel::unlinkSource,

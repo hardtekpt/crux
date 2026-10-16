@@ -14,8 +14,9 @@ They're safe. Demo mode shows a separate set of sample data. Turn it off in *Set
 and your own data is back, untouched.
 
 **Why isn't a climb showing in the name suggestions?**
-Suggestions show the climbs at the place you picked (or, with no place, the climbs with none).
-Pick its place first, then start typing its name.
+The chips show your open projects (climbs you've tried and not sent) at the place you picked, or, with no
+place, the ones with none. A climb you've already sent or never tried isn't a chip, but typing its exact name
+still continues it. Pick the place first.
 
 **How do I mark something as a project?**
 You don't: a climb you've tried and not sent is a project automatically. See

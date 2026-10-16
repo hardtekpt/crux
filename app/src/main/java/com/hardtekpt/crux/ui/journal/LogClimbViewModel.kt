@@ -195,6 +195,9 @@ class LogClimbViewModel @Inject constructor(
     /** Climbs logged with no place, for suggestions when no place is picked. */
     private val unplaced = MutableStateFlow<List<Problem>>(emptyList())
 
+    /** Which of [unplaced] are open projects. */
+    private val unplacedProjects = MutableStateFlow<Set<Long>>(emptySet())
+
     /** Saved places to pick from, most recently visited first. */
     val places: StateFlow<List<PlaceSummary>> = placeRepository.observePlaces()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -721,8 +724,22 @@ class LogClimbViewModel @Inject constructor(
         }
     }
 
+    /** The chips under the name: only the open projects (tried, not sent yet) among [candidates]. A typed name still finds any climb. */
+    fun suggestions(): List<Problem> {
+        val draft = _draft.value
+        val open = if (draft.placeId == null) {
+            unplacedProjects.value
+        } else {
+            placeDetail.value?.takeIf { it.place.id == draft.placeId }?.problems.orEmpty().filter { it.isProject }.map { it.problem.id }.toSet()
+        }
+        return candidates().filter { it.id in open && !it.retired }
+    }
+
     fun refreshUnplaced() {
-        viewModelScope.launch { unplaced.value = placeRepository.climbsAt(null) }
+        viewModelScope.launch {
+            unplaced.value = placeRepository.climbsAt(null)
+            unplacedProjects.value = placeRepository.observeProjects().first().filter { it.problem.placeId == null }.map { it.problem.id }.toSet()
+        }
     }
 
     /** A fall or a send, in the order climbed. The first tap replaces the default single send. */

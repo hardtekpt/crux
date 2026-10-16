@@ -394,4 +394,35 @@ class LogClimbViewModelTest {
         assertEquals(7L, saved.sessionId)
         assertEquals(placeId, saved.placeId)
     }
+
+    @Test
+    fun `name suggestions are the open projects here, not sent or untried climbs`() = runBlocking {
+        val (placeId, tried) = boardWithProblem()
+        fun problem(name: String) = ProblemInput(
+            placeId = placeId,
+            areaId = null,
+            name = name,
+            discipline = Discipline.BOULDER,
+            gradeScale = GradeScale.V_SCALE,
+            gradeIndex = 4,
+            tape = null,
+            notes = null,
+        )
+        val sent = places.saveProblem(problem("Done deal"))
+        places.saveProblem(problem("Never tried"))
+        val today = LocalDate.now(FIXED_CLOCK)
+        fun log(problemId: Long, style: AscentStyle, sends: Int) = NewClimb(
+            Discipline.BOULDER, GradeScale.V_SCALE, 4, style, 1, Venue.BOARD, today, null, "Moon board", null,
+            placeId = placeId, problemId = problemId, sends = sends,
+        )
+        repository.logClimb(log(tried, AscentStyle.ATTEMPT, 0))
+        repository.logClimb(log(sent, AscentStyle.REDPOINT, 1))
+
+        val vm = viewModel("placeId" to placeId)
+        withTimeout(5_000) { vm.placeDetail.first { it?.problems?.size == 3 } }
+        withTimeout(5_000) { vm.draft.first { it.placeId == placeId } }
+
+        assertEquals(listOf("Hard moves"), vm.suggestions().map { it.name })
+        assertEquals(3, vm.candidates().size)
+    }
 }
