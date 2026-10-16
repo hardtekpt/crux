@@ -115,17 +115,24 @@ internal fun PlaylistCard(
                 modifier = Modifier.weight(1f).testTag("session_playlist_next"),
             )
         }
+        val haptics = com.hardtekpt.crux.ui.components.input.rememberCruxHaptics()
         Row(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalAlignment = Alignment.CenterVertically) {
             CruxButton(
                 "+ Fell",
-                { onGo(false) },
+                {
+                    haptics.tick()
+                    onGo(false)
+                },
                 variant = CruxButtonVariant.Tonal,
                 enabled = item.matched,
                 modifier = Modifier.weight(1f).testTag("session_playlist_fell"),
             )
             CruxButton(
                 "+ Sent",
-                { onGo(true) },
+                {
+                    haptics.confirm()
+                    onGo(true)
+                },
                 enabled = item.matched,
                 modifier = Modifier.weight(1f).testTag("session_playlist_sent"),
             )

@@ -324,11 +324,14 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
             item(key = "consistency") {
                 CruxCard(fill = CruxCardFill.Low) {
                     ConsistencyGrid(uiState.activity, uiState.today)
-                    Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.padding(top = space.s3)) {
-                        ProfileStat("${uiState.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = uiState.weekStreak > 0)
-                        ProfileStat("${uiState.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
-                        ProfileStat(uiState.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
-                    }
+                    com.hardtekpt.crux.ui.components.StatStrip(
+                        listOf(
+                            com.hardtekpt.crux.ui.components.StatFigure("${uiState.weekStreak} wk", "Streak", notable = uiState.weekStreak > 0),
+                            com.hardtekpt.crux.ui.components.StatFigure("${uiState.bestWeekStreak} wk", "Best streak"),
+                            com.hardtekpt.crux.ui.components.StatFigure(uiState.daysLast30.toString(), "Last 30 days"),
+                        ),
+                        Modifier.padding(top = space.s3),
+                    )
                 }
             }
 
@@ -608,31 +611,25 @@ internal fun MeasurementDialog(type: MeasurementType, initial: Double?, onDismis
     val input = remember(type, units) { units.measureInput(type) }
     val start = input.toDisplay(initial ?: type.typicalValue())
     var shown by rememberSaveable(type, units) { mutableDoubleStateOf(input.scale.valueAt(input.scale.indexOf(start))) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(type.label, style = MaterialTheme.typography.headlineSmall) },
-        text = {
-            RulerInput(
-                title = type.description,
-                value = shown,
-                onValueChange = { shown = it },
-                scale = input.scale,
-                display = input.display,
-                unit = input.unit,
-                delta = initial?.let { "Last set ${units.measurement(type, it)}" } ?: "Drag the scale, or tap the number to type",
-                parseTyped = input.parse,
-                typeUnit = input.typeUnit,
-                testTag = "ruler_measurement",
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSave(input.toStored(shown).coerceIn(type.range)) },
-                modifier = Modifier.testTag("save_measurement"),
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+    // A sheet, not a dialog: the ruler sits where the thumb is.
+    com.hardtekpt.crux.ui.components.CruxSheet(
+        onDismiss = onDismiss,
+        modifier = Modifier.testTag("measurement_sheet"),
+        title = type.label,
+        confirm = com.hardtekpt.crux.ui.components.SheetButton("Save", { onSave(input.toStored(shown).coerceIn(type.range)) }, tag = "save_measurement"),
+        scroll = false,
+    ) {
+        RulerInput(
+            title = type.description,
+            value = shown,
+            onValueChange = { shown = it },
+            scale = input.scale,
+            display = input.display,
+            unit = input.unit,
+            delta = initial?.let { "Last set ${units.measurement(type, it)}" } ?: "Drag the scale, or tap the number to type",
+            parseTyped = input.parse,
+            typeUnit = input.typeUnit,
+            testTag = "ruler_measurement",
+        )
+    }
 }

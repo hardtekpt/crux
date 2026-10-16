@@ -26,13 +26,14 @@ def inline_dialogs(text):
         m = re.match(r'\s*(?:(?:private|internal|public)\s+)?fun\s+(?:<[^>]+>\s*)?(\w+)\s*\(', line)
         if m:
             func = m.group(1)
-        if func and re.search(r'(?<![\w.])(?:AlertDialog|ModalBottomSheet|DatePickerDialog|Dialog)\(', line) and not re.match(r'\s*(?:private |internal )?fun ', line):
-            own = 'ModalBottomSheet(' in line if func.endswith('Sheet') else func.endswith('Dialog')
+        if func and re.search(r'(?:(?<![\w.])(?:AlertDialog|ModalBottomSheet|DatePickerDialog|Dialog)|(?<!\w)(?:CruxSheet|ActionSheet))\(', line) and not re.match(r'\s*(?:private |internal )?fun ', line):
+            sheet_call = re.search(r'(?<!\w)(?:ModalBottomSheet|CruxSheet|ActionSheet)\(', line)
+            own = bool(sheet_call) if func.endswith('Sheet') else func.endswith('Dialog')
             if own:
                 continue  # the sheet or dialog is counted by its own name
             title = None
-            for nxt in lines[i + 1:i + 30]:
-                t = re.search(r'Text\(\s*"([^"$]{3,40})"', nxt)
+            for nxt in lines[i:i + 30]:
+                t = re.search(r'(?:Text\(\s*|title = |ActionSheet\()"([^"$]{3,40})"', nxt)
                 if t:
                     title = t.group(1)
                     break

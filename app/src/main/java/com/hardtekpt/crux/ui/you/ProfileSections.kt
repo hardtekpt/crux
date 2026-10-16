@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -83,15 +84,13 @@ fun ProfileSectionHeader(title: String, modifier: Modifier = Modifier, action: S
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
+        // The same tonal "+ …" pill as New plan and Add climb, so adding looks alike everywhere.
         if (action != null) {
-            Text(
+            com.hardtekpt.crux.ui.components.CruxButton(
                 action,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable(onClick = onAction)
-                    .padding(horizontal = CruxTheme.space.s2, vertical = CruxTheme.space.s1),
+                onAction,
+                variant = com.hardtekpt.crux.ui.components.CruxButtonVariant.Tonal,
+                icon = androidx.compose.material.icons.Icons.Rounded.Add,
             )
         }
     }
@@ -262,30 +261,6 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                 Text("More", style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
             }
         }
-    }
-}
-
-/** A small figure with a label, for the consistency and records summaries. */
-@Composable
-fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
-    val colors = MaterialTheme.colorScheme
-    Column(
-        modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(if (highlight) colors.primaryContainer else colors.surfaceContainer)
-            .padding(horizontal = CruxTheme.space.s3, vertical = CruxTheme.space.s2),
-    ) {
-        Text(
-            value,
-            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, fontFeatureSettings = "tnum"),
-            color = if (highlight) colors.onPrimaryContainer else colors.onSurface,
-        )
-        Text(
-            label.uppercase(),
-            style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.sp),
-            color = if (highlight) colors.onPrimaryContainer else colors.onSurfaceVariant,
-            maxLines = 1,
-        )
     }
 }
 

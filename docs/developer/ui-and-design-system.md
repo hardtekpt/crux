@@ -62,6 +62,15 @@ the composition's density.
   their own, so there are no cards inside cards. A `notable` figure turns amber. Standalone figures
   on the screen's ground are `StatTile`s.
 - **`ExercisePickerSheet`** is the one exercise picker, for plans and sessions.
+- **`ClimbGrade`** leads every list of climbs (datasets, catalogues, the Climb step); a climb you
+  logged uses `GradeBadge`. **`SettingRow`** is a setting with its value (label left, value in the
+  accent with ▾ right) in any form or sheet.
+- **Values are set in sheets**, not dialogs: a ruler, chips or a field go in a `CruxSheet` with its
+  confirm at the bottom. Dialogs are for confirmations and errors (and a step stacked on a sheet).
+- **Add** is a tonal `CruxButton` with **+** beside the eyebrow or title of the list it adds to;
+  filled is for the one thing a screen exists to finish.
+- **Haptics**: `rememberCruxHaptics()` (`input/Feedback.kt`) has `confirm` (set done, sent, save),
+  `tick` (a fall, a step) and `reject` (a refused save); they follow the system setting.
 - **Deletes**: something simple (a log, a note, a result) is deleted at once and offered to
   `UndoCenter` (`ui/UndoCenter.kt`) with a restore and an optional commit; the app shell shows the
   Undo snackbar above the nav bar. Repositories expose `delete…Undoable`, which returns the restore.

@@ -279,130 +279,14 @@ internal fun TargetSheet(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        // The same steppers as Edit exercise and the interval timer, so sets and reps are set one way.
         if (metric.usesIntervals) {
-            IntervalTargets(target, metric.usesLoad, onChange)
+            com.hardtekpt.crux.ui.session.IntervalFields(target.toIntervals(), showPrep = false) { onChange(it.toTarget(target.loadKg)) }
         } else {
-            StandardTargets(target, metric, onChange)
+            TargetFields(metric, target, onChange)
         }
+        if (metric.usesLoad) LoadRow(target.loadKg) { onChange(target.copy(loadKg = it)) }
         extra?.invoke()
-    }
-}
-
-/**
- * Sets with reps or time per set, optional load, and rest between sets. Each value is a row
- * that opens its wheel in place; one row is open at a time.
- */
-@Composable
-private fun StandardTargets(target: ExerciseTarget, metric: MetricType, onChange: (ExerciseTarget) -> Unit) {
-    var open by rememberSaveable { mutableStateOf<String?>(null) }
-    val toggle = { key: String -> open = if (open == key) null else key }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        InputRow("Sets", target.sets.toString(), open == "sets", { toggle("sets") }, unit = "sets", testTag = "sets") {
-            NumberWheel(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "sets", "Sets")
-        }
-        if (metric.usesReps) {
-            InputRow("Reps", target.reps.toString(), open == "reps", { toggle("reps") }, unit = "reps", testTag = "reps") {
-                NumberWheel(target.reps, { onChange(target.copy(reps = it)) }, 1..100, "reps", "Reps")
-            }
-        }
-        if (metric.usesTime) {
-            InputRow("Time per set", formatDuration(target.seconds), open == "seconds", { toggle("seconds") }, mono = true, testTag = "seconds") {
-                DurationWheel(
-                    target.seconds,
-                    { onChange(target.copy(seconds = it)) },
-                    "Time per set",
-                    maxMinutes = 10,
-                    minSeconds = 1,
-                    presets = listOf(5, 7, 10, 20, 30, 60),
-                )
-            }
-        }
-        if (metric.usesLoad) {
-            LoadRow(target, open == "load", { toggle("load") }, onChange)
-        }
-        InputRow("Rest between sets", formatDuration(target.restSeconds), open == "rest", { toggle("rest") }, mono = true, testTag = "rest") {
-            DurationWheel(
-                target.restSeconds,
-                { onChange(target.copy(restSeconds = it)) },
-                "Rest between sets",
-                maxMinutes = 15,
-                secondStep = 5,
-                presets = listOf(60, 90, 120, 180, 240, 300),
-            )
-        }
-    }
-}
-
-/** Interval work: work and rest per repeat, repeats per cycle, cycles, rest between cycles. */
-@Composable
-private fun IntervalTargets(target: ExerciseTarget, usesLoad: Boolean, onChange: (ExerciseTarget) -> Unit) {
-    var open by rememberSaveable { mutableStateOf<String?>(null) }
-    val toggle = { key: String -> open = if (open == key) null else key }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        InputRow("Work", formatDuration(target.seconds), open == "work", { toggle("work") }, mono = true, testTag = "work") {
-            DurationWheel(
-                target.seconds,
-                { onChange(target.copy(seconds = it)) },
-                "Work",
-                maxMinutes = 10,
-                minSeconds = 1,
-                presets = listOf(5, 7, 10, 15, 20, 30),
-            )
-        }
-        InputRow("Rest", formatDuration(target.repRestSeconds), open == "rep_rest", { toggle("rep_rest") }, mono = true, testTag = "rep_rest") {
-            DurationWheel(
-                target.repRestSeconds,
-                { onChange(target.copy(repRestSeconds = it)) },
-                "Rest",
-                maxMinutes = 10,
-                presets = listOf(3, 5, 10, 30, 60, 90),
-            )
-        }
-        InputRow("Repeats", target.reps.toString(), open == "repeats", { toggle("repeats") }, unit = "reps", testTag = "repeats") {
-            NumberWheel(target.reps, { onChange(target.copy(reps = it)) }, 1..50, "reps", "Repeats")
-        }
-        InputRow("Cycles", target.sets.toString(), open == "cycles", { toggle("cycles") }, unit = "cycles", testTag = "cycles") {
-            NumberWheel(target.sets, { onChange(target.copy(sets = it)) }, 1..20, "cycles", "Cycles")
-        }
-        if (usesLoad) {
-            LoadRow(target, open == "load", { toggle("load") }, onChange)
-        }
-        InputRow("Rest between cycles", formatDuration(target.restSeconds), open == "cycle_rest", {
-            toggle("cycle_rest")
-        }, mono = true, testTag = "cycle_rest") {
-            DurationWheel(
-                target.restSeconds,
-                { onChange(target.copy(restSeconds = it)) },
-                "Rest between cycles",
-                maxMinutes = 15,
-                secondStep = 5,
-                presets = listOf(60, 90, 120, 180, 240, 300),
-            )
-        }
-    }
-}
-
-@Composable
-private fun LoadRow(target: ExerciseTarget, open: Boolean, onToggle: () -> Unit, onChange: (ExerciseTarget) -> Unit) {
-    val load = target.loadKg
-    val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
-    InputRow(
-        "Added load",
-        (
-            if (load > 0) {
-                "+"
-            } else if (load < 0) {
-                "−"
-            } else {
-                ""
-            }
-            ) + com.hardtekpt.crux.data.model.formatLoad(load, imperial),
-        open,
-        onToggle,
-        unit = com.hardtekpt.crux.data.model.loadUnit(imperial),
-        testTag = "load",
-    ) {
-        LoadWheel(load, { onChange(target.copy(loadKg = it)) }, minKg = MIN_LOAD, maxKg = MAX_LOAD)
     }
 }
 

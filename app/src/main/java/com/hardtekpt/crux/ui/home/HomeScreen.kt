@@ -99,6 +99,8 @@ fun HomeScreen(
     onOpenExercise: (Long) -> Unit = {},
     onOpenPlace: (Long) -> Unit = {},
     onLogAtPlace: (Long) -> Unit = {},
+    onLogClimb: () -> Unit = {},
+    onNewPlan: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,6 +123,8 @@ fun HomeScreen(
             openExercise = onOpenExercise,
             openPlace = onOpenPlace,
             logAtPlace = onLogAtPlace,
+            logClimb = onLogClimb,
+            newPlan = onNewPlan,
         ),
         editor = DashboardEditor(
             start = viewModel::startEditing,
@@ -436,7 +440,7 @@ private fun EditableWidget(
     content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val outline by animateFloatAsState(if (editing) 1f else 0f, label = "outline")
+    val outline by animateFloatAsState(if (editing) 1f else 0f, com.hardtekpt.crux.ui.components.CruxMotion.fast(), label = "outline")
     // Long-press drag sits on the container, so it sees touches after the widget's own taps.
     Box(
         modifier = modifier
@@ -467,11 +471,13 @@ private fun EditableWidget(
                     )
                     .pointerInput(Unit) { detectTapGestures { } },
             )
+            // Along the bottom edge, so the widget's name at the top stays readable while arranging.
             Row(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
+                    .align(Alignment.BottomEnd)
                     .padding(6.dp)
-                    .background(colors.surfaceContainerHighest, CircleShape),
+                    .background(colors.surfaceContainerHighest, CircleShape)
+                    .border(CruxTheme.size.borderHairline, colors.outlineVariant, CircleShape),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(

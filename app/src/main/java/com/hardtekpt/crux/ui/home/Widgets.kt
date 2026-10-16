@@ -80,6 +80,8 @@ data class WidgetActions(
     val openExercise: (Long) -> Unit = {},
     val openPlace: (Long) -> Unit = {},
     val logAtPlace: (Long) -> Unit = {},
+    val logClimb: () -> Unit = {},
+    val newPlan: () -> Unit = {},
 )
 
 /** Draws one dashboard widget at its size from the shared home state. */
@@ -87,7 +89,7 @@ data class WidgetActions(
 fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions: WidgetActions, modifier: Modifier = Modifier) {
     val large = widget.size == WidgetSize.LARGE
     when (widget.type) {
-        WidgetType.TODAYS_PLAN -> TodaysPlanWidget(state, large, actions.openTemplate, actions.startPlan, modifier)
+        WidgetType.TODAYS_PLAN -> TodaysPlanWidget(state, large, actions.openTemplate, actions.startPlan, modifier, onNewPlan = actions.newPlan)
 
         WidgetType.WEEK_CLIMBS -> StatTile(
             label = "Climbs this week",
@@ -171,7 +173,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
             }
         }
 
-        WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier)
+        WidgetType.RECENT_CLIMBS -> RecentClimbsWidget(state, large, actions.openJournal, modifier, onLogClimb = actions.logClimb)
 
         WidgetType.PROJECTS -> ProjectsWidget(state, large, actions, modifier)
 
@@ -196,7 +198,14 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
 }
 
 @Composable
-private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) -> Unit, onStart: (Long) -> Unit, modifier: Modifier) {
+private fun TodaysPlanWidget(
+    state: HomeUiState,
+    large: Boolean,
+    onOpen: (Long) -> Unit,
+    onStart: (Long) -> Unit,
+    modifier: Modifier,
+    onNewPlan: () -> Unit = {},
+) {
     val plan = state.todaysPlan
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -214,6 +223,16 @@ private fun TodaysPlanWidget(state: HomeUiState, large: Boolean, onOpen: (Long) 
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.testTag("todays_plan_day"),
             )
+            // Nothing planned and no schedule: offer the plan itself.
+            if (!state.isLoading && !state.climbingToday && state.schedule.isEmpty()) {
+                CruxButton(
+                    "Make a plan",
+                    onNewPlan,
+                    variant = CruxButtonVariant.Tonal,
+                    icon = Icons.Rounded.Add,
+                    modifier = Modifier.padding(top = CruxTheme.space.s2).testTag("home_new_plan"),
+                )
+            }
             state.nextUp?.let { (date, what) ->
                 Text(
                     "Next: $what on ${date.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.UK)}",
@@ -334,7 +353,7 @@ private fun WeightTrendWidget(state: HomeUiState, large: Boolean, modifier: Modi
 }
 
 @Composable
-private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal: () -> Unit, modifier: Modifier) {
+private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal: () -> Unit, modifier: Modifier, onLogClimb: () -> Unit = {}) {
     val climbs = state.recentClimbs.take(if (large) 6 else 3)
     CruxCard(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -344,7 +363,9 @@ private fun RecentClimbsWidget(state: HomeUiState, large: Boolean, onOpenJournal
             }
         }
         if (!state.isLoading && climbs.isEmpty()) {
-            EmptyWidgetText("No climbs logged yet. Tap Log, then Log climb, to start the journal.")
+            // The first action itself, not directions to it.
+            EmptyWidgetText("No climbs logged yet.")
+            CruxButton("Log climb", onLogClimb, variant = CruxButtonVariant.Tonal, icon = Icons.Rounded.Add, modifier = Modifier.testTag("home_log_climb"))
         }
         Column(modifier = Modifier.padding(top = CruxTheme.space.s1)) {
             climbs.forEachIndexed { index, climb ->
@@ -521,11 +542,14 @@ private fun ConsistencyWidget(state: HomeUiState, large: Boolean, onOpen: () -> 
     ) {
         com.hardtekpt.crux.ui.you.ConsistencyGrid(state.activity, state.today)
         if (large) {
-            Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s3)) {
-                com.hardtekpt.crux.ui.you.ProfileStat("${state.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = state.weekStreak > 0)
-                com.hardtekpt.crux.ui.you.ProfileStat("${state.bestWeekStreak} wk", "Best streak", Modifier.weight(1f))
-                com.hardtekpt.crux.ui.you.ProfileStat(state.daysLast30.toString(), "Last 30 days", Modifier.weight(1f))
-            }
+            com.hardtekpt.crux.ui.components.StatStrip(
+                listOf(
+                    com.hardtekpt.crux.ui.components.StatFigure("${state.weekStreak} wk", "Streak", notable = state.weekStreak > 0),
+                    com.hardtekpt.crux.ui.components.StatFigure("${state.bestWeekStreak} wk", "Best streak"),
+                    com.hardtekpt.crux.ui.components.StatFigure(state.daysLast30.toString(), "Last 30 days"),
+                ),
+                Modifier.padding(top = CruxTheme.space.s3),
+            )
         }
     }
 }

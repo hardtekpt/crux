@@ -257,7 +257,7 @@ fun ExerciseEditorScreen(onDone: () -> Unit, viewModel: ExerciseEditorViewModel 
             Eyebrow(if (draft.metric.usesIntervals) "Interval timer" else "Defaults", Modifier.padding(top = space.s3))
             Column(Modifier.testTag("exercise_defaults")) {
                 if (draft.metric.usesIntervals) {
-                    IntervalFields(draft.defaults.toIntervals(draft.prepSeconds), viewModel::setIntervals)
+                    IntervalFields(draft.defaults.toIntervals(draft.prepSeconds), onChange = viewModel::setIntervals)
                 } else {
                     TargetFields(draft.metric, draft.defaults, viewModel::setDefaults)
                 }
@@ -336,7 +336,7 @@ private fun metricHelp(metric: MetricType): String = when (metric) {
 
 /** Sets, reps or time, and rest, for exercises counted in sets. */
 @Composable
-private fun TargetFields(metric: MetricType, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit) {
+internal fun TargetFields(metric: MetricType, target: ExerciseTarget, onChange: (ExerciseTarget) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
         DefaultRow("Sets") { CruxStepper(target.sets, { onChange(target.copy(sets = it)) }, 1..30, "", testTagPrefix = "default_sets") }
         if (metric.usesReps) {
@@ -355,7 +355,7 @@ private fun TargetFields(metric: MetricType, target: ExerciseTarget, onChange: (
 
 /** Added load, in the climber's units; negative is assisted. */
 @Composable
-private fun LoadRow(loadKg: Double, onChange: (Double) -> Unit) {
+internal fun LoadRow(loadKg: Double, onChange: (Double) -> Unit) {
     val imperial = LocalUnits.current == UnitSystem.IMPERIAL
     val step = if (imperial) poundsToKg(2.5) else 1.25
     val shown = loadValue(loadKg, imperial)

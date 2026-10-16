@@ -223,6 +223,8 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                             onOpenDaysOnWall = { navController.navigate(DaysOnWallRoute) },
                             onOpenWeekClimbs = { navController.navigate(WeekClimbsRoute) },
                             onOpenMeasurements = { navController.navigate(MeasurementsRoute) },
+                            onLogClimb = { navController.navigate(LogClimbRoute()) },
+                            onNewPlan = { navController.navigate(PlanEditorRoute()) },
                         )
                     }
                     page<WeekClimbsRoute> {

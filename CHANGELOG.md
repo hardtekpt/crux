@@ -20,6 +20,22 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   and open projects are an amber number rather than an amber block.
 - Place cards are calmer: what's at a place is a line of text, and its numbers sit straight on the
   card instead of in boxes of their own.
+- **One "How hard it felt"**: logging a climb and finishing a session use the same 1 to 10
+  scale, with Easy, Steady, Moderate, Hard and Limit under it for a one-tap answer.
+- **Feel it as well as see it**: the phone gives a short buzz when you tick off a set, tap
+  + Sent or + Fell, and when a save is refused for a missing field.
+- Swiping between a page's tabs now moves the page with your finger, so you can feel it take.
+- Adding looks the same everywhere: a tonal **+** button beside the list it adds to (Add climb in
+  a dataset, Log a record on You), so nothing floats over the list.
+- Plan targets use the same steppers as Edit exercise and the interval timer.
+- Height, wingspan and the other body figures, a new note tag, a wall and a tape colour are set in a
+  sheet at the bottom of the screen instead of a box in the middle.
+- Settings rows read the same in every form: the setting on the left, its value on the right.
+- Home's first screen offers **Make a plan** and **Log climb** when there's nothing there yet.
+- While arranging the dashboard, a widget's controls sit along its bottom edge so its name stays
+  readable.
+- Figures inside cards (consistency, a week of climbs, days on the wall, finishing a session)
+  are plain numbers rather than boxes inside the card; a streak shows in amber.
 - Snappier motion: the nav bar's highlight slides without a bounce, the bar comes back sooner after
   a form, and charts draw in quickly the first time instead of redrawing on every filter.
 

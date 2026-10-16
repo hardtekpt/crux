@@ -25,6 +25,31 @@ import kotlin.math.abs
  */
 
 /**
+ * The three things Crux says through the phone's buzz, all following the system touch-feedback
+ * setting: [confirm] when something is logged (a set done, a send, a save), [tick] for a smaller
+ * step (a fall, a go), [reject] when a save is refused.
+ */
+class CruxHaptics internal constructor(private val view: android.view.View) {
+    fun confirm() {
+        view.performHapticFeedback(if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY)
+    }
+
+    fun tick() {
+        view.performHapticFeedback(if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.SEGMENT_TICK else HapticFeedbackConstants.KEYBOARD_TAP)
+    }
+
+    fun reject() {
+        view.performHapticFeedback(if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS)
+    }
+}
+
+@Composable
+fun rememberCruxHaptics(): CruxHaptics {
+    val view = LocalView.current
+    return remember(view) { CruxHaptics(view) }
+}
+
+/**
  * A light tick each time the picked value changes; [strong] marks the big steps (whole
  * kilos, whole minutes). Follows the system touch-feedback setting.
  */

@@ -741,112 +741,101 @@ private fun AreaDialog(
         onDismiss()
     }
 
-    AlertDialog(
-        onDismissRequest = cancel,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(if (area == null) "Add $noun" else "Edit $noun", style = MaterialTheme.typography.headlineSmall) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+    // A sheet like the app's other forms: Save at the bottom, in reach.
+    com.hardtekpt.crux.ui.components.CruxSheet(
+        onDismiss = cancel,
+        modifier = Modifier.testTag("area_sheet"),
+        title = if (area == null) "Add $noun" else "Edit $noun",
+        confirm = com.hardtekpt.crux.ui.components.SheetButton("Save", {
+            onSave(name, image, sectionId)
+        }, enabled = name.isNotBlank() && !loading, tag = "save_area"),
+    ) {
+        // A mixed place: say which part of it this is.
+        if (sections.size > 1) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+                modifier = Modifier.testTag("area_sections"),
             ) {
-                // A mixed place: say which part of it this is.
-                if (sections.size > 1) {
-                    androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
-                        modifier = Modifier.testTag("area_sections"),
-                    ) {
-                        sections.forEach { section ->
-                            CruxFilterChip(section.name, section.id == sectionId, { sectionId = section.id }, Modifier.testTag("area_section_${section.name}"))
-                        }
-                    }
-                }
-                CruxTextField(
-                    label = "Name",
-                    value = name,
-                    onValueChange = { name = it.take(40) },
-                    placeholder = if (isBoard) "Benchmarks" else "Cave",
-                    modifier = Modifier.testTag("field_area_name"),
-                )
-                Eyebrow("Image · optional", Modifier.padding(top = CruxTheme.space.s2))
-                Text(
-                    "A photo of the $noun, or a map of the place with it marked.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                val current = image
-                when {
-                    loading -> Text("Adding image…", style = MaterialTheme.typography.bodyMedium)
-
-                    current != null -> {
-                        val preview = rememberLocalImage(areaImageFile(current), 800)
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(160.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                                .testTag("area_image_preview"),
-                        ) {
-                            preview?.let {
-                                Image(it, contentDescription = "$label image", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-                            CruxButton("Replace", {
-                                gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                            }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
-                            CruxButton(
-                                "Remove",
-                                {
-                                    if (image != area?.imagePath) viewModel.discardImage(image)
-                                    image = null
-                                },
-                                variant = CruxButtonVariant.Text,
-                                size = CruxButtonSize.Small,
-                                modifier = Modifier.testTag("remove_area_image"),
-                            )
-                        }
-                    }
-
-                    else -> Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-                        CruxButton(
-                            "Choose",
-                            { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                            variant = CruxButtonVariant.Outlined,
-                            size = CruxButtonSize.Small,
-                            icon = Icons.Rounded.Image,
-                            modifier = Modifier.testTag("choose_area_image"),
-                        )
-                        CruxButton(
-                            "Take photo",
-                            {
-                                val uri = viewModel.captureUri()
-                                captureUri = uri.toString()
-                                camera.launch(uri)
-                            },
-                            variant = CruxButtonVariant.Outlined,
-                            size = CruxButtonSize.Small,
-                            icon = Icons.Rounded.PhotoCamera,
-                            modifier = Modifier.testTag("take_area_photo"),
-                        )
-                    }
-                }
-                if (failed) {
-                    Text("That image couldn't be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                sections.forEach { section ->
+                    CruxFilterChip(section.name, section.id == sectionId, { sectionId = section.id }, Modifier.testTag("area_section_${section.name}"))
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(name, image, sectionId)
-            }, enabled = name.isNotBlank() && !loading, modifier = Modifier.testTag("save_area")) {
-                Text("Save")
+        }
+        CruxTextField(
+            label = "Name",
+            value = name,
+            onValueChange = { name = it.take(40) },
+            placeholder = if (isBoard) "Benchmarks" else "Cave",
+            modifier = Modifier.testTag("field_area_name"),
+        )
+        Eyebrow("Image · optional", Modifier.padding(top = CruxTheme.space.s2))
+        Text(
+            "A photo of the $noun, or a map of the place with it marked.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val current = image
+        when {
+            loading -> Text("Adding image…", style = MaterialTheme.typography.bodyMedium)
+
+            current != null -> {
+                val preview = rememberLocalImage(areaImageFile(current), 800)
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .testTag("area_image_preview"),
+                ) {
+                    preview?.let {
+                        Image(it, contentDescription = "$label image", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                    CruxButton("Replace", {
+                        gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, variant = CruxButtonVariant.Text, size = CruxButtonSize.Small)
+                    CruxButton(
+                        "Remove",
+                        {
+                            if (image != area?.imagePath) viewModel.discardImage(image)
+                            image = null
+                        },
+                        variant = CruxButtonVariant.Text,
+                        size = CruxButtonSize.Small,
+                        modifier = Modifier.testTag("remove_area_image"),
+                    )
+                }
             }
-        },
-        dismissButton = { TextButton(onClick = cancel) { Text("Cancel") } },
-    )
+
+            else -> Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
+                CruxButton(
+                    "Choose",
+                    { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.Image,
+                    modifier = Modifier.testTag("choose_area_image"),
+                )
+                CruxButton(
+                    "Take photo",
+                    {
+                        val uri = viewModel.captureUri()
+                        captureUri = uri.toString()
+                        camera.launch(uri)
+                    },
+                    variant = CruxButtonVariant.Outlined,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.PhotoCamera,
+                    modifier = Modifier.testTag("take_area_photo"),
+                )
+            }
+        }
+        if (failed) {
+            Text("That image couldn't be added. Try another.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
 }
 
 /** Small card used on the climb page to sum up progress. */

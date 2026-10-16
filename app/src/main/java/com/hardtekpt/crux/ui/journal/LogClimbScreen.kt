@@ -118,7 +118,10 @@ fun LogClimbScreen(
     val links by viewModel.datasetLinks.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val openLog by viewModel.openLog.collectAsStateWithLifecycle()
+    val haptics = com.hardtekpt.crux.ui.components.input.rememberCruxHaptics()
     LaunchedEffect(draft.saved) { if (draft.saved) onDone() }
+    // A save refused for a missing or wrong field buzzes as well as showing why.
+    LaunchedEffect(draft.nameError, draft.dateError) { if (draft.nameError != null || draft.dateError != null) haptics.reject() }
     LaunchedEffect(openLog) {
         openLog?.let {
             viewModel.logOpened()
@@ -294,7 +297,7 @@ fun LogClimbContent(
                 }
             }
 
-            com.hardtekpt.crux.ui.components.input.EffortWords(draft.effort, onEffort, Modifier.padding(top = space.s3))
+            com.hardtekpt.crux.ui.components.input.EffortScale(draft.effort, onEffort, Modifier.padding(top = space.s3))
 
             // Name: suggests climbs here to continue; any other name starts a new climb.
             val source = draft.source
@@ -489,10 +492,17 @@ private fun DayButton(date: LocalDate, today: LocalDate, onClick: () -> Unit) {
 @Composable
 private fun GoPads(draft: LogClimbDraft, onGo: (Boolean) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val haptics = com.hardtekpt.crux.ui.components.input.rememberCruxHaptics()
     Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
         // The counts are the climb's in all; the dots below say which goes are today's.
-        GoPad("Fell", "not yet", draft.fallsInAll, colors.surfaceContainerHighest, colors.onSurface, Modifier.weight(1f).testTag("go_fell")) { onGo(false) }
-        GoPad("Sent", "topped", draft.sendsInAll, CruxTheme.colors.success, CruxTheme.colors.onSuccess, Modifier.weight(1f).testTag("go_sent")) { onGo(true) }
+        GoPad("Fell", "not yet", draft.fallsInAll, colors.surfaceContainerHighest, colors.onSurface, Modifier.weight(1f).testTag("go_fell")) {
+            haptics.tick()
+            onGo(false)
+        }
+        GoPad("Sent", "topped", draft.sendsInAll, CruxTheme.colors.success, CruxTheme.colors.onSuccess, Modifier.weight(1f).testTag("go_sent")) {
+            haptics.confirm()
+            onGo(true)
+        }
     }
 }
 

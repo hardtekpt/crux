@@ -199,13 +199,16 @@ internal fun TimerSetupSheet(initial: IntervalSpec, title: String?, onStart: (In
  * Used when setting a timer up in a session and when setting an exercise up.
  */
 @Composable
-fun IntervalFields(settings: IntervalSettings, onChange: (IntervalSettings) -> Unit) {
+fun IntervalFields(settings: IntervalSettings, showPrep: Boolean = true, onChange: (IntervalSettings) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-        SetupRow("Preparation", "before the first repeat", TimerColors.prep) {
-            CruxStepper(settings.prepSeconds, { onChange(settings.copy(prepSeconds = it)) }, 0..120, "s", step = 5, testTagPrefix = "timer_prep")
+        // A plan's targets leave the preparation to the exercise.
+        if (showPrep) {
+            SetupRow("Preparation", "before the first repeat", TimerColors.prep) {
+                CruxStepper(settings.prepSeconds, { onChange(settings.copy(prepSeconds = it)) }, 0..120, "s", step = 5, testTagPrefix = "timer_prep")
+            }
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
         }
-        HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
         SetupRow("Work", "each repeat", TimerColors.work) {
             CruxStepper(settings.workSeconds, { onChange(settings.copy(workSeconds = it)) }, 1..600, "s", testTagPrefix = "timer_work")
         }

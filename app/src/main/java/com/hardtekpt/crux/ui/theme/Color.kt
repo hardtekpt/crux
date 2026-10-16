@@ -219,17 +219,29 @@ data class CruxColors(
     val timerCycleRest: Color,
     /** Boards' accent, beside gyms (primary) and crags (secondary). */
     val board: Color,
+    /** A finish hold on a board diagram, beside start (success), hand (primary) and foot (secondary). */
+    val holdFinish: Color,
     /** The stripe down the side of the climber card on You. Decoration, not route tape. */
     val profileTape: List<Color>,
 )
 
-private val Board = Color(0xFFB39DDB)
+// Lilac on dark; a deeper one on light so it keeps 3:1 against white cards.
+private val BoardDark = Color(0xFFB39DDB)
+private val BoardLight = Color(0xFF6F55B5)
+private val HoldFinishDark = Color(0xFFC77DFF)
+private val HoldFinishLight = Color(0xFF8A3FC8)
 private val ProfileTape = listOf(Color(0xFFF2C94C), Color(0xFF4CAF50), Color(0xFF2F80ED), Color(0xFF9B51E0), Color(0xFFEB5757))
 
 internal val CruxLightExtendedColors = with(Light) {
-    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape, chart, timerWork, timerRest, timerCycleRest, Board, ProfileTape)
+    CruxColors(
+        success, onSuccess, successContainer, onSuccessContainer, tape, chart,
+        timerWork, timerRest, timerCycleRest, BoardLight, HoldFinishLight, ProfileTape,
+    )
 }
 
 internal val CruxDarkExtendedColors = with(Dark) {
-    CruxColors(success, onSuccess, successContainer, onSuccessContainer, tape, chart, timerWork, timerRest, timerCycleRest, Board, ProfileTape)
+    CruxColors(
+        success, onSuccess, successContainer, onSuccessContainer, tape, chart,
+        timerWork, timerRest, timerCycleRest, BoardDark, HoldFinishDark, ProfileTape,
+    )
 }

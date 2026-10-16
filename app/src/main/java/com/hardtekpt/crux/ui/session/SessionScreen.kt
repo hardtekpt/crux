@@ -706,6 +706,7 @@ fun SessionScreen(
     val runningTimer = timer
     val runningRest = rest
     val done = current.items.count { it.finished }
+    val haptics = com.hardtekpt.crux.ui.components.input.rememberCruxHaptics()
     val imperial = com.hardtekpt.crux.ui.LocalUnits.current == com.hardtekpt.crux.data.prefs.UnitSystem.IMPERIAL
 
     Column(Modifier.fillMaxSize().statusBarsPadding().testTag("screen_Session")) {
@@ -928,6 +929,7 @@ fun SessionScreen(
                             "Done · ${next.first.exercise.name}, set ${next.second + 1}",
                             {
                                 open = null
+                                haptics.confirm()
                                 viewModel.tick(next.first, next.second)
                             },
                             icon = Icons.Rounded.Check,
@@ -1219,11 +1221,13 @@ private fun FinishSheet(session: Session, nowMillis: Long, onSave: (Int?, String
     ) {
         Eyebrow(session.name)
         Text(clockLabel(session.durationMillis(nowMillis)), style = CruxTheme.type.metricMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min)) {
-            if (session.items.isNotEmpty()) TallyFigure("${session.setsDone}/${session.setsPlanned}", "sets done", Modifier.weight(1f))
-            TallyFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs", Modifier.weight(1f))
-            TallyFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent", Modifier.weight(1f))
-        }
+        com.hardtekpt.crux.ui.components.StatStrip(
+            listOfNotNull(
+                com.hardtekpt.crux.ui.components.StatFigure("${session.setsDone}/${session.setsPlanned}", "sets done").takeIf { session.items.isNotEmpty() },
+                com.hardtekpt.crux.ui.components.StatFigure(session.climbGroups.size.toString(), if (session.climbGroups.size == 1) "climb" else "climbs"),
+                com.hardtekpt.crux.ui.components.StatFigure(session.climbGroups.count { it.style.isSend }.toString(), "sent"),
+            ),
+        )
         EffortScale(effort, { effort = it })
         CruxTextField(label = "Notes", value = notes, onValueChange = {
             notes = it.take(1000)

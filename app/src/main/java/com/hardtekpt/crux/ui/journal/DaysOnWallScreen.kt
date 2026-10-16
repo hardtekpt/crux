@@ -52,7 +52,6 @@ import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
-import com.hardtekpt.crux.ui.you.ProfileStat
 import com.hardtekpt.crux.ui.you.weekStreaks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
@@ -172,12 +171,15 @@ fun DaysOnWallContent(
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             item(key = "figures") {
-                Row(horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.height(IntrinsicSize.Min).testTag("days_figures")) {
-                    ProfileStat(state.thisWeek.toString(), "Week", Modifier.weight(1f))
-                    ProfileStat(state.thisMonth.toString(), "Month", Modifier.weight(1f))
-                    ProfileStat(state.thisYear.toString(), "Year", Modifier.weight(1f))
-                    ProfileStat("${state.weekStreak} wk", "Streak", Modifier.weight(1f), highlight = state.weekStreak > 0)
-                }
+                com.hardtekpt.crux.ui.components.StatStrip(
+                    listOf(
+                        com.hardtekpt.crux.ui.components.StatFigure(state.thisWeek.toString(), "Week"),
+                        com.hardtekpt.crux.ui.components.StatFigure(state.thisMonth.toString(), "Month"),
+                        com.hardtekpt.crux.ui.components.StatFigure(state.thisYear.toString(), "Year"),
+                        com.hardtekpt.crux.ui.components.StatFigure("${state.weekStreak} wk", "Streak", notable = state.weekStreak > 0),
+                    ),
+                    Modifier.testTag("days_figures"),
+                )
             }
             item(key = "calendar") {
                 CruxCard(fill = CruxCardFill.Low) {

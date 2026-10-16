@@ -921,37 +921,35 @@ private fun LocalScaleEditor(scale: LocalScale, error: String?, onChange: (Local
     }
 
     pickingColourFor?.let { index ->
-        AlertDialog(
-            onDismissRequest = { pickingColourFor = null },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text("Tape colour", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                @OptIn(ExperimentalLayoutApi::class)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
-                    LocalScale.PALETTE.forEach { (name, colour) ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .width(56.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .clickable {
-                                    val grade = scale.grades[index]
-                                    // A grade still named after its old colour takes the new name too.
-                                    val renamed = if (LocalScale.PALETTE.any { it.first == grade.name } || grade.name.isBlank()) name else grade.name
-                                    onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = LocalGrade(renamed, colour) }))
-                                    pickingColourFor = null
-                                }
-                                .padding(CruxTheme.space.s1),
-                        ) {
-                            TapeSwatch(argb(colour), 32.dp)
-                            Text(name, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
-                        }
+        // Picking: tap a colour and the sheet closes.
+        com.hardtekpt.crux.ui.components.CruxSheet(
+            onDismiss = { pickingColourFor = null },
+            modifier = Modifier.testTag("tape_colour_sheet"),
+            title = "Tape colour",
+        ) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
+                LocalScale.PALETTE.forEach { (name, colour) ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .width(56.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable {
+                                val grade = scale.grades[index]
+                                // A grade still named after its old colour takes the new name too.
+                                val renamed = if (LocalScale.PALETTE.any { it.first == grade.name } || grade.name.isBlank()) name else grade.name
+                                onChange(scale.copy(grades = scale.grades.toMutableList().also { it[index] = LocalGrade(renamed, colour) }))
+                                pickingColourFor = null
+                            }
+                            .padding(CruxTheme.space.s1),
+                    ) {
+                        TapeSwatch(argb(colour), 32.dp)
+                        Text(name, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
-            },
-            confirmButton = { TextButton(onClick = { pickingColourFor = null }) { Text("Cancel") } },
-        )
+            }
+        }
     }
 }
 
@@ -1100,20 +1098,7 @@ private fun BoardChoice(section: SectionDraft, index: Int, onChange: ((SectionDr
 /** A "label · value ▾" row like the grade rows. */
 @Composable
 private fun ChoiceRow(label: String, value: String, tag: String, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClickLabel = "Change $label", onClick = onClick)
-            .padding(vertical = CruxTheme.space.s1)
-            .testTag(tag),
-    ) {
-        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
-        Icon(Icons.Rounded.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    com.hardtekpt.crux.ui.components.SettingRow(label, value, tag, onClick)
 }
 
 /** Which board: Kilter, then MoonBoard, then Custom board, each with a line on what it covers. */

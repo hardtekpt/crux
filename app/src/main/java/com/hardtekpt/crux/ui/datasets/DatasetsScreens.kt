@@ -64,6 +64,7 @@ import com.hardtekpt.crux.data.model.GradeScale
 import com.hardtekpt.crux.data.model.boardSizeLabel
 import com.hardtekpt.crux.data.prefs.GradeScales
 import com.hardtekpt.crux.ui.components.ActionSheet
+import com.hardtekpt.crux.ui.components.ClimbGrade
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
 import com.hardtekpt.crux.ui.components.CruxButtonVariant
@@ -441,6 +442,20 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                         modifier = Modifier.fillMaxWidth().testTag("dataset_search"),
                     )
                 }
+                // Add sits with the list it adds to, as New plan does on Train; filled stays for the
+                // nav bar's Log.
+                item(key = "add") {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Eyebrow("Climbs · ${ds.climbs.size}", Modifier.weight(1f))
+                        CruxButton(
+                            "Add climb",
+                            { addingClimb = true },
+                            variant = CruxButtonVariant.Tonal,
+                            icon = Icons.Rounded.Add,
+                            modifier = Modifier.testTag("dataset_add_climb"),
+                        )
+                    }
+                }
                 item(key = "sort") {
                     Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
                         ClimbSort.entries.forEach { option ->
@@ -479,15 +494,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                             },
                         )
                             .joinToString(" · ").ifEmpty { if (climb.gradeLabel == null) "no grade yet" else null },
-                        leading = {
-                            Text(
-                                climb.gradeLabel ?: "–",
-                                style = CruxTheme.type.grade,
-                                textAlign = TextAlign.Start,
-                                maxLines = 1,
-                                modifier = Modifier.width(44.dp),
-                            )
-                        },
+                        leading = { ClimbGrade(climb.gradeLabel) },
                         selected = climb.id in selected,
                         onClick = {
                             when {
@@ -502,18 +509,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                 }
             }
         }
-        if (dataset != null && selected.isEmpty()) {
-            Box(
-                Modifier.align(
-                    Alignment.BottomCenter,
-                ).fillMaxWidth().padding(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
-            ) {
-                CruxButton("Add climb", {
-                    addingClimb = true
-                }, icon = Icons.Rounded.Add, size = CruxButtonSize.Large, modifier = Modifier.fillMaxWidth().testTag("dataset_add_climb"))
-            }
-        }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp + LocalNavBarClearance.current))
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = space.s4 + LocalNavBarClearance.current))
     }
 
     val ds = dataset ?: return
@@ -780,7 +776,7 @@ internal fun DatasetDetailsSheet(initial: Dataset, title: String, confirm: Strin
 
 @Composable
 private fun DetailRow(label: String, value: String, tag: String, onClick: () -> Unit) {
-    CruxListRow(title = label, supporting = value, onClick = onClick, modifier = Modifier.testTag(tag))
+    com.hardtekpt.crux.ui.components.SettingRow(label, value, tag, onClick)
 }
 
 /**
@@ -1004,11 +1000,9 @@ private fun ImportSheet(
                 title = raw.name,
                 supporting = if (known) raw.discipline.label else "grade \"${raw.grade}\" not recognised",
                 leading = {
-                    Text(
-                        index?.let(scale::label) ?: if (raw.grade == null) "–" else "?",
-                        style = CruxTheme.type.grade,
-                        color = if (known) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.width(44.dp),
+                    ClimbGrade(
+                        index?.let(scale::label) ?: if (raw.grade == null) null else "?",
+                        color = if (known) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
                     )
                 },
             )

@@ -319,9 +319,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                             row.quality?.let { "★ %.1f".format(it) },
                             "benchmark".takeIf { row.benchmark == true },
                         ).joinToString(" · "),
-                        leading = {
-                            Text(boardGrade(row.difficulty, uiState.scales), style = CruxTheme.type.grade, maxLines = 1, modifier = Modifier.width(44.dp))
-                        },
+                        leading = { com.hardtekpt.crux.ui.components.ClimbGrade(boardGrade(row.difficulty, uiState.scales)) },
                         trailing = uiState.today["c${row.uuid}"]?.let { sent ->
                             {
                                 Box(

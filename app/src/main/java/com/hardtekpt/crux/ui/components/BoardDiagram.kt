@@ -49,7 +49,7 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
 fun holdColor(role: HoldRole): Color = when (role) {
     HoldRole.START -> CruxTheme.colors.success
     HoldRole.HAND -> MaterialTheme.colorScheme.primary
-    HoldRole.FINISH -> Color(0xFFC77DFF)
+    HoldRole.FINISH -> CruxTheme.colors.holdFinish
     HoldRole.FOOT -> MaterialTheme.colorScheme.secondary
 }
 

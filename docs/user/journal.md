@@ -50,8 +50,8 @@ Journal. Coming back to a climb adds another log to it.
    a *Redpoint*. On a climb you've tried before, the counts on the pads are the climb's in all, the
    earlier goes show faded before today's, and any send is a redpoint, whatever day the earlier
    goes were on. For a route sent first go, **No beta** marks it an *Onsight*.
-5. **How hard it felt** (optional): Easy, Steady, Moderate, Hard or Limit. Tap the picked word
-   again to clear it.
+5. **How hard it felt** (optional): a 1 to 10 scale; tap or drag along it, or tap Easy, Steady,
+   Moderate, Hard or Limit under it. **Clear** empties it. Finishing a session asks the same way.
 6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
    like "6B+ · Benchmarks". As you type, Crux suggests the climbs you've logged there; picking one,
    or typing its exact name, adds today's goes to it. Any other name starts a new climb.

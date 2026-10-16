@@ -542,7 +542,7 @@ private fun DatasetClimbRow(
 
 @Composable
 private fun GradeText(grade: String) {
-    Text(grade, style = CruxTheme.type.grade, maxLines = 1, modifier = Modifier.width(44.dp))
+    com.hardtekpt.crux.ui.components.ClimbGrade(grade)
 }
 
 /** Green once sent, amber while a project; nothing before a go. */

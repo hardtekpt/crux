@@ -40,7 +40,6 @@ import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.theme.CruxTheme
-import com.hardtekpt.crux.ui.you.ProfileStat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
 import java.time.DayOfWeek
@@ -179,15 +178,15 @@ fun WeekClimbsContent(state: WeekClimbsUiState, onBack: () -> Unit = {}, actions
                             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = "Next week")
                         }
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(space.s2),
-                        modifier = Modifier.padding(top = space.s3).height(IntrinsicSize.Min).testTag("week_figures"),
-                    ) {
-                        ProfileStat(state.climbs.toString(), if (state.climbs == 1) "Climb" else "Climbs", Modifier.weight(1f))
-                        ProfileStat(state.sent.toString(), "Sent", Modifier.weight(1f))
-                        ProfileStat(state.days.toString(), if (state.days == 1) "Day" else "Days", Modifier.weight(1f))
-                        ProfileStat(state.hardest ?: "–", "Hardest", Modifier.weight(1f))
-                    }
+                    com.hardtekpt.crux.ui.components.StatStrip(
+                        listOf(
+                            com.hardtekpt.crux.ui.components.StatFigure(state.climbs.toString(), if (state.climbs == 1) "Climb" else "Climbs"),
+                            com.hardtekpt.crux.ui.components.StatFigure(state.sent.toString(), "Sent"),
+                            com.hardtekpt.crux.ui.components.StatFigure(state.days.toString(), if (state.days == 1) "Day" else "Days"),
+                            com.hardtekpt.crux.ui.components.StatFigure(state.hardest ?: "–", "Hardest"),
+                        ),
+                        Modifier.padding(top = space.s3).testTag("week_figures"),
+                    )
                 }
             }
             if (!state.isLoading && state.entries.isEmpty()) {

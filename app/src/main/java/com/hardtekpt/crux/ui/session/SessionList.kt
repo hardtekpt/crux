@@ -128,6 +128,7 @@ internal fun ExerciseCard(
     onAddSet: () -> Unit,
     onMenu: () -> Unit,
 ) {
+    val haptics = com.hardtekpt.crux.ui.components.input.rememberCruxHaptics()
     val colors = MaterialTheme.colorScheme
     val space = CruxTheme.space
     val imperial = LocalUnits.current == UnitSystem.IMPERIAL
@@ -236,7 +237,10 @@ internal fun ExerciseCard(
                         TickBox(
                             done = logged != null && !logged.skipped,
                             running = timerRunning && setIndex == next,
-                            onClick = { onTick(setIndex) },
+                            onClick = {
+                                if (logged == null) haptics.confirm()
+                                onTick(setIndex)
+                            },
                             modifier = Modifier.testTag("session_tick_$setIndex"),
                         )
                     }

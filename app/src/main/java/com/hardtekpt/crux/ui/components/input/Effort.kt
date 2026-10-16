@@ -54,8 +54,9 @@ fun effortWord(value: Int): String = when (value) {
 }
 
 /**
- * How hard something felt, 1 to 10, as ten segments: tap one or drag across them. Optional:
- * it starts empty and Clear empties it again.
+ * How hard something felt, 1 to 10, as ten segments: tap one, drag across them, or tap a word
+ * under them (Easy to Limit). The same control for climbs and sessions. Optional: it starts empty
+ * and Clear empties it again.
  */
 @Composable
 fun EffortScale(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier = Modifier, title: String = "How hard it felt") {
@@ -135,52 +136,31 @@ fun EffortScale(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier =
                 )
             }
         }
-    }
-}
-
-/** The words a log offers for how hard it felt, and the 1 to 10 value each one saves. */
-private val EFFORT_WORDS = listOf(2 to "Easy", 4 to "Steady", 6 to "Moderate", 8 to "Hard", 10 to "Limit")
-
-/**
- * How hard it felt as five words, one tap: quick to answer between goes. Saves the same 1 to 10
- * scale (2, 4, 6, 8, 10), so older values show on the nearest word. Tapping the picked word
- * again clears it.
- */
-@Composable
-fun EffortWords(value: Int?, onValueChange: (Int?) -> Unit, modifier: Modifier = Modifier, title: String = "How hard it felt") {
-    val colors = MaterialTheme.colorScheme
-    val picked = value?.let { v -> EFFORT_WORDS.minBy { kotlin.math.abs(it.first - v) }.first }
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s2)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Eyebrow(title, Modifier.weight(1f))
-            Text("Optional", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).testTag("effort")) {
+        // The words under their steps (2, 4, 6, 8, 10): one tap for a quick answer between goes.
+        Row(Modifier.fillMaxWidth()) {
             EFFORT_WORDS.forEach { (score, word) ->
-                val on = picked == score
-                val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
-                val style = MaterialTheme.typography.labelMedium
+                val on = value == score
                 Text(
                     word,
-                    style = style,
-                    color = if (on) colors.onSecondaryContainer else colors.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (on) colors.primary else colors.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
                     maxLines = 1,
-                    // Large text sizes shrink the longer words to fit rather than cut them off.
-                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize),
+                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize),
                     modifier = Modifier
                         .weight(1f)
-                        // As tall as the row, so a shrunk word keeps its chip the height of the others.
-                        .fillMaxHeight()
-                        .clip(shape)
-                        .background(if (on) colors.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent, shape)
-                        .border(CruxTheme.size.borderHairline, if (on) colors.secondary else colors.outlineVariant, shape)
-                        .clickable(onClickLabel = if (on) "Clear" else word) { onValueChange(if (on) null else score) }
-                        .padding(vertical = 9.dp)
-                        .wrapContentHeight()
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClickLabel = word) {
+                            tick(score == 10)
+                            onValueChange(score)
+                        }
+                        .padding(vertical = 6.dp, horizontal = 2.dp)
                         .testTag("effort_$word"),
                 )
             }
         }
     }
 }
+
+/** The words under the effort scale, and the 1 to 10 value each one picks. */
+private val EFFORT_WORDS = listOf(2 to "Easy", 4 to "Steady", 6 to "Moderate", 8 to "Hard", 10 to "Limit")

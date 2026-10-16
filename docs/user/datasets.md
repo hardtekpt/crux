@@ -24,7 +24,7 @@ Tap **+ → New dataset** (or **New dataset** on the empty page):
 
 ## Climbs in a dataset
 
-**Add climb** opens a sheet: the name, Boulder or Route, the grade strip (or **No grade**), the
+**Add climb** (beside the list, above the climbs) opens a sheet: the name, Boulder or Route, the grade strip (or **No grade**), the
 setter and a note. A name already in the dataset shows "Already in this dataset" but is allowed,
 since gyms reuse names. Tap a climb to change it or delete it; a climb without a note goes at once
 with **Undo**, and one with a note asks first.

@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -120,6 +123,50 @@ fun CruxListRow(
             }
         }
         trailing?.invoke()
+    }
+}
+
+/**
+ * The grade at the start of a climb row: mono, a fixed width so names line up down a list,
+ * "–" when there is none. Lists of climbs (datasets, catalogues, playlists, the Climb step)
+ * all lead with it; a climb you logged uses [GradeBadge] instead, which also says sent or best.
+ */
+@Composable
+fun ClimbGrade(grade: String?, modifier: Modifier = Modifier, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface) {
+    Text(
+        grade ?: "–",
+        style = CruxTheme.type.grade,
+        color = color,
+        textAlign = TextAlign.Start,
+        maxLines = 1,
+        modifier = modifier.width(44.dp),
+    )
+}
+
+/**
+ * A setting with its value: the label on the left, the value in the accent with a ▾ on the right;
+ * tapping opens its picker. The one row for "Board · Kilter Original", "Boulder grades · My
+ * settings", "Datasets · None" and the like, in forms and sheets alike.
+ */
+@Composable
+fun SettingRow(label: String, value: String, tag: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = CruxTheme.size.touchTarget)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = "Change $label", onClick = onClick)
+            .padding(vertical = CruxTheme.space.s1)
+            .testTag(tag),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        androidx.compose.material3.Icon(
+            androidx.compose.material.icons.Icons.Rounded.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -304,32 +304,29 @@ fun NoteEditorScreen(onDone: () -> Unit, viewModel: NoteEditorViewModel = hiltVi
     }
     if (typingTag) {
         var text by rememberSaveable { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { typingTag = false },
-            containerColor = colors.surfaceContainerHigh,
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text("New tag", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                CruxTextField(
-                    label = "",
-                    value = text,
-                    onValueChange = { text = it.take(NoteEditorViewModel.MAX_TAG) },
-                    placeholder = "injury, beta, training…",
-                    modifier = Modifier.testTag("field_tag"),
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.setTag(text)
-                        typingTag = false
-                    },
-                    enabled = text.isNotBlank(),
-                    modifier = Modifier.testTag("confirm_tag"),
-                ) { Text("Add") }
-            },
-            dismissButton = { TextButton(onClick = { typingTag = false }) { Text("Cancel") } },
-        )
+        com.hardtekpt.crux.ui.components.CruxSheet(
+            onDismiss = { typingTag = false },
+            modifier = Modifier.testTag("tag_sheet"),
+            title = "New tag",
+            confirm = com.hardtekpt.crux.ui.components.SheetButton(
+                "Add",
+                {
+                    viewModel.setTag(text)
+                    typingTag = false
+                },
+                enabled = text.isNotBlank(),
+                tag = "confirm_tag",
+            ),
+            scroll = false,
+        ) {
+            CruxTextField(
+                label = "",
+                value = text,
+                onValueChange = { text = it.take(NoteEditorViewModel.MAX_TAG) },
+                placeholder = "injury, beta, training…",
+                modifier = Modifier.testTag("field_tag"),
+            )
+        }
     }
 }
 
