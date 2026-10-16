@@ -353,24 +353,6 @@
    "cleanup": []
   },
   {
-   "id": "log-climb-delete",
-   "title": "Delete this log?",
-   "kind": "sheet",
-   "lane": "log",
-   "col": 3,
-   "row": 1,
-   "desc": "Asks before a logged climb is deleted.",
-   "covers": [
-    "LogClimbScreen/dialog:Delete this log?"
-   ],
-   "steps": [
-    "tab:Journal",
-    "tap:Red arete",
-    "tap:Delete climb"
-   ],
-   "cleanup": []
-  },
-  {
    "id": "log-weight-type",
    "title": "Type a value",
    "kind": "sheet",
@@ -402,26 +384,6 @@
     "scrollto:Notes",
     "tap:Notes",
     "tapc:Left ring finger"
-   ],
-   "cleanup": []
-  },
-  {
-   "id": "note-delete",
-   "title": "Delete this note?",
-   "kind": "sheet",
-   "lane": "log",
-   "col": 2,
-   "row": 2,
-   "desc": "Asks before a note is deleted.",
-   "covers": [
-    "NoteEditorScreen/dialog:Delete this note?"
-   ],
-   "steps": [
-    "tab:You",
-    "scrollto:Notes",
-    "tap:Notes",
-    "tapc:Left ring finger",
-    "tap:Delete note"
    ],
    "cleanup": []
   },
@@ -919,7 +881,7 @@
    "row": 1,
    "desc": "Search the library and add an exercise on the spot.",
    "covers": [
-    "ExercisePicker/dialog:Add an exercise"
+    "ExercisePickerSheet"
    ],
    "steps": [
     "tab:Train",
@@ -3143,21 +3105,9 @@
    "sheet"
   ],
   [
-   "log-climb-edit",
-   "log-climb-delete",
-   "Delete",
-   "sheet"
-  ],
-  [
    "log-weight",
    "log-weight-type",
    "Tap the value",
-   "sheet"
-  ],
-  [
-   "note-editor",
-   "note-delete",
-   "Delete",
    "sheet"
   ],
   [
@@ -4133,5 +4083,8 @@
    "sheet"
   ]
  ],
- "ignore": {}
+ "ignore": {
+  "CruxSheet": "The frame every bottom sheet is drawn in, not a sheet of its own",
+  "ActionSheet": "The frame of the menu sheets, which are on the map under their own names"
+ }
 }
