@@ -53,6 +53,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.ui.components.Eyebrow
@@ -170,7 +171,7 @@ fun RulerInput(
         }
     }
     val measurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, color = colors.onSurfaceVariant)
+    val labelStyle = com.hardtekpt.crux.ui.theme.CruxMicro.copy(color = colors.onSurfaceVariant, letterSpacing = TextUnit.Unspecified)
     val nudge = { by: Int -> onValueChange(scale.valueAt((scale.indexOf(value) + by).coerceIn(0, scale.steps))) }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -3,6 +3,7 @@ package com.hardtekpt.crux.ui.journal
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
@@ -102,6 +104,8 @@ import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
 import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.theme.Archivo
+import com.hardtekpt.crux.ui.theme.CruxDayNumber
+import com.hardtekpt.crux.ui.theme.CruxMicro
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.you.describe
@@ -120,6 +124,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class JournalUiState(
     val isLoading: Boolean = true,
@@ -138,12 +143,36 @@ data class JournalUiState(
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(
-    climbRepository: ClimbRepository,
+    private val climbRepository: ClimbRepository,
     recordRepository: RecordRepository,
-    noteRepository: NoteRepository,
+    private val noteRepository: NoteRepository,
     sessionRepository: com.hardtekpt.crux.data.SessionRepository,
     clock: Clock,
+    private val images: com.hardtekpt.crux.data.images.ImageFiles? = null,
+    private val undo: com.hardtekpt.crux.ui.UndoCenter? = null,
 ) : ViewModel() {
+    /**
+     * Deletes the picked logs and notes at once, with one Undo for all of them. A log's photo and
+     * video stay on disk until the Undo has gone.
+     */
+    fun delete(climbs: List<com.hardtekpt.crux.data.model.Climb>, noteIds: List<Long>) {
+        viewModelScope.launch {
+            val restores = climbs.mapNotNull { climbRepository.deleteClimbUndoable(it.id) } + noteIds.mapNotNull { noteRepository.deleteNoteUndoable(it) }
+            val files = climbs.flatMap { listOfNotNull(it.imagePath, it.videoPath) }
+            val count = climbs.size + noteIds.size
+            val center = undo
+            if (center != null && restores.isNotEmpty()) {
+                center.offer(
+                    if (count == 1) "Deleted 1 entry" else "Deleted $count entries",
+                    undo = { restores.forEach { it() } },
+                    commit = { files.forEach { images?.delete(it) } },
+                )
+            } else {
+                files.forEach { images?.delete(it) }
+            }
+        }
+    }
+
     private val today = LocalDate.now(clock)
     private val query = MutableStateFlow(JournalQuery())
 
@@ -211,11 +240,11 @@ fun JournalScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val places by placesViewModel.places.collectAsStateWithLifecycle()
-    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions, places = places)
+    JournalContent(uiState = uiState, onQuery = viewModel::update, actions = actions, places = places, onDelete = viewModel::delete)
 }
 
 private val GUTTER = 48.dp
-private val MonoLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
+private val MonoLabel = CruxMicro
 
 /**
  * The journal as one timeline, newest first. The top bar holds search and a Filters button
@@ -229,8 +258,14 @@ fun JournalContent(
     onQuery: ((JournalQuery) -> JournalQuery) -> Unit = {},
     actions: JournalActions = JournalActions(),
     places: List<com.hardtekpt.crux.data.model.PlaceSummary>? = null,
+    /** Deletes picked logs and notes (with Undo). */
+    onDelete: (List<com.hardtekpt.crux.data.model.Climb>, List<Long>) -> Unit = { _, _ -> },
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    // Long-press a climb or a note to pick it; then tap others, and delete them together.
+    var picked by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val pick = { key: String -> picked = if (key in picked) picked - key else picked + key }
+    val selection = JournalSelection(picked.toSet(), pick)
     val space = CruxTheme.space
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var placeType by rememberSaveable { mutableStateOf<com.hardtekpt.crux.data.model.PlaceType?>(null) }
@@ -247,6 +282,16 @@ fun JournalContent(
     ) {
         if (searching) {
             SearchBar(uiState.query.search, onQuery) { searching = false }
+        } else if (picked.isNotEmpty()) {
+            com.hardtekpt.crux.ui.components.SelectionBar(picked.size, onClear = { picked = emptyList() }) {
+                IconButton(onClick = {
+                    val all = uiState.days.flatMap { it.entries }
+                    val climbs = all.filterIsInstance<TimelineEntry.Climbs>().flatMap { it.day.climbs }.filter { "c${it.id}" in picked }
+                    val notes = all.filterIsInstance<TimelineEntry.NoteEntry>().map { it.note.id }.filter { "n$it" in picked }
+                    onDelete(climbs, notes)
+                    picked = emptyList()
+                }, modifier = Modifier.testTag("selection_delete")) { Icon(Icons.Rounded.Delete, contentDescription = "Delete the picked entries") }
+            }
         } else {
             CruxTopAppBar(title = "Journal", scrollBehavior = scrollBehavior) {
                 IconButton(onClick = { searching = true }, modifier = Modifier.testTag("journal_open_search")) {
@@ -310,10 +355,10 @@ fun JournalContent(
                     // Entries slide into place and fade when a tab, search or filter changes the list.
                     Box(Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())) {
                         when (entry) {
-                            is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb)
+                            is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb, selection)
                             is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
                             is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
-                            is TimelineEntry.NoteEntry -> NoteEntry(entry.note) { actions.openNote(entry.note.id) }
+                            is TimelineEntry.NoteEntry -> NoteEntry(entry.note, selection) { actions.openNote(entry.note.id) }
                         }
                     }
                 }
@@ -633,7 +678,7 @@ private fun DayHeader(day: TimelineDay, today: Boolean) {
             ) {
                 Text(
                     day.date.dayOfMonth.toString(),
-                    style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp),
+                    style = CruxDayNumber,
                     color = if (today) colors.onPrimaryContainer else colors.onSurface,
                 )
                 Text(
@@ -670,7 +715,7 @@ internal fun JournalDayEntries(day: TimelineDay, actions: JournalActions) {
 
 /** Climbs at a place: the place on top, then each climb with its tape colour. */
 @Composable
-private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit) {
+private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit, selection: JournalSelection = JournalSelection()) {
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.primary) {
         Column {
@@ -680,8 +725,25 @@ private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit) {
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
             )
-            day.climbs.forEach { climb -> TapeRow(climb, onClick = { onOpen(climb.id) }) }
+            day.climbs.forEach { climb ->
+                val key = "c${climb.id}"
+                TapeRow(
+                    climb,
+                    onClick = { if (selection.active) selection.pick(key) else onOpen(climb.id) },
+                    selected = key in selection.picked,
+                    onLongClick = { selection.pick(key) }.takeIf { selection.enabled },
+                )
+            }
         }
+    }
+}
+
+/** What's picked in the Journal and how to pick more; empty and off on pages that don't pick. */
+internal class JournalSelection(val picked: Set<String> = emptySet(), private val onPick: ((String) -> Unit)? = null) {
+    val enabled: Boolean get() = onPick != null
+    val active: Boolean get() = picked.isNotEmpty()
+    fun pick(key: String) {
+        onPick?.invoke(key)
     }
 }
 
@@ -690,7 +752,7 @@ private fun ClimbsEntry(day: JournalDay, onOpen: (Long) -> Unit) {
  * grey for a go), the grade, the name, and how it went.
  */
 @Composable
-private fun TapeRow(climb: Climb, onClick: () -> Unit) {
+private fun TapeRow(climb: Climb, onClick: () -> Unit, selected: Boolean = false, onLongClick: (() -> Unit)? = null) {
     val colors = MaterialTheme.colorScheme
     val sent = climb.style.isSend
     val tape = climb.gradeColour?.let { argb(it) } ?: if (sent) CruxTheme.colors.success else colors.outline
@@ -700,7 +762,9 @@ private fun TapeRow(climb: Climb, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .background(if (selected) colors.primaryContainer.copy(alpha = 0.35f) else Color.Transparent)
+            .then(if (selected) Modifier.border(CruxTheme.size.borderEmphasis, colors.primary, RoundedCornerShape(10.dp)) else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(vertical = 6.dp)
             .testTag("journal_climb"),
     ) {
@@ -846,7 +910,9 @@ private fun TrainingEntry(entry: TimelineEntry.Training, onOpen: (Long) -> Unit)
 
 /** A note: its tag, first line and a line of the rest, on a quiet panel. */
 @Composable
-private fun NoteEntry(note: Note, onClick: () -> Unit) {
+private fun NoteEntry(note: Note, selection: JournalSelection = JournalSelection(), onClick: () -> Unit) {
+    val key = "n${note.id}"
+    val selected = key in selection.picked
     val colors = MaterialTheme.colorScheme
     TimelineRow(dot = colors.onSurfaceVariant) {
         Column(
@@ -854,8 +920,12 @@ private fun NoteEntry(note: Note, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .padding(top = 4.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.surfaceContainerLow)
-                .clickable(onClick = onClick)
+                .background(if (selected) colors.primaryContainer.copy(alpha = 0.35f) else colors.surfaceContainerLow)
+                .then(if (selected) Modifier.border(CruxTheme.size.borderEmphasis, colors.primary, RoundedCornerShape(12.dp)) else Modifier)
+                .combinedClickable(
+                    onClick = { if (selection.active) selection.pick(key) else onClick() },
+                    onLongClick = { selection.pick(key) }.takeIf { selection.enabled },
+                )
                 .padding(horizontal = 12.dp, vertical = 10.dp)
                 .testTag("journal_note"),
             verticalArrangement = Arrangement.spacedBy(2.dp),

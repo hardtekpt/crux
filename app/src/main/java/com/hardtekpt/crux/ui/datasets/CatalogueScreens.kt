@@ -22,7 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -228,7 +228,6 @@ private fun count(n: Int?): String = when {
 fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel: CatalogueViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
-    var menu by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var open by remember { mutableStateOf<CatalogueClimb?>(null) }
     var addingTo by remember { mutableStateOf<CatalogueClimb?>(null) }
@@ -246,8 +245,9 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().testTag("screen_Catalogue")) {
             CruxTopAppBar(title = dataset?.name.orEmpty(), onBack = onBack) {
-                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("catalogue_menu")) {
-                    Icon(Icons.Rounded.MoreVert, contentDescription = "Catalogue options")
+                // Its one action straight in the top bar, as Edit place's delete is; it still asks first.
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.testTag("catalogue_delete")) {
+                    Icon(Icons.Rounded.Delete, contentDescription = "Delete catalogue")
                 }
             }
             val q = uiState.query
@@ -356,14 +356,6 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     }
 
     val ds = dataset ?: return
-    if (menu) {
-        PlaylistMenuSheet(ds.name, { menu = false }) {
-            CruxListRow("Delete catalogue", supporting = "Asks first; import it again any time", onClick = {
-                menu = false
-                confirmDelete = true
-            }, modifier = Modifier.testTag("catalogue_delete"))
-        }
-    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

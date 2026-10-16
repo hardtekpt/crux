@@ -71,6 +71,9 @@ To change a log, tap it in the Journal. To remove it, use **Delete**; it disappe
 journal, bests and charts at once, and **Undo** shows above the nav bar for a few seconds in case
 it was a slip. Undo brings back the log with its photo and video.
 
+To clear out several at once, long-press a climb or a note in the timeline to pick it, tap others
+to add them, and tap the bin: they all go together, with one **Undo**.
+
 ## Notes
 
 **+ → Add a note** opens the note editor. The first line is the title. A note can be **pinned**

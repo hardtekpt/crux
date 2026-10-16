@@ -28,7 +28,12 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   exercises as rows under them, and moving or removing in a ⋮ menu, instead of boxes inside boxes.
 - **You → Places** is a quick list, one row per place; the Journal's Places tab keeps the cards.
 - Switches use the accent colour everywhere (some were amber).
-- The **+** Log button and the nav bar drop their glow for a plain, softer shadow.
+- **Pick several and delete them together**: long-press a climb or a note in the Journal, or a
+  note under You → Notes, then tap others; one **Undo** brings them all back.
+- A board catalogue's **Delete** is a bin in its top bar instead of a menu with one item.
+- Importing a backup asks about something already in Crux with the same chips as a dataset import
+  (Skip, Replace, Keep both, and *Same for the other …*), then **Next**.
+- The + Log button and the nav bar drop their glow for a plain, softer shadow.
 - Places, dataset climbs, notes and an exercise's results slide and fade when one is added or
   removed (and when Undo brings it back) instead of jumping.
 - **One "How hard it felt"**: logging a climb and finishing a session use the same 1 to 10

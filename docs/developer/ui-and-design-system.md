@@ -75,6 +75,13 @@ the composition's density.
   `UndoCenter` (`ui/UndoCenter.kt`) with a restore and an optional commit; the app shell shows the
   Undo snackbar above the nav bar. Repositories expose `delete…Undoable`, which returns the restore.
   Deletes that cascade (places, plans, datasets) keep a confirm dialog that says what goes with them.
+- **Selection**: long-press a row to pick it; `SelectionBar` replaces the top bar with "N selected",
+  back clears, and the batch action (Delete, with one Undo) sits on the right. Datasets, Notes and the
+  Journal use it.
+- **Text styles**: screens use `MaterialTheme.typography` or `CruxTheme.type` (also as top-level
+  `CruxMicro`, `CruxMicroSmall`, `CruxAxis`, `CruxDayNumber`, `CruxSectionTitle` and the dock's
+  `CruxDockNumber`, `CruxTimerHuge`, `CruxPhaseLabel`), not their own `TextStyle(...)`. The rest left
+  in screens are sized to fit at run time (hold diagrams, the big timer, wheels and rulers).
 - **Amber** (`secondary`) is for bests, streak highlights and cautions only. Rests are `timerRest`.
 
 ### The touch input kit (`components/input/`)

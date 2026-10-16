@@ -104,7 +104,7 @@ fun PlaceCard(summary: PlaceSummary, onOpen: () -> Unit, modifier: Modifier = Mo
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     place.name,
-                    style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, lineHeight = 26.sp, letterSpacing = (-0.3).sp),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
                     color = colors.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

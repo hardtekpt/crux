@@ -60,6 +60,26 @@ val CruxTypography = Typography(
     labelSmall = style(JetBrainsMono, 11, 14, 600, 0.12),
 )
 
+/** The mono micro label: day letters, tape labels, a value's caption. 11sp, medium, spaced for caps. */
+val CruxMicro = style(JetBrainsMono, 11, 14, 500, 0.1)
+
+/** The smaller micro label, where 11sp doesn't fit: weekday letters in a strip, figure captions. */
+val CruxMicroSmall = style(JetBrainsMono, 10, 12, 500, 0.1)
+
+/** Chart axes and the consistency grid's month and day marks. */
+val CruxAxis = style(JetBrainsMono, 9, 11, 400)
+
+/** A day of the month standing for its day: the Journal's and the Week's date blocks. */
+val CruxDayNumber = style(Archivo, 18, 20, 700, tabular = true)
+
+/** A section heading on a long page (You's Consistency, Personal records). */
+val CruxSectionTitle = style(Archivo, 20, 24, 800, -0.01)
+
+/** The timer dock's numbers, the full-screen timer's, and its phase label. */
+val CruxDockNumber = style(JetBrainsMono, 28, 30, 700, tabular = true)
+val CruxTimerHuge = style(JetBrainsMono, 88, 88, 700, tabular = true)
+val CruxPhaseLabel = style(JetBrainsMono, 13, 16, 500, 0.12)
+
 /** Crux text styles with no Material 3 slot. Read through `CruxTheme.type`. */
 @Immutable
 data class CruxType(
@@ -71,4 +91,9 @@ data class CruxType(
     val gradeSmall: TextStyle = style(JetBrainsMono, 13, 16, 600, 0.02, tabular = true),
     val timer: TextStyle = style(JetBrainsMono, 32, 34, 500, 0.01, tabular = true),
     val code: TextStyle = style(JetBrainsMono, 12, 18, 400),
+    val micro: TextStyle = CruxMicro,
+    val microSmall: TextStyle = CruxMicroSmall,
+    val axis: TextStyle = CruxAxis,
+    val dayNumber: TextStyle = CruxDayNumber,
+    val sectionTitle: TextStyle = CruxSectionTitle,
 )

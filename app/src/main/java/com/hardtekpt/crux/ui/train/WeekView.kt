@@ -61,6 +61,8 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.SheetButton
 import com.hardtekpt.crux.ui.theme.Archivo
+import com.hardtekpt.crux.ui.theme.CruxDayNumber
+import com.hardtekpt.crux.ui.theme.CruxMicroSmall
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import java.time.LocalDate
@@ -85,7 +87,7 @@ data class WeekDay(
     }
 }
 
-private val DayLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.sp)
+private val DayLabel = CruxMicroSmall
 
 /** The Week tab: Monday to Sunday of this week, each day's plans or climbing, or rest. */
 internal fun LazyListScope.week(uiState: TrainUiState, onEditDay: (WeekDay) -> Unit) {
@@ -141,7 +143,7 @@ private fun WeekDayRow(day: WeekDay, today: Boolean, onClick: () -> Unit, modifi
             )
             Text(
                 day.date.dayOfMonth.toString(),
-                style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 20.sp),
+                style = CruxDayNumber,
                 color = if (today) colors.onPrimaryContainer else colors.onSurface,
             )
         }

@@ -45,11 +45,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hardtekpt.crux.ui.theme.CruxDockNumber
+import com.hardtekpt.crux.ui.theme.CruxPhaseLabel
+import com.hardtekpt.crux.ui.theme.CruxTimerHuge
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 
-private val DockNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 30.sp)
-private val HugeNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold, fontSize = 88.sp, lineHeight = 88.sp)
-private val PhaseLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 13.sp, letterSpacing = 1.6.sp)
+private val DockNumber = CruxDockNumber
+private val HugeNumber = CruxTimerHuge
+private val PhaseLabel = CruxPhaseLabel
 
 /**
  * How a timer is drawn: [fill] behind it, [ink] for its text and controls, and [accent] for the

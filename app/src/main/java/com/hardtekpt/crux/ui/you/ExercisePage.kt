@@ -176,7 +176,7 @@ fun ExerciseRecordsScreen(
                         Text("PERSONAL RECORD", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                         Text(
                             pr?.describe(metric, imperial) ?: "–",
-                            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp),
+                            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
                             modifier = Modifier.testTag("exercise_pr"),
                         )
                         Text(

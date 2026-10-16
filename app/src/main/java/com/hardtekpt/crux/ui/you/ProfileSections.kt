@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -55,6 +56,9 @@ import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.input.formatDuration
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.Archivo
+import com.hardtekpt.crux.ui.theme.CruxAxis
+import com.hardtekpt.crux.ui.theme.CruxMicro
+import com.hardtekpt.crux.ui.theme.CruxSectionTitle
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import java.time.DayOfWeek
@@ -63,7 +67,7 @@ import java.time.format.TextStyle as DateTextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
-private val Mono11 = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
+private val Mono11 = CruxMicro
 private val BigFigure =
     TextStyle(
         fontFamily = Archivo,
@@ -80,7 +84,7 @@ fun ProfileSectionHeader(title: String, modifier: Modifier = Modifier, action: S
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier.fillMaxWidth().padding(top = CruxTheme.space.s4)) {
         Text(
             title,
-            style = TextStyle(fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, letterSpacing = (-0.2).sp),
+            style = CruxSectionTitle,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
@@ -187,7 +191,7 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                     Box(Modifier.width(cell + gap)) {
                         Text(
                             label,
-                            style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp),
+                            style = CruxAxis,
                             color = colors.onSurfaceVariant,
                             maxLines = 1,
                             softWrap = false,
@@ -199,7 +203,7 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                 Column(Modifier.width(labelWidth), verticalArrangement = Arrangement.spacedBy(gap)) {
                     listOf("M", "", "W", "", "F", "", "S").forEach {
                         Box(Modifier.height(cell), contentAlignment = Alignment.CenterStart) {
-                            Text(it, style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
+                            Text(it, style = CruxAxis, color = colors.onSurfaceVariant)
                         }
                     }
                 }
@@ -248,7 +252,7 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(start = labelWidth),
             ) {
-                Text("Less", style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
+                Text("Less", style = CruxAxis, color = colors.onSurfaceVariant)
                 listOf(
                     colors.surfaceContainerHighest,
                     colors.primary.copy(alpha = 0.35f),
@@ -258,7 +262,7 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                 ).forEach {
                     Box(Modifier.width(10.dp).height(10.dp).clip(RoundedCornerShape(2.dp)).background(it))
                 }
-                Text("More", style = TextStyle(fontFamily = JetBrainsMono, fontSize = 9.sp), color = colors.onSurfaceVariant)
+                Text("More", style = CruxAxis, color = colors.onSurfaceVariant)
             }
         }
     }
@@ -311,15 +315,19 @@ fun RecordRow(best: ExerciseBest, onClick: () -> Unit, modifier: Modifier = Modi
 
 /** A note as a paper-like card: its first line as the title, the rest clipped below. */
 @Composable
-fun NoteCard(note: Note, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun NoteCard(note: Note, onClick: () -> Unit, modifier: Modifier = Modifier, selected: Boolean = false, onLongClick: (() -> Unit)? = null) {
     val colors = MaterialTheme.colorScheme
     Column(
         modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .background(colors.surfaceContainerLow)
-            .border(CruxTheme.size.borderHairline, colors.outlineVariant, MaterialTheme.shapes.large)
-            .clickable(onClick = onClick)
+            .background(if (selected) colors.primaryContainer.copy(alpha = 0.35f) else colors.surfaceContainerLow)
+            .border(
+                if (selected) CruxTheme.size.borderEmphasis else CruxTheme.size.borderHairline,
+                if (selected) colors.primary else colors.outlineVariant,
+                MaterialTheme.shapes.large,
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(CruxTheme.space.s4)
             .testTag("note_card"),
         verticalArrangement = Arrangement.spacedBy(4.dp),

@@ -45,6 +45,7 @@ import com.hardtekpt.crux.ui.LocalUnits
 import com.hardtekpt.crux.ui.Shown
 import com.hardtekpt.crux.ui.measurement
 import com.hardtekpt.crux.ui.theme.Archivo
+import com.hardtekpt.crux.ui.theme.CruxMicroSmall
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.weight
 
@@ -61,7 +62,7 @@ private const val BODY_DOWN =
 private const val BODY_T =
     "M207,50 C208,60 210,66 212,68 C222,72 234,72 244,76 C262,78 288,79 312,80 L372,82 C378,82 382,81 386,80 C400,78 412,82 412.5,87 C412,92 402,94 388,93 C382,93 378,94 372,95 L312,97 C282,99 252,104 234,118 C232,140 228,160 227,180 C227,196 234,206 236,222 C238,250 236,280 232,310 C230,322 229,330 230,342 C232,362 230,384 224,404 C224,412 230,420 228,426 C220,430 210,430 206,426 C204,418 208,410 208,402 C206,384 204,364 206,344 C207,334 207,326 206,316 C204,290 202,262 200,246 C198,262 196,290 194,316 C193,326 193,334 194,344 C196,364 194,384 192,402 C192,410 196,418 194,426 C190,430 180,430 172,426 C170,420 176,412 176,404 C170,384 168,362 170,342 C171,330 170,322 168,310 C164,280 162,250 164,222 C166,206 173,196 173,180 C172,160 168,140 166,118 C148,104 118,99 88,97 L28,95 C22,94 18,93 12,93 C-2,94 -12,92 -12.5,87 C-12,82 0,78 14,80 C18,81 22,82 28,82 L88,80 C112,79 138,78 156,76 C166,72 178,72 188,68 C190,66 192,60 193,50 Z"
 
-private val Eyebrow = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.2.sp)
+private val Eyebrow = CruxMicroSmall
 
 /** Maps view-box units to pixels in a figure of a given width. */
 private class ViewBox(val x: Float, val y: Float, val width: Float, val height: Float) {

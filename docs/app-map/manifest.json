@@ -2717,24 +2717,6 @@
    "cleanup": []
   },
   {
-   "id": "catalogue-options",
-   "title": "Catalogue options",
-   "kind": "sheet",
-   "lane": "datasets",
-   "col": 4,
-   "row": 4,
-   "desc": "Delete catalogue, which asks first; you can import it again any time.",
-   "covers": [],
-   "steps": [
-    "tab:You",
-    "scrollto:Datasets",
-    "tap:Datasets",
-    "tapc:Kilter Original 12×12",
-    "tap:Catalogue options"
-   ],
-   "cleanup": []
-  },
-  {
    "id": "catalogue-delete",
    "title": "Delete catalogue?",
    "kind": "sheet",
@@ -2750,7 +2732,6 @@
     "scrollto:Datasets",
     "tap:Datasets",
     "tapc:Kilter Original 12×12",
-    "tap:Catalogue options",
     "tapc:Delete"
    ],
    "cleanup": []
@@ -4025,12 +4006,6 @@
   ],
   [
    "catalogue",
-   "catalogue-options",
-   "Catalogue options",
-   "sheet"
-  ],
-  [
-   "catalogue-options",
    "catalogue-delete",
    "Delete catalogue",
    "sheet"

@@ -633,6 +633,7 @@ private fun ImportDialog(file: BackupFile, state: BackupUiState, actions: Backup
 @Composable
 private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, actions: BackupActions) {
     var forOthers by remember(conflict.section) { mutableStateOf(false) }
+    var picked by remember(conflict) { mutableStateOf(Resolution.SKIP) }
     val others = state.othersInSection
     AlertDialog(
         onDismissRequest = {},
@@ -657,29 +658,39 @@ private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, actio
                         modifier = Modifier.padding(top = CruxTheme.space.s1),
                     )
                 }
-                Column(Modifier.padding(top = CruxTheme.space.s2)) {
+                // The same three chips as a dataset import asks with; the pick shows what it means.
+                Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = Modifier.padding(top = CruxTheme.space.s3)) {
                     Resolution.entries.forEach { resolution ->
-                        Choice(resolution, onClick = { actions.resolve(resolution, forOthers && others > 0) })
-                    }
-                }
-                if (others > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { forOthers = !forOthers }
-                            .testTag("conflict_for_others"),
-                    ) {
-                        Checkbox(checked = forOthers, onCheckedChange = { forOthers = it })
-                        Text(
-                            "Do the same for the other $others in ${conflict.section.label.lowercase()}",
-                            style = MaterialTheme.typography.bodyMedium,
+                        com.hardtekpt.crux.ui.components.CruxFilterChip(
+                            resolution.label,
+                            picked == resolution,
+                            { picked = resolution },
+                            Modifier.testTag("resolve_${resolution.name}"),
                         )
                     }
                 }
+                Text(
+                    picked.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = CruxTheme.space.s1),
+                )
+                if (others > 0) {
+                    com.hardtekpt.crux.ui.components.CruxFilterChip(
+                        "Same for the other $others",
+                        forOthers,
+                        { forOthers = !forOthers },
+                        Modifier.padding(top = CruxTheme.space.s2).testTag("conflict_for_others"),
+                    )
+                }
             }
         },
-        confirmButton = { TextButton(onClick = actions.cancelImport) { Text("Cancel import") } },
+        confirmButton = {
+            TextButton(onClick = { actions.resolve(picked, forOthers && others > 0) }, modifier = Modifier.testTag("resolve_next")) {
+                Text(if (state.decisions.size + 1 >= state.conflicts.size || (forOthers && others > 0)) "Done" else "Next")
+            }
+        },
+        dismissButton = { TextButton(onClick = actions.cancelImport) { Text("Cancel import") } },
     )
 }
 
@@ -688,21 +699,6 @@ private fun Version(label: String, text: String) {
     Column(Modifier.padding(top = CruxTheme.space.s2)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text.ifEmpty { "—" }, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun Choice(resolution: Resolution, onClick: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .padding(vertical = CruxTheme.space.s2, horizontal = CruxTheme.space.s1)
-            .testTag("resolve_${resolution.name}"),
-    ) {
-        Text(resolution.label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-        Text(resolution.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

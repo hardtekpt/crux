@@ -41,14 +41,14 @@ untouched until you turn demo mode off.
 
 **When something in the backup is already in Crux**, Crux asks about each one before importing
 anything. It shows what's in Crux and what's in the backup, and says when they're the same. For
-each one you choose:
+each one you pick with a chip (Skip is picked to start), then **Next**:
 
 - **Skip**: keep what's in Crux.
 - **Replace**: use the backup's version. A place keeps its own walls and climbs, and the backup's
   are updated or added by name.
 - **Keep both**: add the backup's as a copy. A named copy gets a number, like "Max hangs (2)".
 
-Tick *Do the same for the other …* to answer once for the rest of that section, such as every
+Pick *Same for the other …* to answer once for the rest of that section, such as every
 climb. *Cancel import* stops before anything changes. Exercises, plans and places count as already
 here when they have the same name; climbs, sessions, notes, records and body stats when they were
 logged at the same moment.

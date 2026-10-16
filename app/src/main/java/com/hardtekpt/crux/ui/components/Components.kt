@@ -82,6 +82,16 @@ fun CruxTopAppBar(
     )
 }
 
+/**
+ * The top bar while rows are picked (long-press one to start): "N selected", back clears the
+ * pick, and the actions that apply to all of them on the right.
+ */
+@Composable
+fun SelectionBar(count: Int, onClear: () -> Unit, actions: @Composable RowScope.() -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onClear)
+    CruxTopAppBar(title = "$count selected", onBack = onClear, actions = actions, modifier = Modifier.testTag("selection_bar"))
+}
+
 enum class CruxCardFill { Default, Low, Outlined }
 
 /** The container everything sits in: `radius-lg`, `space-4` padding, no shadow. */

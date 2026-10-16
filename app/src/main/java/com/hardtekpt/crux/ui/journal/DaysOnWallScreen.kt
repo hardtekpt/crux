@@ -50,6 +50,7 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
+import com.hardtekpt.crux.ui.theme.CruxMicro
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.you.weekStreaks
@@ -141,7 +142,7 @@ class DaysOnWallViewModel @Inject constructor(
     }
 }
 
-private val WeekdayStyle = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.sp)
+private val WeekdayStyle = CruxMicro
 private val DayNumber = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
 
 /**

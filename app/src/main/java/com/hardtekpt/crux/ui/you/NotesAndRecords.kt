@@ -101,10 +101,20 @@ import kotlinx.coroutines.launch
 // ---- Notes ---------------------------------------------------------------------------
 
 @HiltViewModel
-class NotesViewModel @Inject constructor(repository: NoteRepository) : ViewModel() {
+class NotesViewModel @Inject constructor(private val repository: NoteRepository, private val undo: com.hardtekpt.crux.ui.UndoCenter? = null) : ViewModel() {
     val notes: StateFlow<List<Note>?> = repository.observeNotes().flowOn(
         kotlinx.coroutines.Dispatchers.Default,
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Deletes the picked notes at once, with one Undo for all of them. */
+    fun delete(ids: Collection<Long>) {
+        viewModelScope.launch {
+            val restores = ids.mapNotNull { repository.deleteNoteUndoable(it) }
+            if (restores.isNotEmpty()) {
+                undo?.offer(if (restores.size == 1) "Deleted a note" else "Deleted ${restores.size} notes", undo = { restores.forEach { it() } })
+            }
+        }
+    }
 }
 
 /** Every note, pinned first, then newest first. */
@@ -112,12 +122,23 @@ class NotesViewModel @Inject constructor(repository: NoteRepository) : ViewModel
 fun NotesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, onNew: () -> Unit, viewModel: NotesViewModel = hiltViewModel()) {
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val space = CruxTheme.space
+    // Long-press a note to pick it; then tap others, and delete them together (with Undo).
+    var selected by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     Column(Modifier.fillMaxSize().testTag("screen_Notes")) {
-        CruxTopAppBar(
-            title = "Notes",
-            onBack = onBack,
-            actions = { IconButton(onClick = onNew, modifier = Modifier.testTag("new_note")) { Icon(Icons.Rounded.Add, contentDescription = "New note") } },
-        )
+        if (selected.isNotEmpty()) {
+            com.hardtekpt.crux.ui.components.SelectionBar(selected.size, onClear = { selected = emptyList() }) {
+                IconButton(onClick = {
+                    viewModel.delete(selected)
+                    selected = emptyList()
+                }, modifier = Modifier.testTag("selection_delete")) { Icon(Icons.Rounded.Delete, contentDescription = "Delete the picked notes") }
+            }
+        } else {
+            CruxTopAppBar(
+                title = "Notes",
+                onBack = onBack,
+                actions = { IconButton(onClick = onNew, modifier = Modifier.testTag("new_note")) { Icon(Icons.Rounded.Add, contentDescription = "New note") } },
+            )
+        }
         val list = notes ?: return@Column
         if (list.isEmpty()) {
             EmptyState(icon = Icons.AutoMirrored.Rounded.Notes, headline = "No notes yet", sentence = "Add one with the + above or from the Log button.")
@@ -149,7 +170,17 @@ fun NotesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, onNew: () -> Unit, v
                     }
                 }
             }
-            items(shown, key = { it.id }) { note -> NoteCard(note, onClick = { onOpen(note.id) }, modifier = listItemMotion()) }
+            items(shown, key = { it.id }) { note ->
+                val picked = note.id in selected
+                val toggle = { selected = if (picked) selected - note.id else selected + note.id }
+                NoteCard(
+                    note,
+                    onClick = { if (selected.isEmpty()) onOpen(note.id) else toggle() },
+                    modifier = listItemMotion(),
+                    selected = picked,
+                    onLongClick = toggle,
+                )
+            }
         }
     }
 }

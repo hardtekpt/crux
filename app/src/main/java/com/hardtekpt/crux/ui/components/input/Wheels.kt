@@ -201,7 +201,7 @@ fun WheelText(text: String, visibleCount: Int = 3, unit: Boolean = false, mono: 
         Text(
             if (unit) text.uppercase() else text,
             style = if (unit) {
-                TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.3.sp)
+                com.hardtekpt.crux.ui.theme.CruxMicro
             } else {
                 wheelText(mono, selected = true)
             },
@@ -217,7 +217,7 @@ fun WheelColumn(caption: String, wheel: @Composable () -> Unit) {
         wheel()
         Text(
             caption.uppercase(),
-            style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.2.sp),
+            style = com.hardtekpt.crux.ui.theme.CruxMicroSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
         )

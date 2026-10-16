@@ -55,6 +55,7 @@ import com.hardtekpt.crux.ui.oneDecimal
 import com.hardtekpt.crux.ui.places.PlacesViewModel
 import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.shortLabel
+import com.hardtekpt.crux.ui.theme.CruxMicro
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.theme.JetBrainsMono
 import com.hardtekpt.crux.ui.weight
@@ -62,7 +63,7 @@ import com.hardtekpt.crux.ui.weightChange
 import com.hardtekpt.crux.ui.weightUnit
 import com.hardtekpt.crux.ui.weightValue
 
-private val TapeLabel = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.2.sp)
+private val TapeLabel = CruxMicro
 
 /** Bodyweight (trend and every weigh-in) and the climbing body stats. */
 @Composable

@@ -80,7 +80,7 @@ file) and pick it in **+ → Import a file**. Crux never goes online for it.
   In Log climb's Climb step its chip searches it, most sent first, at the angle on the Angle chip;
   picking a climb grades it at that angle ("Kilter Homewall says 6C at 40°"), and changing the
   angle follows. Typing a name suggests its climbs too.
-- **⋯ → Delete catalogue** removes it; import it again any time.
+- The **bin** in the top bar deletes it (it asks first); import it again any time.
 
 ### Hold diagrams
 

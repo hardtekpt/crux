@@ -84,7 +84,7 @@ fun InputRow(
             if (unit != null) {
                 Text(
                     unit.uppercase(),
-                    style = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 1.1.sp),
+                    style = com.hardtekpt.crux.ui.theme.CruxMicro,
                     color = colors.onSurfaceVariant,
                 )
             }
