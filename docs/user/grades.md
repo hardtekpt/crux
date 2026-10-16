@@ -15,7 +15,7 @@ Pick your scale per discipline in *Settings → Grades*. New climbs are logged i
 A climb keeps the scale and grade it was logged in, for good. If you switch from Font to V, your
 old Font climbs still say 6C, and your bests in each scale are kept apart (see
 [Progress](progress.md#hardest-sends)). No conversion is exact, and "7A" in Fontainebleau isn't
-quite "V6" in a gym, so Crux doesn't pretend otherwise.
+quite "V6" in a gym, so Climb Logger doesn't pretend otherwise.
 
 ## Local grades
 

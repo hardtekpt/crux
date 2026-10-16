@@ -30,13 +30,13 @@ Tap **New place** (or *Add place* from *Log climb → Where*):
   gym's own system. Local grades are numbers or colour tapes, in order from easiest to hardest
   (*Add a colour*, *Move easier*, *Move harder*). Local grades are never converted, and your bests
   in them are kept per place.
-- **Lights** (Kilter and MoonBoard facilities): pair your board's lights on this phone, so Crux can
+- **Lights** (Kilter and MoonBoard facilities): pair your board's lights on this phone, so Climb Logger can
   light a climb's holds. See [Datasets](datasets.md#lighting-your-board).
 - **Datasets for each facility**: the lists of climbs Log climb offers there. Datasets made for
   the facility's board are used automatically; tick others (a gym circuit, a custom board's list)
   to link them. See [Datasets](datasets.md#where-a-dataset-is-offered).
 - **Where** (optional): *Add a map pin*. Search an address or place, or move the map so the pin
-  sits on the spot, then *Use this spot*. *My location* centres the map on you; Crux asks for
+  sits on the spot, then *Use this spot*. *My location* centres the map on you; Climb Logger asks for
   location permission only then. The map is OpenStreetMap.
 - **Favourite**: the star. Favourites are one tap away when you log a climb.
 
@@ -59,12 +59,12 @@ it is, if anywhere. You don't create climbs separately; logging goes starts one.
 logs** listed at the bottom; tap one to change or delete it. Changing the name, grade or wall in
 the form changes the climb and all its logs. Deleting a climb's last log deletes the climb.
 
-Crux never hides or removes a climb on its own: everything you log stays, and a climb you haven't
+Climb Logger never hides or removes a climb on its own: everything you log stays, and a climb you haven't
 sent stays a project until you send it.
 
 ## Projects
 
-You don't mark projects; Crux finds them. A project is a climb that's still up, that you've
+You don't mark projects; Climb Logger finds them. A project is a climb that's still up, that you've
 tried and haven't sent yet, at a place or not. Projects show on Home, on Progress, and on each place. Send it, and it
 stops being a project.
 

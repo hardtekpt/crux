@@ -165,7 +165,7 @@ object LiveCards {
         val left = session.items.count { !it.finished }
         val title = current?.let { "${it.exercise.name} · set ${(it.nextSet ?: 0) + 1} of ${it.target.sets}" } ?: "Every exercise done"
         val text = when {
-            current == null -> "Finish the session in Crux"
+            current == null -> "Finish the session in Climb Logger"
             next != null -> "Then ${next.exercise.name} · ${left - 1} more to go"
             else -> "Last exercise"
         }

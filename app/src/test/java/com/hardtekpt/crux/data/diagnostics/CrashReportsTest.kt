@@ -21,14 +21,14 @@ class CrashReportsTest {
         override fun withZone(zone: java.time.ZoneId?) = this
         override fun instant() = now
     }
-    private val reports by lazy { CrashReports(tmp.root.resolve("crashes"), clock, about = "App: Crux 0.1.0 (100, debug)", keep = 3) }
+    private val reports by lazy { CrashReports(tmp.root.resolve("crashes"), clock, about = "App: Climb Logger 0.1.0 (100, debug)", keep = 3) }
 
     @Test
     fun `a crash is saved with the build, the thread and the stack trace`() {
         val file = reports.record("main", IllegalStateException("No place picked"))
 
         val text = file.readText()
-        assertTrue(text.startsWith("Crux crash report\nTime: 2026-10-07T10:15:30.123Z\nApp: Crux 0.1.0 (100, debug)\nThread: main\n"))
+        assertTrue(text.startsWith("Climb Logger crash report\nTime: 2026-10-07T10:15:30.123Z\nApp: Climb Logger 0.1.0 (100, debug)\nThread: main\n"))
         assertTrue(text.contains("java.lang.IllegalStateException: No place picked"))
         assertTrue(text.contains("at com.hardtekpt.crux.data.diagnostics.CrashReportsTest"))
         assertEquals(1, reports.count.value)

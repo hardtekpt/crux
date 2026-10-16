@@ -488,8 +488,8 @@ class BackupRepositoryTest {
     fun `files that are not backups are refused with a reason`() = runTest {
         val repo = repo(newDb())
         fun refusal(text: String) = assertThrows(BackupFormatException::class.java) { repo.parse(text) }.message
-        assertEquals("This file is not a Crux backup.", refusal("not json"))
-        assertEquals("This file is not a Crux backup.", refusal("""{"format":"other","exportedAt":"x"}"""))
+        assertEquals("This file is not a Climb Logger backup.", refusal("not json"))
+        assertEquals("This file is not a Climb Logger backup.", refusal("""{"format":"other","exportedAt":"x"}"""))
         // A newer file is told apart even when the rest of it no longer reads.
         assertTrue(refusal("""{"format":"crux-backup","version":99,"climbs":"changed"}""")!!.contains("newer version"))
         val zipWithoutBackup = ByteArrayOutputStream().also { out ->

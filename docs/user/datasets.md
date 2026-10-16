@@ -46,7 +46,7 @@ logged under the same name); projects you've tried but not sent still show.
   `grade`, `type` (boulder or route; boulder if left out), `setter` and `note`, in any order and
   any case. Only `name` is needed; rows without one are left out and counted, and other columns
   are listed and ignored.
-- **Crux dataset file** (`.crux-dataset.json`), as Crux exports it, with the board and scales.
+- **Climb Logger dataset file** (`.crux-dataset.json`), as Climb Logger exports it, with the board and scales.
 
 Before anything is saved, a preview shows how many climbs the file has, which grades aren't
 recognised, where they go (a new dataset, or one you have) and the first rows. Grades are read in
@@ -55,19 +55,19 @@ scale's keeps the climb without a grade and adds "Grade in file: …" to its not
 lost. When climbs go into a dataset that already has one of the same name and type, pick **Skip**,
 **Replace** or **Keep both**.
 
-**⋯ → Export** saves the dataset as a CSV (the same five columns) or a Crux dataset file, through
-Android's save dialog. Crux needs no storage permission for either.
+**⋯ → Export** saves the dataset as a CSV (the same five columns) or a Climb Logger dataset file, through
+Android's save dialog. Climb Logger needs no storage permission for either.
 
 Datasets and playlists are in your backups (the **Datasets** switch, on by default).
 
 ## Board catalogues
 
 A **board catalogue** is a board's whole list of climbs, for a Kilter (Original or Homewall) or a
-MoonBoard (2016, 2017, 2019, 2024, Mini 2020 or Mini 2025). Crux reads the snapshot files
+MoonBoard (2016, 2017, 2019, 2024, Mini 2020 or Mini 2025). Climb Logger reads the snapshot files
 [Boardsesh](https://boardsesh.com) publishes: download the one for your board (a `.db` or `.db.gz`
-file) and pick it in **+ → Import a file**. Crux never goes online for it.
+file) and pick it in **+ → Import a file**. Climb Logger never goes online for it.
 
-- Crux reads which board the file is. A Kilter asks your board's size (and a Homewall's holds),
+- Climb Logger reads which board the file is. A Kilter asks your board's size (and a Homewall's holds),
   starting at your board facility's, and keeps only the climbs for it; a Kilter Original file holds
   every size, so this cuts it down a lot. A big file takes a while: you can leave the page and the
   import carries on.
@@ -89,7 +89,7 @@ file) and pick it in **+ → Import a file**. Crux never goes online for it.
 
 ### Hold diagrams
 
-A board catalogue's climbs show their holds on the board, drawn by Crux: every hold of your
+A board catalogue's climbs show their holds on the board, drawn by Climb Logger: every hold of your
 board as a faint dot, the climb's as rings, green for start, cyan for hand, violet for finish and
 amber for foot (a legend says which). A MoonBoard shows its grid with the letters and numbers along
 the edges. Tap a diagram for the whole board.
@@ -99,22 +99,22 @@ the edges. Tap a diagram for the whole board.
 The diagram shows on the catalogue's climb sheet, as a thumbnail in Log climb's linked name row,
 on the session's playlist card, and in Log climb for a board climb you logged before. Logging a
 catalogue climb copies its holds onto your climb, so its diagram stays even after you delete the
-catalogue. The hold positions are built into Crux (positions only, no climbs or board images).
+catalogue. The hold positions are built into Climb Logger (positions only, no climbs or board images).
 
-Climbs and grades come from each board's community. Crux isn't affiliated with Kilter or Moon
+Climbs and grades come from each board's community. Climb Logger isn't affiliated with Kilter or Moon
 Climbing, and never shows their board images.
 
 ## Lighting your board
 
-Crux can light a catalogue climb's holds on your own Kilter or MoonBoard over Bluetooth. It
+Climb Logger can light a catalogue climb's holds on your own Kilter or MoonBoard over Bluetooth. It
 never lights anything by itself: a **Light** button sends the climb you're looking at.
 
 - **Pair once.** In **Edit place**, a Kilter or MoonBoard facility has a **Lights** row. **Pair a
-  board** opens Android's own device list (a Kilter shows only Kilter boards); pick yours. Crux asks
+  board** opens Android's own device list (a Kilter shows only Kilter boards); pick yours. Climb Logger asks
   once for **Nearby devices** on Android 12 and up, and never for your location. The pairing stays
   on this phone and isn't in backups.
 - **Test lights** lights the four corners of your size. On a MoonBoard, **Check a hold** lights one
-  corner and asks which one lit, so Crux counts your box's LEDs the right way round. **Lights off**
+  corner and asks which one lit, so Climb Logger counts your box's LEDs the right way round. **Lights off**
   and **Forget** do what they say.
 - **Light** shows on the catalogue climb sheet, under the linked name in Log climb and on the
   session's playlist card, whenever a paired board of that model and size can take the climb (the
@@ -122,7 +122,7 @@ never lights anything by itself: a **Light** button sends the climb you're looki
   doesn't offer it.
 - **In a session**, the live notification of a playlist has **Prev**, **Next** and **Light**, so
   you can move on and send the next climb from the mat.
-- If the board can't be reached, Crux says so ("Is it on and close by?") and nothing else waits on
+- If the board can't be reached, Climb Logger says so ("Is it on and close by?") and nothing else waits on
   it.
 
 Kilter boards speak Aurora's protocol 2 or 3, read from the board's name; MoonBoard LED boxes take
@@ -166,7 +166,7 @@ Typing in the Name field also suggests up to three climbs from the facility's da
 In a dataset, tap a climb and **Log this climb**: Where is filled in when one facility uses the
 dataset, and the Where sheet opens on them when several do.
 
-The climb you log is a normal Crux climb: it copies the name, grade and setter. Changing or
+The climb you log is a normal Climb Logger climb: it copies the name, grade and setter. Changing or
 deleting the dataset later never changes your climbs or logs; a deleted dataset climb just stops
 showing as linked.
 

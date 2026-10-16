@@ -306,7 +306,7 @@ fun SettingsContent(
                             if (uiState.demoMode) {
                                 "Showing sample climbs, plans and weigh-ins. Your own data is kept apart and comes back when you turn this off."
                             } else {
-                                "Explore Crux with sample climbs, plans and weigh-ins. Your own data stays untouched."
+                                "Explore Climb Logger with sample climbs, plans and weigh-ins. Your own data stays untouched."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -335,7 +335,7 @@ fun SettingsContent(
 
             Eyebrow("About", Modifier.padding(top = space.s4))
             CruxListRow(
-                title = "About Crux",
+                title = "About Climb Logger",
                 supporting = "Version, licence, source code and open-source libraries",
                 trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
                 onClick = onAbout,

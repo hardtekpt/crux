@@ -110,9 +110,9 @@ class BoardLink @Inject constructor(@ApplicationContext private val context: Con
     suspend fun test(section: Section): Boolean {
         val lights = section.lights ?: return fail("Pair this board first.")
         val key = sectionKey(section) ?: return fail("Say which board this is first.")
-        val (layout, _) = BoardGeometry.layout(context, key) ?: return fail("Crux has no hold positions for this board.")
+        val (layout, _) = BoardGeometry.layout(context, key) ?: return fail("Climb Logger has no hold positions for this board.")
         val points = layout.points.filterKeys { id -> layout.leds.isEmpty() || layout.leds[sectionSizeId(section)]?.containsKey(id) == true }
-        if (points.isEmpty()) return fail("Crux has no hold positions for this size.")
+        if (points.isEmpty()) return fail("Climb Logger has no hold positions for this size.")
         val corners = listOf(
             points.minByOrNull { it.value.x - it.value.y },
             points.minByOrNull { -it.value.x - it.value.y },
@@ -159,7 +159,7 @@ class BoardLink @Inject constructor(@ApplicationContext private val context: Con
 
     @SuppressLint("MissingPermission")
     private suspend fun send(lights: PairedLights, messages: List<ByteArray>): Boolean = lock.withLock {
-        if (!permitted()) return@withLock fail("Crux needs Nearby devices to reach your board.")
+        if (!permitted()) return@withLock fail("Climb Logger needs Nearby devices to reach your board.")
         try {
             withTimeout(TIMEOUT) { connect(lights.address) }
             val characteristic = write ?: return@withLock fail(CANT_REACH.format(lights.name))

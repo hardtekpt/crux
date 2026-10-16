@@ -1,9 +1,9 @@
 # FAQ and troubleshooting
 
 **Do I need an account?**
-No. Crux has no account, server or sign-in. Everything stays on your phone.
+No. Climb Logger has no account, server or sign-in. Everything stays on your phone.
 
-**Does Crux work offline?**
+**Does Climb Logger work offline?**
 Yes, everything except loading map tiles and searching addresses.
 
 **Why didn't my old climbs change when I switched from Font to V?**
@@ -30,11 +30,11 @@ Yes, with your photos, unless you switch them off under *Settings → Backups �
 They can make the backup file large. See [Settings and your data](settings-and-data.md#backups).
 
 **Can I import the same backup twice?**
-Yes. Crux asks about everything that's already there: skip it, replace it, or keep both. Skip all
+Yes. Climb Logger asks about everything that's already there: skip it, replace it, or keep both. Skip all
 of it and nothing changes.
 
 **An update says something about a database copy. What is that?**
-Before an update changes how data is stored, Crux copies your database on the phone first, so
+Before an update changes how data is stored, Climb Logger copies your database on the phone first, so
 nothing can be lost to a failed upgrade. It's automatic.
 
 **The app crashed.**
@@ -43,7 +43,7 @@ Sorry! Go to *Settings → Diagnostics → Crash reports*, tap *Share latest*, a
 it.
 
 **Android says the update "conflicts with an existing package".**
-The APK you're installing wasn't signed with Crux's release key: it may be a build from somewhere
+The APK you're installing wasn't signed with Climb Logger's release key: it may be a build from somewhere
 else. Only install releases from the
 [releases page](https://github.com/hardtekpt/crux/releases), and check the signature (see
 [Getting started](getting-started.md#verifying-a-download)).

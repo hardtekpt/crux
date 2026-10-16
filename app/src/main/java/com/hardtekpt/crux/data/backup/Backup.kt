@@ -409,7 +409,7 @@ class OpenedBackup(val file: BackupFile, private val mediaDir: File? = null) : C
 
 /** What to do with a record from a backup that is already here. */
 enum class Resolution(val label: String, val description: String) {
-    SKIP("Skip", "Keep what's in Crux"),
+    SKIP("Skip", "Keep what's in Climb Logger"),
     REPLACE("Replace", "Use the backup's version"),
     KEEP_BOTH("Keep both", "Add the backup's as a copy"),
 }

@@ -103,7 +103,7 @@ class DatasetImport(
                 _draft.value = ImportDraft(fileName = name ?: "file", parsed = parsed, intoId = intoId, name = dataset.name, dataset = dataset)
                 _error.value = null
             }.onFailure {
-                _error.value = (it as? DatasetFiles.Unreadable)?.message ?: "This file can't be read. Pick a CSV or a Crux dataset file."
+                _error.value = (it as? DatasetFiles.Unreadable)?.message ?: "This file can't be read. Pick a CSV or a Climb Logger dataset file."
             }
         }
     }

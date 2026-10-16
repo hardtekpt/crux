@@ -17,6 +17,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **New name and icon**: the app is now **Climb Logger**, with a new icon of a mountain and a rising progress line (it has a themed version for Android 13+). The package is the same, so it installs over the old app and your data is untouched.
 - **Choose a climb in Log climb**: the climb chips under Name are gone. A **Choose a climb** button opens a sheet
   with your open projects (tried, not sent yet) and a chip per playlist. Typing a climb's exact name still
   continues it.

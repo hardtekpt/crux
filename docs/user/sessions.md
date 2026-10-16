@@ -11,7 +11,7 @@ without a plan, where you log climbs.
   climbing day.
 - From a plan's page, or the **Today's plan** widget on Home, tap **Start session**.
 
-Crux starts the session at the last place you climbed, and you can change that inside the
+Climb Logger starts the session at the last place you climbed, and you can change that inside the
 session. Only one session runs at a time; starting another ends the first.
 
 ## While it runs
@@ -77,7 +77,7 @@ name and clock; tap it to go back.
 
 ## Live notification
 
-While a session runs, Crux keeps a live notification, so you can see where you are and act without
+While a session runs, Climb Logger keeps a live notification, so you can see where you are and act without
 opening the app. On Android 16 it is a Live Update: a bar in segments and a chip in the status bar.
 On Android 8 to 15 it is a plain notification with a progress bar. Tap the card to go back to the
 session or timer; there is no Open button.
@@ -94,12 +94,12 @@ session or timer; there is no Open button.
 - **A climbing day with no plan**: the time on the wall, with a mark for each climb (green for a
   send, grey for not yet). The title reads "N climbs · M sent" and **Log climb** is on the card.
 
-On Android 13 and later, Crux asks for permission to show notifications the first time a session
+On Android 13 and later, Climb Logger asks for permission to show notifications the first time a session
 starts. If you say no, you just don't get the notification; everything else works as before.
 
 ## Finishing
 
-Tap **Finish**. Add how hard it felt (1–10) and a note, then save. Or throw the session away. Crux
+Tap **Finish**. Add how hard it felt (1–10) and a note, then save. Or throw the session away. Climb Logger
 asks first, and climbs you logged in it stay in the journal.
 
 Finished sessions appear in the [Journal](journal.md) with their length. Tap one for its

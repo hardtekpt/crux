@@ -305,7 +305,7 @@ fun PlaylistScreen(
                 menu = false
                 viewModel.duplicate(onOpenPlaylist)
             }, modifier = Modifier.testTag("playlist_duplicate"))
-            CruxListRow("Export", supporting = "A Crux playlist file to share", onClick = {
+            CruxListRow("Export", supporting = "A Climb Logger playlist file to share", onClick = {
                 menu = false
                 saveFile.launch("${list.name.trim().replace(Regex("[^A-Za-z0-9]+"), "-").trim('-').lowercase().ifEmpty { "playlist" }}.crux-playlist.json")
             }, modifier = Modifier.testTag("playlist_export"))

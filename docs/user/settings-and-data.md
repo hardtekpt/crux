@@ -10,15 +10,15 @@ Open Settings from the gear on the **You** tab.
 - **Appearance**: Dark (the default), Light, or System, and the accent colour: Teal (the
   default), Blue, Violet, Magenta, Pink, Slate or Chalk. The accent colours buttons, selected options and highlights;
   the amber for goes and the green for sends stay the same in every accent. **Text size** makes
-  the text in Crux smaller or larger (Small, Default, Large, Largest) on top of your phone's own
-  font size. Crux reopens on the same page to apply it.
+  the text in Climb Logger smaller or larger (Small, Default, Large, Largest) on top of your phone's own
+  font size. Climb Logger reopens on the same page to apply it.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
 - **Sessions**: *Timer sounds* (beeps for the last seconds of a rest or interval) and *Rest after a
   climb* (Off, or 1 to 5 min: logging a climb in a session starts that rest).
 - **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
-- **About**: version, licence, source code, and the open-source libraries Crux uses.
+- **About**: version, licence, source code, and the open-source libraries Climb Logger uses.
 
 ## Demo mode
 
@@ -35,12 +35,12 @@ untouched until you turn demo mode off.
 - **Export**: choose sections (exercise list, plan list, journal, session history, places, body
   stats, personal records, notes, settings), then pick where to save the `.zip` file: your phone,
   a cloud drive, anywhere your file picker offers.
-- **Import**: pick a backup file. Crux shows what's in it, and you choose what to bring in.
+- **Import**: pick a backup file. Climb Logger shows what's in it, and you choose what to bring in.
   *Settings* starts switched off, because importing them replaces your grades, theme, units, timer
   and Home layout.
 
-**When something in the backup is already in Crux**, Crux asks about each one before importing
-anything. It shows what's in Crux and what's in the backup, and says when they're the same. For
+**When something in the backup is already in Climb Logger**, Climb Logger asks about each one before importing
+anything. It shows what's in Climb Logger and what's in the backup, and says when they're the same. For
 each one you pick with a chip (Skip is picked to start), then **Next**:
 
 - **Skip**: keep what's in Crux.
@@ -59,12 +59,12 @@ Videos can make a backup large.
 
 ### Automatic backups
 
-Under *Automatic backups* on the Backups page, Crux can save a backup for you without being asked.
+Under *Automatic backups* on the Backups page, Climb Logger can save a backup for you without being asked.
 
-1. Tap **Choose folder** and pick a folder on your phone. Crux keeps its access to that folder until you tap **Stop**.
+1. Tap **Choose folder** and pick a folder on your phone. Climb Logger keeps its access to that folder until you tap **Stop**.
 2. Pick how often: **Daily** or **Weekly** (**Off** is the default).
 3. Pick how many to **keep**: the newest 3, 5 or 10. Older automatic backups are removed from the
-   folder, and only the ones Crux made.
+   folder, and only the ones Climb Logger made.
 
 **Back up now** saves one straight away, and the page shows when the last one was made, or why the
 last try failed. Each backup holds all your data, with photos and videos, and goes only to the
@@ -79,25 +79,25 @@ Sessions have one row per set, with the session, exercise, set number, reps, sec
 whether it was skipped; a session with no sets gets one row of its own. Photos and videos stay out.
 It's a table to look at, not a backup: it can't be imported back.
 
-Backups from older versions of Crux keep importing into newer ones, the `.json` files they made
+Backups from older versions of Climb Logger keep importing into newer ones, the `.json` files they made
 included. A backup from a *newer* version than the app is refused, with a message to update the
 app first.
 
 ## Android's own backup
 
-If Android backup is on for your phone, Crux's database and settings are included in it, so a
+If Android backup is on for your phone, Climb Logger's database and settings are included in it, so a
 new phone set up from your Google account backup gets them back. Photos and videos are left out of
 the cloud backup (it has a 25 MB limit) and travel only with a direct phone-to-phone transfer.
 The demo data is never backed up.
 
 ## Your data is never wiped by an update
 
-When an update changes how data is stored, Crux first saves a copy of your database on the phone,
+When an update changes how data is stored, Climb Logger first saves a copy of your database on the phone,
 then upgrades it. Updates never delete your data to start over.
 
 ## Crash reports
 
-If Crux closes unexpectedly, a report is saved **on your phone only**: the app version, Android
+If Climb Logger closes unexpectedly, a report is saved **on your phone only**: the app version, Android
 version, phone model and the error. *Settings → Diagnostics → Crash reports* shows how many there
 are and lets you **share the latest** (to paste into a bug report) or **clear** them. Nothing is
 sent anywhere unless you share it yourself.

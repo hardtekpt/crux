@@ -1,6 +1,6 @@
 # Getting started
 
-Crux is a training planner and climbing journal for Android 9 and newer. Everything you enter stays
+Climb Logger is a training planner and climbing journal for Android 9 and newer. Everything you enter stays
 on your phone. There's no account and no sign-in.
 
 ## Install
@@ -8,7 +8,7 @@ on your phone. There's no account and no sign-in.
 1. On your phone, open the [latest release](https://github.com/hardtekpt/crux/releases/latest)
    and download `crux-vX.Y.Z.apk`.
 2. Open the file. If Android asks, allow installing apps from your browser or file manager.
-3. Open **Crux**.
+3. Open **Climb Logger**.
 
 **Updating:** download the newer APK and install it over the old one. Your data stays. Every
 release is signed with the same key, and Android refuses an update signed with a different one.
@@ -19,7 +19,7 @@ An F-Droid listing is planned. Once it's there, F-Droid will handle updates for 
 ## Your first five minutes
 
 1. **Try it with sample data.** Go to *You* (the person icon) → *Settings* (the gear) → *Demo mode*.
-   Crux switches to a separate set of sample climbs, places, plans and weigh-ins. Your own data is
+   Climb Logger switches to a separate set of sample climbs, places, plans and weigh-ins. Your own data is
    kept apart and comes back when you turn demo mode off.
 2. **Pick your grades.** In *Settings → Grades*, choose a scale for bouldering (Font or V) and one
    for routes (French or YDS). New climbs are logged in these. Grades you've already logged are
@@ -53,13 +53,13 @@ Swipe back, or use the back arrow, to leave a page.
 
 ## Shortcuts
 
-Long-press Crux's icon on your home screen for **Log climb**, **Session** (back into the running
+Long-press Climb Logger's icon on your home screen for **Log climb**, **Session** (back into the running
 session, or the choice of what to start), **Log weight** and **Timer**. You can drag one onto your
 home screen as its own icon.
 
 ## Where your data lives
 
-Everything is stored on your phone, in Crux's private storage. Make a backup now and then from
+Everything is stored on your phone, in Climb Logger's private storage. Make a backup now and then from
 *Settings → Backups*; the file is yours to keep wherever you like. See
 [Settings and your data](settings-and-data.md).
 

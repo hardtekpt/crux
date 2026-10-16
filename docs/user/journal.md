@@ -45,14 +45,14 @@ Journal. Coming back to a climb adds another log to it.
    facility you picked (numbers or colour tapes) when it has its own.
 4. **Goes**: tap **+ Fell** for each go that didn't top out and **+ Sent** for each send, in the
    order you climbed. The dots show them in order, and **Undo** takes the last one back. The form
-   starts on one send, so a flash needs no taps; the first tap replaces it. Crux works out the
+   starts on one send, so a flash needs no taps; the first tap replaces it. Climb Logger works out the
    style: no send is an *Attempt*, a send on the very first go is a *Flash*, and any other send is
    a *Redpoint*. On a climb you've tried before, the counts on the pads are the climb's in all, the
    earlier goes show faded before today's, and any send is a redpoint, whatever day the earlier
    goes were on. For a route sent first go, **No beta** marks it an *Onsight*.
 5. **How hard it felt** (optional): a 1 to 10 scale; tap or drag along it, or tap Easy, Steady,
    Moderate, Hard or Limit under it. **Clear** empties it. Finishing a session asks the same way.
-6. **Name**: type one, or leave it blank and Crux names it from the grade and the wall or place,
+6. **Name**: type one, or leave it blank and Climb Logger names it from the grade and the wall or place,
    like "6B+ · Benchmarks". As you type, **Choose a climb** under the field opens your open projects there (tried, not sent yet) and your
    playlists; picking one, or typing the exact name of any climb there, adds today's goes to it. Any other name starts a new climb.
 7. **Note**, **Photo** and **Video** (all optional): each is a chip until you use it.
@@ -64,7 +64,7 @@ Journal. Coming back to a climb adds another log to it.
    on the chip too.
 9. **Log climb**.
 
-Photos are copied into Crux and scaled to at most 2048 px, so they survive the original being
+Photos are copied into Climb Logger and scaled to at most 2048 px, so they survive the original being
 deleted. Videos are copied as they are.
 
 To change a log, tap it in the Journal. To remove it, use **Delete**; it disappears from your

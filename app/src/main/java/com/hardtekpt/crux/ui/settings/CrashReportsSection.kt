@@ -44,7 +44,7 @@ fun CrashReportsCard(count: Int, onShare: () -> Unit, onClear: () -> Unit) {
         Text("Crash reports", style = MaterialTheme.typography.titleMedium)
         Text(
             if (count == 0) {
-                "None so far. If Crux ever closes unexpectedly, a report is saved here, on this phone only."
+                "None so far. If Climb Logger ever closes unexpectedly, a report is saved here, on this phone only."
             } else {
                 "$count saved on this phone. Share the latest to attach it to a bug report; nothing is sent unless you share it."
             },
@@ -89,7 +89,7 @@ fun CrashReportsCard(count: Int, viewModel: CrashReportsViewModel) {
 private fun Context.shareCrashReport(report: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, "Crux crash report")
+        putExtra(Intent.EXTRA_SUBJECT, "Climb Logger crash report")
         putExtra(Intent.EXTRA_TEXT, report)
     }
     startActivity(Intent.createChooser(send, "Share crash report"))

@@ -397,7 +397,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                 }
                 item(key = "credit") {
                     Text(
-                        "Climbs and grades by each board's community, from a Boardsesh snapshot. Crux isn't affiliated with Kilter or Moon Climbing.",
+                        "Climbs and grades by each board's community, from a Boardsesh snapshot. Climb Logger isn't affiliated with Kilter or Moon Climbing.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = space.s4),
@@ -425,7 +425,9 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = MaterialTheme.shapes.extraLarge,
             title = { Text("Delete ${ds.name}?", style = MaterialTheme.typography.headlineSmall) },
-            text = { Text("Its climbs leave Crux, and your playlists lose them until you import it again. Climbs you logged from it stay as they are.") },
+            text = {
+                Text("Its climbs leave Climb Logger, and your playlists lose them until you import it again. Climbs you logged from it stay as they are.")
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false

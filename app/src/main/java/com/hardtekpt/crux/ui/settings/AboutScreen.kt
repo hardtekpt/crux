@@ -62,7 +62,7 @@ private fun AboutCard() {
     val uriHandler = LocalUriHandler.current
     val space = CruxTheme.space
     CruxCard {
-        Text("Crux", style = MaterialTheme.typography.titleLarge)
+        Text("Climb Logger", style = MaterialTheme.typography.titleLarge)
         Text(
             "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
             style = CruxTheme.type.code,
@@ -70,7 +70,7 @@ private fun AboutCard() {
             modifier = Modifier.padding(bottom = space.s2),
         )
         Text(
-            "Crux is free software: you can share and change it under the GNU General Public License, " +
+            "Climb Logger is free software: you can share and change it under the GNU General Public License, " +
                 "version 3 or later. It comes with no warranty.",
             style = MaterialTheme.typography.bodyMedium,
         )

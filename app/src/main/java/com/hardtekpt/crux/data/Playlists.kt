@@ -477,9 +477,9 @@ object PlaylistFiles {
     fun parse(text: String): Parsed {
         val file = runCatching {
             json.decodeFromString(CruxFile.serializer(), text.removePrefix(0xFEFF.toChar().toString()))
-        }.getOrElse { throw DatasetFiles.Unreadable("This file isn't a Crux playlist.") }
-        if (file.format != FORMAT) throw DatasetFiles.Unreadable("This file isn't a Crux playlist.")
-        if (file.version > VERSION) throw DatasetFiles.Unreadable("This playlist comes from a newer version of Crux. Update the app to import it.")
+        }.getOrElse { throw DatasetFiles.Unreadable("This file isn't a Climb Logger playlist.") }
+        if (file.format != FORMAT) throw DatasetFiles.Unreadable("This file isn't a Climb Logger playlist.")
+        if (file.version > VERSION) throw DatasetFiles.Unreadable("This playlist comes from a newer version of Climb Logger. Update the app to import it.")
         return Parsed(
             name = file.playlist.name.trim().ifEmpty { "Playlist" },
             note = file.playlist.note,

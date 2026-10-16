@@ -196,9 +196,9 @@ object DatasetFiles {
     fun parseCrux(text: String): Parsed {
         val file = runCatching {
             json.decodeFromString(CruxFile.serializer(), text.removePrefix(BOM))
-        }.getOrElse { throw Unreadable("This file isn't a Crux dataset.") }
-        if (file.format != FORMAT) throw Unreadable("This file isn't a Crux dataset.")
-        if (file.version > VERSION) throw Unreadable("This dataset comes from a newer version of Crux. Update the app to import it.")
+        }.getOrElse { throw Unreadable("This file isn't a Climb Logger dataset.") }
+        if (file.format != FORMAT) throw Unreadable("This file isn't a Climb Logger dataset.")
+        if (file.version > VERSION) throw Unreadable("This dataset comes from a newer version of Climb Logger. Update the app to import it.")
         val board = BoardModel.fromKey(file.dataset.board)
         val dataset = Dataset(
             name = file.dataset.name,

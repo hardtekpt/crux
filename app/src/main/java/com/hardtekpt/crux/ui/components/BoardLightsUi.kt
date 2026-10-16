@@ -169,7 +169,7 @@ fun rememberBoardPairing(onFound: (FoundBoard) -> Unit, onFailed: (String) -> Un
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val kilter = pending ?: return@rememberLauncherForActivityResult
         pending = null
-        if (granted) start(kilter) else onFailed("Crux needs Nearby devices to reach your board.")
+        if (granted) start(kilter) else onFailed("Climb Logger needs Nearby devices to reach your board.")
     }
     return { kilter ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

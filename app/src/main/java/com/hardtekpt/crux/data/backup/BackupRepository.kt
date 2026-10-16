@@ -1196,8 +1196,8 @@ class BackupRepository(
         /** Media names inside an archive: a plain file name, nothing that climbs out of the folder. */
         val SAFE_NAME = Regex("[A-Za-z0-9_-][A-Za-z0-9._-]*")
 
-        const val NOT_A_BACKUP = "This file is not a Crux backup."
-        const val NEWER = "This backup comes from a newer version of Crux. Update the app to import it."
+        const val NOT_A_BACKUP = "This file is not a Climb Logger backup."
+        const val NEWER = "This backup comes from a newer version of Climb Logger. Update the app to import it."
         const val DAMAGED = "This backup can't be read. It may be damaged or incomplete."
     }
 }

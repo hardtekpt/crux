@@ -387,7 +387,7 @@ fun BackupContent(
             verticalArrangement = Arrangement.spacedBy(space.s3),
         ) {
             Text(
-                "Save your data to a file you keep, or bring a backup in. When something in a backup is already here, Crux asks what to do.",
+                "Save your data to a file you keep, or bring a backup in. When something in a backup is already here, Climb Logger asks what to do.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -639,7 +639,7 @@ private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, actio
         onDismissRequest = {},
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.extraLarge,
-        title = { Text("Already in Crux", style = MaterialTheme.typography.headlineSmall) },
+        title = { Text("Already in Climb Logger", style = MaterialTheme.typography.headlineSmall) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()).testTag("conflict_dialog")) {
                 Text(
@@ -648,7 +648,7 @@ private fun ConflictDialog(conflict: ImportConflict, state: BackupUiState, actio
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(conflict.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = CruxTheme.space.s1))
-                Version("In Crux", conflict.existing)
+                Version("In Climb Logger", conflict.existing)
                 Version("In the backup", conflict.incoming)
                 if (conflict.identical) {
                     Text(

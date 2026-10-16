@@ -1,4 +1,4 @@
-<p>Crux is a training planner and climbing journal for boulderers and route climbers. Everything stays on your phone: no account, no ads, no tracking.</p>
+<p>Climb Logger is a training planner and climbing journal for boulderers and route climbers. Everything stays on your phone: no account, no ads, no tracking.</p>
 
 <p><b>Train</b></p>
 <ul>

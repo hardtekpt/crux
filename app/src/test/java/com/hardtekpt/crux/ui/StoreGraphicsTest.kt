@@ -60,9 +60,9 @@ class StoreGraphicsTest {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
-                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, Modifier.size(300.dp))
+                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, Modifier.size(260.dp))
                     Column {
-                        Text("Crux", style = MaterialTheme.typography.displayLarge.copy(fontSize = 120.sp), color = Color.White)
+                        Text("Climb Logger", style = MaterialTheme.typography.displayLarge.copy(fontSize = 76.sp), color = Color.White)
                         Text(
                             "Climbing journal and training",
                             style = MaterialTheme.typography.headlineMedium.copy(fontSize = 40.sp),

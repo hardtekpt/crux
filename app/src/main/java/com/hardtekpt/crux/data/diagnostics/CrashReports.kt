@@ -36,7 +36,7 @@ class CrashReports(private val dir: File, private val clock: Clock, private val 
         val file = File(dir, "$PREFIX${FILE_TIME.format(now)}.txt")
         file.writeText(
             buildString {
-                appendLine("Crux crash report")
+                appendLine("Climb Logger crash report")
                 appendLine("Time: $now")
                 appendLine(about)
                 appendLine("Thread: $threadName")

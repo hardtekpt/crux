@@ -94,7 +94,7 @@ class CatalogueImporter @Inject constructor(
             val type = c.getString(0)
             val layout = c.getInt(1)
             val board = BoardseshBoards.model(type, layout)
-                ?: throw DatasetFiles.Unreadable("Crux reads Kilter and MoonBoard catalogues; this one is another board ($type, layout $layout).")
+                ?: throw DatasetFiles.Unreadable("Climb Logger reads Kilter and MoonBoard catalogues; this one is another board ($type, layout $layout).")
             Inspection(name, type, layout, board, c.getInt(2))
         }
     }

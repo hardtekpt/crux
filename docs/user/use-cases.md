@@ -1,6 +1,6 @@
 # Use cases
 
-Short walk-throughs of how Crux fits into a climbing week.
+Short walk-throughs of how Climb Logger fits into a climbing week.
 
 ## A training session at the gym
 
@@ -65,8 +65,8 @@ anything older. Everything else works the same.
 
 1. On the old phone: *Settings → Backups → Export*, all sections, and save the file to a cloud drive
    or send it to yourself.
-2. On the new phone: install Crux, then *Settings → Backups → Import* that file.
+2. On the new phone: install Climb Logger, then *Settings → Backups → Import* that file.
 
 Photos, videos, session history and settings come with it. If you already set something up on the
-new phone, Crux asks whether to keep it, replace it with the backup's, or keep both. If you use
-Android's phone-to-phone transfer, Crux's data (including photos and videos) comes along.
+new phone, Climb Logger asks whether to keep it, replace it with the backup's, or keep both. If you use
+Android's phone-to-phone transfer, Climb Logger's data (including photos and videos) comes along.

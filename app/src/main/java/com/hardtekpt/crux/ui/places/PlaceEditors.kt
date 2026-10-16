@@ -1245,15 +1245,15 @@ private fun LightsSheet(section: SectionDraft, actions: LightsActions, onDismiss
 
             lights == null -> {
                 Text(
-                    "Crux lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
-                        "pick yours. Crux asks for Nearby devices, never your location.",
+                    "Climb Logger lights a climb's holds on your ${section.board?.label} when you tap Light. Android lists the boards nearby; " +
+                        "pick yours. Climb Logger asks for Nearby devices, never your location.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 CruxButton("Pair a board", { pair(kilter) }, modifier = Modifier.fillMaxWidth().testTag("lights_pair"))
             }
 
             checking -> {
-                Text("Crux has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
+                Text("Climb Logger has lit one hold on your MoonBoard. Which one lit up on the wall?", style = MaterialTheme.typography.bodyMedium)
                 val rows = if (section.board?.fixedAngle == 40) 12 else 18
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
                     listOf(
@@ -1302,7 +1302,7 @@ private fun LightsSheet(section: SectionDraft, actions: LightsActions, onDismiss
                     if (kilter) {
                         "Test lights lights the four corners of your size."
                     } else {
-                        "Test lights lights the four corners; Check a hold makes sure Crux counts your box's LEDs the right way round."
+                        "Test lights lights the four corners; Check a hold makes sure Climb Logger counts your box's LEDs the right way round."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

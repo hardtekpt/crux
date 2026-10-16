@@ -57,7 +57,7 @@ Each measurement keeps its history: setting a new value adds today's reading and
 *You → Interval timer* is a timer for hangboarding, circuits and 4×4s, with nothing logged. Pick a
 preset (**Tabata**, **Repeaters**, **Max hangs**, **4×4s**) or set preparation, work, rest,
 repeats, cycles and the rest between cycles yourself. The bar at the top shows the whole timer, each
-phase in its colour, and Crux remembers the setup for next time.
+phase in its colour, and Climb Logger remembers the setup for next time.
 
 <img src="../../app/src/test/screenshots/interval_timer_running_dark.png" width="300" alt="The interval timer running: WORK, a big 4, repeat 4 of 6, cycle 2 of 3, and pause and skip buttons">
 

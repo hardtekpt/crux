@@ -247,7 +247,7 @@ fun DatasetsScreen(
             )
             CruxListRow(
                 title = "Import a file",
-                supporting = "A CSV, a Crux dataset or playlist file, or a Boardsesh board catalogue",
+                supporting = "A CSV, a Climb Logger dataset or playlist file, or a Boardsesh board catalogue",
                 onClick = {
                     adding = false
                     openPicker()
@@ -553,11 +553,11 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                 menu = false
                 editingDetails = true
             }, modifier = Modifier.testTag("dataset_edit_details"))
-            CruxListRow("Import climbs", supporting = "Add from a CSV or Crux file", onClick = {
+            CruxListRow("Import climbs", supporting = "Add from a CSV or Climb Logger file", onClick = {
                 menu = false
                 pickFile.launch(arrayOf("text/*", "application/json", "application/octet-stream"))
             }, modifier = Modifier.testTag("dataset_import"))
-            CruxListRow("Export", supporting = "CSV or Crux dataset file", onClick = {
+            CruxListRow("Export", supporting = "CSV or Climb Logger dataset file", onClick = {
                 menu = false
                 exporting = true
             }, modifier = Modifier.testTag("dataset_export"))
@@ -574,7 +574,7 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                 exportCrux = false
                 saveFile.launch("${fileBase(ds.name)}.csv")
             }, modifier = Modifier.testTag("export_csv"))
-            CruxListRow("Crux dataset file", supporting = "Keeps the board and grades; imports straight back into Crux", onClick = {
+            CruxListRow("Climb Logger dataset file", supporting = "Keeps the board and grades; imports straight back into Climb Logger", onClick = {
                 exporting = false
                 exportCrux = true
                 saveFile.launch("${fileBase(ds.name)}.crux-dataset.json")
@@ -618,7 +618,9 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             shape = MaterialTheme.shapes.extraLarge,
             title = { Text("Delete ${ds.name}?", style = MaterialTheme.typography.headlineSmall) },
             text = {
-                Text("Its ${ds.climbs.size} ${if (ds.climbs.size == 1) "climb goes" else "climbs go"} too. Climbs you logged in Crux are never touched.")
+                Text(
+                    "Its ${ds.climbs.size} ${if (ds.climbs.size == 1) "climb goes" else "climbs go"} too. Climbs you logged in Climb Logger are never touched.",
+                )
             },
             confirmButton = {
                 TextButton(onClick = {

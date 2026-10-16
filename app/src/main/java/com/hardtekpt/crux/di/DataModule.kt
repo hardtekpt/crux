@@ -89,7 +89,7 @@ object AndroidModule {
     fun provideCrashReports(@ApplicationContext context: Context, clock: Clock): CrashReports = CrashReports(
         dir = File(context.filesDir, CrashReports.DIR),
         clock = clock,
-        about = "App: Crux ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})\n" +
+        about = "App: Climb Logger ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})\n" +
             "Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
             "Device: ${Build.MANUFACTURER} ${Build.MODEL}",
     )

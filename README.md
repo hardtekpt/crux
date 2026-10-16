@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="Crux: climbing journal and training" width="720">
+  <img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="Climb Logger: climbing journal and training" width="720">
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
 </p>
 
-**Crux** is a free, open-source Android app for climbers. Plan your training and run it live, keep a
+**Climb Logger** is a free, open-source Android app for climbers. Plan your training and run it live, keep a
 journal of every climb at the places you climb, and watch your progress. No account, no ads, no
 tracking: your data stays on your phone.
 
@@ -105,7 +105,7 @@ tests, so they always match the current version.
 
 **Your data**
 - Everything on your phone. Backups to a file you keep, with photos, videos, session history and
-  settings; on import, Crux asks about anything already there.
+  settings; on import, Climb Logger asks about anything already there.
 - Demo mode with sample data, kept apart from yours.
 - Metric or imperial, dark or light, in one of seven accent colours, with larger or smaller text.
   Crash reports stay on the phone unless you share them.
@@ -115,7 +115,7 @@ See the **[user guide](docs/README.md#user-guide)** for every feature, and
 
 ## Install
 
-Crux needs **Android 9** or newer.
+Climb Logger needs **Android 9** or newer.
 
 1. Download `crux-vX.Y.Z.apk` from the [latest release](https://github.com/hardtekpt/crux/releases/latest).
 2. Open it on your phone and allow installing from that source when Android asks.
@@ -133,7 +133,7 @@ Check a download against the `.sha256` file next to it, or with
 
 ## Privacy
 
-Everything you enter is stored only on your phone. Crux uses the network for two things, both only
+Everything you enter is stored only on your phone. Climb Logger uses the network for two things, both only
 when you use them: map tiles from OpenStreetMap, and address search through your phone's geocoder.
 Location is asked for only when you tap *My location* on the map. No analytics, no ads, no
 third-party SDKs. See [PRIVACY.md](PRIVACY.md).
@@ -217,7 +217,7 @@ app on an emulator in one step. See [Development setup](docs/developer/setup.md)
 - **Crash reports** you can share.
 - **About** screen.
 - Updates never wipe your data.
-- Crux is now open source.
+- Climb Logger is now open source.
 
 **[0.1.0](https://github.com/hardtekpt/crux/releases/tag/v0.1.0)** (2026-10-06): the first release, with
 the exercise library and plans, journal, places, progress, profile, dashboard, backups and demo
@@ -236,14 +236,14 @@ Ideas and requests are welcome as [issues](https://github.com/hardtekpt/crux/iss
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[Code of Conduct](CODE_OF_CONDUCT.md). If Crux crashes, *Settings → Diagnostics → Crash reports*
+[Code of Conduct](CODE_OF_CONDUCT.md). If Climb Logger crashes, *Settings → Diagnostics → Crash reports*
 lets you share the report to attach to an issue. For security problems, see [SECURITY.md](SECURITY.md).
 
 ## License
 
 Copyright (C) 2026 Francisco Santos
 
-Crux is free software: you can redistribute it and/or modify it under the terms of the GNU General
+Climb Logger is free software: you can redistribute it and/or modify it under the terms of the GNU General
 Public License as published by the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version. It is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
