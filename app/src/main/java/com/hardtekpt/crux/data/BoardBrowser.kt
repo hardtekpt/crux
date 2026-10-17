@@ -20,7 +20,8 @@ class BoardBrowser @Inject constructor(private val catalogue: CatalogueRepositor
     fun startAngle(angles: List<Int>, preferred: Int?): Int? = preferred?.takeIf { it in angles } ?: if (40 in angles) 40 else angles.firstOrNull()
 
     /** The scale grades are read and filtered in: the climber's boulder scale for a catalogue, the dataset's own otherwise. */
-    fun scale(dataset: Dataset, scales: GradeScales): GradeScale? = if (dataset.isCatalogue) catalogueScale(scales) else datasetGradeScale(dataset.climbs)
+    fun scale(dataset: Dataset, scales: GradeScales): GradeScale? =
+        if (dataset.isCatalogue) catalogueScale(scales, dataset) else datasetGradeScale(dataset.climbs)
 
     suspend fun candidates(
         dataset: Dataset,
@@ -124,8 +125,14 @@ class BoardBrowser @Inject constructor(private val catalogue: CatalogueRepositor
     }
 }
 
-/** The scale a catalogue's grades are read and filtered in: the climber's boulder scale, or Font for a local one. */
-fun catalogueScale(scales: GradeScales): GradeScale = scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
+/**
+ * The scale a catalogue's grades are read and filtered in: a MoonBoard's own Font grades, always;
+ * a Kilter's in the climber's boulder scale (Font for a local one).
+ */
+fun catalogueScale(scales: GradeScales, dataset: Dataset? = null): GradeScale = when {
+    dataset?.board?.maker == "MoonBoard" -> GradeScale.FONT
+    else -> scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
+}
 
 /** The scale most of a dataset's graded climbs are in; null when none is graded. */
 fun datasetGradeScale(climbs: List<DatasetClimb>): GradeScale? =

@@ -31,7 +31,7 @@ with **Undo**, and one with a note asks first.
 
 Search finds a word in the name, setter or note. Under it, the [filter bar](#filters-and-sorts)
 sorts and filters the list (by grade, by what you've done, by setter), as on a board catalogue; the
-filters button beside the search opens them all at once.
+filters button beside the search opens Filters.
 
 **⋯ → Delete dataset** asks first. Its climbs go with it; climbs you logged are never touched.
 
@@ -73,7 +73,7 @@ file) and pick it in **+ → Import a file**. Climb Logger never goes online for
   was, so importing it again links them back.
 - Open one to browse its climbs at an angle (a Kilter's grades and ascents change with the
   angle; a MoonBoard has its one or two). Search names and setters, and narrow and order the list
-  with the [filter bar](#filters-and-sorts); **Tune** in the top bar shows every filter at once.
+  with [filters and sorts](#filters-and-sorts); **Tune** in the top bar shows every filter at once.
   Grades show in your boulder scale, and each climb shows your goes on it.
 - Tap a climb for its setter, description and grade at each angle, **Log this climb** and
   **Playlist**.
@@ -85,26 +85,33 @@ file) and pick it in **+ → Import a file**. Climb Logger never goes online for
 
 ### Filters and sorts
 
-Board catalogues, your datasets and **Browse a board** in a session share one filter bar under
-the search: a chip for each filter and the sort. A chip reads its value ("6C–7A", "40°", "Not
-sent") and is highlighted while it's set; tapping it opens just that control in a small sheet.
-Filters add up: a climb shows only when it matches all of them. **Clear** beside the count puts
-them back (the angle stays).
+Board catalogues, your datasets and **Browse a board** in a session show one compact line under
+the search: what's applied ("40° · 6C–7A · Not sent", or "All climbs at 40°") and how the list is
+sorted. Tap the line (or **Tune**) for **Filters**, and **Sort** beside it for the order. Filters
+add up: a climb shows only when it matches all of them. **Clear** beside the count, or **Clear
+all** in Filters, puts them back (the angle stays).
 
-| Chip | What it does |
+| In Filters | What it does |
 |---|---|
-| Sort | Up to three sorts, each with a direction; the first decides and the next breaks its ties. Hold a line's handle and drag to reorder; **Then by** adds Grade, Popular, Rating, Your goes, Newest, Name or Setter. It starts at Popular, then Grade (Grade, then Name for a dataset). |
-| Grade | A grid of the grades with a bar for how many climbs each has: tap the easiest, then the hardest. **Near my max** (your hardest send here, one grade either way), **Warm-up** and **Below my max** follow your sends. |
 | Angle | Catalogues only: the angle, as segments. |
+| Grade | Opens a grid of the grades with a bar for how many climbs each has: tap the easiest, then the hardest. **Near my max** (your hardest send here, one grade either way), **Warm-up** and **Below my max** follow your sends. **Back to filters** returns. |
 | You | **New**, **Tried** and **Sent**, any of them; New and Tried together read **Not sent**. |
 | Rating | Catalogues only: Any, 2+, 2.5+ or 3+, the board's rating at this angle. |
 | Ascents | Catalogues only: Any, 10+, 50+ or 200+. |
-| Setter | Search the setters with climbs here and tick any number. |
-| Benchmarks | Catalogues only: a tap shows benchmarks only. |
+| Setter | Opens a search of the setters with climbs here; tick any number. |
+| Sort | Opens the sort, as **Sort** does. |
+| Benchmarks only | Catalogues only. |
 
-**Views** save the whole set, sorts included, under a name: **Save as view** in the all-filters
-sheet. A view shows as a chip; tap it to use it, hold it to delete it. Each board and dataset
-remembers its last filters and sorts.
+**Sort** chains up to three sorts, each with a direction: the first decides and the next breaks its
+ties. Tap a line's arrow to turn it round, hold its handle and drag to reorder, and **Then by**
+adds Grade, Popular, Rating, Your goes, Newest, Name or Setter. **Default** goes back to Popular,
+then Grade (Grade, then Name for a dataset).
+
+**Views** save the whole set, sorts included, under a name: **Save as view** in Filters. Tap a view
+to use it, hold it to delete it. Each board and dataset remembers its last filters and sort.
+
+A MoonBoard's grades always read in Font, as the MoonBoard grades them; a Kilter's follow your
+boulder scale.
 
 ### Hold diagrams
 

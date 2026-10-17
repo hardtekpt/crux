@@ -190,7 +190,8 @@ through the same `OpenRequest` path as the live notification.
   main database keeps a `datasets` row (`kind` `catalogue`) for the list; climbs and per-angle grades
   stay in the catalogue file, which is rebuilt rather than migrated and never backed up.
 - **Browsing** (`data/BoardBrowse.kt`, `data/BoardBrowser.kt`, `ui/datasets/BrowseModel.kt`,
-  `ui/datasets/BrowseFilters.kt`, `ui/session/BrowseBoard.kt`): `BoardBrowser` turns a catalogue (all
+  `ui/datasets/BrowseFilters.kt`: the summary line, Sort, and Filters with its Grade, Setter and Sort
+  sheets that return to it; `ui/session/BrowseBoard.kt`): `BoardBrowser` turns a catalogue (all
   climbs at an angle and search, read in one query) or a dataset into `BrowseCandidate`s; the goes
   come from `PlaylistDao.observeGoes` and are laid on without rereading. `BrowseEngine` applies the
   filters (they add up) and the sort chain in memory, off the main thread. `BrowseModel` is the

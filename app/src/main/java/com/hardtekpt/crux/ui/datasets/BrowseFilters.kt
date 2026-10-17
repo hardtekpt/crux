@@ -24,7 +24,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -136,53 +138,100 @@ private fun settersChip(setters: Set<String>): String? = when {
     else -> setters.take(2).joinToString(", ") + " +${setters.size - 2}"
 }
 
+/** What's applied, as one short line: "40° · 6C–7A · Not sent · ★ 2.5+"; "All climbs at 40°" with nothing set. */
+internal fun filtersSummary(state: BrowseBarState): String {
+    val f = state.query.filters
+    val angle = f.angle?.takeIf { state.catalogue }?.let { "$it°" }
+    val set = listOfNotNull(
+        gradeChip(f),
+        f.you.label(),
+        f.minRating?.let { "★ " + ratingLabel(it) },
+        f.minAscents?.let { "$it+ ascents" },
+        settersChip(f.setters),
+        "benchmarks".takeIf { f.benchmarks },
+    )
+    return when {
+        set.isEmpty() -> "All climbs" + (angle?.let { " at $it" } ?: "")
+        else -> (listOfNotNull(angle) + set).joinToString(" · ")
+    }
+}
+
 /**
- * The filter bar: a chip per filter and the sort, each reading its value and in the selected
- * style when set. A chip opens just its control in a small sheet; Benchmarks toggles. Filters
- * add up and the list follows at once. [allOpen] shows every filter at once (the Tune button).
+ * The applied filters and the sort, summed up in one compact row under the search: tap the
+ * summary for every filter, Sort for the order. Each filter's own control opens from the Filters
+ * sheet, and comes back to it. [allOpen] shows Filters (also from the page's Tune button).
  */
 @Composable
 fun BrowseFilterBar(state: BrowseBarState, actions: BrowseBarActions, allOpen: Boolean, onAllOpen: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     var open by rememberSaveable { mutableStateOf<BrowsePart?>(null) }
+    // A control opened from Filters goes back to Filters when it's done.
+    var fromAll by rememberSaveable { mutableStateOf(false) }
     val q = state.query
-    val f = q.filters
-    val chips = buildList {
-        if (state.views.isNotEmpty() || q.view != null) add(Triple(BrowsePart.VIEW, q.view ?: "Views", q.view != null))
-        add(Triple(BrowsePart.SORT, q.sorts.label().ifBlank { "Sort" }, q.sorts != state.defaultSorts))
-        add(Triple(BrowsePart.GRADE, gradeChip(f) ?: "Grade", gradeChip(f) != null))
-        if (state.catalogue && state.angles.size > 1) add(Triple(BrowsePart.ANGLE, f.angle?.let { "$it°" } ?: "Angle", true))
-        add(Triple(BrowsePart.YOU, f.you.label() ?: "You", f.you.label() != null))
-        if (state.catalogue) {
-            add(Triple(BrowsePart.RATING, "★ " + ratingLabel(f.minRating), f.minRating != null))
-            add(Triple(BrowsePart.ASCENTS, f.minAscents?.let { "$it+ ascents" } ?: "Ascents", f.minAscents != null))
-        }
-        add(Triple(BrowsePart.SETTER, settersChip(f.setters) ?: "Setter", f.setters.isNotEmpty()))
-        if (state.catalogue) add(Triple(BrowsePart.BENCHMARKS, "Benchmarks", f.benchmarks))
-    }
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), modifier = modifier.fillMaxWidth().testTag("browse_bar")) {
-        items(chips, key = { it.first }) { (part, label, on) ->
-            CruxFilterChip(
-                label,
-                on,
-                {
-                    if (part == BrowsePart.BENCHMARKS) {
-                        actions.onQuery(q.copy(filters = f.copy(benchmarks = !f.benchmarks), view = null))
-                    } else {
-                        open = part
-                    }
-                },
-                Modifier.testTag("browse_chip_${part.name}"),
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier.fillMaxWidth().testTag("browse_bar"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2),
+    ) {
+        Column(
+            Modifier
+                .weight(1f)
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClickLabel = "Change filters") { onAllOpen(true) }
+                .heightIn(min = 48.dp)
+                .padding(vertical = CruxTheme.space.s1)
+                .testTag("browse_summary"),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                listOfNotNull(q.view?.let { "$it ·" }, filtersSummary(state)).joinToString(" "),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (state.query.filters.count > 0 || q.view != null) colors.primary else colors.onSurface,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
+            Text(
+                "Sorted by " + q.sorts.joinToString(", ") { "${it.key.label.lowercase()} ${if (it.descending) "↓" else "↑"}" },
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                fromAll = false
+                open = BrowsePart.SORT
+            },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = CruxTheme.space.s3),
+            modifier = Modifier.testTag("browse_sort"),
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text("Sort", modifier = Modifier.padding(start = CruxTheme.space.s1))
         }
     }
     val showing = if (allOpen) BrowsePart.ALL else open
     showing?.let { part ->
-        BrowsePartSheet(part, state, actions, onOpenPart = {
-            open = it
-            onAllOpen(false)
-        }) {
-            open = null
-            onAllOpen(false)
+        BrowsePartSheet(
+            part,
+            state,
+            actions,
+            fromAll = fromAll && part != BrowsePart.ALL,
+            onOpenPart = {
+                fromAll = true
+                open = it
+                onAllOpen(false)
+            },
+        ) {
+            if (fromAll && part != BrowsePart.ALL) {
+                open = null
+                fromAll = false
+                onAllOpen(true)
+            } else {
+                open = null
+                fromAll = false
+                onAllOpen(false)
+            }
         }
     }
 }
@@ -190,21 +239,24 @@ fun BrowseFilterBar(state: BrowseBarState, actions: BrowseBarActions, allOpen: B
 /** The small sheet behind one chip, or every filter at once for [BrowsePart.ALL]. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun BrowsePartSheet(part: BrowsePart, state: BrowseBarState, actions: BrowseBarActions, onOpenPart: (BrowsePart) -> Unit, onDismiss: () -> Unit) {
+internal fun BrowsePartSheet(
+    part: BrowsePart,
+    state: BrowseBarState,
+    actions: BrowseBarActions,
+    onOpenPart: (BrowsePart) -> Unit,
+    /** Opened from Filters: its button goes back there. */
+    fromAll: Boolean = false,
+    onDismiss: () -> Unit,
+) {
     val q = state.query
     val f = q.filters
     fun set(filters: BrowseFilters) = actions.onQuery(q.copy(filters = filters, view = null))
-    val show = SheetButton("Show ${"%,d".format(state.shown)} ${if (state.shown == 1) "climb" else "climbs"}", onDismiss, tag = "browse_show")
+    val show = if (fromAll) {
+        SheetButton("Back to filters", onDismiss, icon = Icons.AutoMirrored.Rounded.ArrowBack, tag = "browse_back")
+    } else {
+        SheetButton("Show ${"%,d".format(state.shown)} ${if (state.shown == 1) "climb" else "climbs"}", onDismiss, tag = "browse_show")
+    }
     when (part) {
-        BrowsePart.ANGLE -> CruxSheet(onDismiss, Modifier.testTag("browse_sheet_angle"), title = "Angle", confirm = show) {
-            AngleChoice(state.angles, f.angle) { set(f.copy(angle = it)) }
-            Text(
-                "Grades, ratings and ascents are per angle, so the list follows it.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
         BrowsePart.GRADE -> CruxSheet(
             onDismiss,
             Modifier.testTag("browse_sheet_grade"),
@@ -213,29 +265,6 @@ internal fun BrowsePartSheet(part: BrowsePart, state: BrowseBarState, actions: B
             confirm = show,
         ) {
             GradeGrid(state, onRange = { from, to -> set(f.copy(gradeScale = state.scale, gradeFrom = from, gradeTo = to)) })
-        }
-
-        BrowsePart.YOU -> CruxSheet(onDismiss, Modifier.testTag("browse_sheet_you"), title = "You", confirm = show) {
-            YouChoice(f.you) { set(f.copy(you = it)) }
-            Text(
-                "New and Tried together is every climb you haven't sent.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        BrowsePart.RATING -> CruxSheet(onDismiss, Modifier.testTag("browse_sheet_rating"), title = "Rating", confirm = show) {
-            CruxSegmentedButtons(RATINGS, f.minRating, ::ratingLabel, { set(f.copy(minRating = it)) })
-            Text(
-                "The board's own rating at this angle, out of 3 or more.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        BrowsePart.ASCENTS -> CruxSheet(onDismiss, Modifier.testTag("browse_sheet_ascents"), title = "Ascents", confirm = show) {
-            CruxSegmentedButtons(ASCENTS, f.minAscents, ::ascentsLabel, { set(f.copy(minAscents = it)) })
-            Text("Skip the climbs few people have repeated.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         BrowsePart.SETTER -> CruxSheet(
@@ -252,7 +281,8 @@ internal fun BrowsePartSheet(part: BrowsePart, state: BrowseBarState, actions: B
             onDismiss,
             Modifier.testTag("browse_sheet_sort"),
             title = "Sort",
-            action = SheetButton("Done", onDismiss, tag = "browse_sort_done"),
+            action = SheetButton("Default", { actions.onQuery(q.copy(sorts = state.defaultSorts, view = null)) }, tag = "browse_sort_default"),
+            confirm = show,
         ) {
             SortChain(q.sorts, state.catalogue) { actions.onQuery(q.copy(sorts = it, view = null)) }
         }
@@ -261,7 +291,8 @@ internal fun BrowsePartSheet(part: BrowsePart, state: BrowseBarState, actions: B
             Views(state, actions, onPicked = onDismiss)
         }
 
-        BrowsePart.BENCHMARKS -> onDismiss()
+        // Set right in Filters, a row each: nothing of their own to open.
+        BrowsePart.ANGLE, BrowsePart.YOU, BrowsePart.RATING, BrowsePart.ASCENTS, BrowsePart.BENCHMARKS -> onDismiss()
 
         BrowsePart.ALL -> CruxSheet(
             onDismiss,
@@ -318,6 +349,7 @@ internal fun BrowsePartSheet(part: BrowsePart, state: BrowseBarState, actions: B
                     Line("Ascents") { CruxSegmentedButtons(ASCENTS, f.minAscents, ::ascentsLabel, { set(f.copy(minAscents = it)) }) }
                 }
                 Line("Setter") { Opens(settersChip(f.setters) ?: "Anyone", BrowsePart.SETTER) }
+                Line("Sort") { Opens(q.sorts.label(), BrowsePart.SORT) }
                 if (state.catalogue) {
                     if (!first) Box(Modifier.fillMaxWidth().height(CruxTheme.size.borderHairline).background(MaterialTheme.colorScheme.outlineVariant))
                     CruxSwitchRow(

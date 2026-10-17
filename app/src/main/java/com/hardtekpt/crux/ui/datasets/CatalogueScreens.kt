@@ -164,9 +164,9 @@ class CatalogueViewModel @Inject constructor(
 }
 
 /** A board difficulty as the climber's boulder scale has it: "6C", or "V5". */
-internal fun boardGrade(difficulty: Double?, scales: GradeScales): String {
+internal fun boardGrade(difficulty: Double?, scales: GradeScales, dataset: Dataset? = null): String {
     val font = difficulty?.let(BoardseshBoards::fontIndex) ?: return "–"
-    val scale = scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
+    val scale = catalogueScale(scales, dataset)
     return convertGrade(GradeScale.FONT, font, scale)?.let(scale::label) ?: GradeScale.FONT.label(font)
 }
 
@@ -322,6 +322,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
         CatalogueClimbSheet(
             climb = climb,
             board = ds.holdsBoard,
+            dataset = ds,
             angle = browse.bar.query.filters.angle,
             scales = uiState.scales,
             onLog = {
@@ -363,6 +364,8 @@ private fun CatalogueClimbSheet(
     onLog: () -> Unit,
     onPlaylist: () -> Unit,
     onDismiss: () -> Unit,
+    /** Its catalogue: a MoonBoard's grades stay Font. */
+    dataset: Dataset? = null,
 ) {
     val space = CruxTheme.space
     val here = climb.gradeAt(angle)
@@ -379,7 +382,7 @@ private fun CatalogueClimbSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(boardGrade(here?.difficulty, scales), style = CruxTheme.type.grade)
+            Text(boardGrade(here?.difficulty, scales, dataset), style = CruxTheme.type.grade)
         }
         // The holds on the board; tap for the whole board.
         val frames = climb.frames
@@ -394,7 +397,7 @@ private fun CatalogueClimbSheet(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
             climb.grades.forEach { grade ->
                 CruxFilterChip(
-                    "${grade.angle}° ${boardGrade(grade.difficulty, scales)} · ${count(grade.ascents)}",
+                    "${grade.angle}° ${boardGrade(grade.difficulty, scales, dataset)} · ${count(grade.ascents)}",
                     grade.angle == here?.angle,
                     {},
                 )

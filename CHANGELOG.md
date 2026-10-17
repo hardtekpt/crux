@@ -11,9 +11,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 - **Browse a board in any session**: **+ → Browse a board** (and **Browse board** beside Log climb) opens your board's
   catalogue or a dataset. Pick a climb and the session's card walks the list with Prev, Light and Next (the notification
   too), and + Fell and + Sent log a go with the angle in the note.
-- **Filters and sorts that combine**: catalogues and datasets get a filter bar, a chip per filter that opens one small
-  control: a grade grid with presets from your sends, You (New, Tried, Sent), rating, ascents, setters, benchmarks and the
-  angle. Sorts chain up to three keys with directions, and a set can be saved as a view. Each board remembers its last set.
+- **Filters and sorts that combine**: catalogues and datasets show one compact line of what's applied, with **Sort**
+  beside it. Filters hold the angle, a grade grid with presets from your sends, You (New, Tried, Sent), rating, ascents,
+  setters and benchmarks; sorts chain up to three keys with directions; a set can be saved as a view. Each board
+  remembers its last set, and a MoonBoard's grades always read in Font.
 - **Accessibility**: with TalkBack, rests and the interval timer say each phase, 10 seconds left and when
   they end; charts, the consistency grid and Home's week strip read their values day by day; every switch,
   set box and search field says what it is; and tape colours say their name. A **Reduce motion** setting

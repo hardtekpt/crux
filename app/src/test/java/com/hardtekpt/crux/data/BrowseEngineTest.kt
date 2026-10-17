@@ -66,4 +66,11 @@ class BrowseEngineTest {
         assertEquals(mapOf(9 to 2, 10 to 1, 11 to 1, 5 to 1), BrowseEngine.gradeCounts(climbs))
         assertEquals(listOf("kim" to 2, "rui" to 2, "ana" to 1), BrowseEngine.setters(climbs))
     }
+
+    @Test
+    fun `a MoonBoard reads in Font, a Kilter in your scale`() {
+        val v = com.hardtekpt.crux.data.prefs.GradeScales(boulder = GradeScale.V_SCALE)
+        assertEquals(GradeScale.FONT, catalogueScale(v, Dataset(name = "MoonBoard 2016", board = com.hardtekpt.crux.data.model.BoardModel.MOON_2016)))
+        assertEquals(GradeScale.V_SCALE, catalogueScale(v, Dataset(name = "Kilter", board = com.hardtekpt.crux.data.model.BoardModel.KILTER_ORIGINAL)))
+    }
 }

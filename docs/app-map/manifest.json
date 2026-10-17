@@ -2154,7 +2154,7 @@
    "lane": "datasets",
    "col": 3,
    "row": 0,
-   "desc": "One dataset: search by name, setter or note, the filter bar (sort, grade, you and setter, with views), and tap a climb to edit it. Add climb adds another.",
+   "desc": "One dataset: search by name, setter or note, a compact line of what's applied with Sort beside it (filters open from the button by the search), and tap a climb to edit it. Add climb adds another.",
    "covers": [
     "DatasetRoute"
    ],
@@ -2720,7 +2720,7 @@
    "lane": "datasets",
    "col": 3,
    "row": 4,
-   "desc": "The climbs of a board catalogue, read-only, through the same filter bar as browsing in a session: search, then a chip per filter and the sort (angle, grade, you, rating, ascents, setter, benchmarks), Tune for all of them, and views.",
+   "desc": "The climbs of a board catalogue, read-only, as browsing in a session shows them: search, a compact line of what's applied with Sort beside it, Tune for every filter, and views. A MoonBoard's grades read in Font.",
    "covers": [
     "CatalogueRoute"
    ],
@@ -3185,7 +3185,7 @@
    "lane": "browse",
    "col": 1,
    "row": 0,
-   "desc": "The board's name (tap to switch), Tune for every filter, a search, the filter bar (each chip reads its value, set ones in the selected style), how many climbs match with Clear, and the climbs with your goes. Tap one to climb it on the session's card; hold one to add it to a playlist. Filters, sort and view are remembered per board.",
+   "desc": "The board's name (tap to switch), Tune for every filter, a search, and one compact line under it: what's applied (“40° · 6C–7A · Not sent”) and how it's sorted. Tap the line for Filters, Sort for the order. Then how many climbs match, with Clear, and the climbs with your goes. Tap one to climb it on the session's card; hold one to add it to a playlist. Each board remembers its last set.",
    "covers": [
     "BrowsePartSheet"
    ],
@@ -3210,7 +3210,7 @@
    "lane": "browse",
    "col": 2,
    "row": 0,
-   "desc": "A grid of the board's grades with a bar for how many climbs each has. Tap the easiest, then the hardest. Near my max, Warm-up and Below my max follow your sends on this board.",
+   "desc": "A grid of the board's grades with a bar for how many climbs each has. Tap the easiest, then the hardest. Near my max, Warm-up and Below my max follow your sends on this board. Opened from Filters, its button goes back there.",
    "covers": [
     "set/dialog:Grade"
    ],
@@ -3220,9 +3220,11 @@
     "tap:Without a plan",
     "tap:Add to this session",
     "tap:Browse a board",
-    "wait:1.5",
-    "wait:2",
-    "tap:Grade"
+    "wait:3",
+    "tapc:All climbs",
+    "wait:1",
+    "tap:Any grade",
+    "wait:1"
    ],
    "cleanup": [
     "discard:Climbing session"
@@ -3245,27 +3247,22 @@
     "tap:Without a plan",
     "tap:Add to this session",
     "tap:Browse a board",
-    "wait:1.5",
-    "wait:2",
-    "tap:Popular, Grade"
+    "wait:3",
+    "tap:Sort"
    ],
    "cleanup": [
     "discard:Climbing session"
    ]
   },
   {
-   "id": "browse-you",
-   "title": "You and the small filters",
+   "id": "browse-setter",
+   "title": "Setter",
    "kind": "sheet",
    "lane": "browse",
    "col": 4,
    "row": 0,
-   "desc": "Each chip opens one control: You (New, Tried, Sent; New and Tried read Not sent), Angle (segmented), Rating (Any, 2+, 2.5+, 3+), Ascents (Any, 10+, 50+, 200+) and Setter (searchable, several at once). Benchmarks toggles straight from its chip.",
+   "desc": "The setters with climbs here, searchable; tick any number. Back to filters returns to the Filters sheet.",
    "covers": [
-    "set/dialog:You",
-    "set/dialog:Angle",
-    "set/dialog:Rating",
-    "set/dialog:Ascents",
     "set/dialog:Setter"
    ],
    "steps": [
@@ -3274,9 +3271,11 @@
     "tap:Without a plan",
     "tap:Add to this session",
     "tap:Browse a board",
-    "wait:1.5",
-    "wait:2",
-    "tap:You"
+    "wait:3",
+    "tapc:All climbs",
+    "wait:1",
+    "tap:Anyone",
+    "wait:1"
    ],
    "cleanup": [
     "discard:Climbing session"
@@ -3289,7 +3288,7 @@
    "lane": "browse",
    "col": 5,
    "row": 0,
-   "desc": "Every filter on one sheet, a row each, with Clear all, Show N climbs and the saved views.",
+   "desc": "Every filter on one sheet, a row each: Angle, Rating and Ascents as segments, You as New, Tried and Sent, Benchmarks as a switch, and Grade, Setter and Sort opening their own controls (which come back here). Clear all, Show N climbs and the saved views.",
    "covers": [
     "set/dialog:Filters"
    ],
@@ -3299,9 +3298,8 @@
     "tap:Without a plan",
     "tap:Add to this session",
     "tap:Browse a board",
-    "wait:1.5",
-    "wait:2",
-    "tap:All filters"
+    "wait:3",
+    "tapc:All climbs"
    ],
    "cleanup": [
     "discard:Climbing session"
@@ -3326,9 +3324,8 @@
     "tap:Without a plan",
     "tap:Add to this session",
     "tap:Browse a board",
-    "wait:1.5",
-    "wait:2",
-    "tap:All filters",
+    "wait:3",
+    "tapc:All climbs",
     "scrollto:Save as view",
     "tap:Save as view"
    ],
@@ -4497,7 +4494,7 @@
    "nav"
   ],
   [
-   "browse-sheet",
+   "browse-all",
    "browse-grade",
    "Grade chip",
    "sheet"
@@ -4509,9 +4506,9 @@
    "sheet"
   ],
   [
-   "browse-sheet",
-   "browse-you",
-   "A filter chip",
+   "browse-all",
+   "browse-setter",
+   "Setter",
    "sheet"
   ],
   [
