@@ -155,4 +155,42 @@ class PlaylistGoesTest {
         s.goes.undo(first)
         assertTrue(s.climbs.observeClimbs().first().isEmpty())
     }
+
+    @Test
+    fun `a board climb's go lands on the board, not the gym the session is at`() = runTest {
+        val dbs = CruxDatabases(
+            UserPreferencesRepository(PreferenceDataStoreFactory.create { File(tmp.root, "board.preferences_pb") }),
+            DatabaseFactory { db },
+            backgroundScope,
+        )
+        val preferences = UserPreferencesRepository(PreferenceDataStoreFactory.create { File(tmp.root, "board-goes.preferences_pb") })
+        val climbs = OfflineClimbRepository(dbs, FIXED_CLOCK)
+        val places = OfflinePlaceRepository(dbs, FIXED_CLOCK)
+        val datasets = OfflineDatasetRepository(dbs, FIXED_CLOCK)
+        val kilter = com.hardtekpt.crux.data.model.BoardModel.KILTER_ORIGINAL
+        val placeId = places.savePlace(
+            PlaceInput(
+                name = "Block Lab",
+                location = null,
+                notes = null,
+                sections = listOf(
+                    SectionInput(type = PlaceType.GYM, name = "Main gym"),
+                    SectionInput(type = PlaceType.BOARD, name = "Kilter board", board = kilter, boardSize = "12x12"),
+                ),
+            ),
+        )
+        val (gym, board) = places.getPlace(placeId)!!.sections
+        val sessions = OfflineSessionRepository(dbs, OfflineTemplateRepository(dbs), FIXED_CLOCK)
+        val session = sessions.observeSession(sessions.start(null, placeId, gym.id)).first()!!
+        val dataset = Dataset(name = "Kilter Original", board = kilter, boardSize = "12x12")
+        val saved = dataset.copy(id = datasets.saveDataset(dataset))
+        val climb = DatasetClimb(name = "Heel hook cave", gradeScale = GradeScale.FONT, gradeIndex = 9, catalogueUuid = "u1")
+
+        val goes = PlaylistGoes(climbs, places, preferences, FIXED_CLOCK, datasets)
+        goes.add(session, ClimbSource(climb, saved), sent = false, angle = 40)
+
+        val log = climbs.observeClimbs().first().single()
+        assertEquals(board.id, log.sectionId)
+        assertEquals("40°", log.notes)
+    }
 }

@@ -427,7 +427,8 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                         onLeave = navController::popBackStack,
                         onLogClimb = { navController.navigate(LogClimbRoute()) },
                         onFinished = navController::popBackStack,
-                        onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId)) },
+                        // A climb in the session opens its log from this session, to change or delete it.
+                        onLogMore = { problemId -> navController.navigate(LogClimbRoute(problemId = problemId, reuseToday = true)) },
                         onLogDatasetClimb = { placeId, sectionId, climbId ->
                             navController.navigate(LogClimbRoute(placeId = placeId ?: 0, sectionId = sectionId ?: 0, datasetClimbId = climbId))
                         },

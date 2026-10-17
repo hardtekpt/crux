@@ -45,7 +45,8 @@ session. Only one session runs at a time; starting another ends the first.
   and the session's card walks the list: its header reads the board, angle, view and where you are
   ("Kilter · 40° · Session · 2 of 31"), **Prev**, **Light** and **Next** move along it (the live
   notification too), and **+ Fell** and **+ Sent** log a go with the angle as the note's first
-  line. The list holds still while you climb, so a send doesn't vanish until you reopen it with
+  line, on the place's board facility for that board (or the facility the dataset is linked to),
+  even when the session started in the main gym. The list holds still while you climb, so a send doesn't vanish until you reopen it with
   the list button. **✕** stops browsing and brings back a playlist you were climbing, where you
   left it. Hold a climb in the list to add it to a playlist.
 - **The dock** at the bottom follows the block you're on: **Done · Exercise, set N** ticks the next
@@ -75,7 +76,9 @@ session. Only one session runs at a time; starting another ends the first.
   climb** on it; it's outlined in the accent while you're climbing. Each climb shows its grade, how
   it went and **+ go** to log another go. Several logs on the same climb show
   as one entry with the goes added up (a redpoint once one of them is a send), here, in the
-  Journal and in the session's summary. Tap a climb in the session to log more goes on it. If
+  Journal and in the session's summary. Tap a climb in the session to open its log from this
+  session: change its goes and details, or delete the log with the bin (Undo brings it back; the
+  climb itself stays while it has other logs). If
   **Rest after a climb** is set in Settings, logging a
   climb starts that rest in the dock, so you know when to pull on again.
 

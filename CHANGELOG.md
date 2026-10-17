@@ -84,6 +84,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
+- **+ Fell and + Sent on a board climb** in a session now log it on the place's board facility, not the main gym the
+  session started in.
+- **A climb in a live session opens its log**, so you can change it or delete it (with Undo), instead of starting a new
+  log.
 - In landscape, the interval timer's big number no longer runs off the bottom of the screen.
 
 ## [0.5.0] - 2026-10-15

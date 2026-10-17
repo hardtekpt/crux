@@ -22,6 +22,7 @@ class PlaylistGoes @Inject constructor(
     private val places: PlaceRepository,
     private val preferences: UserPreferencesRepository,
     private val clock: Clock,
+    private val datasets: DatasetRepository? = null,
 ) {
     /** How to take a go back: delete the log it started, or put the log back as it was. */
     sealed interface Undo {
@@ -33,7 +34,7 @@ class PlaylistGoes @Inject constructor(
     /** [angle], for a board climb, is written as a new log's note's first line, as Log climb does. */
     suspend fun add(session: Session, source: ClimbSource, sent: Boolean, angle: Int? = null): Undo {
         val place = session.placeId?.let { places.getPlace(it) }
-        val section = place?.sections?.firstOrNull { it.id == session.sectionId } ?: place?.sections?.firstOrNull()
+        val section = sectionFor(place?.sections.orEmpty(), session.sectionId, source.dataset)
         val here = places.climbsAt(place?.id).filter { place == null || place.sections.size <= 1 || it.sectionId == null || it.sectionId == section?.id }
         val climb = source.climb
         val problem =
@@ -89,6 +90,27 @@ class PlaylistGoes @Inject constructor(
             ),
         )
         return Undo.Delete(id)
+    }
+
+    /**
+     * Where a go on a [dataset]'s climb belongs: the session's facility when it offers that dataset,
+     * else the facility at the place that does (the board it was made for, or one it's linked to),
+     * so a board climb lands on the board rather than the main gym. With none, the session's.
+     */
+    private suspend fun sectionFor(
+        sections: List<com.hardtekpt.crux.data.model.Section>,
+        sessionSectionId: Long?,
+        dataset: Dataset,
+    ): com.hardtekpt.crux.data.model.Section? {
+        val links = datasets?.observeLinks()?.first().orEmpty()
+        fun offers(s: com.hardtekpt.crux.data.model.Section) = dataset.fitsBoard(s) || dataset.id in links[s.id].orEmpty()
+        val sessions = sections.firstOrNull { it.id == sessionSectionId }
+        if (sessions != null && offers(sessions)) return sessions
+        return sections.firstOrNull { dataset.fitsBoard(it) }
+            ?: sections.firstOrNull { dataset.id in links[it.id].orEmpty() }
+            ?: dataset.board?.let { board -> sections.firstOrNull { it.board == board } }
+            ?: sessions
+            ?: sections.firstOrNull()
     }
 
     suspend fun undo(undo: Undo) {
