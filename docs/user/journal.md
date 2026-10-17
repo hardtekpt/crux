@@ -14,7 +14,7 @@ with **New place**; tap one to open it. See [Places](places.md).
 
 Days run newest first, each with a date tile and a tally; today's tile is filled in the accent.
 
-- **Tabs**: *All*, *Climbs*, *Training* or *Notes*, each with a count. Swipe sideways to move
+- **Tabs**: *All*, *Climbs*, *Training*, *Notes* or *Places*, each with a count, as segmented buttons like Train's. Swipe sideways to move
   between them.
 - **Search** (the magnifier in the top bar): finds climbs, places and notes by text. The back
   arrow clears the search and closes it.

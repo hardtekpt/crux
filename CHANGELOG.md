@@ -31,6 +31,7 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Changed
 
+- **Journal tabs work like Train's**: the Journal's tabs are now the same segmented buttons as Train, still with their counts, and the list swaps without the sliding and fading. Swiping sideways still moves between them.
 - **Weight only on Measurements**: the weight card is gone from the You page, since it is on Measurements. The Measurements row in More about you now shows your latest weight and how it moved.
 - **New name and icon**: the app is now **Climb Logger**, with a new icon of a mountain and a rising progress line (it has a themed version for Android 13+). The package is the same, so it installs over the old app and your data is untouched.
 - **Choose a climb in Log climb**: the climb chips under Name are gone. A **Choose a climb** button opens a sheet

@@ -90,6 +90,7 @@ import com.hardtekpt.crux.ui.components.AnimatedCount
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxFilterChip
 import com.hardtekpt.crux.ui.components.CruxMotion
+import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxSheet
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
@@ -310,7 +311,16 @@ fun JournalContent(
             )
             return
         }
-        TypeTabs(uiState, placeCount = places?.size ?: 0, onSelect = { kind -> onQuery { it.copy(kind = kind) } })
+        // The same tabs as Train: segmented buttons, and the list swaps without animation.
+        CruxSegmentedButtons(
+            options = JournalFilter.entries,
+            selected = uiState.query.kind,
+            label = { option -> "${option.label}\n${if (option == JournalFilter.Places) places?.size ?: 0 else uiState.counts[option] ?: 0}" },
+            onSelect = { kind -> onQuery { it.copy(kind = kind) } },
+            modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2),
+            tagOf = { "journal_filter_${it.name}" },
+            compact = true,
+        )
         // Places: the gyms, crags and boards you climb at, with New place, in place of the timeline.
         if (uiState.query.kind == JournalFilter.Places) {
             LazyColumn(
@@ -349,19 +359,14 @@ fun JournalContent(
             }
             uiState.days.forEach { day ->
                 item(key = "day_${day.date}", contentType = "day") {
-                    Box(Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())) {
-                        DayHeader(day, today = day.date == uiState.today)
-                    }
+                    DayHeader(day, today = day.date == uiState.today)
                 }
                 items(day.entries, key = { it.key }, contentType = { it::class }) { entry ->
-                    // Entries slide into place and fade when a tab, search or filter changes the list.
-                    Box(Modifier.animateItem(fadeInSpec = CruxMotion.medium(), placementSpec = CruxMotion.medium(), fadeOutSpec = CruxMotion.fast())) {
-                        when (entry) {
-                            is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb, selection)
-                            is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
-                            is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
-                            is TimelineEntry.NoteEntry -> NoteEntry(entry.note, selection) { actions.openNote(entry.note.id) }
-                        }
+                    when (entry) {
+                        is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb, selection)
+                        is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
+                        is TimelineEntry.NoteEntry -> NoteEntry(entry.note, selection) { actions.openNote(entry.note.id) }
                     }
                 }
             }
@@ -464,74 +469,6 @@ private fun daySummary(day: TimelineDay): String {
         notes.takeIf { it > 0 }?.let { "$it ${if (it == 1) "note" else "notes"}" },
         sessions.takeIf { it > 0 }?.let { "$it ${if (it == 1) "session" else "sessions"}" },
     ).joinToString(" · ")
-}
-
-/** The four types as equal tabs with live counts, the picked one underlined. */
-@Composable
-private fun TypeTabs(uiState: JournalUiState, placeCount: Int = 0, onSelect: (JournalFilter) -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = CruxTheme.space.s2)
-                .selectableGroup()
-                .testTag("journal_filters"),
-        ) {
-            JournalFilter.entries.forEach { option ->
-                val selected = option == uiState.query.kind
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp)
-                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(option) })
-                        .testTag("journal_filter_${option.name}"),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(top = 10.dp, bottom = 10.dp),
-                    ) {
-                        val label by androidx.compose.animation.animateColorAsState(
-                            if (selected) colors.onSurface else colors.onSurfaceVariant,
-                            CruxMotion.fast(),
-                            label = "tab",
-                        )
-                        val count by androidx.compose.animation.animateColorAsState(
-                            if (selected) colors.primary else colors.onSurfaceVariant,
-                            CruxMotion.fast(),
-                            label = "tabCount",
-                        )
-                        Text(option.label, style = MaterialTheme.typography.titleSmall, color = label, maxLines = 1)
-                        AnimatedCount(
-                            (if (option == JournalFilter.Places) placeCount else uiState.counts[option] ?: 0).toString(),
-                            style = MonoLabel,
-                            color = count,
-                        )
-                    }
-                    val underline by androidx.compose.animation.animateColorAsState(
-                        if (selected) colors.primary else Color.Transparent,
-                        CruxMotion.fast(),
-                        label = "underline",
-                    )
-                    val width by androidx.compose.animation.core.animateFloatAsState(
-                        if (selected) 0.7f else 0.2f,
-                        CruxMotion.medium(),
-                        label = "underlineWidth",
-                    )
-                    Box(
-                        Modifier
-                            .fillMaxWidth(width)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                            .background(underline),
-                    )
-                }
-            }
-        }
-        Box(Modifier.fillMaxWidth().height(CruxTheme.size.borderHairline).background(colors.outlineVariant))
-    }
 }
 
 /** What the sheet has set, each as a chip that removes itself, then Clear all. */

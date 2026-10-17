@@ -166,11 +166,23 @@ private fun Swatch(on: Boolean, color: Color, label: String, onClick: () -> Unit
     }
 }
 
-/** Two to four views of the same thing; exactly one is selected. */
+/** Two to five views of the same thing; exactly one is selected. */
 @Composable
-fun <T> CruxSegmentedButtons(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+fun <T> CruxSegmentedButtons(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    /** The test tag of a segment, when its label changes (a count in it). */
+    tagOf: (T) -> String = { "segment_${label(it)}" },
+    /** For rows of five: the label may use two lines (a name over a count) at one size, with a taller row. */
+    compact: Boolean = false,
+) {
     val colors = MaterialTheme.colorScheme
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth().height(CruxTheme.size.controlHeight)) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier.fillMaxWidth().height(if (compact) CruxTheme.size.controlHeight + 12.dp else CruxTheme.size.controlHeight),
+    ) {
         options.forEachIndexed { index, option ->
             SegmentedButton(
                 selected = option == selected,
@@ -198,9 +210,13 @@ fun <T> CruxSegmentedButtons(options: List<T>, selected: T, label: (T) -> String
                 // Large text sizes shrink a long label to fit rather than cut it off.
                 label = {
                     val style = MaterialTheme.typography.labelLarge
-                    Text(label(option), style = style, maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize))
+                    if (compact) {
+                        Text(label(option), style = style.copy(fontSize = 12.sp), maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    } else {
+                        Text(label(option), style = style, maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize))
+                    }
                 },
-                modifier = Modifier.testTag("segment_${label(option)}"),
+                modifier = Modifier.testTag(tagOf(option)),
             )
         }
     }
