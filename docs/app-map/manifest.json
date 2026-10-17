@@ -1960,7 +1960,7 @@
    "covers": [],
    "steps": [
     "tab:Journal",
-    "tap:Places"
+    "tapc:Places"
    ],
    "cleanup": []
   },
