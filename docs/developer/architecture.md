@@ -189,6 +189,16 @@ through the same `OpenRequest` path as the live notification.
   `CatalogueDatabase`), keyed by catalogue (`boardsesh:kilter:8:25`) and the board's climb uuid. The
   main database keeps a `datasets` row (`kind` `catalogue`) for the list; climbs and per-angle grades
   stay in the catalogue file, which is rebuilt rather than migrated and never backed up.
+- **Browsing** (`data/BoardBrowse.kt`, `data/BoardBrowser.kt`, `ui/datasets/BrowseModel.kt`,
+  `ui/datasets/BrowseFilters.kt`, `ui/session/BrowseBoard.kt`): `BoardBrowser` turns a catalogue (all
+  climbs at an angle and search, read in one query) or a dataset into `BrowseCandidate`s; the goes
+  come from `PlaylistDao.observeGoes` and are laid on without rereading. `BrowseEngine` applies the
+  filters (they add up) and the sort chain in memory, off the main thread. `BrowseModel` is the
+  shared state behind the session's browse sheet and the catalogue and dataset pages. `BrowseStore`
+  keeps each board's last `BrowseQuery` and its views, the boards last used and the running
+  `BrowseRun` in DataStore: a window of up to 300 climbs from the list as it was when picked (so it
+  holds still), with its position. `SessionViewModel.queue` puts it on the playlist card ahead of a
+  playlist; `LivePlaylists` and `LiveService` follow it for the notification.
 - **Hold diagrams** (`data/BoardGeometry.kt`, `ui/components/BoardDiagram.kt`): positions from the
   built-in `assets/board_holes.json` (regenerate with `scripts/board_holes.py`); a climb's holds are
   copied onto it when logged (`problems.holds`, `holdsBoard`).

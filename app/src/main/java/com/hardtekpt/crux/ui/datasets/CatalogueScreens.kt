@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ import com.hardtekpt.crux.data.Dataset
 import com.hardtekpt.crux.data.DatasetRepository
 import com.hardtekpt.crux.data.Playlist
 import com.hardtekpt.crux.data.PlaylistRepository
+import com.hardtekpt.crux.data.catalogueScale
 import com.hardtekpt.crux.data.convertGrade
 import com.hardtekpt.crux.data.model.BoardHolds
 import com.hardtekpt.crux.data.model.BoardModel
@@ -96,42 +98,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** How a catalogue's climbs are listed. */
-enum class CatalogueSort(val label: String) { POPULAR("Popular"), GRADE("Grade"), NAME("Name") }
+data class CatalogueUiState(val dataset: Dataset? = null, val scales: GradeScales = GradeScales(), val playlists: List<Playlist> = emptyList())
 
-/** What the catalogue page asks for: the angle, a search, a sort and benchmarks only. */
-data class CatalogueQuery(
-    val angle: Int? = null,
-    val text: String = "",
-    val sort: CatalogueSort = CatalogueSort.POPULAR,
-    val benchmarks: Boolean = false,
-    /** A grade range, as indices in [catalogueScale]. */
-    val gradeFrom: Int? = null,
-    val gradeTo: Int? = null,
-    /** Hide the climbs you have sent. */
-    val hideSent: Boolean = false,
-)
-
-private const val HIDE_SENT_SCAN = 2000
-
-/** The scale a catalogue's grades are read and filtered in: the climber's boulder scale, or Font for a local one. */
-internal fun catalogueScale(scales: GradeScales): GradeScale = scales.boulder.takeIf { !it.isLocal } ?: GradeScale.FONT
-
-private fun fontOf(scale: GradeScale, index: Int?): Int? = index?.let { convertGrade(scale, it, GradeScale.FONT) }
-
-data class CatalogueUiState(
-    val dataset: Dataset? = null,
-    val angles: List<Int> = emptyList(),
-    val query: CatalogueQuery = CatalogueQuery(),
-    val rows: List<CatalogueRow> = emptyList(),
-    val loading: Boolean = true,
-    val scales: GradeScales = GradeScales(),
-    val playlists: List<Playlist> = emptyList(),
-    /** Climbs tried today, by [com.hardtekpt.crux.data.triedKey]. */
-    val today: Map<String, Boolean> = emptyMap(),
-)
-
-/** A board catalogue: its climbs at an angle, searched and sorted, a page at a time. */
+/** A board catalogue: its climbs at an angle, through the same filters, sorts and views as browsing in a session. */
 @HiltViewModel
 class CatalogueViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -139,39 +108,21 @@ class CatalogueViewModel @Inject constructor(
     private val catalogue: CatalogueRepository,
     private val playlists: PlaylistRepository,
     preferences: UserPreferencesRepository,
-    clock: Clock,
+    @Suppress("UNUSED_PARAMETER") clock: Clock,
+    browser: com.hardtekpt.crux.data.BoardBrowser,
+    store: com.hardtekpt.crux.data.BrowseStore,
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
-    private val scalesFlow = preferences.gradeScales
-    private val sentKeys = playlists.observeSent()
-    private val query = MutableStateFlow(CatalogueQuery())
-    private val found = MutableStateFlow<Pair<CatalogueQuery, List<CatalogueRow>>?>(null)
-    private val angles = MutableStateFlow<List<Int>>(emptyList())
 
-    val uiState: StateFlow<CatalogueUiState> = combine(
-        combine(datasets.observeDatasets(), preferences.gradeScales, playlists.observePlaylists(), playlists.observeTriedOn(LocalDate.now(clock))) {
-                a,
-                b,
-                c,
-                d,
-            ->
-            listOf(a, b, c, d)
-        },
-        query,
-        found,
-        angles,
-    ) { parts, q, result, angleList ->
-        @Suppress("UNCHECKED_CAST")
-        CatalogueUiState(
-            dataset = (parts[0] as List<Dataset>).firstOrNull { it.id == datasetId },
-            angles = angleList,
-            query = q,
-            rows = result?.second.orEmpty(),
-            loading = result?.first != q,
-            scales = parts[1] as GradeScales,
-            playlists = parts[2] as List<Playlist>,
-            today = parts[3] as Map<String, Boolean>,
-        )
+    /** The filters, sorts and climbs: the same model the session's browse sheet uses, remembered per board. */
+    val browse = com.hardtekpt.crux.ui.datasets.BrowseModel(viewModelScope, browser, store, playlists, preferences)
+
+    val uiState: StateFlow<CatalogueUiState> = combine(datasets.observeDatasets(), preferences.gradeScales, playlists.observePlaylists()) {
+            all,
+            scales,
+            lists,
+        ->
+        CatalogueUiState(all.firstOrNull { it.id == datasetId }, scales, lists)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CatalogueUiState())
 
     private val _message = MutableStateFlow<String?>(null)
@@ -179,30 +130,10 @@ class CatalogueViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val key = datasets.observeDatasets().first().firstOrNull { it.id == datasetId }?.catalogueKey ?: return@launch
-            val list = catalogue.angles(key)
-            angles.value = list
-            // 40° is the commonest board angle; a MoonBoard has one or two.
-            query.update { it.copy(angle = if (40 in list) 40 else list.firstOrNull()) }
-            query.collectLatest { q ->
-                val angle = q.angle ?: return@collectLatest
-                val scale = catalogueScale(scalesFlow.first())
-                val from = fontOf(scale, q.gradeFrom)
-                val to = fontOf(scale, q.gradeTo)
-                val rows = if (q.hideSent) {
-                    // The sent ones are in another database, so look further down the list and take a page of what is left.
-                    val sent = sentKeys.first()
-                    catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, from, to, limit = HIDE_SENT_SCAN)
-                        .filter { "c${it.uuid}" !in sent }.take(CatalogueRepository.PAGE)
-                } else {
-                    catalogue.search(key, angle, q.text, q.sort.ordinal, q.benchmarks, from, to)
-                }
-                found.value = q to rows
-            }
+            val ds = datasets.observeDatasets().first().firstOrNull { it.id == datasetId } ?: return@launch
+            browse.open(ds)
         }
     }
-
-    fun update(change: (CatalogueQuery) -> CatalogueQuery) = query.update(change)
 
     /** A climb with its grade at every angle, for its sheet. */
     suspend fun climb(uuid: String): CatalogueClimb? = uiState.value.dataset?.catalogueKey?.let { catalogue.climb(it, uuid) }
@@ -211,7 +142,7 @@ class CatalogueViewModel @Inject constructor(
         val dataset = uiState.value.dataset ?: return
         viewModelScope.launch {
             val id = playlistId ?: playlists.savePlaylist(0, newName.orEmpty(), null)
-            val added = playlists.addClimbs(id, listOf(ClimbSource(climb.asDatasetClimb(query.value.angle), dataset)))
+            val added = playlists.addClimbs(id, listOf(ClimbSource(climb.asDatasetClimb(browse.ui.value.bar.query.filters.angle), dataset)))
             val name = playlists.observePlaylists().first().firstOrNull { it.id == id }?.name.orEmpty()
             _message.value = if (added == 0) "Already in $name" else "Added ${climb.name} to $name"
         }
@@ -248,17 +179,17 @@ private fun count(n: Int?): String = when {
 }
 
 /**
- * A board catalogue: its climbs at the chosen angle (each graded and sent at each angle), with a
- * search over names and setters, Popular, Grade and Name sorts and a Benchmarks filter. A dot marks
- * climbs you tried today. Tap one for its grades, Log this climb and + Playlist.
+ * A board catalogue: its climbs at the chosen angle, through the filter bar (each chip one filter
+ * or the sort, Tune for all of them, views to come back to). Your goes show on each row. Tap one
+ * for its grades, Log this climb and + Playlist.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel: CatalogueViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val browse by viewModel.browse.ui.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
-    var filtering by rememberSaveable { mutableStateOf(false) }
+    var allOpen by rememberSaveable { mutableStateOf(false) }
     var open by remember { mutableStateOf<CatalogueClimb?>(null) }
     var addingTo by remember { mutableStateOf<CatalogueClimb?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -275,13 +206,14 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().testTag("screen_Catalogue")) {
             CruxTopAppBar(title = dataset?.name.orEmpty(), onBack = onBack) {
+                IconButton(onClick = { allOpen = true }, modifier = Modifier.testTag("catalogue_open_filters")) {
+                    Icon(Icons.Rounded.Tune, contentDescription = "All filters")
+                }
                 // Its one action straight in the top bar, as Edit place's delete is; it still asks first.
                 IconButton(onClick = { confirmDelete = true }, modifier = Modifier.testTag("catalogue_delete")) {
                     Icon(Icons.Rounded.Delete, contentDescription = "Delete catalogue")
                 }
             }
-            val q = uiState.query
-            val range = GradeRange(catalogueScale(uiState.scales), q.gradeFrom, q.gradeTo)
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + LocalNavBarClearance.current),
                 verticalArrangement = Arrangement.spacedBy(space.s2),
@@ -295,105 +227,64 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
                     )
                 }
                 item(key = "search") {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                        CruxTextField(
-                            label = "",
-                            value = q.text,
-                            onValueChange = { text -> viewModel.update { it.copy(text = text.take(60)) } },
-                            placeholder = "Search name or setter",
-                            modifier = Modifier.weight(1f).testTag("catalogue_search"),
-                        )
-                        FiltersButton(
-                            active = listOf(range.active, q.hideSent).count { it },
-                            onClick = { filtering = true },
-                            modifier = Modifier.testTag("catalogue_open_filters"),
-                        )
-                    }
+                    CruxTextField(
+                        label = "",
+                        value = browse.text,
+                        onValueChange = viewModel.browse::setText,
+                        placeholder = "Search name or setter",
+                        modifier = Modifier.testTag("catalogue_search"),
+                    )
                 }
-                if (range.active || q.hideSent) {
-                    item(key = "applied") {
-                        Text(
-                            listOfNotNull(
-                                range.label()?.let {
-                                    "Grades $it"
-                                },
-                                "hiding sent climbs".takeIf { q.hideSent },
-                            ).joinToString(" · ").replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("catalogue_grade_applied"),
-                        )
-                    }
+                item(key = "bar") {
+                    BrowseFilterBar(browse.bar, viewModel.browse.actions, allOpen, { allOpen = it })
                 }
-                if (uiState.angles.size > 1) {
-                    item(key = "angles") {
-                        // The chosen angle (40° to start) in view, not the row's start.
-                        val angleRow = androidx.compose.foundation.lazy.rememberLazyListState()
-                        LaunchedEffect(q.angle, uiState.angles) {
-                            uiState.angles.indexOf(q.angle).takeIf { it > 0 }?.let { angleRow.scrollToItem((it - 1).coerceAtLeast(0)) }
-                        }
-                        LazyRow(state = angleRow, horizontalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("catalogue_angles")) {
-                            items(uiState.angles) { angle ->
-                                CruxFilterChip("$angle°", q.angle == angle, {
-                                    viewModel.update { it.copy(angle = angle) }
-                                }, Modifier.testTag("catalogue_angle_$angle"))
-                            }
+                item(key = "count") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Eyebrow(
+                            if (browse.loading) "Reading…" else "${"%,d".format(browse.climbs.size)} ${if (browse.climbs.size == 1) "climb" else "climbs"}",
+                            Modifier.weight(1f).testTag("catalogue_count"),
+                        )
+                        if (browse.bar.query.filters.count > 0) {
+                            TextButton(onClick = viewModel.browse::clear, modifier = Modifier.testTag("catalogue_clear")) { Text("Clear") }
                         }
                     }
                 }
-                item(key = "sort") {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(space.s2), verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                        CatalogueSort.entries.forEach { sort ->
-                            CruxFilterChip(sort.label, q.sort == sort, {
-                                viewModel.update { it.copy(sort = sort) }
-                            }, Modifier.testTag("catalogue_sort_${sort.name}"))
-                        }
-                        CruxFilterChip("Benchmarks", q.benchmarks, {
-                            viewModel.update { it.copy(benchmarks = !it.benchmarks) }
-                        }, Modifier.testTag("catalogue_benchmarks"))
-                    }
-                }
-                if (!uiState.loading && uiState.rows.isEmpty()) {
+                if (!browse.loading && browse.climbs.isEmpty()) {
                     item(key = "none") {
                         Text(
-                            "Nothing matches at ${q.angle}°.",
+                            "Nothing matches${browse.bar.query.filters.angle?.let { " at $it°" } ?: ""}. Clear a filter to see more.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = space.s4),
                         )
                     }
                 }
-                items(uiState.rows, key = { it.uuid }) { row ->
+                items(browse.climbs, key = { it.key }) { row ->
                     CruxListRow(
                         title = row.name,
                         supporting = listOfNotNull(
                             row.setter,
                             "${count(row.ascents)} ascents",
-                            row.quality?.let { "★ %.1f".format(it) },
-                            "benchmark".takeIf { row.benchmark == true },
+                            row.rating?.let { "★ %.1f".format(it) },
+                            "benchmark".takeIf { row.benchmark },
                         ).joinToString(" · "),
-                        leading = { com.hardtekpt.crux.ui.components.ClimbGrade(boardGrade(row.difficulty, uiState.scales)) },
-                        trailing = uiState.today["c${row.uuid}"]?.let { sent ->
-                            {
-                                Box(
-                                    Modifier
-                                        .size(8.dp)
-                                        .background(if (sent) CruxTheme.colors.success else MaterialTheme.colorScheme.secondary, CircleShape),
-                                )
+                        leading = { com.hardtekpt.crux.ui.components.ClimbGrade(row.gradeLabel ?: "–") },
+                        trailing = when {
+                            row.tonight > 0 || row.goes > 0 -> {
+                                {
+                                    Text(
+                                        if (row.sent) "SENT" else "${row.goes} ${if (row.goes == 1) "GO" else "GOES"}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (row.sent) CruxTheme.colors.success else MaterialTheme.colorScheme.secondary,
+                                    )
+                                }
                             }
+
+                            else -> null
                         },
-                        onClick = { scope.launch { open = viewModel.climb(row.uuid) } },
+                        onClick = { scope.launch { open = viewModel.climb(row.key.removePrefix("c")) } },
                         modifier = Modifier.testTag("catalogue_climb"),
                     )
-                }
-                if (uiState.rows.size >= CatalogueRepository.PAGE) {
-                    item(key = "more") {
-                        Text(
-                            "Showing the first ${CatalogueRepository.PAGE}. Search to find others.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
                 item(key = "credit") {
                     Text(
@@ -409,16 +300,6 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
     }
 
     val ds = dataset ?: return
-    if (filtering) {
-        GradeFilterSheet(
-            range = GradeRange(catalogueScale(uiState.scales), uiState.query.gradeFrom, uiState.query.gradeTo),
-            shown = uiState.rows.size,
-            onRange = { r -> viewModel.update { it.copy(gradeFrom = r.from, gradeTo = r.to) } },
-            hideSent = uiState.query.hideSent,
-            onHideSent = { on -> viewModel.update { it.copy(hideSent = on) } },
-            onDismiss = { filtering = false },
-        )
-    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -441,7 +322,7 @@ fun CatalogueScreen(onBack: () -> Unit, onLogClimb: (String) -> Unit, viewModel:
         CatalogueClimbSheet(
             climb = climb,
             board = ds.holdsBoard,
-            angle = uiState.query.angle,
+            angle = browse.bar.query.filters.angle,
             scales = uiState.scales,
             onLog = {
                 open = null

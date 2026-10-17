@@ -374,8 +374,10 @@ class ScreenshotTest {
             playlistRepo,
             preferences,
             FIXED_CLOCK,
+            com.hardtekpt.crux.data.BoardBrowser(com.hardtekpt.crux.data.CatalogueRepository(catalogues)),
+            com.hardtekpt.crux.data.BrowseStore(dataStore),
         )
-        loaded(vm.uiState) { it.rows.isNotEmpty() }
+        loaded(vm.browse.ui) { it.climbs.isNotEmpty() }
         bothThemes("catalogue", readyText = "Moon Landing", dark = DARK) {
             com.hardtekpt.crux.ui.datasets.CatalogueScreen(onBack = {}, onLogClimb = {}, viewModel = vm)
         }
@@ -439,6 +441,10 @@ class ScreenshotTest {
             preferences,
             FIXED_CLOCK,
             playlistRepo,
+            com.hardtekpt.crux.data.BoardBrowser(
+                com.hardtekpt.crux.data.CatalogueRepository(com.hardtekpt.crux.data.CatalogueDatabases(ApplicationProvider.getApplicationContext())),
+            ),
+            com.hardtekpt.crux.data.BrowseStore(dataStore),
         )
         loaded(vm.uiState) { it.dataset != null }
         bothThemes("dataset", readyText = "Blue slab", dark = DARK) { com.hardtekpt.crux.ui.datasets.DatasetScreen(onBack = {}, viewModel = vm) }

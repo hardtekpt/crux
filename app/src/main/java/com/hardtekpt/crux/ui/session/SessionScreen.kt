@@ -131,6 +131,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -143,6 +144,18 @@ data class SetValues(val reps: Int, val seconds: Int, val loadKg: Double)
 
 /** A rest running down: when it ends, and the item it follows. */
 data class Rest(val endsAtMillis: Long, val totalSeconds: Int)
+
+/** What the session's card steps through: a playlist, or a board being browsed (then [angle] is its angle). */
+data class ClimbQueue(
+    val header: String,
+    val items: List<com.hardtekpt.crux.data.PlaylistItem>,
+    val index: Int,
+    val browsing: Boolean = false,
+    val angle: Int? = null,
+    /** A browse keeps a window of its list: where it starts, and how long the whole list is. */
+    val offset: Int = 0,
+    val total: Int = items.size,
+)
 
 /** The interval timer, running for an exercise ([itemId]) or on its own; [cyclesLogged] are already sets. */
 data class SessionTimer(val run: IntervalRun, val itemId: Long?, val cyclesLogged: Int = 0, val setIndexes: List<Int> = emptyList())
@@ -160,6 +173,9 @@ class SessionViewModel @Inject constructor(
     private val templates: com.hardtekpt.crux.data.TemplateRepository? = null,
     playlistRepository: com.hardtekpt.crux.data.PlaylistRepository? = null,
     private val playlistGoes: com.hardtekpt.crux.data.PlaylistGoes? = null,
+    private val browseStore: com.hardtekpt.crux.data.BrowseStore? = null,
+    private val browser: com.hardtekpt.crux.data.BoardBrowser? = null,
+    datasetRepository: com.hardtekpt.crux.data.DatasetRepository? = null,
 ) : ViewModel() {
     private val sessionId: Long = savedStateHandle.get<Long>("sessionId") ?: 0L
 
@@ -173,18 +189,77 @@ class SessionViewModel @Inject constructor(
         .combine(playlists) { id, lists -> id?.let { wanted -> lists.firstOrNull { it.id == wanted } } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** A board being browsed on the card, if any: the list held as it was when you picked from it. */
+    val browseRun: StateFlow<com.hardtekpt.crux.data.BrowseRun?> = (browseStore?.observeRun(sessionId) ?: kotlinx.coroutines.flow.flowOf(null))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val browseItems: StateFlow<Pair<com.hardtekpt.crux.data.BrowseRun, List<com.hardtekpt.crux.data.PlaylistItem>>?> =
+        browseRun.map { run -> run?.copy(index = 0) }.distinctUntilChanged()
+            .combine(datasetRepository?.observeDatasets() ?: kotlinx.coroutines.flow.flowOf(emptyList())) { run, all -> run to all }
+            .mapLatest { (run, all) ->
+                val ds = run?.let { r -> all.firstOrNull { it.id == r.datasetId } } ?: return@mapLatest null
+                run to (browser?.items(ds, run.angle, run.keys) ?: emptyList())
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** What the card steps through: a browsed board when there is one, else the playlist. */
+    val queue: StateFlow<ClimbQueue?> = combine(session, playlist, browseRun, browseItems) { s, list, run, items ->
+        val browsing = run?.let { r -> items?.takeIf { it.first.datasetId == r.datasetId && it.first.keys == r.keys }?.second }
+        when {
+            run != null && browsing != null -> {
+                val ds = browsing.firstOrNull()?.dataset
+                ClimbQueue(
+                    header = listOfNotNull(ds?.let(::boardShort), run.angle?.let { "$it°" }, run.view ?: "Browse").joinToString(" · "),
+                    items = browsing,
+                    index = run.index,
+                    browsing = true,
+                    angle = run.angle,
+                    offset = run.offset,
+                    total = run.total,
+                )
+            }
+
+            list != null -> ClimbQueue("Playlist · ${list.name}", list.items, s?.playlistIndex ?: 0)
+
+            else -> null
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** What Browse a board in the + menu will open: "Kilter Original at Block Lab". */
+    val browseSubtitle: StateFlow<String> = combine(
+        session,
+        datasetRepository?.observeDatasets() ?: kotlinx.coroutines.flow.flowOf(emptyList()),
+        places.observePlaces(),
+        browseStore?.recent ?: kotlinx.coroutines.flow.flowOf(emptyList()),
+    ) { s, all, placeList, recent -> browseBoards(s, all, placeList, recent).subtitle }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "Pick a board or dataset")
+
+    /** Stops browsing: the card goes back to the playlist, at its place, if there is one. */
+    fun stopBrowsing() {
+        viewModelScope.launch { browseStore?.setRun(null) }
+    }
+
     /** The last go added from the playlist card, which can still be taken back for a few seconds. */
     private val _playlistUndo = MutableStateFlow<com.hardtekpt.crux.data.PlaylistGoes.Undo?>(null)
     val playlistUndo: StateFlow<com.hardtekpt.crux.data.PlaylistGoes.Undo?> = _playlistUndo.asStateFlow()
 
     /** Climbs a playlist from its first climb; null stops. */
     fun climbPlaylist(playlistId: Long?) {
-        viewModelScope.launch { sessions.setPlaylist(sessionId, playlistId, 0) }
+        viewModelScope.launch {
+            // A playlist picked while browsing takes the card back from the board.
+            if (playlistId != null) browseStore?.setRun(null)
+            sessions.setPlaylist(sessionId, playlistId, 0)
+        }
     }
 
     /** Prev and Next on the playlist card. */
     fun movePlaylist(index: Int) {
         val current = session.value ?: return
+        if (queue.value?.browsing == true) {
+            viewModelScope.launch { browseStore?.move(sessionId, index) }
+            return
+        }
         val size = playlist.value?.items?.size ?: return
         viewModelScope.launch { sessions.setPlaylist(sessionId, current.playlistId, index.coerceIn(0, (size - 1).coerceAtLeast(0))) }
     }
@@ -193,11 +268,12 @@ class SessionViewModel @Inject constructor(
     fun playlistGo(sent: Boolean) {
         val current = session.value ?: return
         val goes = playlistGoes ?: return
-        val item = playlist.value?.items?.getOrNull(current.playlistIndex) ?: return
+        val q = queue.value ?: return
+        val item = q.items.getOrNull(q.index) ?: return
         val climb = item.climb ?: return
         val dataset = item.dataset ?: return
         viewModelScope.launch {
-            val undo = goes.add(current, com.hardtekpt.crux.data.ClimbSource(climb, dataset), sent)
+            val undo = goes.add(current, com.hardtekpt.crux.data.ClimbSource(climb, dataset), sent, angle = q.angle)
             _playlistUndo.value = undo
             kotlinx.coroutines.delay(com.hardtekpt.crux.data.QuickGoState.UNDO_MILLIS)
             _playlistUndo.compareAndSet(undo, null)
@@ -620,10 +696,12 @@ fun SessionScreen(
     val library by viewModel.library.collectAsStateWithLifecycle()
     val soundsOn by viewModel.timerSounds.collectAsStateWithLifecycle()
     val timerEnds by viewModel.timerEnds.collectAsStateWithLifecycle()
-    val playlist by viewModel.playlist.collectAsStateWithLifecycle()
+    val playlist by viewModel.queue.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val playlistUndo by viewModel.playlistUndo.collectAsStateWithLifecycle()
     var pickingPlaylist by rememberSaveable { mutableStateOf(false) }
+    var browsing by rememberSaveable { mutableStateOf(false) }
+    val browseSubtitle by viewModel.browseSubtitle.collectAsStateWithLifecycle()
     viewModel.currentItem.collectAsStateWithLifecycle()
     // Two clocks. `now` moves only when a number on screen changes, so the screen recomposes about
     // once a second; `drainNow` moves every tick but is read only where the bands draw their drain.
@@ -879,10 +957,13 @@ fun SessionScreen(
                             verticalArrangement = Arrangement.spacedBy(space.s3),
                         ) {
                             playlist?.let { list ->
-                                val item = list.items.getOrNull(current.playlistIndex)
+                                val item = list.items.getOrNull(list.index)
                                 PlaylistCard(
-                                    playlist = list,
-                                    index = current.playlistIndex,
+                                    header = list.header,
+                                    items = list.items,
+                                    index = list.index,
+                                    offset = list.offset,
+                                    total = list.total,
                                     today = item?.let { up ->
                                         current.climbGroups.firstOrNull {
                                             it.discipline == up.discipline && it.name?.trim().equals(up.name.trim(), ignoreCase = true)
@@ -902,12 +983,20 @@ fun SessionScreen(
                                             }
                                         }
                                     },
-                                    onStop = { viewModel.climbPlaylist(null) },
+                                    onStop = { if (list.browsing) viewModel.stopBrowsing() else viewModel.climbPlaylist(null) },
+                                    onList = { browsing = true }.takeIf { list.browsing },
                                     onUndo = if (playlistUndo != null) viewModel::undoPlaylistGo else null,
                                     sectionId = current.sectionId,
                                 )
                             }
-                            ClimbsCard(current.climbGroups, onLogMore, onLogClimb, place = place?.name, current = climbingCurrent && playlist == null)
+                            ClimbsCard(
+                                current.climbGroups,
+                                onLogMore,
+                                onLogClimb,
+                                place = place?.name,
+                                current = climbingCurrent && playlist == null,
+                                onBrowse = { browsing = true },
+                            )
                         }
                     }
                 }
@@ -1047,8 +1136,14 @@ fun SessionScreen(
                 adding = false
                 pickingPlaylist = true
             }.takeIf { playlists.isNotEmpty() },
+            onBrowse = {
+                adding = false
+                browsing = true
+            },
+            browseSubtitle = browseSubtitle,
         )
     }
+    if (browsing) BrowseBoardSheet(onDismiss = { browsing = false })
     if (pickingPlaylist) {
         PlaylistPicker(
             playlists = playlists,

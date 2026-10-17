@@ -218,8 +218,13 @@ class DatasetViewModel @Inject constructor(
     preferences: UserPreferencesRepository,
     private val clock: Clock,
     private val playlists: com.hardtekpt.crux.data.PlaylistRepository,
+    browser: com.hardtekpt.crux.data.BoardBrowser,
+    store: com.hardtekpt.crux.data.BrowseStore,
 ) : ViewModel() {
     val datasetId: Long = savedStateHandle.get<Long>("datasetId") ?: 0L
+
+    /** The dataset's search, filters and sorts, as a board's: remembered, with views. */
+    val browse = BrowseModel(viewModelScope, browser, store, playlists, preferences)
 
     val uiState: StateFlow<DatasetUiState> = combine(
         repository.observeDatasets(),

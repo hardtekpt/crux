@@ -21,16 +21,26 @@ class LivePlaylists @Inject constructor(
     private val playlists: PlaylistRepository,
     private val places: PlaceRepository,
     private val link: BoardLink,
+    private val browse: com.hardtekpt.crux.data.BrowseStore,
+    private val browser: com.hardtekpt.crux.data.BoardBrowser,
+    private val datasets: com.hardtekpt.crux.data.DatasetRepository,
 ) {
     /** The card's playlist line for [session], or null when it isn't climbing one. */
     suspend fun card(session: Session): LivePlaylist? {
         val (item, size) = up(session) ?: return null
-        return LivePlaylist(item.name, session.playlistIndex + 1, size, board(session, item) != null)
+        val run = browse.run(session.id)
+        val at = run?.let { it.offset + it.index } ?: session.playlistIndex
+        return LivePlaylist(item.name, at + 1, run?.total ?: size, board(session, item) != null)
     }
 
     suspend fun move(by: Int) {
         val session = sessions.observeRunning().first() ?: return
         val (_, size) = up(session) ?: return
+        // A board being browsed walks its own list; the playlist keeps its place.
+        browse.run(session.id)?.let { run ->
+            browse.move(session.id, run.index + by)
+            return
+        }
         sessions.setPlaylist(session.id, session.playlistId, (session.playlistIndex + by).coerceIn(0, size - 1))
     }
 
@@ -42,6 +52,12 @@ class LivePlaylists @Inject constructor(
     }
 
     private suspend fun up(session: Session): Pair<PlaylistItem, Int>? {
+        browse.run(session.id)?.let { run ->
+            val ds = datasets.observeDatasets().first().firstOrNull { it.id == run.datasetId } ?: return null
+            val key = run.keys.getOrNull(run.index) ?: return null
+            val item = browser.items(ds, run.angle, listOf(key)).firstOrNull() ?: return null
+            return item to run.size
+        }
         val id = session.playlistId ?: return null
         val list = playlists.observePlaylists().first().firstOrNull { it.id == id } ?: return null
         return list.items.getOrNull(session.playlistIndex)?.let { it to list.items.size }

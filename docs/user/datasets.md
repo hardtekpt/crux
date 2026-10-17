@@ -29,12 +29,9 @@ setter and a note. A name already in the dataset shows "Already in this dataset"
 since gyms reuse names. Tap a climb to change it or delete it; a climb without a note goes at once
 with **Undo**, and one with a note asks first.
 
-Search finds a word in the name, setter or note. Sort by **Grade** (easiest first; climbs without
-a grade come last, shown as "–"), **Name** or **Newest**. The filters button beside the search
-opens **Filters**: drag the two ends of the grade slider to show only climbs between them (grades in
-other scales are converted; climbs without a grade drop out while a range is set). The button shows
-when the dataset has climbs. **Hide climbs I've sent** drops the ones you have sent (picked from here, or
-logged under the same name); projects you've tried but not sent still show.
+Search finds a word in the name, setter or note. Under it, the [filter bar](#filters-and-sorts)
+sorts and filters the list (by grade, by what you've done, by setter), as on a board catalogue; the
+filters button beside the search opens them all at once.
 
 **⋯ → Delete dataset** asks first. Its climbs go with it; climbs you logged are never touched.
 
@@ -75,10 +72,9 @@ file) and pick it in **+ → Import a file**. Climb Logger never goes online for
   from your data: they aren't in backups or exports. Climbs you logged from one remember which it
   was, so importing it again links them back.
 - Open one to browse its climbs at an angle (a Kilter's grades and ascents change with the
-  angle; a MoonBoard has its one or two). Search names and setters, sort by **Popular**, **Grade** or
-  **Name**, or show **Benchmarks** only. Grades show in your boulder scale. A dot marks climbs you
-  tried today. The filters button beside the search has a grade range slider and **Hide climbs I've sent**. A list shows
-  200 at a time: search or filter to find the rest.
+  angle; a MoonBoard has its one or two). Search names and setters, and narrow and order the list
+  with the [filter bar](#filters-and-sorts); **Tune** in the top bar shows every filter at once.
+  Grades show in your boulder scale, and each climb shows your goes on it.
 - Tap a climb for its setter, description and grade at each angle, **Log this climb** and
   **Playlist**.
 - A catalogue is used by every facility with the same board and size, like a dataset made for it.
@@ -86,6 +82,29 @@ file) and pick it in **+ → Import a file**. Climb Logger never goes online for
   picking a climb grades it at that angle ("Kilter Homewall says 6C at 40°"), and changing the
   angle follows. Typing a name suggests its climbs too.
 - The **bin** in the top bar deletes it (it asks first); import it again any time.
+
+### Filters and sorts
+
+Board catalogues, your datasets and **Browse a board** in a session share one filter bar under
+the search: a chip for each filter and the sort. A chip reads its value ("6C–7A", "40°", "Not
+sent") and is highlighted while it's set; tapping it opens just that control in a small sheet.
+Filters add up: a climb shows only when it matches all of them. **Clear** beside the count puts
+them back (the angle stays).
+
+| Chip | What it does |
+|---|---|
+| Sort | Up to three sorts, each with a direction; the first decides and the next breaks its ties. Hold a line's handle and drag to reorder; **Then by** adds Grade, Popular, Rating, Your goes, Newest, Name or Setter. It starts at Popular, then Grade (Grade, then Name for a dataset). |
+| Grade | A grid of the grades with a bar for how many climbs each has: tap the easiest, then the hardest. **Near my max** (your hardest send here, one grade either way), **Warm-up** and **Below my max** follow your sends. |
+| Angle | Catalogues only: the angle, as segments. |
+| You | **New**, **Tried** and **Sent**, any of them; New and Tried together read **Not sent**. |
+| Rating | Catalogues only: Any, 2+, 2.5+ or 3+, the board's rating at this angle. |
+| Ascents | Catalogues only: Any, 10+, 50+ or 200+. |
+| Setter | Search the setters with climbs here and tick any number. |
+| Benchmarks | Catalogues only: a tap shows benchmarks only. |
+
+**Views** save the whole set, sorts included, under a name: **Save as view** in the all-filters
+sheet. A view shows as a chip; tap it to use it, hold it to delete it. Each board and dataset
+remembers its last filters and sorts.
 
 ### Hold diagrams
 

@@ -65,7 +65,8 @@ from its children (a click label like "Go to it" doesn't count: it says what a t
 the thing is). The message lists the test tags, or the bounds of an untagged node.
 `AccentContrastTest` checks the theme's text, control outlines and the colours that carry meaning
 (sends, timer phases, boards, finish holds) against WCAG ratios, and `AccessibilityTextTest` checks
-what charts, the consistency grid and timers read aloud.
+what charts, the consistency grid and timers read aloud. `BrowseEngineTest` checks that browsing's
+filters add up, its sorts chain and its chips read their values.
 
 Comparison is **exact**: removing one letter changes about 200 pixels, so any tolerance would hide
 real changes. Windows and Linux render identically.

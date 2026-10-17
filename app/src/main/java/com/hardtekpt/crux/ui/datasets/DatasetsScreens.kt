@@ -380,12 +380,8 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
     val importDraft by viewModel.importer.draft.collectAsStateWithLifecycle()
     val importError by viewModel.importer.error.collectAsStateWithLifecycle()
     val undo by viewModel.undo.collectAsStateWithLifecycle()
-    var query by rememberSaveable { mutableStateOf("") }
-    var sort by rememberSaveable { mutableStateOf(ClimbSort.GRADE) }
-    var filtering by rememberSaveable { mutableStateOf(false) }
-    var hideSent by rememberSaveable { mutableStateOf(false) }
-    var gradeFrom by rememberSaveable { mutableStateOf<Int?>(null) }
-    var gradeTo by rememberSaveable { mutableStateOf<Int?>(null) }
+    val browse by viewModel.browse.ui.collectAsStateWithLifecycle()
+    var allOpen by rememberSaveable { mutableStateOf(false) }
     var menu by rememberSaveable { mutableStateOf(false) }
     var editingDetails by rememberSaveable { mutableStateOf(false) }
     var exporting by rememberSaveable { mutableStateOf(false) }
@@ -431,9 +427,11 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                 }
             }
             val ds = dataset ?: return@Column
-            val range = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
-            val climbs = remember(ds, query, sort, gradeFrom, gradeTo, hideSent, uiState.sent) {
-                sorted(unsent(gradeFiltered(filtered(ds.climbs, query), range), uiState.sent, hideSent), sort)
+            LaunchedEffect(ds) { viewModel.browse.open(ds) }
+            // The filtered, sorted list, as the dataset's own climbs, to edit and select.
+            val climbs = remember(ds, browse.climbs) {
+                val byKey = ds.climbs.associateBy { "d${it.id}" }
+                if (browse.dataset?.id == ds.id) browse.climbs.mapNotNull { byKey[it.key] } else ds.climbs
             }
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, bottom = space.s4 + 72.dp + LocalNavBarClearance.current),
@@ -447,33 +445,18 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.s2)) {
                         CruxTextField(
                             label = "",
-                            value = query,
-                            onValueChange = { query = it.take(60) },
+                            value = browse.text,
+                            onValueChange = viewModel.browse::setText,
                             placeholder = "Search name, setter or note",
                             modifier = Modifier.weight(1f).testTag("dataset_search"),
                         )
-                        if (range.scale != null || ds.climbs.isNotEmpty()) {
+                        if (ds.climbs.isNotEmpty()) {
                             FiltersButton(
-                                active = listOf(range.active, hideSent).count { it },
-                                onClick = { filtering = true },
+                                active = browse.bar.query.filters.count,
+                                onClick = { allOpen = true },
                                 modifier = Modifier.testTag("dataset_open_filters"),
                             )
                         }
-                    }
-                }
-                if (range.active || hideSent) {
-                    item(key = "applied") {
-                        Text(
-                            listOfNotNull(
-                                range.label()?.let {
-                                    "Grades $it"
-                                },
-                                "hiding sent climbs".takeIf { hideSent },
-                            ).joinToString(" · ").replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.testTag("dataset_grade_applied"),
-                        )
                     }
                 }
                 // Add sits with the list it adds to, as New plan does on Train; filled stays for the
@@ -490,10 +473,16 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
                         )
                     }
                 }
-                item(key = "sort") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(space.s2)) {
-                        ClimbSort.entries.forEach { option ->
-                            CruxFilterChip(option.label, sort == option, { sort = option }, Modifier.testTag("sort_${option.name}"))
+                if (ds.climbs.isNotEmpty()) {
+                    item(key = "bar") {
+                        BrowseFilterBar(browse.bar, viewModel.browse.actions, allOpen, { allOpen = it })
+                    }
+                    if (browse.bar.query.filters.count > 0) {
+                        item(key = "count") {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Eyebrow("${climbs.size} of ${ds.climbs.size} shown", Modifier.weight(1f).testTag("dataset_count"))
+                                TextButton(onClick = viewModel.browse::clear, modifier = Modifier.testTag("dataset_clear")) { Text("Clear") }
+                            }
                         }
                     }
                 }
@@ -592,24 +581,6 @@ fun DatasetScreen(onBack: () -> Unit, onLogClimb: (Long) -> Unit = {}, viewModel
             },
             onDismiss = { editingDetails = false },
         )
-    }
-    if (filtering) {
-        val ds = uiState.dataset
-        if (ds != null) {
-            val all = GradeRange(datasetScale(ds.climbs), gradeFrom, gradeTo)
-            GradeFilterSheet(
-                range = all,
-                shown = unsent(gradeFiltered(filtered(ds.climbs, query), all), uiState.sent, hideSent).size,
-                hideSent = hideSent,
-                onHideSent = { hideSent = it },
-                bounds = gradeBounds(ds.climbs, all.scale),
-                onRange = {
-                    gradeFrom = it.from
-                    gradeTo = it.to
-                },
-                onDismiss = { filtering = false },
-            )
-        }
     }
     if (confirmDelete) {
         AlertDialog(

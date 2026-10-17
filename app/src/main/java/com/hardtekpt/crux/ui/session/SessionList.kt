@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -400,6 +401,8 @@ internal fun ClimbsCard(
     onLogClimb: () -> Unit,
     place: String? = null,
     current: Boolean = false,
+    /** Browse board: the board's climbs, to pick the next one. */
+    onBrowse: (() -> Unit)? = null,
 ) {
     val sent = climbs.filter { it.style.isSend }
     val hardest = sent.maxByOrNull { it.gradeIndex }?.grade
@@ -421,14 +424,26 @@ internal fun ClimbsCard(
             )
         }
         climbs.sortedByDescending { it.id }.forEach { climb -> SessionClimbLine(climb, onClick = climb.problemId?.let { id -> { onLogMore(id) } }) }
-        CruxButton(
-            "Log climb",
-            onLogClimb,
-            variant = CruxButtonVariant.Text,
-            size = CruxButtonSize.Small,
-            icon = Icons.Rounded.Add,
-            modifier = Modifier.testTag("session_card_log_climb"),
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s2), verticalAlignment = Alignment.CenterVertically) {
+            onBrowse?.let {
+                CruxButton(
+                    "Browse board",
+                    it,
+                    variant = CruxButtonVariant.Tonal,
+                    size = CruxButtonSize.Small,
+                    icon = Icons.Rounded.Apps,
+                    modifier = Modifier.weight(1f).testTag("session_card_browse"),
+                )
+            }
+            CruxButton(
+                "Log climb",
+                onLogClimb,
+                variant = if (onBrowse != null) CruxButtonVariant.Outlined else CruxButtonVariant.Text,
+                size = CruxButtonSize.Small,
+                icon = Icons.Rounded.Add,
+                modifier = Modifier.then(if (onBrowse != null) Modifier.weight(1f) else Modifier).testTag("session_card_log_climb"),
+            )
+        }
     }
 }
 
@@ -544,6 +559,8 @@ internal fun AddToSessionSheet(
     onTimer: (() -> Unit)?,
     onDismiss: () -> Unit,
     onPlaylist: (() -> Unit)? = null,
+    onBrowse: (() -> Unit)? = null,
+    browseSubtitle: String = "Pick a board or dataset",
 ) {
     MenuSheet("Add to this session", onDismiss) {
         CruxListRow(
@@ -552,6 +569,15 @@ internal fun AddToSessionSheet(
             onClick = onLogClimb,
             modifier = Modifier.testTag("session_log_climb"),
         )
+        onBrowse?.let {
+            CruxListRow(
+                title = "Browse a board",
+                supporting = browseSubtitle,
+                leading = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+                onClick = it,
+                modifier = Modifier.testTag("session_browse_start"),
+            )
+        }
         onPlaylist?.let {
             CruxListRow(
                 title = "Climb a playlist",

@@ -8,6 +8,12 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Browse a board in any session**: **+ → Browse a board** (and **Browse board** beside Log climb) opens your board's
+  catalogue or a dataset. Pick a climb and the session's card walks the list with Prev, Light and Next (the notification
+  too), and + Fell and + Sent log a go with the angle in the note.
+- **Filters and sorts that combine**: catalogues and datasets get a filter bar, a chip per filter that opens one small
+  control: a grade grid with presets from your sends, You (New, Tried, Sent), rating, ascents, setters, benchmarks and the
+  angle. Sorts chain up to three keys with directions, and a set can be saved as a view. Each board remembers its last set.
 - **Accessibility**: with TalkBack, rests and the interval timer say each phase, 10 seconds left and when
   they end; charts, the consistency grid and Home's week strip read their values day by day; every switch,
   set box and search field says what it is; and tape colours say their name. A **Reduce motion** setting
@@ -17,8 +23,6 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
   place you climb most (and which board, for a Kilter or MoonBoard), your weight and height, and whether to start
   your own log or look around the demo data. Every step can be skipped, it asks for no permissions, and
   **Restore a backup** is on its first screen. Phones that already have your data never see it.
-- **Filters for datasets and board catalogues**: a filters button beside the search opens Filters, where you drag a two-ended
-  slider to the range of grades to show, and a switch to hide the climbs you have sent. Grades read in your own scale.
 - **Simple countdowns in a session**: + → Start a timer now opens with a countdown row (30 s, 1, 2, 3 and 5 min)
   that starts at once, in the same dock and big view as the interval timers. Nothing is logged.
 - **Open in MoonBoard**: a MoonBoard catalogue climb's sheet can open the official MoonBoard app with the

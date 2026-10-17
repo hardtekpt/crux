@@ -30,7 +30,8 @@ class PlaylistGoes @Inject constructor(
         data class Restore(val log: Climb) : Undo
     }
 
-    suspend fun add(session: Session, source: ClimbSource, sent: Boolean): Undo {
+    /** [angle], for a board climb, is written as a new log's note's first line, as Log climb does. */
+    suspend fun add(session: Session, source: ClimbSource, sent: Boolean, angle: Int? = null): Undo {
         val place = session.placeId?.let { places.getPlace(it) }
         val section = place?.sections?.firstOrNull { it.id == session.sectionId } ?: place?.sections?.firstOrNull()
         val here = places.climbsAt(place?.id).filter { place == null || place.sections.size <= 1 || it.sectionId == null || it.sectionId == section?.id }
@@ -77,7 +78,7 @@ class PlaylistGoes @Inject constructor(
                 date = LocalDate.now(clock),
                 name = problem?.name ?: climb.name,
                 place = place?.name,
-                notes = null,
+                notes = angle?.let { com.hardtekpt.crux.data.model.BoardAngleNote.write(it, "") },
                 placeId = place?.id,
                 sectionId = section?.id,
                 sessionId = session.id,

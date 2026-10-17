@@ -64,6 +64,13 @@
    "note": "Your own lists of climbs, such as a gym circuit or a crag’s problems. Import them from a CSV or a Crux file, search and sort them, and export them again."
   },
   {
+   "id": "browse",
+   "name": "Browse a board",
+   "tab": "From any live session, and the catalogue and dataset pages",
+   "c": "--c-session",
+   "note": "A board's climbs, filtered and sorted: one chip per filter, each opening one small control, filters that add up and sorts that chain. Pick a climb and the session's card walks the list."
+  },
+  {
    "id": "states",
    "name": "Other states",
    "tab": "The same pages with other settings",
@@ -864,7 +871,7 @@
    "lane": "session",
    "col": 0,
    "row": 1,
-   "desc": "Log a climb, climb a playlist, add an exercise, or start an interval timer.",
+   "desc": "Log a climb, climb a playlist, add an exercise, or start an interval timer. Browse a board names the board it will open.",
    "covers": [
     "AddToSessionSheet"
    ],
@@ -2147,7 +2154,7 @@
    "lane": "datasets",
    "col": 3,
    "row": 0,
-   "desc": "One dataset: search by name, setter or note, sort by grade, name or newest, and tap a climb to edit it. Add climb adds another.",
+   "desc": "One dataset: search by name, setter or note, the filter bar (sort, grade, you and setter, with views), and tap a climb to edit it. Add climb adds another.",
    "covers": [
     "DatasetRoute"
    ],
@@ -2713,7 +2720,7 @@
    "lane": "datasets",
    "col": 3,
    "row": 4,
-   "desc": "The climbs of a board catalogue, read-only: search by name or setter, pick the angle (30°, 40°, 45°) and sort by popularity, grade or name, or show benchmarks only.",
+   "desc": "The climbs of a board catalogue, read-only, through the same filter bar as browsing in a session: search, then a chip per filter and the sort (angle, grade, you, rating, ascents, setter, benchmarks), Tune for all of them, and views.",
    "covers": [
     "CatalogueRoute"
    ],
@@ -3084,29 +3091,6 @@
    "cleanup": []
   },
   {
-   "id": "dataset-filters",
-   "title": "Filters",
-   "kind": "sheet",
-   "lane": "datasets",
-   "col": 6,
-   "row": 1,
-   "desc": "Drag the two ends of the grade slider to show only a range of grades, and hide the climbs you have sent. The list updates as you go.",
-   "covers": [
-    "GradeFilterSheet"
-   ],
-   "steps": [
-    "tab:You",
-    "scrollto:Datasets",
-    "tap:Datasets",
-    "tap:Block Lab circuit",
-    "tap:Filters",
-    "wait:1",
-    "xy:560,1838",
-    "wait:1"
-   ],
-   "cleanup": []
-  },
-  {
    "id": "setup-welcome",
    "title": "Welcome",
    "kind": "page",
@@ -3170,6 +3154,211 @@
    "steps": [],
    "cleanup": [],
    "firstRun": true
+  },
+  {
+   "id": "browse-pick",
+   "title": "Browse a board",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 0,
+   "row": 0,
+   "desc": "Which board to browse, when the session can't tell: boards with a catalogue and your own datasets, last used first. At a board facility the session opens that board straight away, and after that the last one browsed; switch from the sheet's title.",
+   "covers": [
+    "BrowseBoardSheet"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-sheet",
+   "title": "Browsing a board",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 1,
+   "row": 0,
+   "desc": "The board's name (tap to switch), Tune for every filter, a search, the filter bar (each chip reads its value, set ones in the selected style), how many climbs match with Clear, and the climbs with your goes. Tap one to climb it on the session's card; hold one to add it to a playlist. Filters, sort and view are remembered per board.",
+   "covers": [
+    "BrowsePartSheet"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "tapc:Kilter Original",
+    "wait:3"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-grade",
+   "title": "Grade",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 2,
+   "row": 0,
+   "desc": "A grid of the board's grades with a bar for how many climbs each has. Tap the easiest, then the hardest. Near my max, Warm-up and Below my max follow your sends on this board.",
+   "covers": [
+    "set/dialog:Grade"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tap:Grade"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-sort",
+   "title": "Sort",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 3,
+   "row": 0,
+   "desc": "Up to three sorts, each with its direction: the first decides, the next breaks ties. Hold a line's handle to drag it; Then by adds Grade, Popular, Rating, Your goes, Newest, Name or Setter.",
+   "covers": [
+    "set/dialog:Sort"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tap:Popular, Grade"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-you",
+   "title": "You and the small filters",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 4,
+   "row": 0,
+   "desc": "Each chip opens one control: You (New, Tried, Sent; New and Tried read Not sent), Angle (segmented), Rating (Any, 2+, 2.5+, 3+), Ascents (Any, 10+, 50+, 200+) and Setter (searchable, several at once). Benchmarks toggles straight from its chip.",
+   "covers": [
+    "set/dialog:You",
+    "set/dialog:Angle",
+    "set/dialog:Rating",
+    "set/dialog:Ascents",
+    "set/dialog:Setter"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tap:You"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-all",
+   "title": "Filters",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 5,
+   "row": 0,
+   "desc": "Every filter on one sheet, a row each, with Clear all, Show N climbs and the saved views.",
+   "covers": [
+    "set/dialog:Filters"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tap:All filters"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-views",
+   "title": "Save as view",
+   "kind": "sheet",
+   "lane": "browse",
+   "col": 6,
+   "row": 0,
+   "desc": "Saves the filters and sorts under a name; views show as chips on the bar and in Filters. Hold a view to delete it.",
+   "covers": [
+    "set/dialog:Views",
+    "Views/dialog:Save as view",
+    "Views/dialog:Delete"
+   ],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tap:All filters",
+    "scrollto:Save as view",
+    "tap:Save as view"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
+  },
+  {
+   "id": "browse-card",
+   "title": "Climbing a browsed board",
+   "kind": "page",
+   "lane": "browse",
+   "col": 0,
+   "row": 1,
+   "desc": "The session's card walks the browsed list: the header reads the board, angle, view and where you are (2 of 31), a list icon reopens the sheet where you left it, Prev, Light and Next move along it (the live notification too), and + Fell and + Sent log a go with the angle as the note's first line. The order holds still while you climb.",
+   "covers": [],
+   "steps": [
+    "tab:Log",
+    "tap:Start a session",
+    "tap:Without a plan",
+    "tap:Add to this session",
+    "tap:Browse a board",
+    "wait:1.5",
+    "wait:2",
+    "tapc:Heel hook cave",
+    "wait:2"
+   ],
+   "cleanup": [
+    "discard:Climbing session"
+   ]
   }
  ],
  "edges": [
@@ -4260,18 +4449,6 @@
    "sheet"
   ],
   [
-   "dataset",
-   "dataset-filters",
-   "Filters",
-   "sheet"
-  ],
-  [
-   "catalogue",
-   "dataset-filters",
-   "Filters",
-   "sheet"
-  ],
-  [
    "setup-welcome",
    "setup-units",
    "Set up",
@@ -4306,6 +4483,66 @@
    "home-top",
    "Start",
    "nav"
+  ],
+  [
+   "session-add-sheet",
+   "browse-pick",
+   "Browse a board",
+   "sheet"
+  ],
+  [
+   "browse-pick",
+   "browse-sheet",
+   "A board",
+   "nav"
+  ],
+  [
+   "browse-sheet",
+   "browse-grade",
+   "Grade chip",
+   "sheet"
+  ],
+  [
+   "browse-sheet",
+   "browse-sort",
+   "Sort chip",
+   "sheet"
+  ],
+  [
+   "browse-sheet",
+   "browse-you",
+   "A filter chip",
+   "sheet"
+  ],
+  [
+   "browse-sheet",
+   "browse-all",
+   "Tune",
+   "sheet"
+  ],
+  [
+   "browse-all",
+   "browse-views",
+   "Save as view",
+   "sheet"
+  ],
+  [
+   "browse-sheet",
+   "browse-card",
+   "A climb",
+   "nav"
+  ],
+  [
+   "catalogue",
+   "browse-all",
+   "Tune",
+   "sheet"
+  ],
+  [
+   "dataset",
+   "browse-all",
+   "Filters",
+   "sheet"
   ]
  ],
  "ignore": {

@@ -54,6 +54,18 @@ data class CatalogueGradeEntity(
     val quality: Double? = null,
 )
 
+/** A catalogue climb at one angle with what browsing needs, without its holds. */
+data class CatalogueCandidateRow(
+    val uuid: String,
+    val name: String,
+    val setter: String?,
+    val createdAt: String?,
+    val difficulty: Double?,
+    val benchmark: Boolean?,
+    val ascents: Int?,
+    val quality: Double?,
+)
+
 /** A catalogue climb with its grade at one angle, as lists show it. */
 data class CatalogueRow(
     val uuid: String,
@@ -97,6 +109,29 @@ interface CatalogueDao {
 
     @Query("SELECT * FROM catalogue_climbs WHERE catalogueKey = :key AND uuid IN (:uuids)")
     suspend fun climbs(key: String, uuids: List<String>): List<CatalogueClimbEntity>
+
+    /** Every climb at [angle] whose name or setter has [query], with what browsing filters and sorts on. */
+    @Query(
+        """
+        SELECT c.uuid AS uuid, c.name AS name, c.setter AS setter, c.createdAt AS createdAt, g.difficulty AS difficulty,
+               g.benchmark AS benchmark, g.ascents AS ascents, g.quality AS quality
+        FROM catalogue_climbs c JOIN catalogue_grades g ON g.catalogueKey = c.catalogueKey AND g.uuid = c.uuid AND g.angle = :angle
+        WHERE c.catalogueKey = :key
+          AND (:query = '' OR c.name LIKE '%' || :query || '%' OR c.setter LIKE '%' || :query || '%')
+        """,
+    )
+    suspend fun candidates(key: String, angle: Int, query: String): List<CatalogueCandidateRow>
+
+    /** Climbs by their ids, with their grade at [angle], for a list picked elsewhere. */
+    @Query(
+        """
+        SELECT c.uuid AS uuid, c.name AS name, c.setter AS setter, c.frames AS frames, g.difficulty AS difficulty, g.benchmark AS benchmark,
+               g.ascents AS ascents, g.quality AS quality
+        FROM catalogue_climbs c LEFT JOIN catalogue_grades g ON g.catalogueKey = c.catalogueKey AND g.uuid = c.uuid AND g.angle = :angle
+        WHERE c.catalogueKey = :key AND c.uuid IN (:uuids)
+        """,
+    )
+    suspend fun rows(key: String, angle: Int, uuids: List<String>): List<CatalogueRow>
 
     /**
      * Climbs at [angle] whose name or setter has [query]: by most sent ([sort] 0), easiest first
@@ -297,6 +332,14 @@ class CatalogueRepository @Inject constructor(private val dbs: CatalogueDatabase
     }
 
     suspend fun angles(key: String): List<Int> = dbs.dao().angles(key)
+
+    suspend fun candidates(key: String, angle: Int, query: String = ""): List<CatalogueCandidateRow> = dbs.dao().candidates(key, angle, query.trim())
+
+    /** The climbs of [uuids] at [angle], in that order; a large list is read in pieces. */
+    suspend fun rows(key: String, angle: Int, uuids: List<String>): List<CatalogueRow> {
+        val found = uuids.chunked(500).flatMap { dbs.dao().rows(key, angle, it) }.associateBy { it.uuid }
+        return uuids.mapNotNull { found[it] }
+    }
 
     suspend fun climb(key: String, uuid: String): CatalogueClimb? {
         val dao = dbs.dao()

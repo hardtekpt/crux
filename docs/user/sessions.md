@@ -38,6 +38,16 @@ session. Only one session runs at a time; starting another ends the first.
 - **A playlist** (from **+ → Climb a playlist**, or *Climb this playlist* on a playlist) shows as
   a card with the climb that's up, **Prev** and **Next**, and **+ Fell** and **+ Sent** to add a go
   in one tap. See [Playlists](datasets.md#playlists).
+- **Browse a board** (in **+**, in every session, with a line naming the board; and **Browse board**
+  beside Log climb once you're climbing) opens a board catalogue or a dataset with the
+  [filter bar](datasets.md#filters-and-sorts). At a board facility it opens that board; otherwise
+  you pick one, and next time it opens the last one (switch from the sheet's title). Tap a climb
+  and the session's card walks the list: its header reads the board, angle, view and where you are
+  ("Kilter · 40° · Session · 2 of 31"), **Prev**, **Light** and **Next** move along it (the live
+  notification too), and **+ Fell** and **+ Sent** log a go with the angle as the note's first
+  line. The list holds still while you climb, so a send doesn't vanish until you reopen it with
+  the list button. **✕** stops browsing and brings back a playlist you were climbing, where you
+  left it. Hold a climb in the list to add it to a playlist.
 - **The dock** at the bottom follows the block you're on: **Done · Exercise, set N** ticks the next
   set, **Start timer** runs the next interval exercise, and while you're climbing **Log climb**
   (with **Back to sets** when the plan still has sets to do). Ticking a set takes you back too.

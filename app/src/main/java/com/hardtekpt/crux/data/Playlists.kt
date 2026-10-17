@@ -124,7 +124,22 @@ interface PlaylistDao {
         """,
     )
     fun observeSent(): Flow<List<SentRow>>
+
+    /** Your goes on every climb picked from a dataset or catalogue: all time, whether sent, and in [sessionId]. */
+    @Query(
+        """
+        SELECT p.sourceCatalogueUuid AS uuid, p.sourceDatasetClimbId AS climbId, SUM(c.attempts) AS goes, MAX(c.sends > 0) AS sent,
+               SUM(CASE WHEN c.sessionId = :sessionId THEN c.attempts ELSE 0 END) AS tonight
+        FROM climbs c JOIN problems p ON p.id = c.problemId
+        WHERE p.sourceCatalogueUuid IS NOT NULL OR p.sourceDatasetClimbId IS NOT NULL
+        GROUP BY p.id
+        """,
+    )
+    fun observeGoes(sessionId: Long): Flow<List<GoesRow>>
 }
+
+/** Your goes on one picked climb, as [PlaylistDao.observeGoes] lists them. */
+data class GoesRow(val uuid: String?, val climbId: Long?, val goes: Int, val sent: Boolean, val tonight: Int)
 
 /** A climb you have sent, as [PlaylistDao.observeSent] lists it. */
 data class SentRow(val climbId: Long?, val uuid: String?, val name: String, val discipline: Discipline)
@@ -204,6 +219,9 @@ interface PlaylistRepository {
 
     /** What has ever been sent, as keys for [isSentIn]: [triedKey]s and "n<type>:<name>". */
     fun observeSent(): Flow<Set<String>>
+
+    /** Your goes on each picked climb, by [triedKey], counting [sessionId]'s as tonight's. */
+    fun observeGoes(sessionId: Long?): Flow<Map<String, Goes>> = kotlinx.coroutines.flow.flowOf(emptyMap())
 }
 
 class OfflinePlaylistRepository @Inject constructor(
@@ -410,6 +428,18 @@ class OfflinePlaylistRepository @Inject constructor(
             rows.flatMapTo(mutableSetOf()) { row ->
                 listOfNotNull(row.climbId?.let { "d$it" }, row.uuid?.let { "c$it" }, "n${row.discipline.name}:${row.name.trim().lowercase()}")
             }
+        }
+    }
+
+    override fun observeGoes(sessionId: Long?): Flow<Map<String, Goes>> = dbs.observe { db ->
+        db.playlistDao().observeGoes(sessionId ?: -1).map { rows ->
+            val out = mutableMapOf<String, Goes>()
+            rows.forEach { row ->
+                val key = row.uuid?.let { "c$it" } ?: row.climbId?.let { "d$it" } ?: return@forEach
+                val was = out[key] ?: Goes()
+                out[key] = Goes(was.goes + row.goes, was.sent || row.sent, was.tonight + row.tonight)
+            }
+            out
         }
     }
 

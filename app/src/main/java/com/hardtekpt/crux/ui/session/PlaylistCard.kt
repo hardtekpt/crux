@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
-import com.hardtekpt.crux.data.Playlist
 import com.hardtekpt.crux.data.model.Climb
 import com.hardtekpt.crux.ui.components.CruxButton
 import com.hardtekpt.crux.ui.components.CruxButtonSize
@@ -35,8 +35,13 @@ import com.hardtekpt.crux.ui.theme.CruxTheme
  */
 @Composable
 internal fun PlaylistCard(
-    playlist: Playlist,
+    /** "Playlist · Tonight", or "Kilter · 40° · Session" for a browsed board. */
+    header: String,
+    items: List<com.hardtekpt.crux.data.PlaylistItem>,
     index: Int,
+    /** Where [items] start in a longer list, and its length, for "2 of 38,102". */
+    offset: Int = 0,
+    total: Int = items.size,
     /** The climb's goes in this session, as one entry; null before the first. */
     today: Climb?,
     onMove: (Int) -> Unit,
@@ -46,19 +51,26 @@ internal fun PlaylistCard(
     onUndo: (() -> Unit)?,
     /** The session's facility, whose paired board Light uses first. */
     sectionId: Long? = null,
+    /** A browsed board: reopens the browse sheet where you left it. */
+    onList: (() -> Unit)? = null,
 ) {
-    val at = index.coerceIn(0, (playlist.items.size - 1).coerceAtLeast(0))
-    val item = playlist.items.getOrNull(at)
+    val at = index.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+    val item = items.getOrNull(at)
     val space = CruxTheme.space
     CruxCard(outline = MaterialTheme.colorScheme.primary, modifier = Modifier.testTag("session_playlist")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Eyebrow("Playlist · ${playlist.name} · ${at + 1} of ${playlist.items.size}", Modifier.weight(1f))
+            Eyebrow("$header · ${"%,d".format(offset + at + 1)} of ${"%,d".format(total)}", Modifier.weight(1f))
+            onList?.let {
+                IconButton(onClick = it, modifier = Modifier.testTag("session_browse_list")) {
+                    Icon(Icons.AutoMirrored.Rounded.List, contentDescription = "Back to the list")
+                }
+            }
             IconButton(onClick = onStop, modifier = Modifier.testTag("session_playlist_stop")) {
-                Icon(Icons.Rounded.Close, contentDescription = "Stop climbing this playlist")
+                Icon(Icons.Rounded.Close, contentDescription = if (onList != null) "Stop browsing" else "Stop climbing this playlist")
             }
         }
         if (item == null) {
-            Text("This playlist is empty.", style = MaterialTheme.typography.bodyMedium)
+            Text(if (onList != null) "Nothing left in this list." else "This playlist is empty.", style = MaterialTheme.typography.bodyMedium)
             return@CruxCard
         }
         Row(
@@ -111,7 +123,7 @@ internal fun PlaylistCard(
                 icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 variant = CruxButtonVariant.Outlined,
                 size = CruxButtonSize.Small,
-                enabled = at < playlist.items.lastIndex,
+                enabled = at < items.lastIndex,
                 modifier = Modifier.weight(1f).testTag("session_playlist_next"),
             )
         }

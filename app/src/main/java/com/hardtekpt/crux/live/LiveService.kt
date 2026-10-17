@@ -32,8 +32,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -52,6 +54,8 @@ class LiveService : Service() {
     @Inject lateinit var clock: Clock
 
     @Inject lateinit var lights: LivePlaylists
+
+    @Inject lateinit var browse: com.hardtekpt.crux.data.BrowseStore
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var started = false
@@ -88,7 +92,9 @@ class LiveService : Service() {
                 delay(if (live.rest.value != null || live.timer.value != null || live.standalone.value != null) 1_000 - now % 1_000 + 20 else 30_000)
             }
         }
-        combine(sessions.observeRunning(), live.rest, live.timer, live.standalone, ticks) { session, rest, timer, standalone, _ ->
+        // A browse moving on (Prev, Next) changes the card too, though the session row doesn't change.
+        val running = sessions.observeRunning().flatMapLatest { session -> browse.observeRun(session?.id).map { session } }
+        combine(running, live.rest, live.timer, live.standalone, ticks) { session, rest, timer, standalone, _ ->
             // The time now, not the tick's: a rest started between ticks shows at once.
             Snapshot(session, rest, timer, standalone, clock.millis())
         }.flowOn(Dispatchers.Default).collect { snapshot -> show(snapshot, usualMinutes) }
