@@ -48,6 +48,9 @@ python docs/app-map/capture.py missing                                          
 `--commit` is the commit the APK was built from; it is shown in the map's header. Build the APK from a clean clone of `dev` so
 work in progress in your checkout does not leak into the screenshots.
 
+`setup` clears the app's data, so the app opens on first-run setup: it captures the five setup pages
+(marked `"firstRun": true` in the manifest, which `all` and `page` skip) and finishes setup with demo data.
+
 Each page starts from a fresh launch of the app on Home, runs its `steps`, then saves a screenshot. Its `cleanup`
 steps run afterwards, so a started session does not leak into the next page. Pages that change data (a started
 session) must clean up after themselves; pages that only open and close screens need nothing.

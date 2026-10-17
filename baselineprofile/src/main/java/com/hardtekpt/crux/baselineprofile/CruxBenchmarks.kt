@@ -32,6 +32,7 @@ class CruxBenchmarks {
         setupBlock = {
             pressHome()
             startActivityAndWait()
+            passSetup()
             tap("nav_Home")
         },
     ) {

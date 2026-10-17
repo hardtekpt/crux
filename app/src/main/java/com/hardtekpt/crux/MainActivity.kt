@@ -10,7 +10,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
@@ -99,7 +102,16 @@ class MainActivity : ComponentActivity() {
                         androidx.compose.ui.Modifier.semantics { testTagsAsResourceId = true },
                     ) {
                         val request by openRequest.collectAsStateWithLifecycle()
-                        CruxApp(openRequest = request, onOpened = { openRequest.value = null })
+                        // First-run setup once, on a fresh install; until it's known, just the background.
+                        when (viewModel.setupNeeded.collectAsStateWithLifecycle().value) {
+                            null -> androidx.compose.foundation.layout.Box(
+                                androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background),
+                            )
+
+                            true -> com.hardtekpt.crux.ui.setup.SetupFlow(onDone = viewModel::setupFinished)
+
+                            false -> CruxApp(openRequest = request, onOpened = { openRequest.value = null })
+                        }
                     }
                 }
             }
@@ -135,7 +147,19 @@ interface PreferencesEntryPoint {
 }
 
 @HiltViewModel
-class MainViewModel @Inject constructor(preferences: UserPreferencesRepository) : ViewModel() {
+class MainViewModel @Inject constructor(preferences: UserPreferencesRepository, firstRun: com.hardtekpt.crux.data.FirstRun) : ViewModel() {
+    /** Whether first-run setup shows; null while that is being read. */
+    private val _setupNeeded = kotlinx.coroutines.flow.MutableStateFlow<Boolean?>(null)
+    val setupNeeded: StateFlow<Boolean?> = _setupNeeded
+
+    init {
+        viewModelScope.launch { _setupNeeded.value = firstRun.needed() }
+    }
+
+    fun setupFinished() {
+        _setupNeeded.value = false
+    }
+
     val themeMode: StateFlow<ThemeMode> = preferences.themeMode.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,

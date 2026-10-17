@@ -104,6 +104,21 @@ sequenceDiagram
     D-->>VM: climbs from crux.db (re-subscribed)
 ```
 
+## First-run setup
+
+`MainActivity` asks [`FirstRun`](../../app/src/main/java/com/hardtekpt/crux/data/FirstRun.kt) once
+whether to show setup: only when the `setup_done` preference is unset, demo mode is off and the
+climber's own database has nothing in it (climbs, places, sessions, plans, exercises, body stats,
+notes, datasets). Otherwise it marks setup done, so an install from before setup existed, or one
+restored from a backup, never sees it. Until that's known the Activity draws only the background;
+then it shows `ui/setup/SetupFlow` or `CruxApp`, so setup isn't a navigation route.
+
+`SetupViewModel` keeps every choice in `SetupState` and saves nothing until Start: the units and
+grade scales (the same preferences Settings writes), the place through `PlaceRepository.savePlace`
+(and as the last place, so Log climb starts there), the weight and height through `BodyRepository`,
+then demo mode last, so all of it lands in the climber's own database. **Restore a backup** shows
+the app's `BackupScreen`; leaving it opens the app if the import put anything in the database.
+
 ## Navigation
 
 Navigation Compose with type-safe `@Serializable` routes

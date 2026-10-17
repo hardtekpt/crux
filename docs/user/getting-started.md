@@ -16,6 +16,28 @@ To check a download yourself, see [Verifying a download](#verifying-a-download).
 
 An F-Droid listing is planned. Once it's there, F-Droid will handle updates for you.
 
+## First-run setup
+
+The first time Climb Logger opens on a phone, it offers a short setup. Every step can be skipped and
+keeps the defaults, and none of it asks for a permission.
+
+- **Welcome**: **Set up** walks through the four steps below. **Restore a backup** opens
+  *Backups* to import one; once something is restored, the app opens and setup is done.
+  **Skip setup** keeps every default and opens Home.
+- **1. Units and grades**: Metric or Imperial, and a scale for boulders (Font or V) and routes
+  (French or YDS), each with a sample. These are the same settings as *You › Settings*.
+- **2. Where do you climb?** (optional): the place you go most and what's there: Gym, Crag or
+  Board. For a board, pick Kilter Original, MoonBoard or another board. A MoonBoard starts as the
+  2016 set and a Kilter has no size yet; change either in *Edit place*. Log climb starts at this
+  place.
+- **3. Weight and height** (optional): set them on the rulers, in the units you chose. They become
+  your first weigh-in and your height. Arm span and the rest are under *You › Measurements*.
+- **4. How do you want to start?**: your own log, or demo data to look around (Demo mode, which you
+  turn off in Settings). A summary shows what you chose. Nothing is saved until you tap **Start**
+  (or **Open demo**).
+
+Setup shows once. A phone that already has your data, or one in demo mode, never sees it.
+
 ## Your first five minutes
 
 1. **Try it with sample data.** Go to *You* (the person icon) → *Settings* (the gear) → *Demo mode*.

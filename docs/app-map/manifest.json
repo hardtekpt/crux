@@ -1,6 +1,13 @@
 {
  "lanes": [
   {
+   "id": "setup",
+   "name": "First-run setup",
+   "tab": "A fresh install",
+   "c": "--c-you",
+   "note": "Shown once, the first time the app opens on a phone with no data of yours. Every step can be skipped and keeps the defaults; it asks for no permissions."
+  },
+  {
    "id": "home",
    "name": "Home",
    "tab": "Home tab",
@@ -3098,6 +3105,71 @@
     "wait:1"
    ],
    "cleanup": []
+  },
+  {
+   "id": "setup-welcome",
+   "title": "Welcome",
+   "kind": "page",
+   "lane": "setup",
+   "col": 0,
+   "row": 0,
+   "desc": "The first screen of a fresh install. Set up walks through four steps; Restore a backup opens Backups to import one (and the app opens once something is restored); Skip setup keeps every default and opens Home.",
+   "covers": [],
+   "steps": [],
+   "cleanup": [],
+   "firstRun": true
+  },
+  {
+   "id": "setup-units",
+   "title": "Units and grades",
+   "kind": "page",
+   "lane": "setup",
+   "col": 1,
+   "row": 0,
+   "desc": "Step 1: Metric or Imperial, and the boulder and route scales, each with a sample. They are the same settings as You › Settings. Skip puts the defaults back (Metric, Font, French).",
+   "covers": [],
+   "steps": [],
+   "cleanup": [],
+   "firstRun": true
+  },
+  {
+   "id": "setup-place",
+   "title": "Where do you climb?",
+   "kind": "page",
+   "lane": "setup",
+   "col": 2,
+   "row": 0,
+   "desc": "Step 2, optional: the place you go most, with what's there (Gym, Crag, Board). Board asks which: Kilter Original, MoonBoard (as a 2016 set, changeable in Edit place) or another board. Add place saves it at the end; Log climb starts there.",
+   "covers": [],
+   "steps": [],
+   "cleanup": [],
+   "firstRun": true
+  },
+  {
+   "id": "setup-body",
+   "title": "Weight and height",
+   "kind": "page",
+   "lane": "setup",
+   "col": 3,
+   "row": 0,
+   "desc": "Step 3, optional: weight and height on the rulers, in the units from step 1. Next keeps them as your first weigh-in and height; Skip leaves both unset.",
+   "covers": [],
+   "steps": [],
+   "cleanup": [],
+   "firstRun": true
+  },
+  {
+   "id": "setup-start",
+   "title": "How do you want to start?",
+   "kind": "page",
+   "lane": "setup",
+   "col": 4,
+   "row": 0,
+   "desc": "Step 4: your own log, or the demo data to look around (Demo mode on, turned off in Settings). A summary of the choices; the button reads Start or Open demo. Nothing is saved before it.",
+   "covers": [],
+   "steps": [],
+   "cleanup": [],
+   "firstRun": true
   }
  ],
  "edges": [
@@ -4198,6 +4270,42 @@
    "dataset-filters",
    "Filters",
    "sheet"
+  ],
+  [
+   "setup-welcome",
+   "setup-units",
+   "Set up",
+   "nav"
+  ],
+  [
+   "setup-units",
+   "setup-place",
+   "Next",
+   "nav"
+  ],
+  [
+   "setup-place",
+   "setup-body",
+   "Add place or Skip",
+   "nav"
+  ],
+  [
+   "setup-body",
+   "setup-start",
+   "Next or Skip",
+   "nav"
+  ],
+  [
+   "setup-welcome",
+   "backups-top",
+   "Restore a backup",
+   "nav"
+  ],
+  [
+   "setup-start",
+   "home-top",
+   "Start",
+   "nav"
   ]
  ],
  "ignore": {

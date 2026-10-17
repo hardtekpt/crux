@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **First-run setup**: the first time the app opens, a short setup asks for your units and grade scales, the
+  place you climb most (and which board, for a Kilter or MoonBoard), your weight and height, and whether to start
+  your own log or look around the demo data. Every step can be skipped, it asks for no permissions, and
+  **Restore a backup** is on its first screen. Phones that already have your data never see it.
 - **Filters for datasets and board catalogues**: a filters button beside the search opens Filters, where you drag a two-ended
   slider to the range of grades to show, and a switch to hide the climbs you have sent. Grades read in your own scale.
 - **Simple countdowns in a session**: + → Start a timer now opens with a countdown row (30 s, 1, 2, 3 and 5 min)

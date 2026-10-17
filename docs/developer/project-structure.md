@@ -61,7 +61,7 @@ com.hardtekpt.crux
 │   ├── theme/              Colours, typography, spacing/sizes/shapes, CruxTheme
 │   ├── components/         Buttons, cards, list rows, inputs; input/ = the touch input kit
 │   ├── charts/             Canvas charts and chart cards
-│   ├── home/ train/ journal/ session/ progress/ you/ places/ settings/ quicklog/
+│   ├── home/ train/ journal/ session/ progress/ you/ places/ settings/ quicklog/ setup/
 │   ├── datasets/           Datasets, playlists and board catalogues
 │   ├── timer/              The standalone, full-screen interval timer
 │   ├── Format.kt           Date and number formatting

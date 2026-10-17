@@ -107,6 +107,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[DEMO_MODE] = enabled }
     }
 
+    /** First-run setup has run, been skipped, or wasn't needed (the app already had data). */
+    val setupDone: Flow<Boolean> = dataStore.data.map { it[SETUP_DONE] ?: false }
+
+    suspend fun setSetupDone() {
+        dataStore.edit { it[SETUP_DONE] = true }
+    }
+
     /** Which version of the sample data the demo database holds; 0 before any. */
     val demoDataVersion: Flow<Int> = dataStore.data.map { it[DEMO_DATA_VERSION] ?: 0 }
 
@@ -224,6 +231,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val TEXT_SIZE = stringPreferencesKey("text_size")
         val INTERVAL_TIMER = stringPreferencesKey("interval_timer")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val SETUP_DONE = booleanPreferencesKey("setup_done")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")

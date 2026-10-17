@@ -106,6 +106,7 @@ tests, so they always match the current version.
 **Your data**
 - Everything on your phone. Backups to a file you keep, with photos, videos, session history and
   settings; on import, Climb Logger asks about anything already there.
+- A short first-run setup (units, grades, your place, weight and height), every step skippable.
 - Demo mode with sample data, kept apart from yours.
 - Metric or imperial, dark or light, in one of seven accent colours, with larger or smaller text.
   Crash reports stay on the phone unless you share them.

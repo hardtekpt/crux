@@ -99,8 +99,8 @@ def launch():
     adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     adb('shell', 'monkey', '-p', PKG, '-c', 'android.intent.category.LAUNCHER', '1')
     time.sleep(2.0)
-    for _ in range(30):  # until the first screen is drawn
-        if find('Home', bottom=True):
+    for _ in range(30):  # until the first screen is drawn (Home, or first-run setup on a fresh install)
+        if find('Home', bottom=True) or find('Set up'):
             break
         time.sleep(1.0)
     time.sleep(2.0)
@@ -308,12 +308,19 @@ def setup(apk, commit=None):
     W, H = size()
     fixtures()
     launch()
-    # Demo mode gives every page something to show.
-    run_steps(['tab:You', 'tap:Settings', 'scrollto:Demo mode'])
-    n = find('Demo mode')
-    tap_xy(W - 130, n['cy'], 2.0)
-    run_steps(['expect:Showing sample climbs', 'back', 'tab:Home'])
+    first_run()
     print('ready; demo mode is on')
+
+
+def first_run():
+    """A fresh install opens on first-run setup: capture its pages (only reachable now), then finish it with
+    Demo mode on, which gives every other page something to show."""
+    run_steps(['expect:Set up'], 'setup-welcome')
+    run_steps(['tap:Set up'], 'setup-units')
+    run_steps(['tap:Next', 'tap:Your gym or crag', 'type:Arco Boulder Gym', 'key:KEYCODE_BACK', 'tap:Board'], 'setup-place')
+    run_steps(['tap:Add place'], 'setup-body')
+    run_steps(['tap:Next', 'tap:Look around with demo data'], 'setup-start')
+    run_steps(['tap:Open demo', 'wait:3', 'tab:Home'])
 
 
 def main():
@@ -345,6 +352,9 @@ def main():
     for i in ids:
         p = pages[i]
         print(i)
+        if p.get('firstRun'):
+            print('  captured by setup (first-run setup shows only on a fresh install)')
+            continue
         try:
             launch()
             run_steps(p['steps'], i)

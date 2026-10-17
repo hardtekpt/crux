@@ -144,6 +144,46 @@ class ScreenshotTest {
         bothThemes(name, dark = dark, accent = accent) { HomeContent(uiState = state, dashboard = dashboard) }
     }
 
+    // First-run setup: Welcome in both themes, then each step as Boss's preview drew it.
+    @Test
+    fun setupWelcome() = bothThemes("setup_welcome") {
+        com.hardtekpt.crux.ui.setup.SetupContent(com.hardtekpt.crux.ui.setup.SetupState(), com.hardtekpt.crux.ui.setup.SetupActions())
+    }
+
+    private fun setup(name: String, state: com.hardtekpt.crux.ui.setup.SetupState) = bothThemes(name, dark = DARK) {
+        com.hardtekpt.crux.ui.setup.SetupContent(state, com.hardtekpt.crux.ui.setup.SetupActions())
+    }
+
+    @Test
+    fun setupUnits() = setup("setup_units", com.hardtekpt.crux.ui.setup.SetupState(step = com.hardtekpt.crux.ui.setup.SetupStep.UNITS))
+
+    @Test
+    fun setupPlace() = setup(
+        "setup_place",
+        com.hardtekpt.crux.ui.setup.SetupState(
+            step = com.hardtekpt.crux.ui.setup.SetupStep.PLACE,
+            placeName = "Arco Boulder Gym",
+            kinds = setOf(com.hardtekpt.crux.data.model.PlaceType.GYM, com.hardtekpt.crux.data.model.PlaceType.BOARD),
+        ),
+    )
+
+    @Test
+    fun setupBody() =
+        setup("setup_body", com.hardtekpt.crux.ui.setup.SetupState(step = com.hardtekpt.crux.ui.setup.SetupStep.BODY, weight = 72.4, height = 178.0))
+
+    @Test
+    fun setupStart() = setup(
+        "setup_start",
+        com.hardtekpt.crux.ui.setup.SetupState(
+            step = com.hardtekpt.crux.ui.setup.SetupStep.START,
+            placeName = "Arco Boulder Gym",
+            kinds = setOf(com.hardtekpt.crux.data.model.PlaceType.GYM, com.hardtekpt.crux.data.model.PlaceType.BOARD),
+            placeAdded = true,
+            weight = 72.4,
+            height = 178.0,
+        ),
+    )
+
     // Home in each accent but the brand's teal, which every other screenshot shows.
     @Test
     fun homeBlue() = home("home_blue", accent = Accent.BLUE)

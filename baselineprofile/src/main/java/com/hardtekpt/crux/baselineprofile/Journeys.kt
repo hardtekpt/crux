@@ -32,8 +32,15 @@ fun MacrobenchmarkScope.scrollList(tag: String) {
     device.waitForIdle()
 }
 
+/** A fresh install opens on first-run setup: skip it, once, to reach Home. */
+fun MacrobenchmarkScope.passSetup() {
+    device.wait(Until.findObject(By.res("setup_skip_all")), 2_000L)?.click()
+    device.waitForIdle()
+}
+
 /** The everyday path: Home, the Journal, Train's week and plans, Progress and You, scrolling each. */
 fun MacrobenchmarkScope.everydayJourney() {
+    passSetup()
     tag("screen_Home")
     scrollList("home_list")
     tap("nav_Journal")

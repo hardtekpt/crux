@@ -28,7 +28,17 @@ object TestDatabaseModule {
 
     @Provides
     @Singleton
-    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> = PreferenceDataStoreFactory.create {
+    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> = PreferenceDataStoreFactory.create(
+        // Tests start in the app, past first-run setup.
+        produceMigrations = { listOf(SetupDone) },
+    ) {
         context.preferencesDataStoreFile("test_prefs_${UUID.randomUUID()}")
+    }
+
+    private object SetupDone : androidx.datastore.core.DataMigration<Preferences> {
+        override suspend fun shouldMigrate(currentData: Preferences) = currentData[KEY] == null
+        override suspend fun migrate(currentData: Preferences): Preferences = currentData.toMutablePreferences().apply { this[KEY] = true }
+        override suspend fun cleanUp() = Unit
+        private val KEY = androidx.datastore.preferences.core.booleanPreferencesKey("setup_done")
     }
 }

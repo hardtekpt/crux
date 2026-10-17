@@ -77,7 +77,8 @@ Screens must read "today" from `LocalClock`, not `LocalDate.now()`. The tests pr
 ## Instrumented tests
 
 [`app/src/androidTest`](../../app/src/androidTest/java/com/hardtekpt/crux), with `HiltTestRunner`
-and `TestDatabaseModule` (fresh in-memory databases and DataStore per test):
+and `TestDatabaseModule` (fresh in-memory databases and DataStore per test; the DataStore starts
+with `setup_done` set, so every test opens in the app rather than on first-run setup):
 
 - **`MigrationTest`**: migrates every exported schema to the current one, carries data typed at the
   oldest schema all the way through, and has step tests for migrations that move data.
