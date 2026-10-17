@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -64,6 +65,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -267,7 +271,9 @@ private fun DatasetLinksSheet(
                     )
                 },
                 onClick = if (auto) null else ({ onToggle(dataset.id, !ticked) }),
-                modifier = Modifier.testTag("dataset_link_${dataset.name}"),
+                modifier = Modifier
+                    .semantics { toggleableState = androidx.compose.ui.state.ToggleableState(ticked) }
+                    .testTag("dataset_link_${dataset.name}"),
             )
         }
         CruxListRow(
@@ -978,12 +984,14 @@ private fun LocalColourRow(
                 .size(48.dp)
                 .clip(CircleShape)
                 .clickable(onClickLabel = "Change colour", onClick = onPickColour)
+                .semantics { contentDescription = "Tape colour: " + (LocalScale.PALETTE.firstOrNull { it.second == grade.colour }?.first ?: "custom") }
                 .testTag("local_colour_$index"),
         ) { TapeSwatch(argb(grade.colour ?: 0xFF9E9E9EL), 28.dp) }
         CruxTextField(
             label = "",
             value = grade.name,
             onValueChange = onRename,
+            accessibilityLabel = "Grade ${index + 1} name",
             modifier = Modifier
                 .weight(1f)
                 .testTag("local_name_$index"),

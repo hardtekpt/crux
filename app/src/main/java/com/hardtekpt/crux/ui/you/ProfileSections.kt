@@ -168,6 +168,29 @@ private fun HardestChip(label: String, best: PersonalBest?) {
 }
 
 /**
+ * What TalkBack reads for the grid: the active days in it, then each of the last four weeks with
+ * the days climbed, so the pattern comes across without the squares.
+ */
+internal fun consistencyDescription(activity: Map<LocalDate, Int>, today: LocalDate, firstMonday: LocalDate, weeks: Int, activeDays: Int): String {
+    val thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val recent = (0 until minOf(4, weeks)).map { back ->
+        val monday = thisMonday.minusWeeks(back.toLong())
+        val days = (0 until 7).map { monday.plusDays(it.toLong()) }.filter { !it.isAfter(today) && (activity[it] ?: 0) > 0 }
+        val name = when (back) {
+            0 -> "This week"
+            1 -> "Last week"
+            else -> "Week of ${monday.dayOfMonth} ${monday.month.getDisplayName(DateTextStyle.SHORT, Locale.UK)}"
+        }
+        name + ": " + if (days.isEmpty()) "no days" else days.joinToString(", ") { it.dayOfWeek.getDisplayName(DateTextStyle.FULL, Locale.UK) }
+    }
+    val since = firstMonday
+    return (
+        listOf("$activeDays active days in the last $weeks weeks, since ${since.dayOfMonth} ${since.month.getDisplayName(DateTextStyle.SHORT, Locale.UK)}") +
+            recent
+        ).joinToString(". ")
+}
+
+/**
  * Consistency, the way code hosts show commits: one square per day, a column per week,
  * shaded by how much you did. Fits as many weeks as the width allows, today at the right.
  */
@@ -211,7 +234,7 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                     Modifier
                         .width((cell + gap) * weeks)
                         .height((cell + gap) * 7)
-                        .semantics { contentDescription = "$activeDays active days in the last $weeks weeks" }
+                        .semantics { contentDescription = consistencyDescription(activity, today, firstMonday, weeks, activeDays) }
                         .testTag("consistency_grid"),
                 ) {
                     val c = cell.toPx()
@@ -223,9 +246,14 @@ fun ConsistencyGrid(activity: Map<LocalDate, Int>, today: LocalDate, modifier: M
                             val n = activity[day] ?: 0
                             val color = when {
                                 n == 0 -> colors.surfaceContainerHighest
-                                n == 1 -> colors.primary.copy(alpha = 0.35f)
-                                n <= 3 -> colors.primary.copy(alpha = 0.6f)
-                                n <= 5 -> colors.primary.copy(alpha = 0.82f)
+
+                                // One climb still stands clear of an empty day, in light theme too.
+                                n == 1 -> colors.primary.copy(alpha = 0.5f)
+
+                                n <= 3 -> colors.primary.copy(alpha = 0.7f)
+
+                                n <= 5 -> colors.primary.copy(alpha = 0.86f)
+
                                 else -> colors.primary
                             }
                             drawRoundRect(

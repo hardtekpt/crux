@@ -283,21 +283,14 @@ fun LogClimbContent(
             GoPads(draft, onGo)
             GoTrail(draft, onUndoGo)
             if (draft.asksAboutBeta) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("No beta", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "Sent first go without watching anyone",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    androidx.compose.material3.Switch(
-                        checked = draft.noBeta,
-                        onCheckedChange = onNoBeta,
-                        modifier = Modifier.testTag("no_beta"),
-                    )
-                }
+                com.hardtekpt.crux.ui.components.CruxSwitchRow(
+                    "No beta",
+                    "Sent first go without watching anyone",
+                    draft.noBeta,
+                    onNoBeta,
+                    Modifier.testTag("no_beta"),
+                    titleStyle = MaterialTheme.typography.titleSmall,
+                )
             }
 
             com.hardtekpt.crux.ui.components.input.EffortScale(draft.effort, onEffort, Modifier.padding(top = space.s3))

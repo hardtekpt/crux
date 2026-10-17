@@ -92,10 +92,12 @@ fun FloatingNavBar(
         ) {
             // Sliding accent behind the active icon.
             if (selectedIndex >= 0) {
+                val reduceMotion = com.hardtekpt.crux.ui.components.input.rememberReduceMotion()
                 val indicatorOffset by animateDpAsState(
                     targetValue = TabWidth * selectedIndex + (TabWidth - IndicatorSize) / 2,
                     // The one spring in the app: the highlight overshoots a little as it lands (Boss's choice).
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+                    // With Reduce motion it glides there without the overshoot.
+                    animationSpec = if (reduceMotion) CruxMotion.medium() else spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
                     label = "indicator",
                 )
                 Box(
@@ -137,7 +139,17 @@ private fun NavTab(destination: TopLevelDestination, selected: Boolean, onClick:
         animationSpec = CruxMotion.fast(),
         label = "tint",
     )
-    val scale by animateFloatAsState(if (selected) 1.1f else 1f, CruxMotion.fast(), label = "scale")
+    val scale by animateFloatAsState(
+        if (selected &&
+            !com.hardtekpt.crux.ui.components.input.rememberReduceMotion()
+        ) {
+            1.1f
+        } else {
+            1f
+        },
+        CruxMotion.fast(),
+        label = "scale",
+    )
     Box(
         modifier = Modifier
             .width(TabWidth)

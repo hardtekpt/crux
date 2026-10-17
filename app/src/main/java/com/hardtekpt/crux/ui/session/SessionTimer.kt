@@ -55,6 +55,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,8 +102,8 @@ internal object TimerColors {
 /** Whole seconds left, rounded up, so the last second reads 1 and not 0. */
 internal fun secondsLeft(millis: Long): Int = ((millis.coerceAtLeast(0) + 999) / 1000).toInt()
 
-/** One piece of a progress strip: how much of it is filled, and with what. */
-internal data class Segment(val filled: Float, val color: Color)
+/** One rail segment: how full, its colour, and what TalkBack calls it ("Hangboard, 2 of 5 sets"). */
+internal data class Segment(val filled: Float, val color: Color, val label: String = "")
 
 @Composable
 internal fun SegmentStrip(segments: List<Segment>, modifier: Modifier = Modifier, height: Int = 3, onPick: ((Int) -> Unit)? = null) {
@@ -111,7 +113,16 @@ internal fun SegmentStrip(segments: List<Segment>, modifier: Modifier = Modifier
             Box(
                 Modifier
                     .weight(1f)
-                    .then(if (onPick != null) Modifier.clickable { onPick(index) }.padding(vertical = 8.dp) else Modifier)
+                    .then(
+                        if (onPick != null) {
+                            Modifier
+                                .clickable(onClickLabel = "Go to it") { onPick(index) }
+                                .semantics { contentDescription = segment.label }
+                                .padding(vertical = 8.dp)
+                        } else {
+                            Modifier
+                        },
+                    )
                     .height(height.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(track),

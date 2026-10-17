@@ -59,7 +59,7 @@ private fun fadeInOnly(): EnterTransition = fadeIn(enterSpec())
 private fun fadeOutOnly(): ExitTransition = fadeOut(exitSpec())
 
 val cruxEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-    when (move()) {
+    when (if (CruxMotion.reduced) Move.TabSwitch else move()) {
         Move.TabSwitch, Move.FormClose -> fadeInOnly()
         Move.FormOpen -> fadeInOnly() + slideInVertically(enterSpec<IntOffset>()) { nudge(it) * 2 }
         Move.Push -> fadeInOnly() + slideInHorizontally(enterSpec<IntOffset>(), ::nudge)
@@ -67,7 +67,7 @@ val cruxEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTran
 }
 
 val cruxExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-    when (move()) {
+    when (if (CruxMotion.reduced) Move.TabSwitch else move()) {
         Move.TabSwitch, Move.FormOpen, Move.Push -> fadeOutOnly()
         Move.FormClose -> fadeOutOnly() + slideOutVertically(exitSpec<IntOffset>()) { nudge(it) * 2 }
     }

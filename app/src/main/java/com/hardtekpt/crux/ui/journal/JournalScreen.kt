@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,6 +52,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -482,6 +484,7 @@ private fun TypeTabs(uiState: JournalUiState, placeCount: Int = 0, onSelect: (Jo
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .weight(1f)
+                        .heightIn(min = 48.dp)
                         .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(option) })
                         .testTag("journal_filter_${option.name}"),
                 ) {
@@ -552,6 +555,7 @@ private fun AppliedFilters(query: JournalQuery, onQuery: ((JournalQuery) -> Jour
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
+                .minimumInteractiveComponentSize()
                 .clip(CircleShape)
                 .clickable { onQuery { JournalQuery(kind = it.kind, search = it.search) } }
                 .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -566,9 +570,11 @@ private fun AppliedChip(label: String, onRemove: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            // A small chip with a full-size tap area around it.
+            .minimumInteractiveComponentSize()
             .clip(CircleShape)
             .background(colors.surfaceContainerHigh)
-            .clickable(onClick = onRemove)
+            .clickable(onClickLabel = "Remove filter", onClick = onRemove)
             .padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
             .testTag("applied_$label"),
     ) {

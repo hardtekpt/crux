@@ -192,10 +192,69 @@ private fun phaseLine(run: IntervalRun, position: IntervalPosition): String {
     }
 }
 
+/** How a time is spoken: "1 minute 30 seconds", "45 seconds". */
+internal fun spokenDuration(seconds: Int): String {
+    val m = seconds / 60
+    val s = seconds % 60
+    fun unit(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"
+    return when {
+        m == 0 -> unit(s, "second")
+        s == 0 -> unit(m, "minute")
+        else -> unit(m, "minute") + " " + unit(s, "second")
+    }
+}
+
+/** Says [text] to TalkBack each time [key] changes; nothing when TalkBack is off. */
+@Composable
+internal fun Announce(key: Any?, text: () -> String?) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.LaunchedEffect(key) {
+        text()?.let {
+            @Suppress("DEPRECATION")
+            view.announceForAccessibility(it)
+        }
+    }
+}
+
+/**
+ * A rest spoken for TalkBack: when it starts ("Rest, 2 minutes") and 10 seconds before the end of
+ * a long one; the session says "Rest over". Never every second.
+ */
+@Composable
+internal fun AnnounceRest(rest: Rest, nowMillis: Long) {
+    val left = secondsLeft(rest.endsAtMillis - nowMillis)
+    val tenLeft = left in 1..10 && rest.totalSeconds >= 30
+    Announce(rest.totalSeconds to tenLeft) { if (tenLeft) "10 seconds left" else "Rest, " + spokenDuration(left) }
+}
+
+/**
+ * An interval timer spoken for TalkBack: each phase as it starts ("Work, rep 3 of 6, 7 seconds"),
+ * 10 seconds before the end of a long phase, pauses, and the end. The beeps and buzz stay as they are.
+ */
+@Composable
+internal fun AnnounceInterval(run: IntervalRun, position: IntervalPosition) {
+    val left = secondsLeft(position.leftMillis)
+    val key = when {
+        position.finished -> "done"
+        run.paused -> "paused ${position.index}"
+        left <= 10 && position.phase.seconds >= 30 -> "ten ${position.index}"
+        else -> "phase ${position.index}"
+    }
+    Announce(key) {
+        when {
+            position.finished -> "Timer done"
+            run.paused -> "Paused"
+            key.startsWith("ten") -> "10 seconds left"
+            else -> phaseLine(run, position).replace(" · ", ", ") + ", " + spokenDuration(left)
+        }
+    }
+}
+
 /** The rest between sets in the dock: the time, what's next with a draining bar, +30 s and Skip. */
 @Composable
 internal fun RestDock(rest: Rest, nowMillis: Long, drainNowMillis: () -> Long, label: String, onAdd: () -> Unit, onSkip: () -> Unit, onOpen: () -> Unit) {
     val look = dockLook(TimerColors.setRest, solid = false)
+    AnnounceRest(rest, nowMillis)
     DockFrame(look, onOpen, Modifier.testTag("session_rest")) {
         Text(
             clockLabel(secondsLeft(rest.endsAtMillis - nowMillis) * 1000L),
@@ -225,6 +284,7 @@ internal fun IntervalDock(
 ) {
     val position = run.position(nowMillis)
     val look = dockLook(TimerColors.of(position.phase.kind), solid = position.phase.kind == IntervalPhase.Kind.WORK && !run.paused)
+    AnnounceInterval(run, position)
     DockFrame(look, onOpen, Modifier.testTag("timer_band")) {
         Text(clockLabel(secondsLeft(position.leftMillis) * 1000L), style = DockNumber, color = look.ink, modifier = Modifier.testTag("timer_left"))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -296,6 +356,7 @@ internal fun BigRest(
     modifier: Modifier = Modifier,
 ) {
     val look = dockLook(TimerColors.setRest, solid = false)
+    AnnounceRest(rest, nowMillis)
     BigFrame(
         look = look,
         label = "Rest",
@@ -328,6 +389,7 @@ internal fun BigInterval(
     val position = run.position(nowMillis)
     val look = dockLook(TimerColors.of(position.phase.kind), solid = position.phase.kind == IntervalPhase.Kind.WORK && !run.paused)
     val phase = phaseLine(run, position).substringBefore(" · cycle")
+    AnnounceInterval(run, position)
     BigFrame(
         look = look,
         label = if (run.paused) "Paused · $phase" else phase,

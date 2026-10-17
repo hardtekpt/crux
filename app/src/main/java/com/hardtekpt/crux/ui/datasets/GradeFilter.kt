@@ -127,21 +127,14 @@ internal fun GradeFilterSheet(
                 Text(scale.grades[last], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Row(
-            Modifier.fillMaxWidth().padding(top = space.s3),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(space.s3),
-        ) {
-            androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                Text("Hide climbs I've sent", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    "Projects you've tried but not sent still show.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            androidx.compose.material3.Switch(hideSent, onHideSent, Modifier.testTag("hide_sent"))
-        }
+        com.hardtekpt.crux.ui.components.CruxSwitchRow(
+            "Hide climbs I've sent",
+            "Projects you've tried but not sent still show.",
+            hideSent,
+            onHideSent,
+            Modifier.padding(top = space.s3).testTag("hide_sent"),
+            titleStyle = MaterialTheme.typography.bodyLarge,
+        )
         extra()
     }
 }

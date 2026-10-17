@@ -73,8 +73,15 @@ fun rememberTicker(): (strong: Boolean) -> Unit {
 @Composable
 fun rememberReduceMotion(): Boolean {
     val context = LocalContext.current
-    return remember(context) { context.animationsOff() }
+    val system = remember(context) { context.animationsOff() }
+    return system || LocalReduceMotion.current
 }
+
+/** The climber's Reduce motion setting, provided by MainActivity. */
+val LocalReduceMotion = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** Android's Remove animations, read once. */
+fun Context.systemAnimationsOff(): Boolean = animationsOff()
 
 private fun Context.animationsOff(): Boolean = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 

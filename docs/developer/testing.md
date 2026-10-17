@@ -53,10 +53,19 @@ Pixel 7 size. Goldens:
   finished sessions for them.
 - `*_text_largest_dark` render Home, Log climb, Session and Settings with 1.69× text
   (`@Config(fontScale = …)`), to catch text that clips or overlaps when the font is large.
+  `*_text_double_dark` do the same at 2× (Android's 200% font), with first-run setup too.
 - `home_{blue,violet,pink,chalk}_{dark,light}` show Home in some of the accents other than teal.
 - `interval_timer*` show the timer's setup, and the running timer in both themes, on its side
   (`@Config(qualifiers = "+land")`) and with the largest text.
 - `StoreGraphicsTest` draws the store icon and feature graphic from the launcher icon.
+
+**Every screenshot is also an accessibility check.** After capturing, `bothThemes` fails the test
+when anything with a click action has no text, content description or editable text of its own or
+from its children (a click label like "Go to it" doesn't count: it says what a tap does, not what
+the thing is). The message lists the test tags, or the bounds of an untagged node.
+`AccentContrastTest` checks the theme's text, control outlines and the colours that carry meaning
+(sends, timer phases, boards, finish holds) against WCAG ratios, and `AccessibilityTextTest` checks
+what charts, the consistency grid and timers read aloud.
 
 Comparison is **exact**: removing one letter changes about 200 pixels, so any tolerance would hide
 real changes. Windows and Linux render identically.

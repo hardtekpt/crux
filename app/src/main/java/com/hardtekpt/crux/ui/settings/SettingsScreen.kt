@@ -57,6 +57,7 @@ data class SettingsUiState(
     val demoMode: Boolean = false,
     val units: UnitSystem = UnitSystem.METRIC,
     val timerSounds: Boolean = true,
+    val reduceMotion: Boolean = false,
     /** Rest after a climb logged in a session, in seconds; 0 is off. */
     val climbRestSeconds: Int = 0,
 )
@@ -68,9 +69,9 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
         combine(preferences.themeMode, preferences.accent, preferences.textSize, ::Triple),
         preferences.demoMode,
         preferences.units,
-        combine(preferences.timerSounds, preferences.climbRestSeconds, ::Pair),
-    ) { scales, (theme, accent, textSize), demo, units, (sounds, climbRest) ->
-        SettingsUiState(scales, theme, accent, textSize, demo, units, sounds, climbRest)
+        combine(preferences.timerSounds, preferences.climbRestSeconds, preferences.reduceMotion, ::Triple),
+    ) { scales, (theme, accent, textSize), demo, units, (sounds, climbRest, reduceMotion) ->
+        SettingsUiState(scales, theme, accent, textSize, demo, units, sounds, reduceMotion, climbRest)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
@@ -102,6 +103,10 @@ class SettingsViewModel @Inject constructor(private val preferences: UserPrefere
         viewModelScope.launch { preferences.setTimerSounds(enabled) }
     }
 
+    fun setReduceMotion(enabled: Boolean) {
+        viewModelScope.launch { preferences.setReduceMotion(enabled) }
+    }
+
     fun setUnits(units: UnitSystem) {
         viewModelScope.launch { preferences.setUnits(units) }
     }
@@ -127,6 +132,7 @@ fun SettingsScreen(
         onDemoMode = viewModel::setDemoMode,
         onUnits = viewModel::setUnits,
         onTimerSounds = viewModel::setTimerSounds,
+        onReduceMotion = viewModel::setReduceMotion,
         onClimbRest = viewModel::setClimbRest,
         onBackups = openBackups,
         diagnostics = { CrashReportsCard(crashCount, crashReportsViewModel) },
@@ -150,6 +156,7 @@ fun SettingsContent(
     onAccent: (Accent) -> Unit = {},
     onTextSize: (TextSize) -> Unit = {},
     onClimbRest: (Int) -> Unit = {},
+    onReduceMotion: (Boolean) -> Unit = {},
 ) {
     val space = CruxTheme.space
     Column(modifier.fillMaxSize().testTag("screen_Settings")) {
@@ -228,6 +235,13 @@ fun SettingsContent(
                     label = { it.label },
                     onSelect = onTextSize,
                 )
+                com.hardtekpt.crux.ui.components.CruxSwitchRow(
+                    "Reduce motion",
+                    "Pages only fade, and the tab bar doesn't bounce. On by itself when Android's Remove animations is on.",
+                    uiState.reduceMotion,
+                    onReduceMotion,
+                    Modifier.padding(top = space.s4).testTag("reduce_motion"),
+                )
             }
 
             Eyebrow("Units", Modifier.padding(top = space.s4))
@@ -254,24 +268,13 @@ fun SettingsContent(
 
             Eyebrow("Sessions", Modifier.padding(top = space.s4))
             CruxCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Timer sounds", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Beeps for the last three seconds of a rest or interval. The phone buzzes either way.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = uiState.timerSounds,
-                        onCheckedChange = onTimerSounds,
-                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier
-                            .padding(start = space.s3)
-                            .testTag("timer_sounds"),
-                    )
-                }
+                com.hardtekpt.crux.ui.components.CruxSwitchRow(
+                    "Timer sounds",
+                    "Beeps for the last three seconds of a rest or interval. The phone buzzes either way.",
+                    uiState.timerSounds,
+                    onTimerSounds,
+                    Modifier.testTag("timer_sounds"),
+                )
             }
             CruxCard {
                 Text("Rest after a climb", style = MaterialTheme.typography.titleMedium)
@@ -299,28 +302,17 @@ fun SettingsContent(
 
             Eyebrow("Your data", Modifier.padding(top = space.s4))
             CruxCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Demo mode", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            if (uiState.demoMode) {
-                                "Showing sample climbs, plans and weigh-ins. Your own data is kept apart and comes back when you turn this off."
-                            } else {
-                                "Explore Climb Logger with sample climbs, plans and weigh-ins. Your own data stays untouched."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = uiState.demoMode,
-                        onCheckedChange = onDemoMode,
-                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier
-                            .padding(start = space.s3)
-                            .testTag("demo_mode"),
-                    )
-                }
+                com.hardtekpt.crux.ui.components.CruxSwitchRow(
+                    "Demo mode",
+                    if (uiState.demoMode) {
+                        "Showing sample climbs, plans and weigh-ins. Your own data is kept apart and comes back when you turn this off."
+                    } else {
+                        "Explore Climb Logger with sample climbs, plans and weigh-ins. Your own data stays untouched."
+                    },
+                    uiState.demoMode,
+                    onDemoMode,
+                    Modifier.testTag("demo_mode"),
+                )
             }
             CruxListRow(
                 title = "Backups",

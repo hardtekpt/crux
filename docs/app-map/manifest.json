@@ -1539,7 +1539,7 @@
    "lane": "you",
    "col": 4,
    "row": 2,
-   "desc": "Grades per discipline, theme, accent colour, text size and units.",
+   "desc": "Grades per discipline, theme, accent colour, text size, Reduce motion and units.",
    "covers": [
     "SettingsRoute"
    ],

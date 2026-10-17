@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +45,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -298,12 +302,26 @@ fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifi
                 day.slots.any { it.kind == ScheduleKind.CLIMB } -> colors.primary
                 else -> Color.Transparent
             }
-            val ring = day.slots.none { it.kind == ScheduleKind.PLAN } && day.slots.any { it.kind == ScheduleKind.CLIMB } && dot != CruxTheme.colors.success
+            val done = day.slots.isNotEmpty() && day.slots.all { day.done(it) }
+            val ring = day.slots.none { it.kind == ScheduleKind.PLAN } && day.slots.any { it.kind == ScheduleKind.CLIMB } && !done
+            // Read as one: "Tuesday 14, today, plan, done".
+            val spoken = listOfNotNull(
+                day.date.dayOfWeek.getDisplayName(DateTextStyle.FULL, Locale.UK) + " " + day.date.dayOfMonth,
+                "today".takeIf { isToday },
+                when {
+                    day.slots.any { it.kind == ScheduleKind.PLAN } && day.slots.any { it.kind == ScheduleKind.CLIMB } -> "plan and climbing"
+                    day.slots.any { it.kind == ScheduleKind.PLAN } -> "plan"
+                    day.slots.any { it.kind == ScheduleKind.CLIMB } -> "climbing day"
+                    else -> "rest day"
+                },
+                "done".takeIf { done },
+            ).joinToString(", ")
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp),
                 modifier = Modifier
                     .weight(1f)
+                    .clearAndSetSemantics { contentDescription = spoken }
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isToday) colors.primaryContainer else Color.Transparent)
                     .padding(vertical = 5.dp),
@@ -318,13 +336,24 @@ fun WeekStrip(week: List<WeekDay>, today: LocalDate, modifier: Modifier = Modifi
                     style = MaterialTheme.typography.titleSmall,
                     color = if (isToday) colors.onPrimaryContainer else colors.onSurface,
                 )
-                Column(
-                    Modifier
-                        .width(6.dp)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .then(if (ring) Modifier.border(1.5.dp, dot, RoundedCornerShape(3.dp)) else Modifier.background(dot)),
-                ) {}
+                // Done is a tick, not only a green dot, so it doesn't rest on colour alone.
+                Box(Modifier.height(10.dp), contentAlignment = Alignment.Center) {
+                    if (done) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.material.icons.Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = dot,
+                            modifier = Modifier.size(10.dp),
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .then(if (ring) Modifier.border(1.5.dp, dot, RoundedCornerShape(3.dp)) else Modifier.background(dot)),
+                        )
+                    }
+                }
             }
         }
     }

@@ -112,7 +112,9 @@ Wheels expose semantics actions, so TalkBack can set them directly.
 - **Motion** lives in `components/Motion.kt`: `CruxMotion` durations (120 / 160 / 200 ms,
   decelerating, no overshoot (the nav bar's sliding highlight is the one spring, by choice), plus the page `enter()` / `exit()` curves that `Transitions.kt` uses), `revealWhen(ready)` to fade a list in once its data is loaded
   instead of showing empty values, `pressScale` for big tap targets and `AnimatedCount` for
-  numbers that roll. Lazy lists use `Modifier.animateItem()`; colours that change with state use
+  numbers that roll. **Reduce motion** (Settings, or Android's Remove animations) sets
+  `CruxMotion.reduced` and `LocalReduceMotion`: page changes only fade, and the nav highlight
+  glides without its overshoot. Lazy lists use `Modifier.animateItem()`; colours that change with state use
   `animateColorAsState`. Keep new motion within these: short, quiet, never in the way of a tap.
 - **Performance**: view models build their state with `flowOn(Dispatchers.Default)` before
   `stateIn`, so only the result reaches the main thread. In lazy lists, give items keys and a
@@ -130,4 +132,11 @@ Wheels expose semantics actions, so TalkBack can set them directly.
 - **Test tags**: interactive elements and screens carry `testTag`s (`screen_Home`, `log_fab`,
   `save_climb`…), which the instrumented tests use.
 - **Accessibility**: give icons that carry meaning a `contentDescription` (decorative ones `null`),
-  and keep touch targets at least 48 dp (`CruxTheme.size.touchTarget`).
+  and keep touch targets at least 48 dp (`CruxTheme.size.touchTarget`, or
+  `minimumInteractiveComponentSize()` around a small chip). An on/off setting is a
+  `CruxSwitchRow`, so the row is the control. A picture (chart, grid, diagram) gets a
+  `contentDescription` that reads its values, not only its title; `TimeSeriesChart` and `BarChart`
+  add theirs to the title you pass. A timer speaks through `Announce` (`session/SessionDock.kt`)
+  when its phase changes, never every second. Nothing relies on colour alone. Read
+  `rememberReduceMotion()` before adding motion that slides or bounces; page transitions check
+  `CruxMotion.reduced`. The screenshot tests fail on a tappable with no label.

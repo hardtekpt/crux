@@ -81,7 +81,7 @@ fun CruxButton(
             Icon(icon, contentDescription = null, modifier = Modifier.size(CruxTheme.size.iconSm))
             Spacer(Modifier.width(CruxTheme.space.s2))
         }
-        Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

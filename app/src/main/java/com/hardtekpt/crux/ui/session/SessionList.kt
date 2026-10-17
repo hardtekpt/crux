@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -53,10 +54,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hardtekpt.crux.data.SessionItem
 import com.hardtekpt.crux.data.SessionSet
 import com.hardtekpt.crux.data.model.MetricType
@@ -282,6 +286,8 @@ private fun HeadCell(text: String, modifier: Modifier) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = if (text == "Last") TextAlign.Start else TextAlign.Center,
         maxLines = 1,
+        // Big text sizes shrink a heading to fit its column instead of running into the next.
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = MaterialTheme.typography.labelSmall.fontSize),
         modifier = modifier.padding(horizontal = 2.dp),
     )
 }
@@ -315,10 +321,18 @@ private fun RowScope.ValueCell(text: String, open: Boolean, done: Boolean, onCli
 private fun TickBox(done: Boolean, running: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val success = CruxTheme.colors.success
-    Box(Modifier.width(48.dp), contentAlignment = Alignment.Center) {
+    // The whole 48dp square is the target; TalkBack reads it as the set's tick box.
+    Box(
+        modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .toggleable(value = done, role = androidx.compose.ui.semantics.Role.Checkbox, onValueChange = { onClick() })
+            .semantics { contentDescription = if (running) "Set, timer running" else "Set done" },
+        contentAlignment = Alignment.Center,
+    ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = modifier
+            modifier = Modifier
                 .size(32.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(if (done) success else Color.Transparent)
@@ -332,12 +346,11 @@ private fun TickBox(done: Boolean, running: Boolean, onClick: () -> Unit, modifi
                         colors.outline
                     },
                     RoundedCornerShape(9.dp),
-                )
-                .clickable(onClickLabel = if (done) "Take this set back" else "Done", onClick = onClick),
+                ),
         ) {
             when {
-                done -> Icon(Icons.Rounded.Check, contentDescription = "Done", tint = CruxTheme.colors.onSuccess, modifier = Modifier.size(18.dp))
-                running -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Timer running", tint = TimerColors.work, modifier = Modifier.size(18.dp))
+                done -> Icon(Icons.Rounded.Check, contentDescription = null, tint = CruxTheme.colors.onSuccess, modifier = Modifier.size(18.dp))
+                running -> Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = TimerColors.work, modifier = Modifier.size(18.dp))
             }
         }
     }

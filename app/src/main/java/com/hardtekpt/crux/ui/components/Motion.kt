@@ -27,6 +27,12 @@ import androidx.compose.ui.text.TextStyle
  * to nothing.
  */
 object CruxMotion {
+    /**
+     * Reduce motion is on (the setting, or Android's Remove animations): page changes only fade.
+     * Set by MainActivity; read by the navigation transitions, which run outside composition.
+     */
+    @Volatile var reduced: Boolean = false
+
     const val FAST = 120
     const val MEDIUM = 160
     const val SLOW = 200

@@ -57,6 +57,33 @@ import kotlin.math.min
 // it), except the donut, which always lists its slices. Every chart can be read without
 // touch: values the climber needs are labelled, and a tap shows the exact date and value.
 
+/**
+ * What TalkBack reads for a line chart: its title, then the first and latest points, the low and
+ * the high, so the shape comes across without the picture.
+ */
+internal fun describeSeries(title: String, sorted: List<SeriesPoint>, formatX: (Double) -> String, formatY: (Double) -> String): String {
+    if (sorted.isEmpty()) return title
+    val first = sorted.first()
+    val last = sorted.last()
+    val low = sorted.minBy { it.y }
+    val high = sorted.maxBy { it.y }
+    val parts = mutableListOf(title.ifBlank { "Chart" })
+    if (sorted.size == 1) {
+        parts += "${formatY(last.y)} on ${formatX(last.x)}"
+    } else {
+        parts += "${sorted.size} points, from ${formatY(first.y)} on ${formatX(first.x)} to ${formatY(last.y)} on ${formatX(last.x)}"
+        parts += "low ${formatY(low.y)}, high ${formatY(high.y)}"
+    }
+    return parts.joinToString(". ")
+}
+
+/** What TalkBack reads for a bar chart: its title and every bar's label and value (the last 12). */
+internal fun describeBars(title: String, bars: List<BarDatum>, formatValue: (Double) -> String): String {
+    if (bars.isEmpty()) return title
+    val shown = bars.takeLast(12)
+    return listOf(title.ifBlank { "Chart" }, shown.joinToString(", ") { "${it.label} ${formatValue(it.value)}" }).joinToString(". ")
+}
+
 /** One point on a time series: x is any increasing number, usually LocalDate.toEpochDay(). */
 data class SeriesPoint(val x: Double, val y: Double)
 
@@ -102,7 +129,7 @@ fun TimeSeriesChart(
             .fillMaxWidth()
             .height(height)
             .testTag("time_series_chart")
-            .semantics { contentDescription = description }
+            .semantics { contentDescription = describeSeries(description, sorted, formatX, formatY) }
             .pointerInput(sorted) {
                 detectTapGestures { offset ->
                     val index = nearestIndex(sorted, offset.x, plotEdges[0], plotEdges[1], xMin, xSpan)
@@ -239,7 +266,7 @@ fun BarChart(
             .fillMaxWidth()
             .height(height)
             .testTag("bar_chart")
-            .semantics { contentDescription = description },
+            .semantics { contentDescription = describeBars(description, bars, formatValue) },
     ) {
         val labelHeight = measurer.measure("0", axisStyle).size.height + 6.dp.toPx()
         val valueHeight = measurer.measure("0", valueStyle).size.height + 4.dp.toPx()

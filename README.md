@@ -108,6 +108,8 @@ tests, so they always match the current version.
   settings; on import, Climb Logger asks about anything already there.
 - A short first-run setup (units, grades, your place, weight and height), every step skippable.
 - Demo mode with sample data, kept apart from yours.
+- Works with TalkBack (timers that speak, charts that read their values) and up to twice the text
+  size, with a Reduce motion setting.
 - Metric or imperial, dark or light, in one of seven accent colours, with larger or smaller text.
   Crash reports stay on the phone unless you share them.
 

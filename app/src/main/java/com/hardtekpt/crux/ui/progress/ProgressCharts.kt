@@ -82,7 +82,7 @@ fun ProgressChartCards(charts: ProgressCharts, modifier: Modifier = Modifier) {
             BarChart(
                 bars = charts.weeklySends,
                 formatValue = ::formatTick,
-                description = "Sends per week: " + charts.weeklySends.joinToString { "${it.label} ${formatTick(it.value)}" },
+                description = "Sends per week",
             )
         }
         charts.pyramids.forEach { pyramid ->

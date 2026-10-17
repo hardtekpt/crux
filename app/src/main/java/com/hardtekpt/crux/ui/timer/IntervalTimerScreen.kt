@@ -251,6 +251,7 @@ fun IntervalTimerRunning(
     val accent = if (position.finished) colors.primary else TimerColors.of(position.phase.kind)
     val fill = accent.copy(alpha = if (CruxTheme.isDark) 0.22f else 0.16f)
     val toggle = if (run.paused) onResume else onPause
+    com.hardtekpt.crux.ui.session.AnnounceInterval(run, position)
     BoxWithConstraints(
         modifier
             .fillMaxSize()

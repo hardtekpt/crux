@@ -107,6 +107,13 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         dataStore.edit { it[DEMO_MODE] = enabled }
     }
 
+    /** Reduce motion: pages only fade, nothing slides or bounces. Off by default; Android's Remove animations turns it on too. */
+    val reduceMotion: Flow<Boolean> = dataStore.data.map { it[REDUCE_MOTION] ?: false }
+
+    suspend fun setReduceMotion(enabled: Boolean) {
+        dataStore.edit { it[REDUCE_MOTION] = enabled }
+    }
+
     /** First-run setup has run, been skipped, or wasn't needed (the app already had data). */
     val setupDone: Flow<Boolean> = dataStore.data.map { it[SETUP_DONE] ?: false }
 
@@ -232,6 +239,7 @@ class UserPreferencesRepository @Inject constructor(private val dataStore: DataS
         val INTERVAL_TIMER = stringPreferencesKey("interval_timer")
         val DEMO_MODE = booleanPreferencesKey("demo_mode")
         val SETUP_DONE = booleanPreferencesKey("setup_done")
+        val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
         val DEMO_DATA_VERSION = androidx.datastore.preferences.core.intPreferencesKey("demo_data_version")
         val UNITS = stringPreferencesKey("units")
         val LAST_PLACE = longPreferencesKey("last_place_id")

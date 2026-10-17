@@ -11,7 +11,9 @@ Open Settings from the gear on the **You** tab.
   default), Blue, Violet, Magenta, Pink, Slate or Chalk. The accent colours buttons, selected options and highlights;
   the amber for goes and the green for sends stay the same in every accent. **Text size** makes
   the text in Climb Logger smaller or larger (Small, Default, Large, Largest) on top of your phone's own
-  font size. Climb Logger reopens on the same page to apply it.
+  font size. Climb Logger reopens on the same page to apply it. **Reduce motion** makes pages only
+  fade (nothing slides in) and stops the tab bar's highlight from bouncing. It's on by itself when
+  Android's *Remove animations* is on.
 - **Units**: Metric (kilograms and centimetres) or Imperial (pounds, feet and inches). Everything is
   stored metric, and Imperial only changes what you see, so switching back and forth loses nothing.
 - **Sessions**: *Timer sounds* (beeps for the last seconds of a rest or interval) and *Rest after a
@@ -19,6 +21,25 @@ Open Settings from the gear on the **You** tab.
 - **Your data**: demo mode, and *Backups*, a page of its own.
 - **Diagnostics**: crash reports.
 - **About**: version, licence, source code, and the open-source libraries Climb Logger uses.
+
+## Accessibility
+
+Climb Logger works with TalkBack and with large text:
+
+- **Everything you can tap says what it is.** Switches read as one control with their name, the
+  set boxes in a session read as "Set done, checkbox", and fields with no label above them say what
+  they're for. Small chips keep a full-size tap area.
+- **Timers talk.** With TalkBack on, a rest says how long it is when it starts, "10 seconds left"
+  near the end of a long one, and "Rest over". The interval timer says each phase as it starts
+  ("Work, rep 3 of 6, 7 seconds"), 10 seconds left in a long phase, pauses and the end. It never
+  counts every second.
+- **Pictures read as numbers.** Charts read their values (each week's bars, or a line's first and
+  latest points with its low and high). The consistency grid reads your active days and each of
+  the last four weeks by day, and Home's week strip reads day by day ("Tuesday 14, plan, done").
+  Hold diagrams read their holds by role, and a tape colour says its name.
+- **Not by colour alone.** Done days on the week strip are a tick, not only a green dot.
+- **Large text.** The app is checked at twice the normal text size; long labels shrink to fit or
+  end in "…" rather than running into each other.
 
 ## Demo mode
 

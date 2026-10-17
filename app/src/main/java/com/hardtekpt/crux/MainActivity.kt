@@ -18,6 +18,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
@@ -30,6 +31,7 @@ import com.hardtekpt.crux.data.prefs.UnitSystem
 import com.hardtekpt.crux.data.prefs.UserPreferencesRepository
 import com.hardtekpt.crux.ui.CruxApp
 import com.hardtekpt.crux.ui.LocalUnits
+import com.hardtekpt.crux.ui.components.input.systemAnimationsOff
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -85,6 +87,8 @@ class MainActivity : ComponentActivity() {
                 if (pickedTextSize != null && pickedTextSize != textSize) recreate()
             }
             val units by viewModel.units.collectAsStateWithLifecycle()
+            val reduceMotion = viewModel.reduceMotion.collectAsStateWithLifecycle().value || remember { systemAnimationsOff() }
+            LaunchedEffect(reduceMotion) { com.hardtekpt.crux.ui.components.CruxMotion.reduced = reduceMotion }
             val gradeScales by viewModel.gradeScales.collectAsStateWithLifecycle()
             val darkTheme = themeMode.isDark()
 
@@ -96,7 +100,11 @@ class MainActivity : ComponentActivity() {
             }
 
             CruxTheme(darkTheme = darkTheme, accent = accent) {
-                CompositionLocalProvider(LocalUnits provides units, com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales) {
+                CompositionLocalProvider(
+                    LocalUnits provides units,
+                    com.hardtekpt.crux.ui.LocalGradeScales provides gradeScales,
+                    com.hardtekpt.crux.ui.components.input.LocalReduceMotion provides reduceMotion,
+                ) {
                     // Test tags double as resource ids, so the benchmarks and profile generator can find screens.
                     androidx.compose.foundation.layout.Box(
                         androidx.compose.ui.Modifier.semantics { testTagsAsResourceId = true },
@@ -178,6 +186,8 @@ class MainViewModel @Inject constructor(preferences: UserPreferencesRepository, 
         started = SharingStarted.Eagerly,
         initialValue = null,
     )
+
+    val reduceMotion: StateFlow<Boolean> = preferences.reduceMotion.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val units: StateFlow<UnitSystem> = preferences.units.stateIn(
         scope = viewModelScope,

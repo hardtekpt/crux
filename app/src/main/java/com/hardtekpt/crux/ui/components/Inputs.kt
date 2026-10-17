@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.TextAutoSize
@@ -155,7 +156,13 @@ private fun Swatch(on: Boolean, color: Color, label: String, onClick: () -> Unit
         ) {
             if (on) Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.surface, modifier = Modifier.size(CruxTheme.size.iconSm))
         }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = if (on) colors.onSurface else colors.onSurfaceVariant, maxLines = 1)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (on) colors.onSurface else colors.onSurfaceVariant,
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize),
+        )
     }
 }
 
@@ -215,8 +222,11 @@ fun CruxTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     minLines: Int = 1,
+    /** What TalkBack calls a field shown without a label; the placeholder when not given. */
+    accessibilityLabel: String? = null,
 ) {
     val colors = MaterialTheme.colorScheme
+    val spokenLabel = label.ifBlank { accessibilityLabel ?: placeholder.orEmpty() }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(CruxTheme.space.s1)) {
         if (label.isNotBlank()) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
@@ -226,7 +236,9 @@ fun CruxTextField(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = CruxTheme.size.controlHeightLarge),
+                .heightIn(min = CruxTheme.size.controlHeightLarge)
+                // A field with no label above still says what it's for.
+                .then(if (label.isBlank() && spokenLabel.isNotBlank()) Modifier.semantics { contentDescription = spokenLabel } else Modifier),
             placeholder = placeholder?.let { { Text(it, style = MaterialTheme.typography.bodyLarge) } },
             textStyle = MaterialTheme.typography.bodyLarge,
             isError = error != null,
@@ -410,5 +422,40 @@ private fun RepeatButton(icon: ImageVector, description: String, enabled: Boolea
             },
     ) {
         Icon(icon, contentDescription = null, tint = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f))
+    }
+}
+
+/**
+ * A setting that is on or off: the title and line under it, and a switch. The whole row is the
+ * control, so a tap anywhere toggles it and TalkBack reads it as one switch with its name.
+ */
+@Composable
+fun CruxSwitchRow(
+    title: String,
+    description: String?,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = titleStyle, color = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f))
+            description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant) }
+        }
+        androidx.compose.material3.Switch(
+            checked = checked,
+            onCheckedChange = null,
+            enabled = enabled,
+            colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = colors.primary),
+        )
     }
 }

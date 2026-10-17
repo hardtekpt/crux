@@ -155,7 +155,7 @@ fun DashboardWidgetContent(widget: DashboardWidget, state: HomeUiState, actions:
                 trailing = "${formatTick(weeks.sumOf { it.value })} in ${weeks.size} weeks",
                 modifier = modifier,
             ) {
-                BarChart(bars = weeks, formatValue = ::formatTick, height = if (large) 170.dp else 110.dp)
+                BarChart(bars = weeks, formatValue = ::formatTick, height = if (large) 170.dp else 110.dp, description = "Sends per week")
             }
         }
 

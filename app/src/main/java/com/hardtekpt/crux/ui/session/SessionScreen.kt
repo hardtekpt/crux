@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,6 +69,8 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -662,6 +665,9 @@ fun SessionScreen(
             restLeft <= 0 -> {
                 sounds.change()
                 buzz(context)
+                // The dock goes with the rest, so it's said here, for TalkBack.
+                @Suppress("DEPRECATION")
+                view.announceForAccessibility("Rest over")
                 viewModel.endRest()
             }
 
@@ -759,9 +765,15 @@ fun SessionScreen(
                         is SessionBlock.Exercise -> Segment(
                             filled = block.item.logged.toFloat() / block.item.target.sets.coerceAtLeast(1),
                             color = if (block.item.finished) success else colors.primary,
+                            label = "${block.item.exercise.name}, " +
+                                if (block.item.finished) "done" else "${block.item.logged} of ${block.item.target.sets} sets",
                         )
 
-                        SessionBlock.Climbing -> Segment(filled = if (current.climbs.isEmpty()) 0f else 1f, color = colors.primary)
+                        SessionBlock.Climbing -> Segment(
+                            filled = if (current.climbs.isEmpty()) 0f else 1f,
+                            color = colors.primary,
+                            label = "Climbing, ${current.climbs.size} ${if (current.climbs.size == 1) "climb" else "climbs"}",
+                        )
                     }
                 },
                 modifier = Modifier.padding(horizontal = space.s4).padding(bottom = space.s1).testTag("session_rail"),
@@ -1083,14 +1095,14 @@ fun SessionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { alsoPlan = !alsoPlan }
+                            .toggleable(alsoPlan, role = androidx.compose.ui.semantics.Role.Switch) { alsoPlan = it }
                             .testTag("target_also_plan"),
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text("Also change the plan", style = MaterialTheme.typography.titleSmall)
                             Text(current.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                         }
-                        androidx.compose.material3.Switch(checked = alsoPlan, onCheckedChange = { alsoPlan = it })
+                        androidx.compose.material3.Switch(checked = alsoPlan, onCheckedChange = null)
                     }
                 }
             } else {

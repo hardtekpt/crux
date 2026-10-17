@@ -704,25 +704,13 @@ private fun Version(label: String, text: String) {
 
 @Composable
 private fun ToggleRow(label: String, description: String, checked: Boolean, onToggle: () -> Unit, tag: String, enabled: Boolean = true) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            )
-            Text(
-                description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(
-            checked = checked && enabled,
-            onCheckedChange = { onToggle() },
-            enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.testTag(tag),
-        )
-    }
+    com.hardtekpt.crux.ui.components.CruxSwitchRow(
+        label,
+        description,
+        checked && enabled,
+        { onToggle() },
+        Modifier.padding(vertical = 2.dp).testTag(tag),
+        enabled = enabled,
+        titleStyle = MaterialTheme.typography.titleSmall,
+    )
 }

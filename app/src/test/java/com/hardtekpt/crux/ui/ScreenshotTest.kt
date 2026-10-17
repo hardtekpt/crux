@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
@@ -625,6 +626,27 @@ class ScreenshotTest {
     }
 
     // The largest text size on top of a large phone font, so clipped or overlapping text shows up.
+    // Twice the text size, Android's largest font with display size left alone.
+    @Test
+    @Config(fontScale = DOUBLE_TEXT)
+    fun homeDoubleText() = home("home_text_double", dark = DARK)
+
+    @Test
+    @Config(fontScale = DOUBLE_TEXT)
+    fun logClimbDoubleText() = logClimb("logclimb_text_double", dark = DARK)
+
+    @Test
+    @Config(fontScale = DOUBLE_TEXT)
+    fun sessionDoubleText() = session("session_text_double", dark = DARK)
+
+    @Test
+    @Config(fontScale = DOUBLE_TEXT)
+    fun settingsDoubleText() = settings("settings_text_double", dark = DARK)
+
+    @Test
+    @Config(fontScale = DOUBLE_TEXT)
+    fun setupDoubleText() = setup("setup_units_text_double", com.hardtekpt.crux.ui.setup.SetupState(step = com.hardtekpt.crux.ui.setup.SetupStep.UNITS))
+
     @Test
     @Config(fontScale = LARGEST_TEXT)
     fun homeLargestText() = home("home_text_largest", dark = DARK)
@@ -687,6 +709,27 @@ class ScreenshotTest {
                 ?: "src/test/screenshots/${name}_${if (theme) "dark" else "light"}.png"
             compose.onRoot().captureRoboImage(path)
         }
+        assertEveryTappableIsLabelled(name)
+    }
+
+    /**
+     * Every screen in these tests doubles as an accessibility check: anything TalkBack can tap
+     * must say what it is, through its own text or description or its children's.
+     */
+    private fun assertEveryTappableIsLabelled(name: String) {
+        val unlabelled = compose.onAllNodes(androidx.compose.ui.test.hasClickAction()).fetchSemanticsNodes().filter { node ->
+            val c = node.config
+            val text = c.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text).orEmpty().joinToString("")
+            val description = c.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription).orEmpty().joinToString("")
+            val edit = c.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText)?.text.orEmpty()
+            // A click label ("Go to it") says what a tap does, not what the thing is, so it doesn't count.
+            (text + description + edit).isBlank()
+        }
+        org.junit.Assert.assertTrue(
+            "$name: tappable with no label: " +
+                unlabelled.joinToString { it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag) ?: "untagged at ${it.boundsInRoot}" },
+            unlabelled.isEmpty(),
+        )
     }
 
     private companion object {
@@ -695,6 +738,9 @@ class ScreenshotTest {
 
         /** Largest (1.3×) on a phone already set to 1.3×. */
         const val LARGEST_TEXT = 1.69f
+
+        /** Android's 200% font size. */
+        const val DOUBLE_TEXT = 2f
         const val STORE_SCREENSHOTS = "../fastlane/metadata/android/en-US/images/phoneScreenshots"
         val STORE_ORDER = mapOf(
             "home" to 1,

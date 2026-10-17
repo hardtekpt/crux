@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Added
 
+- **Accessibility**: with TalkBack, rests and the interval timer say each phase, 10 seconds left and when
+  they end; charts, the consistency grid and Home's week strip read their values day by day; every switch,
+  set box and search field says what it is; and tape colours say their name. A **Reduce motion** setting
+  (on by itself with Android's Remove animations) makes pages only fade. Done days on the week strip are a
+  tick, small chips have full-size tap areas, and the app is checked at twice the normal text size.
 - **First-run setup**: the first time the app opens, a short setup asks for your units and grade scales, the
   place you climb most (and which board, for a Kilter or MoonBoard), your weight and height, and whether to start
   your own log or look around the demo data. Every step can be skipped, it asks for no permissions, and

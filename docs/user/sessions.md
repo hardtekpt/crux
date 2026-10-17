@@ -69,6 +69,10 @@ session. Only one session runs at a time; starting another ends the first.
   **Rest after a climb** is set in Settings, logging a
   climb starts that rest in the dock, so you know when to pull on again.
 
+With TalkBack on, a rest says its length when it starts, "10 seconds left" near the end of a long
+one and "Rest over"; the interval timer says each phase as it starts. See
+[Accessibility](settings-and-data.md#accessibility).
+
 The screen stays on while something counts down. Timers are worked out from the clock, so they stay
 right if the screen turns off or you switch apps.
 

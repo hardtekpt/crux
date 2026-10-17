@@ -30,7 +30,7 @@ object TestDatabaseModule {
     @Singleton
     fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> = PreferenceDataStoreFactory.create(
         // Tests start in the app, past first-run setup.
-        produceMigrations = { listOf(SetupDone) },
+        migrations = listOf(SetupDone),
     ) {
         context.preferencesDataStoreFile("test_prefs_${UUID.randomUUID()}")
     }
