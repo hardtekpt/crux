@@ -79,6 +79,7 @@ import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.EmptyState
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.SheetButton
+import com.hardtekpt.crux.ui.components.TabbedContent
 import com.hardtekpt.crux.ui.components.input.GradeStrip
 import com.hardtekpt.crux.ui.components.listItemMotion
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
@@ -129,100 +130,116 @@ fun DatasetsScreen(
                 Icon(Icons.Rounded.Add, contentDescription = "New dataset or import")
             }
         }
-        if (!uiState.isLoading && (uiState.datasets.isNotEmpty() || uiState.playlists.isNotEmpty())) {
-            CruxSegmentedButtons(
-                options = DatasetsTab.entries,
-                selected = tab,
-                label = { t ->
-                    val count = if (t == DatasetsTab.DATASETS) uiState.datasets.size else uiState.playlists.size
-                    "${t.label} · $count"
-                },
-                onSelect = { tab = it },
-                modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2).testTag("datasets_tabs"),
-            )
-        }
-        if (!uiState.isLoading && tab == DatasetsTab.PLAYLISTS) {
-            LazyColumn(
-                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-                verticalArrangement = Arrangement.spacedBy(space.s2),
-                modifier = Modifier.testTag("playlists_list"),
-            ) {
-                if (uiState.playlists.isEmpty()) {
-                    item(key = "no_playlists") {
-                        Column(verticalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.padding(vertical = space.s4)) {
-                            Text(
-                                "A playlist is an ordered pick of climbs from your datasets, like Tonight. Climb it in a session, one climb after another.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            CruxButton("New playlist", { creatingPlaylist = true }, icon = Icons.Rounded.Add, modifier = Modifier.testTag("playlists_new"))
+        // What's under the tabs, for the tab shown.
+        val tabContent: @Composable (DatasetsTab) -> Unit = { shown ->
+            if (!uiState.isLoading && shown == DatasetsTab.PLAYLISTS) {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+                    verticalArrangement = Arrangement.spacedBy(space.s2),
+                    modifier = Modifier.testTag("playlists_list"),
+                ) {
+                    if (uiState.playlists.isEmpty()) {
+                        item(key = "no_playlists") {
+                            Column(verticalArrangement = Arrangement.spacedBy(space.s3), modifier = Modifier.padding(vertical = space.s4)) {
+                                Text(
+                                    "A playlist is an ordered pick of climbs from your datasets, like Tonight. " +
+                                        "Climb it in a session, one climb after another.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                CruxButton(
+                                    "New playlist",
+                                    { creatingPlaylist = true },
+                                    icon = Icons.Rounded.Add,
+                                    modifier = Modifier.testTag("playlists_new"),
+                                )
+                            }
                         }
                     }
+                    items(uiState.playlists, key = { it.id }) { list -> PlaylistRow(list) { onOpenPlaylist(list.id) } }
                 }
-                items(uiState.playlists, key = { it.id }) { list -> PlaylistRow(list) { onOpenPlaylist(list.id) } }
-            }
-        } else if (!uiState.isLoading && uiState.datasets.isEmpty()) {
-            EmptyState(
-                icon = Icons.AutoMirrored.Rounded.ViewList,
-                headline = "No datasets yet",
-                sentence = "Keep lists of climbs for your home board, a spray wall or a gym circuit. You'll pick from them when you log a climb.",
-                action = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(space.s2)) {
-                        CruxButton("New dataset", { creating = true }, icon = Icons.Rounded.Add, modifier = Modifier.testTag("datasets_new"))
-                        CruxButton("Import a file", openPicker, variant = CruxButtonVariant.Outlined, modifier = Modifier.testTag("datasets_import"))
+            } else if (!uiState.isLoading && uiState.datasets.isEmpty()) {
+                EmptyState(
+                    icon = Icons.AutoMirrored.Rounded.ViewList,
+                    headline = "No datasets yet",
+                    sentence = "Keep lists of climbs for your home board, a spray wall or a gym circuit. You'll pick from them when you log a climb.",
+                    action = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(space.s2)) {
+                            CruxButton("New dataset", { creating = true }, icon = Icons.Rounded.Add, modifier = Modifier.testTag("datasets_new"))
+                            CruxButton("Import a file", openPicker, variant = CruxButtonVariant.Outlined, modifier = Modifier.testTag("datasets_import"))
+                        }
+                    },
+                )
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+                    verticalArrangement = Arrangement.spacedBy(space.s2),
+                    modifier = Modifier.testTag("datasets_list"),
+                ) {
+                    // A catalogue being imported shows here too, so leaving its sheet loses nothing.
+                    (catalogueState as? com.hardtekpt.crux.data.CatalogueImporter.State.Importing)?.let { importing ->
+                        item(key = "importing") {
+                            CruxListRow(
+                                title = "Importing ${importing.board.label}",
+                                supporting = "${"%,d".format(importing.done)} of ${"%,d".format(importing.total)} climbs read",
+                                onClick = { catalogueSheet = true },
+                                modifier = Modifier.testTag("catalogue_importing"),
+                            )
+                        }
                     }
-                },
-            )
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-                verticalArrangement = Arrangement.spacedBy(space.s2),
-                modifier = Modifier.testTag("datasets_list"),
-            ) {
-                // A catalogue being imported shows here too, so leaving its sheet loses nothing.
-                (catalogueState as? com.hardtekpt.crux.data.CatalogueImporter.State.Importing)?.let { importing ->
-                    item(key = "importing") {
-                        CruxListRow(
-                            title = "Importing ${importing.board.label}",
-                            supporting = "${"%,d".format(importing.done)} of ${"%,d".format(importing.total)} climbs read",
-                            onClick = { catalogueSheet = true },
-                            modifier = Modifier.testTag("catalogue_importing"),
-                        )
+                    val catalogues = uiState.datasets.filter { it.isCatalogue }
+                    if (catalogues.isNotEmpty()) {
+                        item(key = "catalogues") { Eyebrow("Board catalogues", Modifier.padding(bottom = space.s1)) }
+                        items(catalogues, key = { "c${it.id}" }) { dataset ->
+                            CruxListRow(
+                                title = dataset.name,
+                                supporting = datasetLine(dataset),
+                                leading = { DatasetBadge(dataset) },
+                                trailing = {
+                                    Text("read-only", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                },
+                                onClick = { onOpenCatalogue(dataset.id) },
+                                modifier = Modifier.testTag("catalogue_row"),
+                            )
+                        }
                     }
-                }
-                val catalogues = uiState.datasets.filter { it.isCatalogue }
-                if (catalogues.isNotEmpty()) {
-                    item(key = "catalogues") { Eyebrow("Board catalogues", Modifier.padding(bottom = space.s1)) }
-                    items(catalogues, key = { "c${it.id}" }) { dataset ->
+                    item(key = "yours") {
+                        Eyebrow("Yours", Modifier.padding(top = space.s2, bottom = space.s1))
+                    }
+                    items(uiState.datasets.filter { !it.isCatalogue }, key = { it.id }) { dataset ->
                         CruxListRow(
                             title = dataset.name,
                             supporting = datasetLine(dataset),
                             leading = { DatasetBadge(dataset) },
-                            trailing = { Text("read-only", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                            onClick = { onOpenCatalogue(dataset.id) },
-                            modifier = Modifier.testTag("catalogue_row"),
+                            onClick = { onOpen(dataset.id) },
+                            modifier = Modifier.testTag("dataset_row"),
+                        )
+                    }
+                    item(key = "later") {
+                        Text(
+                            "Import a Kilter or MoonBoard catalogue from a Boardsesh snapshot file with + → Import a file.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = space.s2),
                         )
                     }
                 }
-                item(key = "yours") { Eyebrow("Yours", Modifier.padding(top = space.s2, bottom = space.s1)) }
-                items(uiState.datasets.filter { !it.isCatalogue }, key = { it.id }) { dataset ->
-                    CruxListRow(
-                        title = dataset.name,
-                        supporting = datasetLine(dataset),
-                        leading = { DatasetBadge(dataset) },
-                        onClick = { onOpen(dataset.id) },
-                        modifier = Modifier.testTag("dataset_row"),
-                    )
-                }
-                item(key = "later") {
-                    Text(
-                        "Import a Kilter or MoonBoard catalogue from a Boardsesh snapshot file with + → Import a file.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = space.s2),
-                    )
-                }
             }
+        }
+        // Datasets and Playlists: the tabs stay still, the list under them swaps (swipe sideways too).
+        if (!uiState.isLoading && (uiState.datasets.isNotEmpty() || uiState.playlists.isNotEmpty())) {
+            TabbedContent(
+                tabs = DatasetsTab.entries,
+                selected = tab,
+                onSelect = { tab = it },
+                label = { t ->
+                    val count = if (t == DatasetsTab.DATASETS) uiState.datasets.size else uiState.playlists.size
+                    "${t.label} · $count"
+                },
+                tabsModifier = Modifier.testTag("datasets_tabs"),
+            ) { shown -> tabContent(shown) }
+        } else {
+            tabContent(tab)
         }
     }
     if (adding) {

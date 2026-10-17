@@ -40,9 +40,9 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.GradeBadge
 import com.hardtekpt.crux.ui.components.GradeState
 import com.hardtekpt.crux.ui.components.StatTile
+import com.hardtekpt.crux.ui.components.TabbedContent
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
-import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.places.ProjectRow
 import com.hardtekpt.crux.ui.shortLabel
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -178,18 +178,29 @@ fun ProgressContent(
         modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            // Swipe sideways to move between Climbing and Training.
-            .swipeBetweenTabs { direction -> ProgressView.entries.getOrNull(view.ordinal + direction)?.let { view = it } }
             .testTag("screen_Progress"),
     ) {
         CruxTopAppBar(title = "Progress", scrollBehavior = scrollBehavior)
-        CruxSegmentedButtons(
-            options = ProgressView.entries,
-            selected = view,
-            label = { it.label },
-            onSelect = { view = it },
-            modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2).testTag("progress_tabs"),
-        )
+        // Climbing and Training: the tabs stay still, the page under them swaps (swipe sideways too).
+        TabbedContent(ProgressView.entries, view, { view = it }, { it.label }, tabsModifier = Modifier.testTag("progress_tabs")) { shown ->
+            ProgressTab(shown, uiState, onOpenProblem, onOpenExercise, lastGo, onGo, onUndoGo)
+        }
+    }
+}
+
+/** One of Progress's tabs, under its tabs. */
+@Composable
+private fun ProgressTab(
+    view: ProgressView,
+    uiState: ProgressUiState,
+    onOpenProblem: (Long) -> Unit,
+    onOpenExercise: (Long) -> Unit,
+    lastGo: com.hardtekpt.crux.data.LoggedGo?,
+    onGo: ((Long) -> Unit)?,
+    onUndoGo: () -> Unit,
+) {
+    val space = CruxTheme.space
+    run {
         if (view == ProgressView.Training) {
             LazyColumn(
                 contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s2, bottom = space.s4 + LocalNavBarClearance.current),

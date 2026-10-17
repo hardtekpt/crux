@@ -232,16 +232,23 @@ class MainActivityTest {
         composeRule.onNodeWithTag("save_climb").performClick()
         composeRule.waitForTag("screen_Session")
         composeRule.waitForTag("session_climb")
-        // Tapping it logs more goes on the same climb; the session still shows it once.
+        // Tapping it opens its log from the session (to change or delete it): a go added there
+        // stays on the same log, and the session still shows it once.
         composeRule.onNodeWithTag("session_climb").performClick()
         composeRule.waitForTag("screen_LogClimb")
+        composeRule.onNodeWithTag("delete_climb").assertIsDisplayed()
         composeRule.onNodeWithTag("go_fell").performClick()
         composeRule.onNodeWithTag("save_climb").performClick()
         composeRule.waitForTag("screen_Session")
-        composeRule.waitUntil(5_000) {
-            composeRule.onAllNodes(hasTestTag("session_climb") and hasText("2", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeRule.waitForTag("session_climb")
         assertEquals(1, composeRule.onAllNodesWithTag("session_climb").fetchSemanticsNodes().size)
+        composeRule.onNodeWithTag("session_climb").performClick()
+        composeRule.waitForTag("screen_LogClimb")
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(hasTestTag("go_fell") and hasText("1", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.waitForTag("screen_Session")
 
         // An interval exercise added on the spot: a cycle ticked by hand, then changed in place.
         composeRule.onNodeWithTag("session_add").performClick()
@@ -728,10 +735,11 @@ class MainActivityTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("screen_Train").performTouchInput {
             swipe(
-                start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.08f),
+                // On the content: the header and tabs stay put and don't take the swipe.
+                start = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.5f),
                 end = androidx.compose.ui.geometry.Offset(
                     width * 0.85f,
-                    height * 0.08f,
+                    height * 0.5f,
                 ),
             )
         }

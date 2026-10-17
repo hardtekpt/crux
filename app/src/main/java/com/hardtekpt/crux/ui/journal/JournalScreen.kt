@@ -98,13 +98,13 @@ import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.ImageThumbnail
 import com.hardtekpt.crux.ui.components.InlineEmptyState
 import com.hardtekpt.crux.ui.components.SheetButton
+import com.hardtekpt.crux.ui.components.TabbedContent
 import com.hardtekpt.crux.ui.components.VideoThumbnail
 import com.hardtekpt.crux.ui.components.input.argb
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.dayLabel
 import com.hardtekpt.crux.ui.displayName
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
-import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.places.placesList
 import com.hardtekpt.crux.ui.theme.Archivo
 import com.hardtekpt.crux.ui.theme.CruxDayNumber
@@ -277,10 +277,6 @@ fun JournalContent(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            // Swipe sideways to move between All, Climbs, Training and Notes.
-            .swipeBetweenTabs { direction ->
-                JournalFilter.entries.getOrNull(uiState.query.kind.ordinal + direction)?.let { kind -> onQuery { it.copy(kind = kind) } }
-            }
             .testTag("screen_Journal"),
     ) {
         if (searching) {
@@ -311,62 +307,66 @@ fun JournalContent(
             )
             return
         }
-        // The same tabs as Train: segmented buttons, and the list swaps without animation.
-        CruxSegmentedButtons(
-            options = JournalFilter.entries,
+        // The same tabs as Train: they stay still, and only what's under them swaps (swipe sideways too).
+        TabbedContent(
+            tabs = JournalFilter.entries,
             selected = uiState.query.kind,
-            label = { option -> "${option.label}\n${if (option == JournalFilter.Places) places?.size ?: 0 else uiState.counts[option] ?: 0}" },
             onSelect = { kind -> onQuery { it.copy(kind = kind) } },
-            modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2),
+            label = { option -> "${option.label}\n${if (option == JournalFilter.Places) places?.size ?: 0 else uiState.counts[option] ?: 0}" },
             tagOf = { "journal_filter_${it.name}" },
             compact = true,
-        )
-        // Places: the gyms, crags and boards you climb at, with New place, in place of the timeline.
-        if (uiState.query.kind == JournalFilter.Places) {
-            LazyColumn(
-                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
-                verticalArrangement = Arrangement.spacedBy(space.s3),
-                modifier = Modifier.testTag("journal_places"),
+        ) { _ ->
+            // Places: the gyms, crags and boards you climb at, with New place, in place of the timeline.
+            if (uiState.query.kind == JournalFilter.Places) {
+                LazyColumn(
+                    state = remember { androidx.compose.foundation.lazy.LazyListState() },
+                    contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s3, bottom = space.s4 + LocalNavBarClearance.current),
+                    verticalArrangement = Arrangement.spacedBy(space.s3),
+                    modifier = Modifier.testTag("journal_places"),
+                ) {
+                    placesList(places, actions.openPlace, actions.newPlace, placeType, { placeType = it })
+                }
+                if (showFilters) FilterSheet(uiState, onQuery, onDismiss = { showFilters = false })
+                return@TabbedContent
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = uiState.query.activeFilters > 0,
+                enter = androidx.compose.animation.expandVertically(CruxMotion.medium()) + androidx.compose.animation.fadeIn(CruxMotion.medium()),
+                exit = androidx.compose.animation.shrinkVertically(CruxMotion.medium()) + androidx.compose.animation.fadeOut(CruxMotion.fast()),
             ) {
-                placesList(places, actions.openPlace, actions.newPlace, placeType, { placeType = it })
+                Box(Modifier.padding(start = space.s4, top = space.s2)) { AppliedFilters(uiState.query, onQuery) }
             }
-            if (showFilters) FilterSheet(uiState, onQuery, onDismiss = { showFilters = false })
-            return@Column
-        }
-        androidx.compose.animation.AnimatedVisibility(
-            visible = uiState.query.activeFilters > 0,
-            enter = androidx.compose.animation.expandVertically(CruxMotion.medium()) + androidx.compose.animation.fadeIn(CruxMotion.medium()),
-            exit = androidx.compose.animation.shrinkVertically(CruxMotion.medium()) + androidx.compose.animation.fadeOut(CruxMotion.fast()),
-        ) {
-            Box(Modifier.padding(start = space.s4, top = space.s2)) { AppliedFilters(uiState.query, onQuery) }
-        }
-        LazyColumn(
-            contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
-            modifier = Modifier.revealWhen(!uiState.isLoading).testTag("journal_list"),
-        ) {
-            if (uiState.days.isEmpty() && !uiState.isLoading) {
-                item(key = "empty") {
-                    val query = uiState.query
-                    InlineEmptyState(
-                        icon = Icons.Rounded.Search,
-                        text = if (query.kind == JournalFilter.Training && query.activeFilters == 0 && query.search.isBlank()) {
-                            "No training yet. Sessions you finish and results you log on exercises show here."
-                        } else {
-                            "Nothing matches. Try another word or clear a filter."
-                        },
-                    )
+            // Each tab starts at the top, as Train's do, rather than keeping the last tab's scroll.
+            val listState = remember(uiState.query.kind) { androidx.compose.foundation.lazy.LazyListState() }
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(start = space.s4, end = space.s4, top = space.s1, bottom = space.s4 + LocalNavBarClearance.current),
+                modifier = Modifier.revealWhen(!uiState.isLoading).testTag("journal_list"),
+            ) {
+                if (uiState.days.isEmpty() && !uiState.isLoading) {
+                    item(key = "empty") {
+                        val query = uiState.query
+                        InlineEmptyState(
+                            icon = Icons.Rounded.Search,
+                            text = if (query.kind == JournalFilter.Training && query.activeFilters == 0 && query.search.isBlank()) {
+                                "No training yet. Sessions you finish and results you log on exercises show here."
+                            } else {
+                                "Nothing matches. Try another word or clear a filter."
+                            },
+                        )
+                    }
                 }
-            }
-            uiState.days.forEach { day ->
-                item(key = "day_${day.date}", contentType = "day") {
-                    DayHeader(day, today = day.date == uiState.today)
-                }
-                items(day.entries, key = { it.key }, contentType = { it::class }) { entry ->
-                    when (entry) {
-                        is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb, selection)
-                        is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
-                        is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
-                        is TimelineEntry.NoteEntry -> NoteEntry(entry.note, selection) { actions.openNote(entry.note.id) }
+                uiState.days.forEach { day ->
+                    item(key = "day_${day.date}", contentType = "day") {
+                        DayHeader(day, today = day.date == uiState.today)
+                    }
+                    items(day.entries, key = { it.key }, contentType = { it::class }) { entry ->
+                        when (entry) {
+                            is TimelineEntry.Climbs -> ClimbsEntry(entry.day, actions.openClimb, selection)
+                            is TimelineEntry.Training -> TrainingEntry(entry, actions.openRecords)
+                            is TimelineEntry.SessionEntry -> SessionEntryRow(entry.session, actions.openClimb) { actions.openSession(entry.session.id) }
+                            is TimelineEntry.NoteEntry -> NoteEntry(entry.note, selection) { actions.openNote(entry.note.id) }
+                        }
                     }
                 }
             }

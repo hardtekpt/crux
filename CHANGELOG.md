@@ -84,6 +84,8 @@ and versions follow [Semantic Versioning](https://semver.org/). Each release als
 
 ### Fixed
 
+- **Tabs hold still**: on Train, the Journal, Progress and Datasets the header and tabs no longer shake when you switch
+  or swipe; only the content under them changes, and each tab starts at the top.
 - **+ Fell and + Sent on a board climb** in a session now log it on the place's board facility, not the main gym the
   session started in.
 - **A climb in a live session opens its log**, so you can change it or delete it (with Undo), instead of starting a new

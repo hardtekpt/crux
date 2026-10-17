@@ -104,9 +104,11 @@ Wheels expose semantics actions, so TalkBack can set them directly.
 - A floating, icon-only bar with five tabs and the **+** Log button built in
   (`navigation/FloatingNavBar.kt`). Screens pad their content with `LocalNavBarClearance`.
 - Page transitions are quiet fades, including predictive back.
-- Pages with their own tabs (Train: Week / Plans / Exercises, the Journal's types) swipe sideways
-  between them (`TabSwipe.kt`); the page follows the finger a little once the swipe is claimed.
-  The main tabs don't swipe.
+- Pages with their own tabs (Train, the Journal, Progress, Datasets) use `TabbedContent`
+  (`components/TabbedContent.kt`): the header and the tabs stay still, only the selected segment
+  changes, and only the content under them swaps, built fresh for each tab so it starts at the top.
+  A sideways swipe on the content moves between tabs (`TabSwipe.kt`, without the lean, so nothing
+  shakes). The main tabs don't swipe.
 - **Tabs or segments**: up to three views of one page use `CruxSegmentedButtons` (Train, Progress,
   Datasets); four or more, or views that show counts, use underline tabs (the Journal).
 - **Motion** lives in `components/Motion.kt`: `CruxMotion` durations (120 / 160 / 200 ms,

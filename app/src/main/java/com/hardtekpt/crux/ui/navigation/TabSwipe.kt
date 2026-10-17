@@ -26,7 +26,13 @@ import kotlinx.coroutines.launch
  * day strips, scrolling rows, the dashboard's drag) keeps the gesture and no tab switch
  * happens. Mostly-vertical drags are left to scrolling.
  */
-fun Modifier.swipeBetweenTabs(enabled: Boolean = true, onSwipe: (direction: Int) -> Unit): Modifier = composed {
+fun Modifier.swipeBetweenTabs(
+    enabled: Boolean = true,
+    /** The content leans with the finger once the swipe is claimed; off keeps it still. */
+    follow: Boolean = true,
+    onSwipe: (direction: Int) -> Unit,
+): Modifier = composed {
+    val currentFollow by rememberUpdatedState(follow)
     val currentEnabled by rememberUpdatedState(enabled)
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     // Once the swipe is claimed, the page follows the finger a little (a quarter of the drag, at
@@ -60,8 +66,10 @@ fun Modifier.swipeBetweenTabs(enabled: Boolean = true, onSwipe: (direction: Int)
                 // finger doesn't also take it as a tap.
                 if (swiping) {
                     change.consume()
-                    val to = (dx * 0.25f).coerceIn(-follow, follow)
-                    scope.launch { shift.snapTo(to) }
+                    if (currentFollow) {
+                        val to = (dx * 0.25f).coerceIn(-follow, follow)
+                        scope.launch { shift.snapTo(to) }
+                    }
                 }
                 if (!change.pressed) break
             }

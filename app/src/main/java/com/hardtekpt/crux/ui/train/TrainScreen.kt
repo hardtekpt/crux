@@ -49,9 +49,9 @@ import com.hardtekpt.crux.ui.components.CruxSegmentedButtons
 import com.hardtekpt.crux.ui.components.CruxTopAppBar
 import com.hardtekpt.crux.ui.components.Eyebrow
 import com.hardtekpt.crux.ui.components.InlineEmptyState
+import com.hardtekpt.crux.ui.components.TabbedContent
 import com.hardtekpt.crux.ui.components.revealWhen
 import com.hardtekpt.crux.ui.navigation.LocalNavBarClearance
-import com.hardtekpt.crux.ui.navigation.swipeBetweenTabs
 import com.hardtekpt.crux.ui.progress.headline
 import com.hardtekpt.crux.ui.theme.CruxTheme
 import com.hardtekpt.crux.ui.you.describe
@@ -147,32 +147,26 @@ fun TrainScreen(
         Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            // Swipe sideways to move between Week, Plans and Exercises.
-            .swipeBetweenTabs { direction -> TrainView.entries.getOrNull(view.ordinal + direction)?.let { view = it } }
             .testTag("screen_Train"),
     ) {
         CruxTopAppBar(title = "Train", scrollBehavior = scrollBehavior)
-        CruxSegmentedButtons(
-            options = TrainView.entries,
-            selected = view,
-            label = { it.label },
-            onSelect = { view = it },
-            modifier = Modifier.padding(horizontal = space.s4, vertical = space.s2),
-        )
-        LazyColumn(
-            contentPadding = PaddingValues(
-                start = space.s4,
-                end = space.s4,
-                top = space.s2,
-                bottom = space.s4 + LocalNavBarClearance.current,
-            ),
-            verticalArrangement = Arrangement.spacedBy(space.s3),
-            modifier = Modifier.revealWhen(!uiState.isLoading).testTag("train_list"),
-        ) {
-            when (view) {
-                TrainView.Week -> week(uiState) { day -> editingDay = day.date.dayOfWeek }
-                TrainView.Plans -> plans(uiState, onOpenPlan, onNewPlan, viewModel::addStarterLibrary)
-                TrainView.Exercises -> exercises(uiState, onOpenExercise, onNewExercise, viewModel::addStarterLibrary)
+        // Week, Plans and Exercises: the tabs stay still, the list under them swaps (swipe sideways too).
+        TabbedContent(TrainView.entries, view, { view = it }, { it.label }) { shown ->
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = space.s4,
+                    end = space.s4,
+                    top = space.s2,
+                    bottom = space.s4 + LocalNavBarClearance.current,
+                ),
+                verticalArrangement = Arrangement.spacedBy(space.s3),
+                modifier = Modifier.revealWhen(!uiState.isLoading).testTag("train_list"),
+            ) {
+                when (shown) {
+                    TrainView.Week -> week(uiState) { day -> editingDay = day.date.dayOfWeek }
+                    TrainView.Plans -> plans(uiState, onOpenPlan, onNewPlan, viewModel::addStarterLibrary)
+                    TrainView.Exercises -> exercises(uiState, onOpenExercise, onNewExercise, viewModel::addStarterLibrary)
+                }
             }
         }
     }
