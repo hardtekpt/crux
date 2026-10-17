@@ -60,6 +60,7 @@ import com.hardtekpt.crux.ui.components.ClimbGrade
 import com.hardtekpt.crux.ui.components.CruxListRow
 import com.hardtekpt.crux.ui.components.CruxTextField
 import com.hardtekpt.crux.ui.components.Eyebrow
+import com.hardtekpt.crux.ui.components.keepEndScrollInSheet
 import com.hardtekpt.crux.ui.datasets.BrowseFilterBar
 import com.hardtekpt.crux.ui.datasets.BrowseModel
 import com.hardtekpt.crux.ui.datasets.BrowseUi
@@ -263,7 +264,7 @@ internal fun BrowseBoardSheet(onDismiss: () -> Unit, viewModel: BrowseBoardViewM
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.testTag("browse_boards")) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(space.s2), modifier = Modifier.keepEndScrollInSheet().testTag("browse_boards")) {
                     itemsIndexed(boards.choices, key = { _, it -> it.dataset.id }) { _, choice ->
                         val on = choice.dataset.id == ui.dataset?.id
                         CruxListRow(
@@ -341,7 +342,7 @@ internal fun BrowseBoardSheet(onDismiss: () -> Unit, viewModel: BrowseBoardViewM
                 state = list,
                 verticalArrangement = Arrangement.spacedBy(space.s2),
                 contentPadding = PaddingValues(bottom = space.s4),
-                modifier = Modifier.weight(1f).testTag("browse_climbs"),
+                modifier = Modifier.weight(1f).keepEndScrollInSheet().testTag("browse_climbs"),
             ) {
                 if (!ui.loading && ui.climbs.isEmpty()) {
                     item {

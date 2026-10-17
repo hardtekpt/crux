@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import com.hardtekpt.crux.ui.theme.CruxTheme
@@ -83,7 +84,7 @@ fun CruxSheet(
             Column(
                 Modifier
                     .weight(1f, fill = false)
-                    .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                    .then(if (scroll) Modifier.keepEndScrollInSheet().verticalScroll(rememberScrollState()) else Modifier),
                 verticalArrangement = Arrangement.spacedBy(spacing),
                 content = content,
             )
@@ -109,4 +110,24 @@ fun CruxSheet(
 @Composable
 fun ActionSheet(title: String, onDismiss: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     CruxSheet(onDismiss = onDismiss, modifier = modifier, eyebrow = title, spacing = CruxTheme.space.s1, content = content)
+}
+
+/**
+ * For a list inside a bottom sheet: scrolling on past the end stays with the list, so the open
+ * sheet doesn't take the leftover and bounce up and down. Pulling down at the top still reaches
+ * the sheet, so it closes as usual.
+ */
+fun Modifier.keepEndScrollInSheet(): Modifier = nestedScroll(KeepEndScroll)
+
+private object KeepEndScroll : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    override fun onPostScroll(
+        consumed: androidx.compose.ui.geometry.Offset,
+        available: androidx.compose.ui.geometry.Offset,
+        source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+    ): androidx.compose.ui.geometry.Offset = if (available.y < 0) available else androidx.compose.ui.geometry.Offset.Zero
+
+    override suspend fun onPostFling(
+        consumed: androidx.compose.ui.unit.Velocity,
+        available: androidx.compose.ui.unit.Velocity,
+    ): androidx.compose.ui.unit.Velocity = if (available.y < 0) available else androidx.compose.ui.unit.Velocity.Zero
 }
