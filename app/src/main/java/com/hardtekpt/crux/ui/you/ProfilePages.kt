@@ -166,7 +166,14 @@ private fun WeightCard(uiState: YouUiState, onLogWeight: () -> Unit) {
     CruxCard(fill = CruxCardFill.Default, modifier = Modifier.testTag("weight_card")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Eyebrow("Weight", Modifier.weight(1f))
-            CruxButton("Log", onLogWeight, variant = CruxButtonVariant.Tonal, size = CruxButtonSize.Small, icon = Icons.Rounded.Add)
+            CruxButton(
+                "Log",
+                onLogWeight,
+                variant = CruxButtonVariant.Tonal,
+                size = CruxButtonSize.Small,
+                icon = Icons.Rounded.Add,
+                modifier = Modifier.testTag("measurements_log_weight"),
+            )
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(summary?.latest?.value?.let { units.weight(it).value } ?: "–", style = CruxTheme.type.metricLarge)

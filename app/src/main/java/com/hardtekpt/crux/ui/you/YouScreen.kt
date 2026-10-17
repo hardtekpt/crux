@@ -258,7 +258,6 @@ fun parseMeasurement(type: MeasurementType, text: String): Result<Double> {
 
 /** Where the profile's taps lead. */
 data class ProfileActions(
-    val logWeight: () -> Unit = {},
     val openSettings: () -> Unit = {},
     val logRecord: () -> Unit = {},
     val openRecords: (Long) -> Unit = {},
@@ -349,15 +348,12 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
                 RecordRow(best, onClick = { actions.openRecords(best.exercise.id) })
             }
 
-            // ---- Weight
-            item(key = "weight_header") { ProfileSectionHeader("Weight") }
-            item(key = "weight") { WeightTracker(uiState, onLog = actions.logWeight) }
-
             // ---- The pages behind the profile
             item(key = "menu_header") { ProfileSectionHeader("More about you") }
             item(key = "menu") {
                 val ape = uiState.apeIndex
-                val height = uiState.latest[MeasurementType.HEIGHT]
+                val weight = uiState.summary?.latest
+                val change = uiState.summary?.change
                 val girths = MeasurementType.circumferences.count { it in uiState.latest }
                 CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("profile_menu")) {
                     Column(Modifier.padding(vertical = space.s1).fillMaxWidth()) {
@@ -365,14 +361,9 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
                             Icons.Rounded.Accessibility,
                             "Measurements",
                             when {
-                                height != null && ape != null -> "${units.measurement(
-                                    MeasurementType.HEIGHT,
-                                    height.value,
-                                )} · ape ${units.lengthDifference(ape.differenceCm)}"
-
-                                height != null -> units.measurement(MeasurementType.HEIGHT, height.value).toString()
-
-                                else -> "Height, reach, body fat"
+                                weight != null && change != null -> "${units.weight(weight.value).value} ${units.weightUnit()} · ${units.weightChange(change)}"
+                                weight != null -> "${units.weight(weight.value).value} ${units.weightUnit()}"
+                                else -> "Weight, height, body fat"
                             },
                             actions.openMeasurements,
                             Modifier.testTag("menu_measurements"),
@@ -442,74 +433,6 @@ fun YouContent(uiState: YouUiState, actions: ProfileActions, modifier: Modifier 
                 }
             }
         }
-    }
-}
-
-/**
- * The latest weigh-in, how it moved, and a small line of recent weigh-ins, with a Log button.
- * The full chart and history live on Measurements.
- */
-@Composable
-private fun WeightTracker(uiState: YouUiState, onLog: () -> Unit) {
-    val units = LocalUnits.current
-    val colors = MaterialTheme.colorScheme
-    val summary = uiState.summary
-    CruxCard(fill = CruxCardFill.Low, modifier = Modifier.testTag("weight_tracker")) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CruxTheme.space.s3)) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        summary?.latest?.value?.let { units.weight(it).value } ?: "–",
-                        style = CruxTheme.type.metricMedium,
-                        modifier = Modifier.testTag("you_weight"),
-                    )
-                    if (summary != null) {
-                        Text(
-                            " ${units.weightUnit()}",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 3.dp),
-                        )
-                    }
-                }
-                Text(
-                    when {
-                        summary == null -> "No weigh-ins yet"
-                        summary.change != null -> "${units.weightChange(summary.change)} · ${summary.window}"
-                        else -> "Weighed ${summary.latest.date.shortLabel()}"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                )
-            }
-            val recent = uiState.weights.take(12).reversed()
-            if (recent.size >= 2) WeightSparkline(recent.map { it.value }, Modifier.size(width = 88.dp, height = 36.dp))
-            CruxButton(
-                text = "Log",
-                onClick = onLog,
-                variant = CruxButtonVariant.Tonal,
-                icon = Icons.Rounded.Add,
-                size = CruxButtonSize.Small,
-                modifier = Modifier.testTag("log_weight"),
-            )
-        }
-    }
-}
-
-/** Recent weigh-ins as a bare line, the latest one dotted. */
-@Composable
-private fun WeightSparkline(values: List<Double>, modifier: Modifier = Modifier) {
-    val line = MaterialTheme.colorScheme.primary
-    androidx.compose.foundation.Canvas(modifier) {
-        val low = values.min()
-        val high = values.max()
-        val span = (high - low).takeIf { it > 0 } ?: 1.0
-        val stepX = size.width / (values.size - 1)
-        val points = values.mapIndexed { i, v ->
-            androidx.compose.ui.geometry.Offset(i * stepX, (size.height - 4.dp.toPx()) * (1 - ((v - low) / span).toFloat()) + 2.dp.toPx())
-        }
-        points.zipWithNext { a, b -> drawLine(line, a, b, strokeWidth = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) }
-        drawCircle(line, radius = 3.5.dp.toPx(), center = points.last())
     }
 }
 

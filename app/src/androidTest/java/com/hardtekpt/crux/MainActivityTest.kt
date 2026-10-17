@@ -96,24 +96,16 @@ class MainActivityTest {
     @Test
     fun loggingAWeightUpdatesYou() {
         composeRule.onNodeWithTag("nav_You").performClick()
-        // Measurements sit below the climber card, consistency and records on the profile.
-        // Scrolling only until the tile shows can leave it under the floating nav bar, where a
-        // touch would land on the bar, so trigger the tile's click action directly.
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
-        composeRule.onNodeWithTag("log_weight").performSemanticsAction(SemanticsActions.OnClick)
+        // Weight lives on Measurements, behind the profile menu.
+        openFromProfileMenu("menu_measurements", "screen_Measurements")
+        composeRule.onNodeWithTag("measurements_log_weight").performClick()
         composeRule.waitForTag("screen_LogWeight")
         composeRule.onNodeWithTag("ruler_weight_value").performClick()
         composeRule.textFieldIn("field_type_value").performTextReplacement("72.5")
         composeRule.onNodeWithTag("confirm_type_value").performClick()
         composeRule.onNodeWithTag("save_weight").performClick()
 
-        composeRule.waitForTag("screen_You")
-        composeRule.onNodeWithTag("you_list").performScrollToNode(hasTestTag("log_weight"))
-        composeRule.waitUntil(5_000) {
-            runCatching { composeRule.onNodeWithTag("you_weight", useUnmergedTree = true).assertTextEquals("72.5") }.isSuccess
-        }
-        // The full history is on Measurements.
-        openFromProfileMenu("menu_measurements", "screen_Measurements")
+        composeRule.waitForTag("screen_Measurements")
         composeRule.onNodeWithTag("measurements_list").performScrollToNode(hasTestTag("weight_row"))
         assertEquals(1, composeRule.onAllNodesWithTag("weight_row").fetchSemanticsNodes().size)
     }

@@ -1328,7 +1328,7 @@
    "lane": "you",
    "col": 1,
    "row": 0,
-   "desc": "The weight tracker and the “More about you” list: Measurements, Circumferences, Notes, Places, Grade converter, Interval timer and Settings.",
+   "desc": "The “More about you” list: Measurements (latest weight), Circumferences, Notes, Places, Grade converter, Interval timer and Settings.",
    "covers": [],
    "steps": [
     "tab:You",

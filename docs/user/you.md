@@ -28,8 +28,8 @@ They're changed in their session, not here.
 
 ## Weight
 
-Your latest weigh-in, a sparkline of the trend, and **Log** for a new one (also in the **+**
-menu). The ruler and the day strip sit at the bottom of the Log weight page, within reach of your thumb.
+Weight lives under **More about you → Measurements**, whose row shows your latest weigh-in and how it
+moved. There you see the chart and history, and **Log** adds a new one (also in the **+** menu). The ruler and the day strip sit at the bottom of the Log weight page, within reach of your thumb.
 Weight is stored in kilograms and shown in pounds under Imperial.
 
 ## More about you

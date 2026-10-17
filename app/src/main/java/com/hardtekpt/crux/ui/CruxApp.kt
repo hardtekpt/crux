@@ -310,7 +310,6 @@ fun CruxApp(openRequest: com.hardtekpt.crux.OpenRequest? = null, onOpened: () ->
                     page<YouRoute> {
                         YouScreen(
                             actions = ProfileActions(
-                                logWeight = { navController.navigate(LogWeightRoute) },
                                 openSettings = { navController.navigate(SettingsRoute) },
                                 logRecord = { navController.navigate(RecordEditorRoute()) },
                                 openRecords = { navController.navigate(ExerciseRecordsRoute(it)) },
